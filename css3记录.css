@@ -1,0 +1,48 @@
+/* 过渡动画 */
+div {
+	transition-property: width; //规定对哪个属性进行过渡
+
+	transition-duration: 3s; //定义过度的时间，默认为0
+
+	transition-timing-function: ease; //定义过渡的缓效果。默认为ease
+
+	transition-delay: 3s; //规定过渡效果的延迟时间，即在过了这个时间后才开始动画，默认是0。
+}
+
+为了书写方便，也可以把这四个属性按照以上的顺序简写在一个transition属性上：
+div {transition: width 3s ease 3s;}
+如果是属性的默认值，则可以省略。
+
+如果是要同时过渡多个属性，可以用逗号隔开， 如：
+div {transition: width 3s, height 3s, background-color: 3s;}
+
+使用transition属性只是规定了要如何去过渡，要想让动画发生，还得要有元素状态的改变。
+如何改变元素状态呢，当然就是在css中给这个元素定义一个类（:hover等伪类也可以），这个类描述的是过渡动画结束时元素的状态。
+
+div {
+	width: 100px; height: 100px; background-color: #000;
+	transition: width 3s, height 3s, background-color 3s;
+}
+
+div: hover {
+	width: 400px; height: 400px; background-color: #f00;
+}
+	
+/* 关键帧动画 */
+@keyframes demo {
+	0% {background-color: red; width: 100%;}
+	10% {background-color: green; width: 120%;}
+	/* ... */
+	100% {background-color: yellow; width: 100%;} 
+}
+
+把动画绑定到元素上，我们可以用animation属性，animation属性有以下这些
+animation-name: 规定@keyframes 动画的名称
+animation-duration: 规定动画完成一个周期所花费的秒或毫秒，默认为0
+animation-timing-function: 规定动画的速度风曲线，默认为ease;
+animation-delay: 规定动画何时开始，默认是0
+animation-iteration-count: 规定动画的播放次数，默认为1;
+animation-direction: 规定动画是否在下一周期逆向播放，默认为'normal'
+animation-play-state: 规定动画是否正运行或暂停，默认为'running'
+animation-fill-mode: 规定动画之外的状态。
+
