@@ -27,7 +27,7 @@
 		navigator.geolocation.watchPosition();
 	}
 
-=> BaiduMap
+=> BaiduMap 使用
 	> 入门指南
 		1.创建地图实例
 			/*位于BMap命名空间下的Map类表示地图，通过new操作符可以创建一个地图实例。其参数可以是元素id也可以是元素对象。*/
@@ -183,4 +183,33 @@
 			let infoWindow = new BMap.InfoWindow("window", opts); // 创建信息窗口对象
 			map.openInfoWindow(infoWindow, map.getCenter());      // 打开信息窗口
 
+
+
+
+
+
+
 			
+
+=> BaiduMap API			
+	&& Marker类： 
+		Method：
+			/**
+			 * @return {Point}
+			 * @Point {lat: number, lng: number}
+			 */
+			getPosition(): 返回标注的地理坐标
+
+			setLabel(label: Label): 为标注添加文本标记
+
+			setTitle(title: string): 设置标注的标题，当鼠标移至标注上方时显示此标题
+
+	&& LocalSearch类：
+		LocalSearch(location: Map|Point|String, opts: LocalSearchOption)
+		创建一个搜索类实例，其中location表示检索区域，其类型可为地图实例、坐标点或城市名称的字符串。当参数为地图实例时，检索位置由当前地图中心点确定，且搜索结果的标注将自动加载到地图上，并支持调整地图视野层级；当参数为坐标时，检索位置由该点所在位置确定；当参数为城市名称时，检索会在该城市内进行。
+		Method：
+
+=> BaiduMap interface 		
+	地理编码：'http://api.map.baidu.com/geocoder/v2/?address=北京市海淀区上地十街10号&output=json&ak=您的ak&callback=showLocation'
+	逆地理编码： 'http://api.map.baidu.com/geocoder/v2/?callback=renderReverse&location=35.658651,139.745415&output=json&pois=1&ak=您的ak' 
+
