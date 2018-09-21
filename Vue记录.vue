@@ -1211,6 +1211,3 @@
 
 		export default MsiUsers;
 	</script>
-
-	element-ui 表示行初始化选择
-	this.$refs.multipleTable.toggleRowSelection(row, true);

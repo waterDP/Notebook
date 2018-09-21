@@ -2,6 +2,11 @@
  * 地理信息相关
  * H5
  * 百度Api
+ * 高德Api
+ */
+
+/*
+	amap(高德) key: 04679c50edf711e24bed12cfb3b9f019
  */
 
 => H5 
@@ -213,3 +218,48 @@
 	地理编码：'http://api.map.baidu.com/geocoder/v2/?address=北京市海淀区上地十街10号&output=json&ak=您的ak&callback=showLocation'
 	逆地理编码： 'http://api.map.baidu.com/geocoder/v2/?callback=renderReverse&location=35.658651,139.745415&output=json&pois=1&ak=您的ak' 
 
+=> Vue BaiduMap
+	> 全局注册将一次性引入百度地图组件库的所有组件。
+
+		import Vue from 'vue'
+		import BaiduMap from 'vue-baidu-map'
+
+		Vue.use(BaiduMap, {
+		  // ak 是在百度地图开发者平台申请的密钥 详见 http://lbsyun.baidu.com/apiconsole/key */
+		  ak: 'YOUR_APP_KEY'
+		});
+
+		`<template>
+		  <baidu-map class="bm-view">
+		  </baidu-map>
+		</template>
+
+		<style>
+		.bm-view {
+		  width: 100%;
+		  height: 300px;
+		}
+		</style>`
+
+	> 全局组件事件
+		ready {BMap, map} 地图组件渲染完毕时触发，返回一个百度地图的核心类和一个地图实例。百度地图组件是异步加载，请不要尝试在组件的生命周期中设访问BMap核心类和map实例，如有需要，请在所需组件的ready事件回调函数的参数中获取。
+
+
+=> AMap(高德)
+	设置中心点
+	// 传入经纬度，设置地图中心点
+	let position = new AMap.LngLat(116, 39); // 标准写法
+	let position = [116, 39]; // 简写
+	map.setCenter(position);
+	// 获取地图中心点
+	let currentCenter = map.getCenter();
+	// 设置、获取地图缩放级别（setZoom, getZoom）
+	// 设置地图的级别，级别为数字
+	// pc上，参数zoom可高范围为[3,18]
+	// 移动端，参数zoom可设范围：[3,19]
+	map.setZoom(13);
+	// 获取地图级别
+	let currentZoom = map.getZoom();
+
+	// 同时设置缩放级别和中心点
+	map.setZoomAndCenter(14, [115.205468, 39.907761]);

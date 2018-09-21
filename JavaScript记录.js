@@ -653,4 +653,183 @@
 	let b = new AimClass(12, new DS('15'));
 	b.methods('keyboard').methods('www');
 	
-	
+=> ajax 模型
+	// 生成可发送同步/异步请求的 XMLHttpRequest 对象实例
+	const oReq = new XMLHttpRequest();
+	// open 方法初始化请求方法、地址，第三个参数 true 声明进行异步请求
+	oReq.open("GET", "http://www.jianshu.com/", true);
+	// 请求的整个过程中有五种状态，且同一时刻只能存在一种状态：
+	// 1. 未打开
+	// 2. 未发送
+	// 3. 已获取响应体
+	// 4. 正在下载响应体
+	// 5. 请求完成
+	// 当请求状态发生改变时，触发 onreadystatechange 会被调用
+	oReq.onreadystatechange = function (oEvent) {
+	  // 如果已经开始下载响应体了
+	  if (oReq.readyState === 4) {
+	    // 如果响应体成功下载，并且服务端返回 200 状态码
+	    if (oReq.status === 200) {
+	      // 打印响应信息
+	      console.log(oReq.responseText);
+	    } else {
+	      console.log("Error", oReq.statusText);
+	    }
+	  }
+	};
+	// send 方法发送请求，由于此请求是异步的，该方法立刻返回
+	oReq.send(null);
+
+=> 注册 Service Worker
+	当浏览器对 Service Worker 提供原生支持时，我们便可以在页面加载后注册指定的 JavaScript 文件，并运行在后台线程之中，以下代码是这一过程的实例。	
+		// 检查浏览器是否对 serviceWorker 有原生支持
+    if ('serviceWorker' in navigator) {
+      // 有原生支持时，在页面加载后开启新的 Service Worker 线程，从而优化首屏加载速度
+      window.addEventListener('load', function() {
+      // register 方法里第一个参数为 Service Worker 要加载的文件；第二个参数 scope 可选，用来指定 Service Worker 控制的内容的子目录
+        navigator.serviceWorker.register('./ServiceWorker.js').then(function(registration) {
+          // Service Worker 注册成功
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }).catch(function(err) {
+          // Service Worker 注册失败
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
+
+=> 安装 Service Worker
+	安装阶段，我们可以执行任何任务。这里我们逐步打开缓存、缓存文件和确认所有需要的资产是否缓存。ServiceWorker.js 中的实例安装代码如下：
+
+	var CACHE_NAME = 'my-site-cache-v1';
+	var urlsToCache = [
+	  '/',
+	  '/styles/main.css',
+	  '/script/main.js'
+	];
+
+	self.addEventListener('install', function(event) {
+	  // Perform install steps
+	  event.waitUntil(
+	    caches.open(CACHE_NAME)
+	      .then(function(cache) {
+	        console.log('Opened cache');
+	        return cache.addAll(urlsToCache);
+	      })
+	  );
+	});
+	这要求我们在与项目根目录下建立 main.js 和 main.css 空文件。我们可以在 Chrome 开发者工具里的“Application”菜单的“Cache Storage”中看到相应的缓存。并且在图中的“Service Workers”选项卡中看到正在运行的 Service Workers。
+
+	且从上面的代码可以看到，通过 Service Worker 对象加载的文件拥有全局变量 caches 等，并且 self 关键字指向这个对象本身。cache 使我们可以存储网络响应发来的资源，并且根据它们的请求来生成 key。这个 API 和浏览器的标准的缓存工作原理很相似，且会持久存在，直到我们释放主动空间——我们拥有全部的控制权。
+
+=>js实现简单的双向绑定
+	`
+		<body>
+			<div id='app'>
+				<input type="text" id='txt' />
+				<p id="show"></p>
+			</div>
+		</body>
+	`	
+	let obj = {};
+	Object.defineProperty(obj, 'txt', {
+		get: function() {
+			return obj
+		},
+		set: function(newValue) {
+			document.getElemenetById('txt').value = newValue
+			document.getElemenetById('show').innerHTML = newValue
+		}
+	})
+	document.addEventListener('keyup', e => {
+		obj.text = e.target.value
+	})
+
+=> Thunk 函数
+	在JavaScript语言中，Thunk函数替换的不是表达式，而是多参数函数的版本，且只接受回调函数作为参数
+	// 正常版本的readFile(多参数版本)
+	fs.readFile(fileName, callback);
+
+	// Thunk版本的readFile(单参数版本)
+	let readFileThunk = Thunk(fileName);
+	readFileThunk(callBack);
+
+	function Thunk(fileName) {
+		return function(callback) {
+			return fs.readFile(fileName, callback);
+		}
+	}
+
+	Thunk 函数转换器
+		// ES5版本
+	var Thunk = function(fn){
+	  return function (){
+	    var args = Array.prototype.slice.call(arguments);
+	    return function (callback){
+	      args.push(callback);
+	      return fn.apply(this, args);
+	    }
+	  };
+	};
+
+	// ES6版本
+	var Thunk = function(fn) {
+	  return function (...args) {
+	    return function (callback) {
+	      return fn.call(this, ...args, callback);
+	    }
+	  };
+	};
+
+	使用上面的转换器，生成fs.readFile的Thunk函数
+	let readFileThunk = Thunk(fs.readFile);
+	readFileThunk(fileName)(callback);
+
+	&& Thunkify模块
+	生产环境的转换器，建议使用Thunkify模块。
+	首先是安装。
+	$ npm install thunkify
+
+	使用方法如下
+	const thunkify = require('thunkify');
+	const fs = require('thunkify');
+
+	let read = thunkify(fs.readfile);
+	read('package.json')((err, str) => {
+		// ...
+	});
+
+	[code thunkify源码]
+	function thunkify(fn) {
+		let args = new Array(arguments.length);
+		let ctx =  this;
+
+		for (let i = 0; i < args.length; ++i) {
+			args[i] = arguments[i];
+		}
+
+		return function(done) {
+			let called;
+			args.push(function () {
+				if (called) return;
+				called = true;
+				done.apply(null, arguments)
+			});
+
+			try {
+				fn.apply(ctx, args)
+			} catch(err) {
+				done(err);
+			}
+		}
+	}
+
+=> promisify 
+	const promisify = require('promisify');
+	const fs = require('fs');
+
+	let read = promisify(fs.readFile);
+	read('package.json').then(data => {
+		// ...
+	}).catch(err => {
+		// ...
+	});

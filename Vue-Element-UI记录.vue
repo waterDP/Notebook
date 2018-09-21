@@ -1,3 +1,7 @@
+	element-ui 表示行初始化选择
+	this.$refs.multipleTable.toggleRowSelection(row, true);
+
+
 => Layout 布局
 	通过基础的24分栏，迅速简便地创建布局；
 	<el-row></el-row>

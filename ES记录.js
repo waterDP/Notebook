@@ -168,6 +168,39 @@ consbyTime('111').then((res)=>{
 
  	run(gen);
 
+ 	&& 一个简单的随机数生成
+	 	比如我们将实现一个随机数的获取：
+	 	function * randomGenerator (...randoms) {
+		  let len = randoms.length
+		  while (true) {
+		    yield randoms[Math.floor(Math.random() * len)]
+		  }
+		}
+
+		const randomeGen = randomGenerator(1, 2, 3, 4);
+
+		randomeGen.next().value // 返回一个随机数
+
+	&& 代替一些递归的操作
+		那个最著名的斐波那契数，基本上都会选择使用递归来实现
+		但是再结合着Generator以后，就可以使用一个无限循环来实现了：
+		function * fibonacci(seed1, seed2) {
+		  while (true) {
+		    yield (() => {
+		      seed2 = seed2 + seed1;
+		      seed1 = seed2 - seed1;
+		      return seed2;
+		    })();
+		  }
+		}
+
+	const fib = fibonacci(0, 1);
+	fib.next(); // {value: 1, done: false}
+	fib.next(); // {value: 2, done: false}
+	fib.next(); // {value: 3, done: false}
+	fib.next(); // {value: 5, done: false}
+	fib.next(); // {value: 8, done: false}
+
 =>async函数
 	const fs = require('fs');
  	let readFile = function (fileName) {
@@ -300,3 +333,58 @@ consbyTime('111').then((res)=>{
 	>> 使用from方法	
 	/*所有偶数的集合，对应_.filter*/
 	let evens = Array.from(arr, x => (x % 2 === 0));
+
+=> Symbol 
+	作为属性名的Symbol
+	let mySymbol = Symbol();
+	// 第一种写法
+	let a = {};
+	a[mySymbol] = 'Hello'
+	// 第二种写法
+	let a = {
+		[mySymbol]: 'Hello'
+	};
+	// 第三种写法
+	let a = {};
+	Object.definePerproty(a, mySymbol, 'Hello');
+  // 以上写法都行得出同行的结果
+  a[mySymbol]  // 'Hello'
+
+  Symbol值作为对象属性名时，不能用点运算符：
+  let a = {};
+  let name = Symbol();
+  a.name = 'lili';
+  a[name] = 'lucy';
+  console.log(a.name, a[name]);   // lili, lucy
+  Symbol值作为属性名时，该属性是公开属性，不是私有属性。
+  /*
+  	这个有点类似于java中的protected属性（protected和private的区别：在类的外部都是不可以访问的，在类内的子类可以继承protected不可以继承private）
+
+		但是这里的Symbol在类外部也是可以访问的，只是不会出现在for...in、for...of循环中，也不会被Object.keys()、Object.getOwnPropertyNames()返回。但有一个Object.getOwnPropertySymbols方法，可以获取指定对象的所有Symbol属性名
+   */
+  
+
+  && Symbol.for(), Symbol.keyFor()
+  Symbol.for机制有点类似于单例模式，首先在全局中搜索有没有以该参数作为名称的Symbol值，如果有，就返回这个Symbol值，否则就新建并返回一个以该字符串为名称的Symbol值。和直接Symbol就有点不同了
+  let s1 = Symbol.for('foo');
+  let s2 = Symbol.for('foo');
+
+  s1 === s2;  // true;
+
+  Symbol.keyFor方法返回一个已登记的Symbol类型值的key。实质就是检测该Symbol是否已创建；
+  let s1 = Symbol.for("foo");
+  Symbol.keyFor(s1); // 'foo'
+
+  let s2 = Symbol('foo');
+  Symbol.keyFor(s2);  // undefined
+
+=> async
+  async function testAwati() {
+  	try {
+  		await func1();
+  		await func2();
+  		await func3();
+  	} catch (err) {
+  		console.log(err);
+  	}
+  }

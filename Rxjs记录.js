@@ -2,9 +2,9 @@
 	1.Observable可观察对象：表示一个可调用的未来值或者事件的集合。
 	2.Observer观察者：一个回调函数集合，它知道怎样去监听被Obsevable发送的值。
 	3.Subscription订阅：表示一个可观察对象的执行，主要用于取消执行。
-	4.Operators操作符：纯粹的函数，使得以函数编程的方式处理集合，比如：map,filter,concat,flatmap。
-	5.Subject主题：等同于一个事件驱动器（EventEmitter），是将一个值或者事件广播到多个观察者（Observer）的唯一途径。
-	6.Schedulers调试器：用来控制并发并且是中央集权的调度员，允许我们在发生计算时进行协调，例如 setTimeout 或 requestAnimationFrame 或其他。
+	4.Operators操作符：纯粹的函数，使得以函数编程的方式处理集合，比如：map,filter,concat,flatMap等这样的操作符来处理集合。
+	5.Subject主体：等同于一个事件驱动器（EventEmitter），是将一个值或者事件广播到多个观察者（Observer）的唯一途径。
+	6.Schedulers调度器：用来控制并发并且是中央集权的调度员，允许我们在发生计算时进行协调，例如 setTimeout 或 requestAnimationFrame 或其他。
 
 【例1】
 	通常你这样注册事件监听
@@ -148,7 +148,7 @@
 			}, 1000);
 		});
 
-	>>订单 Observables
+	>>订阅 Observables
 		observable.subscribe(x=>console.log(x));
 		完全不同于诸如addEventListener/removeEventListener事件语句柄API。使用 observable.subscribe 给定的观察者并没有作为一个监听者被注册。
 		可观察对象甚至不保存有哪些观察者。订阅是启动可观察对象执行和发送值或者事件给观察者的简单方式。
@@ -206,7 +206,7 @@
 	});
 
 =>Subscription订阅
-	什么是Subscription（订阅）？订阅是一个表示一次性资源的对象，通常是一个可观察对象的执行。订阅对象有一个重要的方法：unsubscribe，该方法不需要参数， 仅仅去废弃掉可观察对象所持有的资源。
+	什么是Subscription（订阅）？订阅是一个表示可清理资源的对象，通常是一个可观察对象的执行。订阅对象有一个重要的方法：unsubscribe，该方法不需要参数， 仅仅去废弃掉可观察对象所持有的资源。
 
 	订阅对象也可以放在一起，因些对一个订阅对象的 unsubscribe() 进行调用，可以对多个订阅进行取消。做法是：把一个订阅“加”进另一个订阅。
 
@@ -229,9 +229,8 @@
 
 	Subscriptions 还有一个 remove(otherSubscription) 方法，用来撤销一个已添加的子 Subscription 。
 
-=>Subject主题
-
-	什么是Subject？主题是允许值被多播到多个观察者的一种特殊的Observable。然而纯粹的可观察对象是单播的（每一个订阅的观察者拥有单独的可
+=>Subject主体
+	什么是Subject？主体是允许值被多播到多个观察者的一种特殊的Observable。然而纯粹的可观察对象是单播的（每一个订阅的观察者拥有单独的可
 	观察对象的执行）。
 
 	每个 Subject 都是 Observable 。 - 对于 Subject，你可以提供一个观察者并使用 subscribe 方法，就可以开始正常接收值。从观察者的角度而言，它无法判断 Observable 执行是来自普通的 Observable 还是 Subject 。
