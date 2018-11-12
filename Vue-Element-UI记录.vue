@@ -60,3 +60,18 @@
 	<el-footer>: 底栏容器。
 	
 	[注]	以上的组件采用了flex布局，使用前请确定目标浏览器是否兼容。此外，<el-container>的子元素只能是后四者，后四者的父元素也只能是<el-container>
+
+
+
+=> this.$message()
+  /** Show a success message */
+  success (text: string): ElMessageComponent
+
+  /** Show a warning message */
+  warning (text: string): ElMessageComponent
+
+  /** Show an info message */
+  info (text: string): ElMessageComponent
+
+  /** Show an error message */
+  error (text: string): ElMessageComponent		

@@ -388,3 +388,37 @@ consbyTime('111').then((res)=>{
   		console.log(err);
   	}
   }
+
++> 使用Reduce实现Promise串行执行
+	function runPromiseByQueue(myPromises) {
+		myPromises.reduce((prevPromise, nextPromise) => 
+			prevPromise.then(nextPromise.bind(this)), Promise.resolve());
+	}  
+
+	当上一个Promise开始执行（previousPromise.then），当其执行完毕后再调用下一个Promise,并作为一个新Promise返回，下次迭代就会继续这个循环。
+	const createPromise = (time, id) => {
+		return new Promise(resolve => {
+			setTimeout(() => {
+				console.log('promise', id);
+				resolve();
+			}, time);
+		})
+	}
+
+	runPromiseByQueue([
+    createPromise.bind(this, 3000, 1),
+    createPromise.bind(this, 2000, 2),
+    createPromise.bind(this, 1000, 3)
+	]);
+
+	// promise 1
+	// promise 2
+	// promise 3
+
+=> 箭头函数与普通函数的区别
+	1. 箭头函数是匿名函数，不能作为构造函数，不能使用new;
+	2. 箭头函数不能绑定auguments,取而代之用rest...解决；
+	3. 箭头函数不绑定this，会捕获其所在上下文的this值，作为自己的this值
+	4. 箭头函数能过call()或apply()方法调用一个函数时，只传入一个参数，对this并没有影响。
+	5. 箭头函数没有原型属性。
+	6. 箭头函数不能当做Generator函数，不能使用yield关键字。

@@ -54,8 +54,90 @@
 	>>array.concat(arrayX,arrayX,...,arrayX): 
 	合并多个数据，不会改变array
 
-=> 闭包案例
+=> 类型转换
+	采用Number类型的 toString()方法的基模式，可以用不同的基输出数字。例如二进制的基是2，八进制的基是8，十六进制的基是16。
+	let num = 10;
+	alert(num.toString(2));  // 输出'1010'
+	alert(num.toString(8));  // 输出'12'
+	alert(num.toString(16));  // 输出'A'
 
+=> 函数
+	*如果同时采用function命令和赋值语句声明同一个函数，最后总是采用赋值语句的定义。
+		var f = function () {
+	  	console.log('1');
+		}
+
+		function f() {
+	 	 console.log('2');
+		}
+
+		f() // 1
+
+	*函数的属性和方法
+		1.name属性
+		函数的name属性返回函数的名字
+		function f1() {}	
+		f1.name // 'f1'
+		如果是通过变量赋值定义的函数，那么name属性返回变量中
+		var f2 = function() {};
+		f2.name // 'f2'
+		但是，上面这种情况，只有变量的值是一个匿名函数时才是如此。如果变量的值是一个具名函数，那么name属性返回function关键字之后那个函数名
+		var f3 = function myName() {};
+		f3.name // 'myName'
+		2.length属性
+		函数的length属性返回函数预期传入的参数个数，即函数定义之中的参数个数。
+		function f(a, b) {}
+		f.length  // 2
+		length属性提供了一种机制，判断定义时和调用时参数的差异，以便实现面向对象编程的”方法重载“（overload）。
+
+	*函数本身的作用域
+	函数本身也是一个值，也有自己的作用域。它的作用域与变量一样，就是其声明时所在作用域，与其运行时所有的作用域无关
+		var a = 1;
+		var x = function () {
+		  console.log(a);
+		};
+
+		function f() {
+		  var a = 2;
+		  x();
+		}
+
+		f() // 1
+
+	*正常模式下，arguments对象可以在运行时修改。
+	var f = function(a, b) {
+		arguments[0] = 3;
+		arguments[1] = 2;
+		return a + b;
+	}
+
+	f(1, 1)  // 5
+
+	*严格模式下，arguments对象是一个只读对象，修改它是无效的，但不会报错。
+	var f = function(a, b) {
+		'use strict';
+		arguments[0] = 3;
+		arguments[1] = 2;
+		return a + b;
+	}
+
+	f(1, 1); // 2
+
+	*与数组的关系
+	需要注意的是，虽然arguments很像数组，但它的一个对象。数组专有的方法（比如slice和forEach)，不能在arguments对象上直接使用。
+	如果要让arguments对象使用数组方法，真正的解决方法是将arguments转为真正的数组。下面是两种常用的转换方法，slice方法和逐一填入新数组。
+	let args = Array.prototype.slice.call(arguments);
+
+	let args = [];
+	for(let i = 0; i < arguments.length; i++) {
+		args.push(arguments[i]);
+	}
+
+	**闭包
+	闭包是定义在一个函数内部的函数。
+	
+
+=> 闭包案例
 	function createScaleFunct(factor) {
 		return function(v) {
 			return _.map(v, (n)=> {
@@ -128,7 +210,29 @@
 	'string'    : 如果这个值是字符串；
 	'number'    : 如果这个值是数值；
 	'object'    : 如果这个值是对象或null；
-	'function'  : 如果这个值是函数；   
+	'function'  : 如果这个值是函数；
+
+=> 原型与原型链
+	在默认情况下，所有的原型对象都会自动获得一个 constructor（构造函数）属性，这个属性（是一个指针）指向 prototype 属性所在的函数（Person）。
+
+	ECMAScript5定义了一个名为Object.create()的方法，它创建一个对象，其中第一个参数是对象的原型。Object.create()提供第二个参数，用以对对象的属性进行进一步描述。
+	可以通过传入参数null来创建一个没有原型的新对象，但通过这种方式创建的对象不会继承任何东西，甚至不包括基础方法，比如toString()，也就是说，它将不能和“+”运算符一起正常工作。
+	>>> 通过原型继承创建一个新对象
+	// inhert()返回一个继承自原型对象p的属性的新对象。
+	// 这里使用ECMAScript5中的Object.create函数（如果存在的话）   
+	// 如果不存在Object.create()，则退化为其他方法
+	function inherit(p) {
+		if (p == null) throw TypeError(); // p是一个对象，但不能是空对象
+		if (Object.create) {
+			return Object.create(p);
+		}
+
+		let t = typeof p;
+		if (t !== 'object' && t !== 'function') throw TypeError();
+		function f() {};
+		f.prototype = p;
+		return new f();
+	}
 
 => js面向对象
 	
@@ -437,7 +541,7 @@
 
 		alert(person.friends);  // 'Shelby, Court, Van, Rob, Barbie'
 
-		Object.create()方法的第二个参数与Object.definedProperties()方的第二个参数格式相同：每个属性都是通过自己的描述符定义的。
+		Object.create()方法的第二个参数与Object.defineProperties()方的第二个参数格式相同：每个属性都是通过自己的描述符定义的。
 		以这种方式指定的任何属性都会覆盖原型对象上的同名属性。
 
 		let person = {
@@ -680,6 +784,62 @@
 	// send 方法发送请求，由于此请求是异步的，该方法立刻返回
 	oReq.send(null);
 
+=> fetch的基本用法
+ 	// url 必选 ，options 可选
+ 	fetch('/some/url', {
+ 		method: 'get'
+ 	}).then(res => {
+
+ 	}).catch(err => {
+
+ 	})
+
+ 	>> 请示头
+ 	let headers = new Headers({
+ 		'Context-Type': 'text/plain',
+ 		'X-My-Custom-Header': 'CustomValue'
+ 	});	
+
+ 	// 添加(append)请求头信息
+ 	headers.append('Context-Type', 'text/plain');
+ 	headers.append('X-My-Coutom-Header', 'CustomValue');
+
+ 	// 判断(had)，获取(get)，以及修改(set)请求头的值
+ 	headers.has('Content-Type'); // true
+ 	headers.get('Content-Type'); // text/plain
+ 	headers.set('Content-Type', 'application/json');
+
+ 	// 删除某条请求头信息（a header）
+ 	headers.delete('X-My-Custom-Header');
+
+ 	需要创建一个Request对象来包装请求头：
+ 	let request = new Request('/some-url', {
+ 		headers: new Headers({
+ 			'Content-Type': 'text/plain'
+ 		})
+ 	});
+
+ 	fetch(reqest).then(res => {});
+
+ 	Request 简介
+ 	Request对象表示一次fetch调用的请求信息。传入Request参数来调用fetch, 可以执行很多自定义请求的高级用法：
+ 	method: 支持GET, POST, PUT, DELETE, HEAD
+ 	url: 请求的URL
+ 	headers: 对应Headers对象
+ 	body: 请求参数（JSON.stringify过的字符串或'name=jim&age=22'格式）
+ 	mode: 是否允许跨域请求，以及哪上些响应的属性是可读的。可选值：
+ 		cors: (默认)，允许跨域请求，将遵守CORS协议
+ 		no-cors: 该模式允许来自CDN的脚本，其他域的图片和其他一些跨域资源。前提条件是method只能是GET,POST,HEAD，此外，如果ServiceWorkers拦截了这些请求，它不能随意添加或者修改除这些之外Header属性。第三，js不能访问Response对象中的任何属性，这确保了跨域时ServiceWorkers的安全和隐私信息泄露问题。
+ 		some-origin: 如果是一个跨域请求，将返回一个error
+ 		navigate: 支持导航的模式，仅用于html导航
+	credentials: 设置cookies	是否随意请求一起发送，可选值
+		omit: (默认)，不发送Cookie。
+		same-origin: 同域下自动发送Cookie。
+		include: 始终发送Cookie，即使是跨域。
+	redirect: 定义重定向处理方式。可选值：follow（默认），error，manual
+	integrity: 子资源完整性值
+	cache: 设置缓存模式。可选值	
+
 => 注册 Service Worker
 	当浏览器对 Service Worker 提供原生支持时，我们便可以在页面加载后注册指定的 JavaScript 文件，并运行在后台线程之中，以下代码是这一过程的实例。	
 		// 检查浏览器是否对 serviceWorker 有原生支持
@@ -833,3 +993,143 @@
 	}).catch(err => {
 		// ...
 	});
+
+=> 在 Node.js 中，eventLoop是基于libuv的。通过查看libuv的文档可以发现整个eventLoop 分为 6 个阶段：
+	1.timers: 定时器相关任务，node中我们关注的是它会执行 setTimeout() 和 setInterval() 中到期的回调
+	2.pending callbacks: 执行某些系统操作的回调
+	3.idle, prepare: 内部使用
+	4.poll: 执行 I/O callback，一定条件下会在这个阶段阻塞住
+	5.check: 执行 setImmediate 的回调
+	6.close callbacks: 如果 socket 或者 handle 关闭了，就会在这个阶段触发 close 事件，执行 close 事件的回调
+
+
+=> Object.defineProperty() && Object.defineProperties();
+	ECMAS-262第5版在定义只有内部采用的特性时，提供了描述了属性特征的几种属性。ECMAScript对象中目前存在的属性描述符主要有两种，数据描述符(数据属性)和存取描述符(访问器属性)，数据描述符是一个拥有可写或不可写值的属性。存取描述符是由一对 getter-setter 函数功能来描述的属性。	
+
+	& 数据（数据描述符）属性
+		数据属性有4个描述内部属性的特性
+		[[Configurable]]
+		表示能否通过delete删除此属性，能否修改属性的特性，或能否把属性修改为访问器属性，如果直接使用字面定义对象，默认为 true;
+		[[Enumerable]]
+		表示该属性是否可枚举，即是否通过for-in循环或Object.keys()返回属性，如果直接使用字面值定义对象，默认值为 true;
+		[[Writable]]
+		能否修改属性的值，如果直接使用字面量定义对象，默认值为 true;
+		[[Value]]
+		该属性对应的值，默认为undefined
+
+	& 访问器（存取描述符）属性
+		[[Configurable]]
+		和数据属性的[[Configurable]]一样，表示能否通过delete删除此属性，能否修改属性的特性，或能否修改把属性修改为访问器属性，如果直接使用字面量定义对象，默认值为true;
+		[[Enumerable]]	
+		和数据属性的[[Configurable]]一样，表示该属性是否可枚举，即是否通过for-in循环或Object.keys()返回属性，如果直接使用字面量定义对象，默认值为true;
+		[[Get]]
+		一个给属性提供 getter 的方法(访问对象属性时调用的函数,返回值就是当前属性的值)，如果没有 getter 则为 undefined。该方法返回值被用作属性值。默认为 undefined；
+		[[Set]]
+		一个给属性提供 setter 的方法(给对象属性设置值时调用的函数)，如果没有 setter 则为 undefined。该方法将接受唯一参数，并将该参数的新值分配给该属性。默认为 undefined
+
+	>> Object.defineProperty()
+	方法会直接在一个对象上定义一个新的属性，或者修改一个对象的现有属性，并返回这个对象。如果不指定configurable,
+	writeable,enumeable，则这些属性的默认值为 false, 如果不指定value, get, set， 则这此属性的默认什为 undefined;
+	Object.defineProperty(obj, prop, descriptor)
+	obj: 需要被操作的目标对象
+	prop: 目标对象需要定义或修改的属性的名称
+	descriptor: 将被定义或修改的属性的描述符
+
+	let obj = new Object();
+
+	Object.defineProperty(obj, 'name', {
+		configurable: false,
+		writable: true,
+		enumerable: true,
+		value: '张三'
+	})
+
+	console.log(obj.name) // 张三
+
+	>> Object.defineProperties()
+	方法直接在一个对象上定义一个或多个新的属性或修改现有的属性，并返回该对象。
+	Object.defineProperties(obj, props)
+	obj: 将要被添加属性或修改属性的对象；
+	props: 该对象的一个或多个键值对定义了将要为对象添加或修改的属性的具体配置；
+
+	let obj = new Object();
+
+	Object.defineProperties(obj, {
+		name: {
+			value: '张三',
+			configurable: false,
+			writeable: true,
+			enumerable: true
+		},
+		age: {
+			value: 18,
+			configurable: true
+		}
+	});
+
+	console.log(obj.name, obj.age); // 张三，18
+
+  .. 简易的数据绑定 get set 
+  `
+		<body>
+			<p>
+				input=>
+				<input type="text" id='input1'>
+			</p>
+			<p>
+        input2=>
+        <input type="text" id="input2">
+	    </p>
+	    <div>
+	        我每次比input1的值加1=>
+	        <span id="span"></span>
+	    </div>
+		</body>
+  `	
+
+  let oInput1 = document.getElemenetById('input1');
+  let oInput2 = document.getElemenetById('input2');
+  let oSpan = document.getElemenetById('span');
+
+  let obj = {};
+  Object.defineProperties(obj, {
+  	val1: {
+  		configurable: true,
+  		get() {
+  			oInput1.value = 0;
+  			oInput2.value = 0;
+  			oSpan.innerHTML = 0;
+  			return 0;
+  		},
+  		set(newValue) {
+  			oInput2.value = newValue;
+  			oSpan.innerHTML = Number(newValue) ? Number(newValue) : 0;
+  		}
+  	},
+  	val2: {
+  		configurable: true,
+  		get() {
+  			oInput1.value = 0;
+  			oInput2.value = 0;
+  			oSpan.innerHTML = 0;
+  			return 0;
+  		},
+  		set(newValue) {
+  			  oInput1.value = newValue;
+          oSpan.innerHTML = Number(newValue) + 1;
+  		}
+  	}
+  })
+
+  oInput1.value = obj.val1;
+  oInput1.addEventListener('keyup', () => {
+  	obj.val1 = oInput1.value;
+  }, false);
+  oInput2.addEventListener('keyup', () => {
+  	obj.val2 = oInput2.value;
+  }, false);
+
++> 根据js的语法，要满足===的条件如下：
+	1.如果是引用类型，则两个变量必须指向同一个对象（同一个地址）；
+	2.如果是基本类型，则两个变量除了类型必须相同外，值还必须相等；
+	  

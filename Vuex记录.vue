@@ -393,7 +393,7 @@
 		<script>
 			actions: {
 				actionB ({commit}) {
-					return dispatch('actionA').then(() => {
+					return dispatch('weactionA').then(() => {
 						commit('someOtherMutation');
 					});
 				}
