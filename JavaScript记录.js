@@ -59,7 +59,7 @@
 	let num = 10;
 	alert(num.toString(2));  // 输出'1010'
 	alert(num.toString(8));  // 输出'12'
-	alert(num.toString(16));  // 输出'A'
+	alert(num.toString(16));  // 输出'A '
 
 => 函数
 	*如果同时采用function命令和赋值语句声明同一个函数，最后总是采用赋值语句的定义。
