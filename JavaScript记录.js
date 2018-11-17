@@ -1027,6 +1027,9 @@
 		[[Set]]
 		一个给属性提供 setter 的方法(给对象属性设置值时调用的函数)，如果没有 setter 则为 undefined。该方法将接受唯一参数，并将该参数的新值分配给该属性。默认为 undefined
 
+		1.在使用Object.defineProperty、Object.defineProperties 或 Object.create 函数的情况下添加数据属性，writable、enumerable和configurable默认值为false。
+		2.使用对象直接量创建的属性，writable、enumerable和configurable特性默认为true。
+
 	>> Object.defineProperty()
 	方法会直接在一个对象上定义一个新的属性，或者修改一个对象的现有属性，并返回这个对象。如果不指定configurable,
 	writeable,enumeable，则这些属性的默认值为 false, 如果不指定value, get, set， 则这此属性的默认什为 undefined;
@@ -1128,6 +1131,131 @@
   oInput2.addEventListener('keyup', () => {
   	obj.val2 = oInput2.value;
   }, false);
+
+=> proxy
+	使用defineProperty只能重定义属性的读取（get）和设置（set）行为，到了ES6，提供了Proxy，可以重新定义更多的行为，比如in,delete,函数调用等更多行为。
+
+	let proxy = new Proxy(target, handler);
+	proxy对象的所有用法，都是上面的这种形式，不同的只是handler参数的方法。其中，new Proxy() 表示生成一个Proxy实例，target参数表示所要拦截的目标对象，handler参数也是一个对象，用来定制拦截行为；
+	let proxy = new Proxy({}, {
+		get(obj, prop) {
+			console.log('设置get操作');
+			return obj[prop];
+		},
+		set(obj, prop, value) {
+			console.log('设置set操作');
+			obj[prop] = value;
+		}
+	});
+
+	proxy.time = 35; //  设置set操作
+	console.log(proxy.time); // 设置get操作  // 35
+
+
+=> Watch API
+	Html中有个span标签和button标签
+	`
+		<span id='container'>1</span>
+		<button id='button'>点击加1</button>
+	`
+	当单击按钮的时候，span标签加1。
+
+	>>传统的做法
+	document.getElemenetById('button').addEventListener('click', () => {
+		let container = document.getElemenetById('container');
+		container.innerHTML = Number(container.innerHTML+1);
+	});
+
+	>>defineProperty
+	let obj = {
+		value: 1
+	};
+
+	let value = 1;
+
+	Object.defineProperties(obj, 'value', {
+		get() {
+			return value;
+		},
+		set(newValue) {
+			value = newValue;
+			documnet.getElemenetById('container').innerHTML = newValue;
+		}
+	});
+
+	document.getElemenetById('button').addEventListener('click', () => {
+		obj.value += 1;
+	});
+
+	然而，现在的写法，我们还需要单独声明一个变量存储 obj.value 的值，因为如果你在 set 中直接 obj.value = newValue 就会陷入无限的循环中。此外，我们可能需要监控很多属性值的改变，要是一个一个写，也很累呐，所以我们简单写个 watch 函数。使用效果如下：
+	let obj = {
+		value: 1
+	};
+
+	watch(obj, 'num', (newValue) => {
+		document.getElemenetById('container').innerHTML = newValue;
+	});
+
+	document.getElemenetById('button').addEventListener('click', () => {
+		obj.value += 1;
+	});
+
+	watch函数
+	(function() {
+		function watch(obj, name, func) {
+			let value = obj[name];
+
+			Object.defineProperty(obj, name, {
+				get() {
+					return value;
+				},
+				set(newValue) {
+					value = newValue;
+					func(value)
+				}
+			});
+
+			if (value) obj[name] = value;
+		}
+		this.watch = watch;
+	})();
+
+	>>> watch API 优化
+	我们使用 proxy 再来写一下 watch 函数。使用效果如下： 
+	(function() {
+	    var root = this;
+
+	    function watch(target, func) {
+
+	        var proxy = new Proxy(target, {
+	            get: function(target, prop) {
+	                return target[prop];
+	            },
+	            set: function(target, prop, value) {
+	                target[prop] = value;
+	                func(prop, value);
+	            }
+	        });
+
+	        if(target[name]) proxy[name] = value;
+	        return proxy;
+	    }
+
+	    this.watch = watch;
+	})()
+
+	var obj = {
+	    value: 1
+	}
+
+	var newObj = watch(obj, function(key, newvalue) {
+	    if (key == 'value') document.getElementById('container').innerHTML = newvalue;
+	})
+
+	document.getElementById('button').addEventListener("click", function() {
+	    newObj.value += 1
+	});
+
 
 +> 根据js的语法，要满足===的条件如下：
 	1.如果是引用类型，则两个变量必须指向同一个对象（同一个地址）；
