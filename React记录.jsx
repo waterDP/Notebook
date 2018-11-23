@@ -265,7 +265,7 @@ dangerouslySetInnerHTML: 它的作用就是避免 React 转义字符，在确定
 		}
 
 		componentDidMount() {
-			document.body.addEventListener('click', (e)=> {
+			document.body.addEventListener('click', (e) => {
 				this.setState({
 					active: false
 				})
@@ -311,13 +311,13 @@ dangerouslySetInnerHTML: 它的作用就是避免 React 转义字符，在确定
 
 	$$不要将合成事件与原生事件混用
 	componentDidMount() {
-		document.body.addEventListener('click', (e)=>{
+		document.body.addEventListener('click', (e) =>{
 			this.setState({
 				active: false;
 			})
 		});
 
-		document.querySelector('.code').addEventListener('click', (e)=>{
+		document.querySelector('.code').addEventListener('click', (e) => {
 			e.stopPropagation();
 		})     
 	}
@@ -330,7 +330,7 @@ dangerouslySetInnerHTML: 它的作用就是避免 React 转义字符，在确定
 
 	$$通过e.target判断来避免
 	componentWillUnmount() {
-		document.body.addEventListener('click', (e)=>{
+		document.body.addEventListener('click', (e) => {
 			if(e.target. && e.target.matches('div.code')) {
 				return;
 			}
@@ -611,7 +611,7 @@ $$ 非受控组件
 			render() {
 				return (
 					<div>
-						{list.map((entry, index)=>(
+						{list.map((entry, index) => (
 							<listItem key={`list-${index}` value={entry.text} />
 						))}
 					</div>
@@ -965,7 +965,7 @@ class CommentListContainer extends Component {
 
 function CommentList({comments}) {
 	return (
-		{comments.map((entry, i)=>{
+		{comments.map((entry, i) => {
 			<li key={`response-${i}`} className="comment-item">
 				<p className="comment-item-name">{entry.name}</p>
 				<p className="comment-item-content">{entry.content}</p>
@@ -1038,7 +1038,7 @@ function CommentList({comments}) {
 
 			let middleAPI = {
 				getState: store.getState,
-				dispatch: (action)=>dispatch(action)
+				dispatch: (action) => dispatch(action)
 			};
 			chain = middlewares.map(middlewares => middleware(middlewareAPI));
 			dispatch = compose(...chain)(store.dispatch);
