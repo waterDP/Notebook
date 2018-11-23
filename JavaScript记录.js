@@ -135,7 +135,7 @@
 
 	**闭包
 	闭包是定义在一个函数内部的函数。
-	
+	闭包是指有权访问另一个函数作用域的函数。
 
 => 闭包案例
 	function createScaleFunct(factor) {
@@ -763,11 +763,11 @@
 	// open 方法初始化请求方法、地址，第三个参数 true 声明进行异步请求
 	oReq.open("GET", "http://www.jianshu.com/", true);
 	// 请求的整个过程中有五种状态，且同一时刻只能存在一种状态：
-	// 1. 未打开
-	// 2. 未发送
-	// 3. 已获取响应体
-	// 4. 正在下载响应体
-	// 5. 请求完成
+	// 0. 未打开
+	// 1. 未发送
+	// 2. 已获取响应体
+	// 3. 正在下载响应体
+	// 4. 请求完成
 	// 当请求状态发生改变时，触发 onreadystatechange 会被调用
 	oReq.onreadystatechange = function (oEvent) {
 	  // 如果已经开始下载响应体了
@@ -783,6 +783,80 @@
 	};
 	// send 方法发送请求，由于此请求是异步的，该方法立刻返回
 	oReq.send(null);
+
++> 封装一个ajax对象
+	const ajax = {};
+	ajax.httpRequest = () => {
+		// 判断是否支持XMLHttpRequest对象
+		// Chrome,Firefox,Opera, 8.0+, Safari
+		if (window.XMLHttpRequest) {
+			return new XMLHttpRequest();
+		}
+		// 兼容IE浏览器
+		const versions = [
+		 	"MSXML2.XmlHttp.6.0",
+      "MSXML2.XmlHttp.5.0",
+      "MSXML2.XmlHttp.4.0",
+      "MSXML2.XmlHttp.3.0",
+      "MSXML2.XmlHttp.2.0",
+      "Microsoft.XmlHttp"
+		];
+
+		// 定义局部变量xhr,储存IE浏览器的ActiveXObject对象
+		let xhr;
+		for (let i = 0; i < versions.lenght; i++) {
+			try {
+				xhr = new ActiveXObject(versions[i]);
+			} catch (err) {
+
+			}
+		} 
+		return xhr;
+	};
+
+	ajax.send = (url, callback, method, data, async) => {
+		// 默认异步
+		if (async === undefined) {
+			async = true;
+		}
+		let httpRequest = ajax.httpRequest();
+		// 初始化HTTP请求
+		httpRequest.open(method, url, async);
+		// onreadystatechange函数
+		httpRequest.onreadystatechange = () => {
+			// readyState的值等于4，从服务器拿到数据
+			if (httpRequest.readState === 4) {
+				// 回调函数响应数据
+				callback(httpRequest.responseText);
+			}
+		}
+	}	
+	
+	// 实现GET请求
+	ajasx.get = (url, data, callback, aync) => {
+		const query = [];
+		for (let key in data) {
+			query.push(`${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`);
+		}
+		ajax.send(`${url}${query.leng ? `?${query.join('&')}` : ''}`, callback, 'GET', null, async);
+	}
+
+	// 实现POST请求
+	ajax.post = (url, data, callback, async) => {
+		const query = {};
+		for {let key in data} {
+			query.push(`${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`);
+		}
+		ajax.send(url, callback, 'POST', query.join('&'), async);
+	}
+
++> ajax请求的5个readyState状态
+	状态0 Uninitialized 初始化状态。XMLHttpRequest对象创建或已被 abort()方法重置。
+	状态1 Open Open()方法已调用，但是send()方法未调用。请求还未被发送。	  
+	状态2 Sent Send()方法已调用，Http请求已发送到到Web服务器。未接收到响应。
+	状态3 Receiving 所有响应头都已经接收到。响应体开始接收未完成。
+	状态4 Loaded HTTP响应已经完全接收。
+	readyState的值不会递减，除非当一个请求在处理的过程中的时候调用了 abort() 或 open()方法。每次这个属性的值增加的时候，都会触发onreadystatechange事件。	
 
 => fetch的基本用法
  	// url 必选 ，options 可选
@@ -1260,4 +1334,56 @@
 +> 根据js的语法，要满足===的条件如下：
 	1.如果是引用类型，则两个变量必须指向同一个对象（同一个地址）；
 	2.如果是基本类型，则两个变量除了类型必须相同外，值还必须相等；
-	  
+
++> 变量对象的创建，依次经历了以下几个过程。
+	1.建立arguments对象。检查当前上下文的参数，建立该对象下的属性的属性值。
+	2.检查当前上下文中的函数声明，也就是使用function关键字声明的函数。在变量对象中以函数名建立一个属性，属性值为指向该函数所在内存地址的引用，如果函数的属性已存在，那么该属性将会被新的引用覆盖。	
+	3.检查当前上下文中的变量声明，每找到一个变量声明，就在变量对象中以变量名建立一个属性，属性值为undefined。如果该变量名的属性已存在，为了防止同名的函数被修改为undefined，则会直接跳过，原属性值不会被修改。
+
+=> 事件循环机制
+	任务：
+		1.任务队列又分为macro-task（宏任务）与micro-task （微任务），在最新的标准中，它们分别称为task和job。
+		2.macro-task大概包括：script（整体代码），setTimeout, setInterval, setImediate,I/O,UI rendering;
+		3.micro-task大概包括：process.nextTick, Promise, Object.observe（已废弃）,MutationObserver（html5新特征）
+		4.setTimeout/Promise等我们称之为任务源。而进入任务队列的是他们指定的具体执行任务。
+		5.来自不同的任务源的任务会进入到不同的任务队列。其中setTimeout与setInterval是同源的。
+		5.事件循环顺序，决定了JavaScript代码的执行顺序。它从script开始第一次循环。之后全局上下文进入函数调用栈。直到调用栈清空(只剩全局)，然后执行所有的micro-task。当所有的micro-task执行完毕之后。循环再次从macro-task开始，找到其中的一个任务执行完毕，然后再执行所有的micro-task,这样一直循环下去。
+		6.其中每一个任务的执行，无论是macro-task还是micro-task，都是借助函数借用栈来完成。
+
+
+>>> [片断]: 用循环依次输出1到5，每一次输出的时间间隔为1秒；
+	1. Promise 版本
+		const tasks = [];  // 这里存放异步操作的Promise
+		const output = (i) => new Promise(resolve => {
+		  setTimeout(() => {
+		    console.log(new Date, i);
+		    resolve();
+		  }, 1000*i);
+		});
+
+		// 生成所有的异步操作
+		for(var i=0; i < 5; i++) {
+		  tasks.push(output(i));
+		}
+
+		// 异步操作完成之后，输出最后的i
+		Promise.all(tasks).then(() => {
+		  setTimeout(() => {
+		    console.log(new Date, i);
+		  }, 1000);
+		}); 		
+	2. async 版本	
+		// 其他语言中的sleep，实际上可以是任何异步操作
+		const sleep = (timeoutMS) => new Promise(resolve => {
+			setTimeout(resolve, timeoutMS);
+		});
+
+		(async () => { // 声明即执行的async函数表达式
+			for (var i = 0; i < 5; i++) {
+				await sleep(1000);
+				console.log(new Date(), i);
+			}
+
+			await sleep(1000);
+			console.log(new Date(), i);
+		})();

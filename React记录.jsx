@@ -226,7 +226,7 @@ dangerouslySetInnerHTML: 它的作用就是避免 React 转义字符，在确定
 		class NativeEventDmo extends Component {
 
 			componentDidMount() {
-				this.refs.button.addEventListener('click', (e)=>{
+				this.refs.button.addEventListener('click', (e) => {
 					this.handleClick(e);
 				})     
 			}

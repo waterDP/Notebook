@@ -16,6 +16,22 @@ const add = a => b => a + b;
 const add2 = add(2);
 add2(1);
 // 3
+// 
+
+
+=>  一个阶乘的尾递归优化
+  传统的写法
+  function factorial(n) {
+  	if (n === 1) return 1;
+  	return n * factorial(n-1);
+  }
+
+  尾递归
+  function factorial(n, total) {
+  	if (n === 1) return total;
+  	return factoiral(n - 1, total);
+  }
+  factorial(5, 1);
 
 /*=================================================*/
 function splat(fun) {
