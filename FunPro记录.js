@@ -16,7 +16,6 @@ const add = a => b => a + b;
 const add2 = add(2);
 add2(1);
 // 3
-// 
 
 
 =>  一个阶乘的尾递归优化

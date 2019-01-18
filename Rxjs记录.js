@@ -830,3 +830,89 @@ Rx.Observable.fromEvent(imgStream, 'line')  // 将行读取转换为Rx的事件�
 		console.log(err);
 		console.log('!!!!!ERROR!!!!');
 	});
+
+<例> 每隔一秒，输出一个递增的数字（1， 2， 3）	
+	import { Observable } from "rxjs";
+
+	const onSubscribe = observer => {
+	  let number = 1;
+	  const handle = setInterval(() => {
+	    observer.next(number++);
+	    if (number > 3) {
+	      clearInterval(handle);
+	    }
+	  }, 1000);
+	}
+
+	const source$ = new Observable(onSubscribe);
+
+	const theObserver = {
+	  next(item) {
+	    console.log(item);
+	  }
+	}
+
+	source$.subscribe(theObserver);
+
+<操作符函数的实现>
+	1.返回一个全新的Observable对象。 // 无副作用	
+	2.对上游和下游的订阅及退订处理。
+	3.处理异常情况。
+	4.及时释放资源。
+
+	map 的实现
+	function map(project) {
+		return new Observable(observer => {
+			const sub = this.subscribe({
+				next(v) {
+					try {
+						observer.next(project(v));
+					} catch(e) {
+						observer.error(e);
+					}
+				},
+				error(e) {
+					return observer.error(e);
+				}, 
+				complete() {
+					return observer.complete();
+				}
+			});
+			return {
+				unsubscribe() {
+					sub.nusubscribe();
+				}
+			}
+		})
+	}
+
+	>> 关联Observable
+	1.给Observable打补丁
+	Observable.prototype.map = map;
+	2.使用bind绑定特定Observable对象
+	const operator = map.bind(source$);
+	const result$ = operator(x => x * 2);
+
+	const result$ = source$::map(x => x * 2)::(x => x + 1);
+	3.使用lift
+	function map(project) {
+		return this.lift(function(source$) {
+			return source$.subscribe({
+				next(v) {
+					try {
+						this.next(project(v));
+					} catch(e) {
+						this.error(e);
+					}
+				},
+				error(e) {
+					return this.error(e);
+				},
+				complete() {
+					return this.complete();
+				}
+			})
+		})
+	}
+
+	Observable.prototype.map = map;
