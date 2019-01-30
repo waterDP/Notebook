@@ -2462,4 +2462,14 @@ process.nextTick(): 它的作用是延迟一个函数的执行，直到下一次
 	3.async.waterfall([], callback)：同样是顺序执行异步操作，和前两个方法的区别是每一个异步操作都会把结果传递给下一个调用。
 
 	
-	
+	设置yarn的缓存目录
+	yarn config set cache-folder <path>
+
+	yarn cache ls
+	列出当前缓存的包列表。
+
+	yarn cache dir
+	显示缓存数据的目录。
+
+	yarn cache clean
+	清除所有缓存数据。
