@@ -1,0 +1,7 @@
+npm and yarn:
+	rimraf node_modules   删除node_modules 
+	yarn cache clean      清除yarn全局缓存
+
+
+git:
+	git remote update origin --prune 本地分支与远端分支同步
