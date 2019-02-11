@@ -1512,6 +1512,10 @@
 		*/
 
 => 装饰者模式
+	
+	定义：给对象动态地增加职责的方式被为装饰都模式
+
+	..模拟传统面向对象语言的装饰者模式	
 	假设我们编写一个飞机大战的游戏，随着经验值的增加，我们操作的飞机对象可以升级成更厉害的飞机，一开始这些飞机只能发射普通的子弹，升到第二级时可以发射导弹，升级到第三级时可以发身原子弹。
 	下面来看代码实现，首先是原始的飞机类：
 	let Plane = function () {}
@@ -1546,5 +1550,126 @@
 
 	plane.fire();
 	// 分别输出：发身射普通子弹、发射导弹、发射原子弹
+	// 
+	.. javascript装饰器
+	let plane = {
+		fire: function () {
+			console.log('发射普通子弹')
+		}
+	};
 
-	
+	let missileDecorator = function () {
+		console.log('发射导弹');
+	};
+
+	let atomDecorator = function () {
+		console.log('发射原子弹');
+	};
+
+	let fire1 = plain.fire;
+
+	plain.fire = function() {
+		fire1();
+		missileDecorator();
+	}
+
+	let fire2 = plane.fire;
+	plain.fire = function() {
+		fire2();
+		atomDecorator();
+	}
+
+	plain.fire();
+	// 分别输出： 发射普通子弹，发射导弹，发射原子弹
+	// 
+	>> 装饰函数
+		javascript中，几乎所有的一切都是对象，其中函数又称为一等对象。在平时的开发工作中，也许大部分时间都在和函数打交道。在JavaScript中可以很方便的给某个对象扩展属性和方法，但却很难在不改动某个函数原代码的情况下，给该函数添加一些额外的功能。在代码运行期间，我们很难切入某个函数的执行环境。
+
+		要想为函数添加一些功能，最简单粗暴的方式就是直接改写该函数，但这是最差的办法，直接违反开放-封闭原则；
+		let a = function() {
+			alert(1);
+		}
+		//改成
+		a = function() {
+			alert(1);
+			alert(2);
+		}
+
+		很多时候我们不想去碰原函数，也许原函数是由其他同事编写的，里面的实现非常杂乱。甚至在古老的项目中，这个函数的原代码被隐藏在一个我们不愿碰触的一个阴暗角落。 现在需要一个办法，在不改变函数源代码的情况下，能给函数增加功能，这正是开放-封闭原则给我们指出的一条光明道路。
+
+
+		const a = function() {
+			alert(1);
+		}
+
+		const _a = a;
+
+		a = function() {
+			_a();
+			alert(2);
+		}
+
+		a();
+
+		这是实际开发中很常见的一种做法，比如我们想给 window 绑定 onload 事件，但是又不确定这个事件是不是已经被其他人绑定过，为了避免覆盖掉之前的 window.onload 函数中的行为，我们一般都会先保存好原先的 window.onload，把它放入新的 window.onload 里执行：0
+
+		window.onload = function() {
+			alert();
+		}
+
+		let _onload = window.onload || function() {};
+
+		window.onload = function() {
+			_onload();
+			alert(2);
+		}
+
+		这样的代码当然是符合开放封闭原则的，我们在增加新功能的时候，确实没有修改原来的window.onload 代码，但是这种方式存在以下两个问题。
+		1.必须维护_onload这个中间变量，虽然看起来并不起眼，但如果函数的装饰较长，或者需要的函数变多，这些中间变量的数量也会越来越多。
+		2.其实还遇到了this被劫持的问题，在window.onload的例子中没有这个烦恼，是因为调用变通函数_onload时，this也指向window，跟调用window.onload是一样（函数作为对象的方法被调用时，this指向该对象，所以此处this也只指向window）
+
+	>> 用AOP装饰函数 （AOP面向切面编程）
+		首先给出Function.prototype.before 方法和 Function.prototype.after方法：
+		Function.prototype.before = function(fn) {
+			const _self = this; // 保留原函数的引用；
+			return function() {
+				/*
+				 * 执行新函数，且保证this不被劫持，新函数接受的参数也会原封不动地传入原函数
+				 * 新函数在原函数之前执行
+				 */
+				fn.apply(this, arguments);
+				/*
+				 * 执行原函数并返回原函数的执行结果
+				 * 并且保证this不被劫持
+				 */
+				return _self.apply(this, arguments);
+			}
+		}
+
+		Function.prototype.after = function(fn) {
+			const _self = this;
+			return function() {
+				let ret = _self.apply(this, arguments);
+				fn.apply(this, arguments);
+
+				return ret;
+			}
+		}
+
+		window.onload的例子，看看用 Function.prototype.before 来增加新的window.onload
+		window.onload = function () {
+			alert(2);
+		}
+
+		window.onload = (window.onload || function() {}).after(function() {
+			alert(2);
+		}).after(function() {
+			alert(3);
+		}).after(function() {
+			alert(4);
+		});
+
+=> 状态模式
+			
+
+		
