@@ -1106,7 +1106,7 @@
 
 	>> Object.defineProperty()
 	方法会直接在一个对象上定义一个新的属性，或者修改一个对象的现有属性，并返回这个对象。如果不指定configurable,
-	writeable,enumeable，则这些属性的默认值为 false, 如果不指定value, get, set， 则这此属性的默认什为 undefined;
+	writable,enumerable，则这些属性的默认值为 false, 如果不指定value, get, set， 则这此属性的默认什为 undefined;
 	Object.defineProperty(obj, prop, descriptor)
 	obj: 需要被操作的目标对象
 	prop: 目标对象需要定义或修改的属性的名称
@@ -1207,7 +1207,7 @@
   }, false);
 
 => proxy
-	使用defineProperty只能重定义属性的读取（get）和设置（set）行为，到了ES6，提供了Proxy，可以重新定义更多的行为，比如in,delete,函数调用等更多行为。
+	使用defineProperty只能重定义属性的读取（get）和设置（set）行为，到了ES6，提供了Proxy，可以重新定义更多的行为，比如in,delete函数调用等更多行为。
 
 	let proxy = new Proxy(target, handler);
 	proxy对象的所有用法，都是上面的这种形式，不同的只是handler参数的方法。其中，new Proxy() 表示生成一个Proxy实例，target参数表示所要拦截的目标对象，handler参数也是一个对象，用来定制拦截行为；
@@ -1237,7 +1237,7 @@
 	>>传统的做法
 	document.getElemenetById('button').addEventListener('click', () => {
 		let container = document.getElemenetById('container');
-		container.innerHTML = Number(container.innerHTML+1);
+		container.innerHTML = Number(container.innerHTML) + 1;
 	});
 
 	>>defineProperty
@@ -1247,7 +1247,7 @@
 
 	let value = 1;
 
-	Object.defineProperties(obj, 'value', {
+	Object.defineProperty(obj, 'value', {
 		get() {
 			return value;
 		},
@@ -1261,12 +1261,12 @@
 		obj.value += 1;
 	});
 
-	然而，现在的写法，我们还需要单独声明一个变量存储 obj.value 的值，因为如果你在 set 中直接 obj.value = newValue 就会陷入无限的循环中。此外，我们可能需要监控很多属性值的改变，要是一个一个写，也很累呐，所以我们简单写个 watch 函数。使用效果如下：
+	然而，现在的写法，我们还需要单独声明一个变量存储 obj.value 的值，因为如果你在 set 中直接 obj.value = newValue   watch 函数。使用效果如下：
 	let obj = {
 		value: 1
 	};
 
-	watch(obj, 'num', (newValue) => {
+	watch(obj, 'value', (newValue) => {
 		document.getElemenetById('container').innerHTML = newValue;
 	});
 
@@ -1297,36 +1297,31 @@
 	>>> watch API 优化
 	我们使用 proxy 再来写一下 watch 函数。使用效果如下： 
 	(function() {
-	    var root = this;
+    function watch(target, func) {
+      let proxy = new Proxy(target, {
+        get(target, prop) {
+          return target[prop];
+        },
+        set(target, prop, value) {
+          target[prop] = value;
+          func(prop, value);
+        }
+      });
 
-	    function watch(target, func) {
+      return proxy;
+    }
+    this.watch = watch;
+	})();
 
-	        var proxy = new Proxy(target, {
-	            get: function(target, prop) {
-	                return target[prop];
-	            },
-	            set: function(target, prop, value) {
-	                target[prop] = value;
-	                func(prop, value);
-	            }
-	        });
-
-	        if(target[name]) proxy[name] = value;
-	        return proxy;
-	    }
-
-	    this.watch = watch;
-	})()
-
-	var obj = {
+	let obj = {
 	    value: 1
 	}
 
-	var newObj = watch(obj, function(key, newvalue) {
-	    if (key == 'value') document.getElementById('container').innerHTML = newvalue;
+	let newObj = watch(obj, (key, newValue) => {
+	    if (key == 'value') document.getElementById('container').innerHTML = newValue;
 	})
 
-	document.getElementById('button').addEventListener("click", function() {
+	document.getElementById('button').addEventListener("click", () => {
 	    newObj.value += 1
 	});
 
