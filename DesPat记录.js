@@ -1670,6 +1670,101 @@
 		});
 
 => 状态模式
-			
+	定义： 允许一个对象在其内部状态改变时改变它的行为，对象看起来似乎修改它的类。
+	let State = function() {};
+	State.prototype.buttonWasPressed = function() {
+		throw new Error('父类的buttonWasPressed方法必须被重写');
+	}		
+
+	let SuperStrongLightState = function(light) {
+		this.light = light;
+	}
+
+	SuperStrongLightState.prototype = new State();  // 继承抽象父类
+
+	SuperStrongLightState.prototype.buttonWasPressed = function() { // 重写buttonWasPressed方法
+		console.log('关灯')
+		this.light.setState(this.light.offLightState);
+	}
+
+	>> JavaScript版本的状态机
+		const Light = function() {
+			this.currState = FSM.off;   // 设置当前状态
+			this.button = null;   
+		}
+
+		Light.prototype.init = function() {
+			const button  = document.createElement('button');
+			const self = this;
+			button.innerHTML = '已关灯';
+			this.button = document.body.appendChild(button);
+			this.button.onclick = function() {
+				self.currState.buttonWasPressed.call(self);
+			}
+		}
+
+		const FSM = {
+			off: {
+				buttonWasPressed: function() {
+					console.log('关灯');
+					this.button.innerHTML = '下次按我是开灯';
+					this.currState = FSM.on;
+				}
+			},
+			on: {
+				buttonWasPressed: function() {
+					console.log('开灯');
+					this.button.innerHTML = '下次按我是关灯';
+					this.currState = FSM.off;
+				}
+			}
+		};
+
+		let light = new Light();
+		light.init();
+
+		接下来尝试另外一种方法，即利用下面的delegate函数来完成这个状态机编写。这是面向对象设计和闭包互换的一个例子，前者把变量保存为对象的属性，而后者把变量封闭在闭包形成的环境中。
+		const delegate = function(client, delegation) {
+			return {
+				buttonWasPressed: function() { // 将客户的操作委托给delegate对象
+					return delegation.buttonWasPressed.apply(client, arguments);
+				}
+			}
+		};
+
+		const FSM = {
+			off: {
+				buttonWasPressed: function() {
+					console.log('关灯');
+					this.button.innerHTML = '下一次按下我是开灯';
+					this.currState = this.onState;
+				}
+			},
+			on: function() {
+				console.log('开灯');
+				this.button.innerHTML = '下一次按下我是关灯';
+				this.currState = this.offState;
+			}
+		};
+
+		const Light = function() {
+			this.offState = delegate(this, FSM.off);
+			this.onState = delegate(this, FSM.on);
+			this.currState = this.offState;  // 设置初始状态为关闭状态
+			this.button = null;
+		};
+
+		Light.prototype.init = function() {
+			const button = document.createElement('button');
+			const self = this;
+			button.innerHTML = '已关灯';
+			this.button = document.appendChild(button);
+			this.button.onclick = function() {
+				self.currState.buttonWasPressed();
+			}
+		}
+
+		let light = new Light();
+		light.init();
 
 		
