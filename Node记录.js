@@ -729,7 +729,7 @@
 
 >>串行化流程控制
 	const fs = require('fs');
-	const request = require('fs');
+	const request = require('request');
 	const htmlparser = require('htmlparser');
 
 	let configFilename = './rss_feeds.txt';
@@ -744,7 +744,7 @@
 		});
 	};
 
-	//任务2：记取并解析包含预订源URL的文件
+	//任务2：读取并解析包含预订源URL的文件
 	function readRSSFile(configFilename) {
 		fs.readFile(configFilename, (err, feedList) => {
 			if (err) return next(err);
@@ -1518,216 +1518,216 @@
 			console.error(err);      // 处理错误
 		}
 
-	/*锁文件*/
-		fs.writeFile('config.lock', process.pid, {flags: 'wx'}, (err) => {  // 如果不存在锁文件的话，写入PID来锁住文件
-			if (err) return console.error(err);               // 任何失败，包括文件已存在
+		/*锁文件*/
+			fs.writeFile('config.lock', process.pid, {flags: 'wx'}, (err) => {  // 如果不存在锁文件的话，写入PID来锁住文件
+				if (err) return console.error(err);               // 任何失败，包括文件已存在
 
-			/*安全地修改config.json*/
-		});
+				/*安全地修改config.json*/
+			});
 
-	/*通过mkdir创建锁文件*/
-	fs.mkdir('config.json', (err) => {
-		if (err) return console.error(err);    // 无法创建目录
+		/*通过mkdir创建锁文件*/
+		fs.mkdir('config.json', (err) => {
+			if (err) return console.error(err);    // 无法创建目录
 
-		fs.writeFile('config.lock/'+process.pid, (err) => {   // 标识PID已经锁住以便进行调试。
-			if (err) return console.error(err);
+			fs.writeFile('config.lock/'+process.pid, (err) => {   // 标识PID已经锁住以便进行调试。
+				if (err) return console.error(err);
 
-			/*安全地修改config.json*/
-		});
-	});
-
-	/*创建一个锁文件模块*/
-	const fs = require('fs');
-
-	let hasLock = false;
-	let lockDir = 'config.lock';
-
-	exports.lock = function(cb) {   // 定义一个方法来获取一个锁
-		if (hasLock) return cb();     // 已经获得了一个锁
-
-		fs.mkdir(locDir, (err) => {
-			if (err) return cb(err);    // 无法创建一个锁
-
-			fs.writeFile(`${lockDir}/${process.pid}`, (err) => { // 把PID写入到时目录中以便调试
-				if (err) console.error(err);                       // 如果无法写PID，并非世界末日：打印日志，然后继续运行
-
-				hasLock = true;
-				return cb();            // 锁创建了
+				/*安全地修改config.json*/
 			});
 		});
-	}
 
-	exports.unlock = function(cb) {    // 定义一个方法来释放锁
-		if (!hasLock) return cb();       // 没有需要解开的锁
+		/*创建一个锁文件模块*/
+		const fs = require('fs');
 
-		fs.unlink(`${lockDir}/${process.pid}`, (err) => {
-			if (err) return cb(err);
+		let hasLock = false;
+		let lockDir = 'config.lock';
 
-			fs.rmdir(lockDir, (err) => {
-				if (err) return cb(err);
-				hasLock = false;
-				cb();
-			});
-		});
-	}
+		exports.lock = function(cb) {   // 定义一个方法来获取一个锁
+			if (hasLock) return cb();     // 已经获得了一个锁
 
-	process.on('exit', () => {
-		if (hasLock) {
-			fs.unlinkSync(`${lockDir}/${process.pid}`);  // 如果还有一个锁，在退出之前同步删除掉1
-			fs.rmdirSync(lockDir);
-			console.log('removed lock');
-		}
-	});
+			fs.mkdir(locDir, (err) => {
+				if (err) return cb(err);    // 无法创建一个锁
 
-	/*使用*/
-	const locker = require('./locker');
+				fs.writeFile(`${lockDir}/${process.pid}`, (err) => { // 把PID写入到时目录中以便调试
+					if (err) console.error(err);                       // 如果无法写PID，并非世界末日：打印日志，然后继续运行
 
-	locker.lock((err) => {   // 尝试获取一个锁
-		if (err) throw err;
-		/*在这里进行修改*/
-		locker.unlock(() => {});  // 当完成后释放锁
-	});
-
-	/*findSync*/
-	const fs = require('fs');
-	const join = require('path').join;
-	const _ = require('lodash');
-
-	exports.findSync = function (nameRe, startPath) {   // 接收一个正则来从一开始的路径进行搜索。
-		let results = [];                                 // 存储匹配项的集合
-
- 		function finder(path) {
- 			let files = fs.readdirSync(path);               // 读取文件列表（包括目录）
-
- 			_.forEach(files, (item) => {                    
- 				let fpath = join(path, item);                 // 获取当前文件路径
- 				let stats = fs.statSync(fpath);               // 获取当前文件状态
-
- 				if (stats.isDirectory()) {                    // 如果它是一个文件目录，继续使用新的路径调用finder
- 					finder(fpath);
- 				}
- 				if (stas.isFile() && nameRe.test(item)) {     // 如果它是一个文件，并且满足搜索的匹配，将其添加当结果中
- 					results.push(fpath);
- 				}
- 			});
- 		}
-
- 		finder(startPath);    // 初始化文件查找
- 		return results;       // 返回结果
-	}
-
-	const fineder = require('./finder');
-	try {
-		let results = finder.findSync(/file.*/, '/path/to/root');
-		console.log(result);
-	} catch(err) {
-		console.error(err);
-	}
-
-	/*异步版本*/
-	const fs = require('fs');
-	const join = require('path').join;
-
-	exports.find = function(nameRe, startPath, cb) {
-		let result = [], asyncOps = 0, errored = false;
-
-		function error(err) {
-			if (!errored) cb(err);
-			errored = true;
-		}
-
-		function finder(path) {
-			asyncOps++;   // 在第一个异步操作之前计数器自增
-			fs.readdir(path, (err, files) => {
-				if (err) return error(err);
-
-				files.forEach((file) => {
-					let fpath = join(path, file);
-
-					asyncOps++;
-					fs.stat(fpath, (err, stats) => {
-						if (err) return error(err);
-
-						if (stats.isDirectory()) {
-							finder(fpath)
-						} 
-						if (stats.isFile() && nameRe.test(file))  {
-							results.push(fpath);
-						}
-
-						asyncOps--;
-						if (asyncOps === 0) {
-							cb(null, results);
-						}
-					});
+					hasLock = true;
+					return cb();            // 锁创建了
 				});
-
-				asyncOps--;            // 在每一个异步操作已完成之后计数器自减
-				if (asnycOps === 0) {   // 如果我们回到零了，那么已经完成并且没有错误，这时候可以在回调中返回结果
-					cb(null, results);
-				}
-
 			});
 		}
 
-		finder(startPath);
-	}
+		exports.unlock = function(cb) {    // 定义一个方法来释放锁
+			if (!hasLock) return cb();       // 没有需要解开的锁
 
-	const finder = require('finder');
+			fs.unlink(`${lockDir}/${process.pid}`, (err) => {
+				if (err) return cb(err);
 
-	finder.find(/file.*/, '/path/to/root', (err, result) => {
-		if (err) return console.error(err);
-		console.log(resutls);
-	});
-	
-
-
-	/*编写文件数据库*/
-	const fs = require('fs');
-	const EventEmitter = require('events').EventEmitter;
-	const _ = require('lodash');
-
-	let Database = function(path) {
-		this.path = path;
-
-		this._records = Object.create(null);
-		this._writeStream = fs.createWriteSteram(this.path, {
-			encoding: 'utf8',
-			flags: 'a'
-		});
-
-		this._load();
-	}
-
-	Database.protected = Object.create(EventeEmitter.prototype);
-
-	Database.prototype._load = function() {
-		let stream = fs.createReadStream(this.path, {encoding: 'utf8'});
-		let data = '';
-
-		stream.on('readable', () => {
-			data += stream.read();
-			let records = data.split('\n');
-			data = records.pop();
-
-			_.forEach(records, (rec) => {
-				try {
-					let record = JSON.parse(rec);
-					if (record.value == null) {
-						delete this._records[record.key];
-					} else {
-						this._records[record.key] = record.value;
-					}
-				} catch(e) {
-					this.emit('error', 'foun invalid record', rec);
-				}
+				fs.rmdir(lockDir, (err) => {
+					if (err) return cb(err);
+					hasLock = false;
+					cb();
+				});
 			});
+		}
+
+		process.on('exit', () => {
+			if (hasLock) {
+				fs.unlinkSync(`${lockDir}/${process.pid}`);  // 如果还有一个锁，在退出之前同步删除掉1
+				fs.rmdirSync(lockDir);
+				console.log('removed lock');
+			}
 		});
 
-		stream.on('end', () => {
-			this.emit('load');
+		/*使用*/
+		const locker = require('./locker');
+
+		locker.lock((err) => {   // 尝试获取一个锁
+			if (err) throw err;
+			/*在这里进行修改*/
+			locker.unlock(() => {});  // 当完成后释放锁
 		});
-	}
+
+		/*findSync*/
+		const fs = require('fs');
+		const join = require('path').join;
+		const _ = require('lodash');
+
+		exports.findSync = function (nameRe, startPath) {   // 接收一个正则来从一开始的路径进行搜索。
+			let results = [];                                 // 存储匹配项的集合
+
+	 		function finder(path) {
+	 			let files = fs.readdirSync(path);               // 读取文件列表（包括目录）
+
+	 			_.forEach(files, (item) => {                    
+	 				let fpath = join(path, item);                 // 获取当前文件路径
+	 				let stats = fs.statSync(fpath);               // 获取当前文件状态
+
+	 				if (stats.isDirectory()) {                    // 如果它是一个文件目录，继续使用新的路径调用finder
+	 					finder(fpath);
+	 				}
+	 				if (stas.isFile() && nameRe.test(item)) {     // 如果它是一个文件，并且满足搜索的匹配，将其添加当结果中
+	 					results.push(fpath);
+	 				}
+	 			});
+	 		}
+
+	 		finder(startPath);    // 初始化文件查找
+	 		return results;       // 返回结果
+		}
+
+		const fineder = require('./finder');
+		try {
+			let results = finder.findSync(/file.*/, '/path/to/root');
+			console.log(result);
+		} catch(err) {
+			console.error(err);
+		}
+
+		/*异步版本*/
+		const fs = require('fs');
+		const join = require('path').join;
+
+		exports.find = function(nameRe, startPath, cb) {
+			let result = [], asyncOps = 0, errored = false;
+
+			function error(err) {
+				if (!errored) cb(err);
+				errored = true;
+			}
+
+			function finder(path) {
+				asyncOps++;   // 在第一个异步操作之前计数器自增
+				fs.readdir(path, (err, files) => {
+					if (err) return error(err);
+
+					files.forEach((file) => {
+						let fpath = join(path, file);
+
+						asyncOps++;
+						fs.stat(fpath, (err, stats) => {
+							if (err) return error(err);
+
+							if (stats.isDirectory()) {
+								finder(fpath)
+							} 
+							if (stats.isFile() && nameRe.test(file))  {
+								results.push(fpath);
+							}
+
+							asyncOps--;
+							if (asyncOps === 0) {
+								cb(null, results);
+							}
+						});
+					});
+
+					asyncOps--;            // 在每一个异步操作已完成之后计数器自减
+					if (asnycOps === 0) {   // 如果我们回到零了，那么已经完成并且没有错误，这时候可以在回调中返回结果
+						cb(null, results);
+					}
+
+				});
+			}
+
+			finder(startPath);
+		}
+
+		const finder = require('finder');
+
+		finder.find(/file.*/, '/path/to/root', (err, result) => {
+			if (err) return console.error(err);
+			console.log(resutls);
+		});
+		
+
+
+		/*编写文件数据库*/
+		const fs = require('fs');
+		const EventEmitter = require('events').EventEmitter;
+		const _ = require('lodash');
+
+		let Database = function(path) {
+			this.path = path;
+
+			this._records = Object.create(null);
+			this._writeStream = fs.createWriteSteram(this.path, {
+				encoding: 'utf8',
+				flags: 'a'
+			});
+
+			this._load();
+		}
+
+		Database.protected = Object.create(EventeEmitter.prototype);
+
+		Database.prototype._load = function() {
+			let stream = fs.createReadStream(this.path, {encoding: 'utf8'});
+			let data = '';
+
+			stream.on('readable', () => {
+				data += stream.read();
+				let records = data.split('\n');
+				data = records.pop();
+
+				_.forEach(records, (rec) => {
+					try {
+						let record = JSON.parse(rec);
+						if (record.value == null) {
+							delete this._records[record.key];
+						} else {
+							this._records[record.key] = record.value;
+						}
+					} catch(e) {
+						this.emit('error', 'foun invalid record', rec);
+					}
+				});
+			});
+
+			stream.on('end', () => {
+				this.emit('load');
+			});
+		}
 
 	<例子 7.1> 一个简单的TCP服务器
 		const net = require('net');
@@ -1934,37 +1934,37 @@
 		});
 
 	<例子 7.8> 使用http模块来创建代理
-	const http = require('http');		
-	const url = require('url');
+		const http = require('http');		
+		const url = require('url');
 
-	http.createService((req, res) => {
-		cnosole.log('start request:', req.url);
-		let options = url.parse(req.url);
-		options.headers = req.headers;
+		http.createService((req, res) => {
+			cnosole.log('start request:', req.url);
+			let options = url.parse(req.url);
+			options.headers = req.headers;
 
-		let proxyRequest = http.request(options, (proxyReponse) => {
-			proxyRequest.on('data', (chunk) => {
-				console.log('proxyResponse length:', chunk.length);
-				res.write(chunk, 'binary');
+			let proxyRequest = http.request(options, (proxyReponse) => {
+				proxyRequest.on('data', (chunk) => {
+					console.log('proxyResponse length:', chunk.length);
+					res.write(chunk, 'binary');
+				});
+				proxyResponse.on('end' () => {
+					console.log('proxy request ended');
+					res.end();
+				});
+
+				res.writeHead(proxyRespnes.statusCode, proxyResponse.headers);
 			});
-			proxyResponse.on('end' () => {
-				console.log('proxy request ended');
-				res.end();
+
+			req.on('data', (chunk) => {
+				console.log('in request length', chunk.length);
+				proxyRequest.write(chunk, 'binary');
 			});
 
-			res.writeHead(proxyRespnes.statusCode, proxyResponse.headers);
-		});
-
-		req.on('data', (chunk) => {
-			console.log('in request length', chunk.length);
-			proxyRequest.write(chunk, 'binary');
-		});
-
-		req.on('end', () =>{
-			console.log('original request end');
-			proxyRequest.end();
-		});
-	}).listen(8080);
+			req.on('end', () =>{
+				console.log('original request end');
+				proxyRequest.end();
+			});
+		}).listen(8080);
 
 	<例子 9.1>一个快速的静态的web服务器
 		const connect = require('connect');
@@ -2460,16 +2460,3 @@ process.nextTick(): 它的作用是延迟一个函数的执行，直到下一次
 	1.async.series([], callback)： 方法接收一个数组和一个回调函数，回调函数的第二个参数是一个数组，包含了全部异步操作的返回结果，结果集中的顺序和series参数数组的顺序是对应的；
 	2.async.parallel([], callback)：所有的方法是并行执行的，执行时间由耗时最长的调用决定。parallel方法在数组中的某个异步调用结束之后并没有立刻返回，而是将结果暂存起来，等所有的异步操作完成之后，再根据调用顺序将结果组装成调用顺序的结果集返回。
 	3.async.waterfall([], callback)：同样是顺序执行异步操作，和前两个方法的区别是每一个异步操作都会把结果传递给下一个调用。
-
-	
-	设置yarn的缓存目录
-	yarn config set cache-folder <path>
-
-	yarn cache ls
-	列出当前缓存的包列表。
-
-	yarn cache dir
-	显示缓存数据的目录。
-
-	yarn cache clean
-	清除所有缓存数据。
