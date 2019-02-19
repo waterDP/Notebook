@@ -1072,7 +1072,7 @@
 		}
 
 		CountStream.prototype.end = function () {
-			this.emit('total', this.count);   // 当输入流结束时，触发totao事件
+			this.emit('total', this.count);   // 当输入流结束时，触发total事件
 		}
 
 	<例子 1.2> 使用CountStream类

@@ -2,11 +2,6 @@ npm and yarn:
 	rimraf node_modules   删除node_modules 
 	yarn cache clean      清除yarn全局缓存
 
-
-git:
-	git remote update origin --prune 本地分支与远端分支同步
-
-
 	设置yarn的缓存目录
 	yarn config set cache-folder <path>
 
@@ -18,3 +13,7 @@ git:
 
 	yarn cache clean
 	清除所有缓存数据。
+
+
+git:
+	git remote update origin --prune 本地分支与远端分支同步
