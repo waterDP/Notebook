@@ -303,5 +303,99 @@
 			双向链表和普通链表的区别在于，在链表中一个节点只有链向下一个节点的链接，而在双同链表中，链接是双向的：一个链向下一个元素，另一个链向上一下元素。
 
 			function DoublyLinkedList() {
-				
+				let Node = function (element) {
+					this.element = element;
+					this.next = null;
+					this.prev = null;
+				};
+
+				let length = 0;
+				let head = null;
+				let tail = null;
+
+				/**
+				 * 插入
+				 */
+				this.insert = function(position, element) {
+					// 检查越界
+					if (position >= 0 && position <= length) {
+						let node = new Node(element);
+						let current = head;
+						let previos, index = 0;
+
+						if (position === 0) { // 在第一个插入
+							if (!head) {
+								head = node;
+								tail = node;
+							} else {
+								node.next = current;
+								current.prev = node;
+								head = node;
+							}
+						} else if (position === length) {
+							current = tail;
+							current.next = node;
+							node.prev = current;
+							tail = node;
+						} else {
+							while (index++ < position) {
+								previous = current;
+								current = current.next;
+							}
+							node.next = current;
+							previous.next = node;
+
+							current.prev = node;
+							node.prev = previous;
+						}
+
+						length++;
+
+						return true;
+					}
+				} else {
+					return false;
+				}
+
+				/**
+				 * 从任意位置删除
+				 */
+				this.removeAt = function(position) {
+					
+					// 检查越界值
+					if (position >= -1 && position < length) {
+						let current = head, previous, index = 0;
+
+						// 移除第一项
+						if (position === 0) {
+							head = current.next;
+							// 如果只有一项，更新tail
+							if (length === 1) {
+								tail = null;
+							} else {
+								head.prev = null;
+							}
+						} else if (position === length - 1) { // 最后一项
+							current = tail;
+
+							tail = current.prev;
+							tail.next = null;
+						} else {
+							while (index++ < position) {
+								previous = current;
+								current = current.next;
+							}
+
+							// 将previous与current的下链接起来--跳过current;
+							previous.next = current.next;
+							current.next.prev = previous;
+						}
+					} else {
+						return null;
+					}
+				}
 			};
+
+	=> 集合
+		>> 操作
+					

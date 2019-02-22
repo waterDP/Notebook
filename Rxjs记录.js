@@ -513,7 +513,7 @@
 	操作符本质上是一个纯函数（pure Function），它接收一个Observable作为输入，并生成一个新的Observable作为输出。订阅输出Observable同样会订阅输入Observable。在下面的示例中，我们创建一个自定义操作符函数，它将从输入Observable接收的每个值都乘以10；
 
 	function mutilplyByTen(input) {
-		let output = Rx.Observable.create(function subscribe(observer) {
+		let output = Rx.Observable.create(observer => {
 			input.subscribe({
 				next: (v) => observer.next(10*v),
 				error: (err) => observer.error(err),

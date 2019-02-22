@@ -17,3 +17,4 @@ npm and yarn:
 
 git:
 	git remote update origin --prune 本地分支与远端分支同步
+	git branch -m 原分支名 现分支名  修改本地分支名称 如果是修改当前分支的名称，则原分支名省略
