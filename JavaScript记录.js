@@ -209,8 +209,10 @@
 	'boolean'   : 如果这个值是布尔值；
 	'string'    : 如果这个值是字符串；
 	'number'    : 如果这个值是数值；
-	'object'    : 如果这个值是对象或null；
+	'object'    : 如果这个值是对象或null； *
 	'function'  : 如果这个值是函数；
+
+=> Object.seal()方法封闭一个对象，阻止添加新属性并将所有现有属性标记为不可配置。当前属性的值只要可写就可以改变。
 
 => 原型与原型链
 	在默认情况下，所有的原型对象都会自动获得一个 constructor（构造函数）属性，这个属性（是一个指针）指向 prototype 属性所在的函数（Person）。
@@ -1068,7 +1070,8 @@
 		// ...
 	});
 
-=> 在 Node.js 中，eventLoop是基于libuv的。通过查看libuv的文档可以发现整个eventLoop 分为 6 个阶段：
+=> EventLoop 事件循环
+	在 Node.js 中，eventLoop是基于libuv的。通过查看libuv的文档可以发现整个eventLoop 分为 6 个阶段：
 	1.timers: 定时器相关任务，node中我们关注的是它会执行 setTimeout() 和 setInterval() 中到期的回调
 	2.pending callbacks: 执行某些系统操作的回调
 	3.idle, prepare: 内部使用
@@ -1225,7 +1228,6 @@
 	proxy.time = 35; //  设置set操作
 	console.log(proxy.time); // 设置get操作  // 35
 
-
 => Watch API
 	Html中有个span标签和button标签
 	`
@@ -1325,7 +1327,6 @@
 	    newObj.value += 1
 	});
 
-
 +> 根据js的语法，要满足===的条件如下：
 	1.如果是引用类型，则两个变量必须指向同一个对象（同一个地址）；
 	2.如果是基本类型，则两个变量除了类型必须相同外，值还必须相等；
@@ -1344,7 +1345,6 @@
 		5.来自不同的任务源的任务会进入到不同的任务队列。其中setTimeout与setInterval是同源的。
 		5.事件循环顺序，决定了JavaScript代码的执行顺序。它从script开始第一次循环。之后全局上下文进入函数调用栈。直到调用栈清空(只剩全局)，然后执行所有的micro-task。当所有的micro-task执行完毕之后。循环再次从macro-task开始，找到其中的一个任务执行完毕，然后再执行所有的micro-task,这样一直循环下去。
 		6.其中每一个任务的执行，无论是macro-task还是micro-task，都是借助函数借用栈来完成。
-
 
 >>> [片断]: 用循环依次输出1到5，每一次输出的时间间隔为1秒；
 	1. Promise 版本
@@ -1383,23 +1383,23 @@
 			console.log(new Date(), i);
 		})();
 
-		/*Promise 的连续异步用*/
-function consbyTime(context) {
-	return new Promise((resolve, reject)=>{
-		setTimeout(()=>{
-			resolve(context);
-		},100)
-	});
-}
+=> Promise 的连续异步调用
+	function consbyTime(context) {
+		return new Promise((resolve, reject)=>{
+			setTimeout(()=>{
+				resolve(context);
+			},100)
+		});
+	}
 
-console.log('begin');
+	console.log('begin');
 
-consbyTime('111').then((res)=>{
-	console.log(res);
-	return consbyTime('222');  //注意此处的return 
-}).then((res)=>{
-	console.log(res)
-})
+	consbyTime('111').then((res)=>{
+		console.log(res);
+		return consbyTime('222');  //注意此处的return 
+	}).then((res)=>{
+		console.log(res)
+	})
 
 =>ES6成生器（Generators）
 	
@@ -1807,3 +1807,86 @@ consbyTime('111').then((res)=>{
 	4. 箭头函数能过call()或apply()方法调用一个函数时，只传入一个参数，对this并没有影响。
 	5. 箭头函数没有原型属性。
 	6. 箭头函数不能当做Generator函数，不能使用yield关键字。
+
+=> 防抖和节流
+	相同: 在不影响客户体验的前提下，将频繁的回调函数进行数次缩减，避免大量计算导致的页面卡顿。
+	不同: 防抖是将多次执行变为最后一次执行，节流是将多次执行变为在规定时间内只执行一次。
+
+	>> 防抖
+		> 条件
+			1.如果客户连续的操作会导致频繁的事件回调（可能引起页面卡顿）；
+			2.客户只关心“最后一次”操作（也可以理解为停止连续操作后）所返回的结果；
+		> 场景	
+			. 输入搜索联想，用户在不断输入值时，用防抖来节约请求资料。
+			. 按钮点击
+
+		> 原理:
+				通过定时器将回调函数进行延时。如果在规定时间内继续回调,发现存在之前的定时器,则将该定时器清除,并重新设置定时器。这里有个细节,就是后面所有的回调函数都要能访问到之前设置的定时器,这时就需要用到闭包
+
+		> 两种版本
+			防抖分为两种:
+				1.非立即执行版：事件触发->延时->执行回调函数;如果在延时中,继续触发事件,则会重新进行延时。在延时结束后执行回调函数。常见例子：就是input搜索框,客户输完过一会就会自动搜索。
+				2.立即执行版：事件触发->执行回调函数->延时;如果在延时中,继续触发事件,则会重新进行延时。在延时结束后,并不会执行回调函数。常见例子：就是对于按钮防点击。例如点赞,心标,收藏等有立即反馈的按钮。
+
+				// 一个回调函数
+				function callback(content) {
+					console.log(content)
+				}
+
+			<非立即执行版>	
+				//然后准备包装函数:
+				//1.保存定时器标识 
+				//2.返回闭包函数
+				function debounceFactory(cb, delay = 500) {
+					let timer = null; // 定时器
+					return args => {
+						clearTimeout(timer);
+						timer = setTimeout(cb.bind(this, args), delay);
+					}
+				}
+
+				// 接着用变量保存保存 debounce 返回的带有延时功能的函数
+				let debounce = debounceFactory(callback, 500)
+
+				// 添加事件监听
+				let input = document.getElementById('dobunce');
+				input.addEventListener('keyup', e => debounce.apply(this, e.target.value));
+
+			<立即执行版>
+				function debounce(cb, delay = 500, immediate = true) {
+					let timer; // 定时器
+					return args => {
+						clearTimeout(timer);  // 不管是否立即执行，都要先删除定时器
+						if (immediate) {  // 立即执行版本
+							if (!timer) {
+								cb(args);
+							}
+							timer = setTimeout(() => timer = null, delay);
+						} else{  // 非立即执行
+							timer = setTimeout(cb.bind(this, args), delay);
+						}
+					}
+				}	
+
+	>> 节流
+		> 条件
+			1.客户连续频繁地触发事件； 
+			2.客户不再只关心“最后一次”操作的结果反馈，而是在操作过程中持续的反馈。
+		> 场景
+			. 鼠标不断点击触发，点击事件在规定时间内只触发一次（单位时间内只触发一次）。
+			. 监听滚动事件，比如是否滑动到底部自动加载更多，用throttle来判断。			
+		[注意]：：何为连续触发频繁地触发事件，就是事件触发时间间隔至少要比规定时间要短。	
+
+		> 原理
+			两种实现方式：
+				1.时间戳方式：通过闭包保存上一次的时间戳，然后与事件触发的时间戳比较。如果大于规定时间，则执行回调，否则，什么也不干
+				. 特点： 一般第一次会执行，之后连续频繁地触发事件，也是超过了规定时间才会触发一次。最后一次触发事件，也不会执行（说明： 如果你最后一次发时间大于规定时间，这样就算不是连续触发了）。
+				2.定时器方式：原理与防抖类似。通过闭包保存上一次的定时器状态。然后事件触发时，如定时器为null（即代表时间间隔大于规定时间），则设置的定时器。到时间后执行回调函数，并将定时器设置为null。
+				. 特点： 当第一次触发事件时，不会立即执行函数，到了规定时间后才会执行。之后连续频繁的触发事件，也是到了规定时间才会执行一次(因为定时器)。当最后一次停止触发后，由于定时器的延时，还会执行一次回调查函数（那也是上一次成功触发执行的回调，而不是你最后一次触发产生的）。一句话总结就是延时回调，你能看到的回调都是上次成功触发的，而不是你此刻产生的。
+
+		// 时间戳版本		
+		function throttle(fn, delay = 500) {
+			let previous = 0; // 记录上一次触发的时间戳，这里初始化为0，是为了第一次触发产生回调
+			
+		}
+		

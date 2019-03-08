@@ -1,6 +1,4 @@
-/**
- * 泛型
- */
+/*泛型*/
 	function indentity<T>(arg: T): T {
 		return arg;
 	}
@@ -11,7 +9,7 @@
 		console.log(arg.length);
 		return arg;
 	}
-	
+
 	function logginIdentity2<T>(arg: Array<T>): Array<T> {
 		console.log(arg.length);
 		return arg;
@@ -27,7 +25,7 @@
 		 * 我们还可以使用带有调用签名字面量来定义泛型函数
 		 * let myIdentity: {<T>(arg: T): T} = indentity;
 		 */
-	// 泛型接口	
+	// 泛型接口
 		interface GenericIdentityFn<T> {
 			<T>(arg: T): T;
 		}
@@ -42,7 +40,7 @@
 		class GenericNumber<T> {
 			zeroValue: T;
 			add: (x: T, y: T) => T;
-		}	
+		}
 
 		let myGenericNumber = new GenericNumber<number>();
 		myGenericNumber.zeroValue = 0;
@@ -56,7 +54,7 @@
 			length: number;
 		}
 
-		function logginIdentity<T extends Lenthwise>(arg: T): T {
+		function logginIdentity<T extends Lengthwise>(arg: T): T {
 			console.log(arg.length);
 			return arg;
 		}
@@ -79,7 +77,7 @@
 
 	// 在泛型中使用类类型
 
-		/*在TypeScript使用泛型创建工厂函数时，需要引用构造函数的类类型*/	
+		/*在TypeScript使用泛型创建工厂函数时，需要引用构造函数的类类型*/
 		function create<T>(c: {new(): T}): T {
 			return new c();
 		}
@@ -130,9 +128,7 @@
 
 	export const PAGE_CONFIG: Map<PageConfig> = {};
 
-/**
- * 交叉类型
- */
+/*交叉类型*/
  	function extend<T, U>(first: T, second: U): T & U {
  		let result = <T & U>{};
  		for (let id in first) {
@@ -164,9 +160,7 @@
  	let n = jim.name;
  	jim.log();
 
-/**
- * 联合
- */
+/*联合*/
  	function padLeft(value: string, padding: string | number) {
  		// ...
  	}
@@ -177,7 +171,7 @@
 
  		如果一值是联合类型，我们只能访问此联合类型的所有类型共有的成员。
  	 */
- 	
+
  	interface Bird {
  		fly();
  		layEggs();
@@ -196,9 +190,7 @@
  	pet.layEggs();  // okays
  	pet.swim();   // errors;
 
-/**
- * 类型保护与区分类型
- */
+/*类型保护与区分类型*/
   // 类型断言
   let pet1 = getSmallPet();
 
@@ -206,4 +198,132 @@
   	(<Fish>pet1).swim();
   } else {
   	(<Bird>pet1).fly();
+  }
+
+/*装饰器*/
+
+  function f() {
+  	console.log('f(): evaluated');
+  	return function(target, propertyKey: string, descriptor: PropertyDescriptor) {
+  		console.log('f(): called');
+  	}
+  }
+
+  function g() {
+  	console.log('g(): evaluated');
+  	return function(target, propertyKey: string, descriptor: PropetyDescriptor) {
+  		consle.log('g(): called');
+  	}
+  }
+
+  class C {
+  	@f()
+  	@g()
+  	method() {
+
+  	}
+  }
+
+  // 在控制台里会打印出如下结果
+  /**
+   * f(): evaluated
+   * g(): evaluated
+   * g(): called
+   * f(): called
+   */
+
+  /**
+   * 装饰器求值
+   * 类中不同声明上的装饰器将按以下规定的顺序应用
+   * 1.参数装饰器，然后依次是方法装饰器，访问符装饰器，或属性装饰器应用到每个实例成员。
+   * 2.参数装饰器，然后依次是方法装饰器，访问符装饰器，或属性装饰器应用到每个静态成员。
+   * 3.参数装饰器应用到构造函数。
+   * 4.类装饰器应用到类。
+   */
+
+  // 类装饰器
+  /**
+   * 类装饰器表达式会在运行时当作函数被调用，类的构造函数作为其中唯一的参数。
+   * 如果类装饰器返回一个值，它会使用提供的构造函数来替换类的声明。
+   */
+
+  @sealed
+  class Greeter {
+  	greeting: string;
+  	constructor(message: string) {
+  		this.greeting = message;
+  	}
+  	greet() {
+  		return `Hello,${this.greeting}`
+  	}
+  }
+
+  /**
+   * 封闭此类的构造函数和原型
+   */
+  function sealed(constructor: Function) {
+  	Object.seal(constructor);
+  	Object.seal(constructor.prototype);
+  }
+
+  /**
+   * 下面是一个重载的例子
+   */
+  function classDecorator<T extends {new(...args: any[]): {}}>(constructor: T) {
+  	return class extends constructor {
+  		newProperty = 'new property';
+  		hello = 'override';
+  	}
+  }
+
+  @classDecorator
+  class Greeter {
+  	property = 'property';
+  	hello: string;
+  	constructor(m: string) {
+  		this.hello = m;
+  	}
+  }
+
+  console.log(new Greeter('world'));
+
+  // 方法装饰器
+  /**
+   * 方法装饰器表达式会在运行时当作函数被调用，传入下列3个参数
+   * 1.对于静态成员来说是类的构造函数，对于实例成员来说是类的原型对象
+   * 2.成员的名字
+   * 3.成员的属性描述符
+   */
+  // 下面是一个方法装饰器（@enumerable）的例子，应用在Greeter类的方法上
+  class Greeter {
+  	greeting: string;
+  	constructor(message: string) {
+  		this.greeting = message;
+  	}
+  	@enumerable(false)
+  	greet() {
+  		return `Hello, ${this.greeting}`;
+  	}
+  }
+
+  /**
+   * 这时的@enumerable(false)是一个装饰器工厂。
+   * 当装饰器@enumerable(false)被调用时，它会修改属性描述符的enumerable属性
+   */
+  function enumerable(value: boolean) {
+  	return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  		descriptor.enumerable = value;
+  	}
+  }
+
+  // 访问装饰器
+  /**
+   * 访问装饰器表达式会在运行时当作函数被调用，传入下列3个参数
+   * 1.对于静态成员来说是类的构造函数，对于实例成员是类的原型对象。
+   * 2.成员的名字
+   * 3.成员的属性描述符
+   * 如果访问器装饰器返回一个值，它会被用作方法的属性描述符。
+   */
+  class Point {
+  	
   }
