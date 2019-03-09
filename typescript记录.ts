@@ -325,5 +325,108 @@
    * 如果访问器装饰器返回一个值，它会被用作方法的属性描述符。
    */
   class Point {
-  	
+  	private _x: number;
+  	private _y: number;
+  	constractor(x: number, y: number) {
+  		this._x = x;
+  		this._y = y;
+  	}
+
+  	@configurable(false)
+  	get x() {return this._x;}
+  	@configurable(true)
+  	get y() {return this._y;}
   }
+
+  /**
+   * 定义@configurable
+   */
+  function configurable(value: boolean) {
+  	return function (target: any, propertyKey: string, descriptor: PropertyDescriptor){
+  		descriptor.configrable = value;
+  	}
+  }
+
+  // 属性装饰器
+  /**
+   * 1.对于静态成员来说类是构造函数，对于实例成员是类的原型对象
+   * 2.类的成员名字
+   * 如果访问装饰器返回一个值，它会被用作方法的属性描述符
+   */
+  // 我们可以用它来记录这个属性的元数据
+  class Greeter {
+  	@format('Hello, %s');
+  	greeting: string;
+
+  	constructor(message: string) {
+  		this.greetion = message;
+  	}
+  	greet() {
+  		let formatString = getFormat(this, "greeting");
+  		return formateString.replace("%s", this.greeting);
+  	}
+  }
+
+  /**
+   * 定义@format装饰器和getFormat函数
+   */
+  import 'reflect-metadata';
+
+  const formatMetadataKey = Symbol('format');
+
+  function format(formatString: string) {
+  	return Reflect.metadata(formatMetadataKey, formatString);
+  }
+
+  function getFormat(target: any, propertyKey: string) {
+  	return Reflect.getMetadata(formatMetadataKey, target, propertyKey);
+  }
+
+  // 参数装饰器
+  /**
+   * 参数装饰器表达式会在运行时当作函数被调用，传入下列3个参数
+   * 1.对于静态成员来说是构造函数，对于实例成员是原型对象
+   * 2.成员的名称
+   * 3.参数在函数参数列表中的索引
+   * 【注意】 参数装饰器只能用来监视一个方法的参数是否被传入
+   * 参数装饰器的返回值会被忽略
+   */
+  /*下列定义了参数装饰器（@required）*/
+  class Greeter {
+  	greeting: string;
+  	constructor(message: string) {
+  		this.greeting = message;
+  	}
+  	@validate
+  	greet(@required name: string) {
+  		return `Hello${name},${this.greeting}`;
+  	}
+  }
+
+  import 'reflect-metadata';
+  const requiredMetadataKey = Symbol("required");
+
+  function required(target: Object, propertyKey: string | symbol, parameterIndex: number) {
+  	let existingRequiredParameters: number[] = 
+  		Reflect.getOwnMetadata(requiredMetadataKey, target, propertyKey) || [];
+  	existingRequiredParameters.push(parameterIndex);
+  	Reflect.defineMetadata(requiredMetadataKey, existingRequiredParameters, target, propertyKey);	
+  }
+
+  function validate(target: any, propertyName: string, descriptor: TypedPropertyDescriptor<Function>) {
+  	let method = descriptor.value;
+  	descriptor.value = function() {
+  		let requiredParameters: number[] = Reflect.getOwnMetadata(requiredMetadataKey, target, propertyName);
+  		if (requiredParameters) {
+  			for (let parameterIndex of requiredParameters) {
+  				if (parameterIndex >= arguments.length || arguments[parameterIndex] === undefined) {
+  					throw new Error("Missing required argument.");
+  				}
+  			}
+  		}
+
+  		return method.apply(this, arguments);
+  	}
+  }
+
+
