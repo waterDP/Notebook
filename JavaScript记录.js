@@ -1704,6 +1704,28 @@
 		}	
 	})();
 
+=> Reflect 对象
+	Refkect 是一个内置对象，它提供拦截javaScript操作的方法。这些对象与处理器的方法。Reflect不是一个函数对象，因此它是不可构造的。
+
+	1.Refkect.apply(target, thisArgument, argumentsList); 
+		>描述：
+		该方法与ES5中Function.prototype.apply()方法类似：调用一个方法并且显式地指定this变量和参数列表（arguments） ，参数列表可以是数组，或类似数组的对象。
+		>参数：
+		target
+			目标函数
+		thisArgument
+			target函数调用时绑定的this对象
+		argumentsList
+			target函数调用时传入的实参列表，该参数应该是一个类数组的对象。	
+		>异常：
+		如果target是不可调用，抛出TypeError。	
+		>使用示例：
+		Reflect.apply(Math.floor, undefined, [1.75]);
+		// 1
+		Reflect.apply(String.fromCharCode, undefined, [104, 101, 108, 108, 111]);
+		// 'hello'
+	// todo: ...	
+
 => ES6数组新功能
 	>>数组中的迭代器@@iterator
 		const arr = [1,2,3,4]
