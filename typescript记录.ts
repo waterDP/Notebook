@@ -1,3 +1,133 @@
+/*接口*/
+  /*只读属性*/
+    interface Point {
+      readonly x: number;
+      readonly y: number; 
+    }
+
+    let p1: Point = {x: 10, y: 20};
+    p1.x = 5; // error
+
+    /**
+     * TypeScript具有ReadonlyArray<T>类型，它与Array相似，只是把所有可变的方法去掉了，因此可以确保数组创建后再也不能被修改：
+     */
+    let a: Array<number> = [1, 2, 3];
+    let ro: ReadonlyArray<number> = a;
+    ro[0] = 12;  // error;
+    ro.push(5);  // error
+    ro.length = 100; // error
+    a = ro; // error
+  /*函数类型*/ 
+  //对于函数类型的类型检查来说，函数的参数名不需要与接口里定义的名字相匹配。   
+    interface SearchFunc {
+      (source: string, subString: string): boolean;
+    }
+
+    let mySearch: SearchFunc;
+    mySearch = function(src: string, sub: string) {
+      let result = src.search(sub);
+      return result > -1;
+    }
+
+  /*类类型*/  
+    interface ClockInterface1 {
+      currentTime: Date;
+      setTime(d: Date);
+    }
+    class Clock implements ClockInterface1 {
+      currentTime: Date;
+      constructor(h: number, m: number) {
+
+      }
+      setTime(d: Date) {
+
+        this.currentTime = d;
+      }
+    }
+
+  /*类静态部分与实例部分的区别*/  
+  interface ClockConstructor {
+    new (hour: number, minuter: number): ClockInterface;
+  }
+  interface ClockInterface {
+    tick();
+  }
+
+  // 工厂函数
+  function createClock(ctor: ClockConstructor, hour: number, minute: number): ClockInterface {
+    return new ctor(hour, minute);
+  }
+
+  class DigitalClock implements ClockInterface {
+    constructor(h: number, m: number) { 
+
+    }
+    tick() {
+      console.log('beep beep')
+    }
+  }
+
+  class AnalogClock implements ClockInterface {
+    constructor(h: number, m: number) {
+
+    }
+    tick() {
+      console.log('tick tock');
+    }
+  }
+
+  let digital = createClock(DigitalClock, 12, 17);
+  let analog = createClock(AnalogClock, 7, 32);
+
+  // 【注意】一个接口可以继承多个接口，创建出多个接口的合成接口。
+
+  // 混合类型
+  /**
+    /**terval: number;
+    reset(): void;
+  }
+
+  function getCounter(): Counter {
+    let counter = <Counter>function (start: number) {};
+    counter.interval = 123;
+    counter.reset = function() {}
+    return counter;
+  }
+
+  let c = getCounter();
+  c(10);
+  c.reset();
+  c.interval = 0.5;
+
+  // 接口继承类
+  /**
+   * 当接口继承了一个类类型时，它会继承类的成员但不包括其实现。就好像接口声明了所有类中存在的成员，但并没有具体实现一样。接口同接会继承到类的private和protected成员。这意味着当你创建了一个接口继承了一个私有或受保护的成员类时，这个接口类或其子类所实现。
+   */
+  class Control {
+    private state: any;
+  }
+
+  interface SelectableControl extends Control {
+    select(): void;
+  }
+
+  class Button extends Control implements SelectableControl {
+    select() { };
+  }
+
+  class TextBox extends Control {
+
+  }
+
+  // Error: Property 'state' is missing in type 'Image'
+  class Image implements SelectableControl {
+    select() {}
+  }
+
+  class Location {
+
+  }
+
 /*泛型*/
 	function indentity<T>(arg: T): T {
 		return arg;
@@ -212,7 +342,7 @@
   function g() {
   	console.log('g(): evaluated');
   	return function(target, propertyKey: string, descriptor: PropetyDescriptor) {
-  		consle.log('g(): called');
+  		console.log('g(): called');
   	}
   }
 
@@ -429,4 +559,4 @@
   	}
   }
 
-
+/**/
