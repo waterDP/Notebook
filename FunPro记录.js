@@ -140,7 +140,7 @@ pingpong.div(3);
 		repeatdly(3, () => {
 			return Math.floor((Math.random() * 10) + 1);
 		});
-.
+
 		// [2, 4, 9]
 
 		>>函数iterateUntil接收两个函数：一个用来执行一些动作，另外一个用来进行结果检查，当结果满足“结束”值时返回 false;
@@ -334,6 +334,10 @@ pingpong.div(3);
 const compose = function (f, g) {
 	return x => f(g(x));
 }
+
+const compose = 
+	(...fns) => 
+		fns.reduce((f, g) => (...args) => f(g(...args)));
 
 let toUpperCase = function(x) {
 	return x.toUpperCase();
