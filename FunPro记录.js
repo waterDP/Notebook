@@ -13,6 +13,7 @@ add2(1);
 
 // ES6写法
 const add = a => b => a + b;
+const add = a => b => c => a + b + c;
 const add2 = add(2);
 add2(1);
 // 3
@@ -28,7 +29,8 @@ add2(1);
   尾递归
   function factorial(n, total) {
   	if (n === 1) return total;
-  	return factoiral(n - 1, total);
+  	total *= n;
+  	return factorial(n - 1, total);
   }
   factorial(5, 1);
 
