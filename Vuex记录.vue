@@ -163,9 +163,9 @@
 
 		如果你想将一个getter属性另取一个名字，使用对象形式：
 		<script>
-			mapGetters([
+			mapGetters({
 				doneCount: 'doneTodosCount'
-			]);
+			});
 		</script>
 
 	>> Mutation
@@ -535,3 +535,7 @@
 				}
 			});
 		</script>
+
+
+
+[v-model与value.sync机制]: 

@@ -398,4 +398,25 @@
 
 	=> 集合
 		>> 操作
-					
+			add(value): 向集合添加一个新的项。
+			remove(value): 从集合移除一个值。
+			has(value): 如果值在集合中，返回true，否则返回false。
+			clear(): 移除集合中的所有项。
+			size(): 返回集合中所有元素的数量。与数组的length属性类似。
+			values(): 返回一个包含集合中的有值的数组。
+
+			this.has = function(value) {
+				return value in items;
+
+				// better: return items.hasOwnProperty(value);
+			}
+
+			this.add = function(value) {
+				if (!this.has(value)) {
+					item[value] = value;
+					return true;
+				}
+				return false;
+			}
+
+			

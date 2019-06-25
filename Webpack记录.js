@@ -84,9 +84,12 @@
 			new webpack.optimize.UglifyJsPlugin(),
 			new HtmlWebpackPlugin({template: './src/index.html'})
 		]
-	}
+	} 
 
 	module.exports = config;
+
+	5. 模式 (Mode) 
+		提供 mode 配置选项，告知 webpack 使用相应模式的内置优化。
 
 =>入口起点（Entry Points）
 	

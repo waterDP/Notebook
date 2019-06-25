@@ -234,6 +234,7 @@
 		if(err) throw err;
 
 		console.log(stats);
+	}	
 	
 	stat实例中的函数
 

@@ -1826,7 +1826,7 @@
 	1. 箭头函数是匿名函数，不能作为构造函数，不能使用new;
 	2. 箭头函数不能绑定auguments,取而代之用rest...解决；
 	3. 箭头函数不绑定this，会捕获其所在上下文的this值，作为自己的this值
-	4. 箭头函数能过call()或apply()方法调用一个函数时，只传入一个参数，对this并没有影响。
+	4. 箭头函数通过call()或apply()方法调用一个函数时，只传入一个参数，对this并没有影响。
 	5. 箭头函数没有原型属性。
 	6. 箭头函数不能当做Generator函数，不能使用yield关键字。
 
@@ -1909,6 +1909,420 @@
 		// 时间戳版本		
 		function throttle(fn, delay = 500) {
 			let previous = 0; // 记录上一次触发的时间戳，这里初始化为0，是为了第一次触发产生回调
-			
+			return function(args) {
+				let now = Date.now();
+				let thet = this;
+				let _args = args;
+				if (now - previous > delay) { // 如果时间差大于规定时间，则触发
+					fn.apply(that, _args);
+				}
+			}
 		}
+
+		// 定时器版本
+		function throttle(fn, delay = 500) {
+			let timer;
+			let args = args;
+			if (!timer) { // 如果定时器不存在，则设置新的定时器，到时后，才执行回调，并将定时器置为null
+				timer = setTimeout(function () {
+					timer = null;
+					fn.apply(that, age);
+				}, delay);
+			}
+		}
+
+		// 时间戳+定时器版：实现第一次触发可以立即响应，结束触发后了也能响应
+		// 该版主体思路还是时间戳，定时器的作用仅是执行最后一次回调
+		function  throttle(fn, delay = 500) {
+			let timer = null;
+			let previous = 0;
+			return function (args) {
+				let now = Date.now();
+				let remaining = delay - (now - previous); //  距离规定时间还剩多少时间
+				let that = this;
+				let _args = args;
+				clearTimeout(timer);
+				if (remaining <= 0) {
+					fn.apply(that, _args);
+					previous = Date.now();
+				} else {
+					timer = setTimeout(function() {
+						fn.apply(that, _args);
+					}, remaining); // 因为上面添加一个clearTime，实际这个定时器只有最后一次才会执行。
+				}
+			}
+		}
+
+=> 原生js版前路由实现
+
+	下面分别使用 hash 和 history 两种实现方式回答上面的两个核心问题。
+
+		hash 实现
+			hash 是 URL 中 hash (#) 及后面的那部分，常用作锚点在页面内进行导航，改变 URL 中的 hash 部分不会引起页面刷新
+			通过 hashchange 事件监听 URL 的变化，改变 URL 的方式只有这几种：通过浏览器前进后退改变 URL、通过<a>标签改变 URL、通过window.location改变URL，这几种情况改变 URL 都会触发 hashchange 事件
+			history 实现
+
+		history 提供了 pushState 和 replaceState 两个方法，这两个方法改变 URL 的 path 部分不会引起页面刷新
+		history 提供类似 hashchange 事件的 popstate 事件，但 popstate 事件有些不同：通过浏览器前进后退改变 URL 时会触发 popstate 事件，通过pushState/replaceState或<a>标签改变 URL 不会触发 popstate 事件。好在我们可以拦截 pushState/replaceState的调用和<a>标签的点击事件来检测 URL 变化，所以监听 URL 变化可以实现，只是没有 hashchange 那么方便。
+
+	`
+		<body>
+			<ul>
+		    <!-- 定义路由 -->
+		    <li><a href="#/home">home</a></li>
+		    <li><a href="#/about">about</a></li>
+
+		    <!-- 渲染路由对应的 UI -->
+		    <div id="routeView"></div>
+		  </ul>
+		</body>
+	`
+
+	>> 基于hash实现
+		// 页面加载完不会触发hashchange事件，这里主动触发一次hashchange事件
+		window.addEventListener('DOMContentLoaded', onLoad);
+		// 监听路由变化
+		window.addEventListener('hashChange', onHashChange);
+
+		// 路由视图
+		let routerView = null;
 		
+		function onLoad() {
+			routeView = document.querySelector('#routerView');
+			onHashChange();
+		}	
+
+		// 路由变化时，根据路由渲染对应UI
+		function onHashChange() {
+			switch(location.hash) {
+				case '#/home':
+					routeView.innerHTML = 'Home';
+					break;
+				case '#/about':
+					routerView.innerHTML = 'About';
+					break;
+				default: 
+					break;	
+			}
+		}
+
+	>> 基于history实现
+		// 页面加载完不会触发 hashchange，这里主动触发一次 hashchange 事件
+		window.addEventListener('DOMContentLoaded', onLoad);
+		// 监听路由变化
+		window.addEventListener('popstate', onPopState);
+
+		// 路由视图
+		let routerView = null
+
+		function onLoad () {
+		  routerView = document.querySelector('#routeView')
+		  onPopState()
+
+		  /*
+		  	拦截 <a> 标签点击事件默认行为， 点击时使用 pushState 修改 URL并更新手动 UI，从而实现点击链接更新 URL 和 UI 的效果。
+		   */
+		  let linkList = document.querySelectorAll('a[href]')
+		  linkList.forEach(el => el.addEventListener('click', function (e) {
+		    e.preventDefault()
+		    history.pushState(null, '', el.getAttribute('href'))
+		    onPopState()
+		  }))
+		}
+
+		// 路由变化时，根据路由渲染对应 UI
+		function onPopState () {
+		  switch (location.pathname) {
+		    case '/home':
+		      routerView.innerHTML = 'Home'
+		      break;
+		    case '/about':
+		      routerView.innerHTML = 'About'
+		      break;
+		    default:
+		      break;
+		  }
+		}
+
+=> React 版前端路由实现
+	`
+	  <BrowserRouter>
+	    <ul>
+	      <li>
+	        <Link to="/home">home</Link>
+	      </li>
+	      <li>
+	        <Link to="/about">about</Link>
+	      </li>
+	    </ul>
+
+	    <Route path="/home" render={() => <h2>Home</h2>} />
+	    <Route path="/about" render={() => <h2>About</h2>} />
+	  </BrowserRouter>
+	`
+
+	>> BrowserRouter实现
+		export default class BrowserRouter extends React.Component {
+			state = {
+				currentPath: utils.extractHashPath(window.location.href);
+			}
+
+			onHashChange = e => {
+				const currentPath = utils.extractHashPath(e.newURL);
+				console.log('onHaskChange', currentPath);
+				this.setState({currentPath});
+			}
+
+			componentDidMount() {
+				window.addEventListener('hashChange', this.onHaskChange);
+			}
+
+			componentWillUnmount() {
+				window.removeEventListener('hashChange', this.onHaskChange)
+			}
+
+			render() {
+				return (
+					<RouteContext.Provider value={{currentPath: this.state.currentPath}}>
+						{this.props.children}
+					<\/RouteContext.Provider>
+				)
+			}
+		}
+
+		>>Router实现
+			export default ({path, render}) => {
+				<RouterContent.Consumer>
+					{{(currentPath) => currentPath === path && render()}}
+				<\/RouterContent.Consumer>
+			}
+		>>Link实现
+			export default ({ to, ...props }) => <a {...props} href={"#" + to} \/>;
+
+		>> HistoryRouter 实现
+			export default class HistoryRouter extends React.Component {
+				state = {
+					currentPath: utils.extractUrlPath(window.location.href)
+				}
+
+				onPopState = e => {
+					const currentPath = utils.extractUrlPath(window.location.href);
+					console.log('onPropState:', currentPath);
+					this.setState({currentPath});
+				}
+
+				componentDidMount() {
+					window.addEventListener('popState', this.onPopState);
+				}
+
+				componentWillUnmount() {
+					window.removeEventListener('popState', this.onPopState);
+				}
+
+				render() {
+					return (
+						<RouteContext.Provider value={{currentPath: this.state.currentpath, onPopState: this.onPopState}}>
+						<\/RouteContext.Provider>
+					)
+				}
+			}		
+
+		>> Route 实现
+			export default ({ path, render }) => (
+			  <RouteContext.Consumer>
+			    {({currentPath}) => currentPath === path && render()}
+			  <\/RouteContext.Consumer>
+			);
+
+		>> Link 实现
+			export default ({ to, ...props }) => (
+			  <RouteContext.Consumer>
+			    {({ onPopState }) => (
+			      <a
+			        href=""
+			        {...props}
+			        onClick={e => {
+			          e.preventDefault();
+			          window.history.pushState(null, "", to);
+			          onPopState();
+			        }}
+			      />
+			    )}
+			  </RouteContext.Consumer>
+			);
+
+
+=> Vue 版本前端路由实现				
+	`
+		<div>
+    	<ul>
+      	<li><router-link to="/home">home</router-link></li>
+      	<li><router-link to="/about">about</router-link></li>
+    	</ul>
+    	<router-view></router-view>
+  	</div>
+  `	
+  >> 基于hash实现
+	  const routes = {
+		  '/home': {
+		    template: '<h2>Home</h2>'
+		  },
+		  '/about': {
+		    template: '<h2>About</h2>'
+		  }
+		}
+
+		const app = new Vue({
+		  el: '.vue.hash',
+		  components: {
+		    'router-view': RouterView,
+		    'router-link': RouterLink
+		  },
+		  beforeCreate () {
+		    this.$routes = routes
+		  }
+		});
+
+	>> router-view 实现
+		`
+			<template>
+				<component :is="routeView"></component>
+			</template>
+		`
+		import utils from "~/utils.js";
+		export default {
+			data() {
+				return {
+					routeView: null
+				}
+			},
+			created() {
+				this.boundHashChange = this.onBoudHaskChange.bind(this)
+			},
+			berforeMount() {
+				window.adddEventListener('hashchange', this.boundHashChange)
+			},
+			mounted() {
+				this.onHashChange();
+			},
+			beforeDestroy() {
+				window.removeEventListener('hashchange',  this.boundHashChange)
+			},
+			methods: {
+				onHashChange() {
+					const path = utils.extractHashPath(window.location.href);
+					this.routeView = this.$root.$routes[path] || null;
+					console.log('vue:hashchange', path);
+				}	
+			}
+		}
+
+	>> router-link 实现
+	`
+		<template>
+			<a @click.prevent='onClick'><slot></slot></a>
+		</template>
+	`	
+	export default {
+		props: {
+			to: String
+		},
+		methods: {
+			onClick() {
+				window.location.hash = `#${this.to}`
+			}
+		}
+	}
+
+	>> 基于history实现	
+		使用方式和 vue-router 类似：
+			`
+		    <div>
+		      <ul>
+		        <li><router-link to="/home">home</router-link></li>
+		        <li><router-link to="/about">about</router-link></li>
+		      </ul>
+		      <router-view></router-view>
+		    </div>
+	    `
+
+			const routes = {
+			  '/home': {
+			    template: '<h2>Home</h2>'
+			  },
+			  '/about': {
+			    template: '<h2>About</h2>'
+			  }
+			}
+
+			const app = new Vue({
+			  el: '.vue.history',
+			  components: {
+			    'router-view': RouterView,
+			    'router-link': RouterLink
+			  },
+			  created () {
+			    this.$routes = routes
+			    this.boundPopState = this.onPopState.bind(this)
+			  },
+			  beforeMount () {
+			    window.addEventListener('popstate', this.boundPopState) 
+			  },
+			  beforeDestroy () {
+			    window.removeEventListener('popstate', this.boundPopState) 
+			  },
+			  methods: {
+			    onPopState (...args) {
+			      this.$emit('popstate', ...args)
+			    }
+			  }
+			})
+
+		>> router-view 实现：
+			`
+				<template>
+	  			<component :is="routeView" />
+				</template>
+			`	
+			import utils from '~/utils.js'
+			export default {
+			  data () {
+			    return {
+			      routeView: null
+			    }
+			  },
+			  created () {
+			    this.boundPopState = this.onPopState.bind(this)
+			  },
+			  beforeMount () {
+			    this.$root.$on('popstate', this.boundPopState)
+			  },
+			  beforeDestroy() {
+			    this.$root.$off('popstate', this.boundPopState)
+			  },
+			  methods: {
+			    onPopState (e) {
+			      const path = utils.extractUrlPath(window.location.href)
+			      this.routeView = this.$root.$routes[path] || null
+			      console.log('[Vue] popstate:', path)
+			    }
+			  }
+			}
+
+		>> router-link 实现
+			`
+				<template>
+  				<a @click.prevent="onClick" href=''><slot></slot></a>
+				</template>
+			`	
+			export default {
+			  props: {
+			    to: String
+			  },
+			  methods: {
+			    onClick () {
+			      history.pushState(null, '', this.to)
+			      this.$root.$emit('popstate')
+			    }
+			  }
+			}
