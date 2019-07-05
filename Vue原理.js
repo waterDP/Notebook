@@ -488,8 +488,118 @@
 	2.遍历AST标记静态节点   优化器  
 	3.使用AST生成渲染函数   代码生成器
 
-	<解析器>
+	<解析器> parse
 
+	declare type ASTElement = {
+		type: 1;
+		tag: string;
+		attrsList: Array<{name: string; value: string}>;
+		attrMap: ASTElement | void;
+		children: Array<ASTNode>;
+		// ...
+	}
+
+	declare type ASTExpression = {
+		type: 2;
+		expression: string;
+		text: string;
+		static?: boolean;
+	}
+
+	declare type ASTText = {
+		type: 3;
+		text: string;
+		static?: boolean;
+	}
+
+	// parse 里定义的一些正则
+	export const onRE = /^@|^v-on:/; // 匹配 v-on
+	export const dirRE = /^v-|^@|^:/; // 匹配 v-on和
+	export const forAliacRE = /(.*?)\s+(?:in|of)\s+(.*)/; // 匹配 v-for 属性
+	export const forIteratorRE = /\((\{[^}]*\}|[^,]*),([^,]*)(?:,([^,]*))?\)/; // 匹配 v-for 的多种形式
+
+	/**
+	 * @example
+	 * <div id="test">texttext</div>
+	 */
+	ele1 = {
+    type: 1,
+    tag: "div",
+    attrsList: [{name: "id", value: "test"}],
+    attrsMap: {id: "test"},
+    parent: undefined,
+    children: [{
+        type: 3,
+        text: 'texttext'
+      }
+    ],
+    plain: true,
+    attrs: [{name: "id", value: "'test'"}]
+  }
+
+  <优化器> optimize
+  /**
+   * 在第二步中，会对parse生成的AST进行静态内容的优化。静态内容指的和数据没关系，
+   * 不需要每次都刷新的内容。标记静态节点的作用是为了在后面做Vnode的diff时起作用，
+   * 用来确认一个节点应该做patch还是直接跳过。optimize的过程分两步：
+   * 	1.标记所有静态和非静态结点
+   * 	2.标记静态根节点
+   */
+  
+  /*标记所有的静态和非静态结点*/
+  function markStatic(node: ASTNode) {
+  	// 标记static属性
+  	/**
+	   * isStatic 函数顾名思义是判断该节点是否static的函数，符合以下内容的节点就会被认为是static的节点
+	   * 1.如果是表达式AST节点，直接返回false;
+	   * 2.如果是文本AST节点，直接返回true;
+	   * 3.如果元素是元素节点，阶段有v-pre 指令 ||
+	   * 	.没有任何指令、数据绑定、事件绑定 &&
+	   * 	.没有v-if 和 v-for
+	   * 	.不是slot和component &&
+	   * 	.是HTML保留标签 &&
+	   * 	.不是template标签直接子元素并且没有包含在for循环中
+	   * 则返回true
+	  */
+  	node.static = isStatic(node);
+
+  	if (node.type === 1) {
+  		/**
+  		 * if 判断条件
+  		 * !isPlatformReservedTag(node.tag) node.tag不是HTML保留标签时返回true
+  		 * node.tag !== 'slot' 标签不是slot
+  		 * node.attrsMap['inline-template'] === null node不是一个内联模板容器
+  		 */
+  		if (
+  			!isPlatformReservedTag(node.tag) &&
+  			node.tag !== 'slot' &&
+  			node.attrsMap['inline-template'] === null
+  		) {
+  			return;
+  		}
+  	}
+  	for (let i = 0, l = node.chilren.length; i < l; i++) {
+  		const child = node.children[i];
+  		markStatic(child);
+  		if (!child.static) {
+  			node.static = false;
+  		}
+  	}
+  }
+
+  如果满足上面的所有条件，那么这个节点的static就会被置为false并且不递归子元素，当不满足上面某一个条件时，递归子元素判断子元素是否static，只有所有元素都是static的时候，该元素才是static;
+
+
+  /*标记静态根节点*/
+  if (node.static && node.children.length && (
+  	node.children.length === 1 &&
+  	node.children[0].type === 3
+  )) {
+  	node.staticRoot = true;
+  	return;
+  } else {
+  	node.staticRoot;
+  }
 
 => 整体流程	
 
@@ -636,7 +746,7 @@
 	与生命周期相关的函数有4个，分别是vm.$mount/vm.$forceUpdate/vm.$nextTick/vm.$destroy。其中有两个方法是从lifecycleMixin中挂载到时Vue构造函数的prototype属性上的，分别是vm.$forceUpdate 和
 	vm.$destory。 lifecycleMixin代码如下
 	export function lifecycleMxin(Vue) {
-		
+
 		Vue.prototype.$foreUpdate = function () {
 			// todo:
 			const vm = this;
@@ -655,6 +765,10 @@
 			vm._isBeingDetoryed = true;
 
 			// 删除自己与父级之间的连接
+			/**
+			 * 如果当前实例有父级，同时父级没有被销毁且不是抽象组件，那么将自己从父级的子级列表中的删除，
+			 * 也就是将自己的实例从父级的$children属性中删除-
+			 */
 			const parent = vm.$parent;
 			if (parent && !parent._isBeingDetoryed && !vm.$options.abstract) {
 				remove(parent.$children, vm);
@@ -692,3 +806,185 @@
 			}
 		}
 	}
+
+	<vm.$nextTick()>
+	/**
+	 * 由于vm.$nextTick会将回调添加到任务队列中延迟执行，所以在回调执行前，如果反复调用vm.$nextTcik，Vue
+	 * 并不会反复将架回调添加到时任务队列中，只会向任务队列中添加一个任务。
+	 * 此外，Vue内部有一个列表来存储vm.$nextTick参数中提供的回调。在一轮事件循环中，vm.$nextTick只会向
+	 * 任务队列添加一个任务，多次使用vm.$nextTick只会将回调添加到回调列表中缓存起来。当任务触发时，依次执行
+	 * 列表中的所有回调并清空列表。
+	 */
+	const callbacks = [];
+	let pending = false;
+
+	function flushCallbacks () {
+		pending = false;
+		const copies = callbacks.slice(0);
+		callbacks.length = 0;
+		for (let i = 0; i < copies.length; i++) {
+			copies[i]();
+		}
+	}
+
+	let microTimerFunc;
+	let macroTimerFunc;
+	let useMacroTask = false;
+
+	if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+		macroTimerFunc = () => {
+			setImmediate(flushCallbacks);
+		};
+	} else if (typeof MessageChannel !== 'undefined' && (
+			isNative(MessageChannel) ||
+			MessageChannel.toString() === '[object MessageChannelConstructor]';
+	)) {
+		const channel = new MessageChannel();
+		const port = channel.port2;
+		chaneel.port1.onmessage = flushCallbacks;
+		macroTimerFunc = () => {
+			port.postMessage(1);
+		}
+	} else {
+		macroTimerFunc = () => {
+			setTimeout(flushCallbacks, 0);
+		}
+	}
+
+	if (typeof Promise !== 'undefined' && isNative(Promise)) {
+		const p = Promise.resolve();
+		microTimerFunc = () => {
+			p.then(flushCallbacks);
+		}
+	} else {
+		microTimerFunc = macroTimerFunc;
+	}
+
+	export function withMacroTask (fn) {
+		return fn._withTask || (fn._withTask = function () {
+			useMacroTask = true;
+			const res = fn.apply(null, arguments);
+			useMacroTask = false;
+			return res;
+		});
+	}
+
+	export function nextTick(cb, ctx) {
+		let _resolve;
+		callbacks.push(() => {
+			if (cb) {
+				cb.call(ctx);
+			} else if (_resolve) {
+				_resolve(ctx);
+			}
+		});
+		if (!pending) {
+			pending = true;
+			if (useMacroTask) {
+				macroTimerFunc();
+			} else {
+				microTimerFunc();
+			}
+		}
+		if (!cb && typeof Promise !== 'undefined') {
+			return new Promise(resolve => {
+				_resolve = resolver;
+			});
+		}
+	}
+
+	
+	<生命周期>
+		/**
+		 * @define: 初始化阶段
+		 * @description: new Vue() 到created之间的阶段叫作初始化阶段；
+		 * 		这个阶段的主要目的是在Vue.js实例上初始化一些属性、事件以及响应式数据，
+		 * 		如props、methods、data、watch、provide和inject等。
+		 */
+		
+		/**
+		 * @define: 模板编译阶段
+		 * @description: 在created钩子函数与beforeMount钩子函数之间的阶段是模板编译阶段。
+		 * 		这个阶段的主要目的是将模板编译为渲染函数，只存在于完整版之中。
+		 * 		如果在只包含运行时的构建版本中new Vue(),则不会存在这个阶段。
+		 */
+		
+		/**
+		 * @define: 挂载阶段
+		 * @description： beforeMount钩子函数到到mounted钩子函数之间的是挂载阶段。
+		 * 		在这个阶段，Vue会将其实例挂载到Dom元素上，通俗的讲，就是将模板渲染到指定的Dom元素中。
+		 * 		在挂载的过程中，Vue会开启Watcher来持续追踪依赖的变化。
+		 * 		
+		 * 		在已挂载状态下，Vue仍会持续追踪状态变化。当数据(状态)发生变化时，
+		 * 		Watcher会通知虚拟DOM重新渲染视图，并且在渲染视图前触发beforeUpdate钩子函数，
+		 * 		渲染完成后触发updated钩子函数。
+		 *
+		 * 		通常，在运行时的大部分时间下，Vue处于已挂载的状态，每当状态发生变化时，Vue都会通知组件
+		 * 		使用虚拟DOM重新渲染，也就是我们常说的响应式。这个状态会持续到组件被销毁。
+		 */
+		
+		/**
+		 * @define: 卸载阶段
+		 * @description: 应用调用vm.$detroy方法后，Vue的生命周期会进入卸载阶段。
+		 * 		在这个阶段，Vue会将自身从父组件中删除，取消实例上所有依赖的追踪
+		 * 		并且移除所有的事件监听器。 
+		 */
+
+		Vue.prototype._init = function(options) {
+		 	vm.$options = mergeOptions(
+		 		resolveConstrctorOptions(vm.constructor),
+		 		options||{},
+		 		vm
+		 	)
+
+		 	initLifeCycle(vm);
+		 	initEvent(vm);
+		 	initRender(vm, 'beforeCreate');
+		 	initInjections(vm); // 在data/props前初始化inject
+		 	initState(vm);
+		 	initProvide(vm); // 在data/props后初始化provide
+		 	callHook(vm, 'created');
+
+		 	// 如果用户在实例化Vue时传递了el选项，则自动开启模板编译阶段与挂载阶段
+		 	// 如果没有传递el选项，则不进入下一个生命周期
+		 	// 用户需要执行vm.$mount方法，手动开启模板编译阶段与挂载阶段
+		 	if (vm.$options.el) {
+		 		vm.$mount(vm.$option.el);
+		 	} 
+		} 
+
+		export function callHook(vm, hook) {
+			const handlers = vm.$options[hook];
+			if (handlers) {
+				for (let i = 0, j = handlers.length; i < j; i++) {
+					handlers[i].call(vm);
+				}
+			}
+		}
+
+		<初始化实例>
+		/**
+		 * vue通过 initLifecycle函数向实例中挂载属性，该函数接收vue实例作为参数。
+		 */
+		export function initLifecycle(vm) {
+			const options = vm.$options;
+
+			// 找出第一个非抽象父类
+			let parent = options.parent;
+			if (parent && !options.abstract) {
+				while (parent.$options.abstract && parent.$parent) {
+					parent = parent.$parent;
+				}
+				parent.$children.push(vm);
+			}
+
+			vm.$parent = parent;
+			vm.$root = parent ? parent.$root : vm;
+
+			vm.$children = vm;
+			vm.$refs = [];
+
+			vm.$children = null;
+			vm._isDestoryed= false;
+			vm._isBeingDetoryed = false;
+		}

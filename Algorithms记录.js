@@ -419,4 +419,436 @@
 				return false;
 			}
 
+			this.remove = function(value) {
+				if (this.has(value)) {
+					delete item[value];
+					return true;
+				}
+				return false;
+			}
+
+			this.clear = function() {
+				items = {};
+			}
+
+			this.size = function() {
+				return Object.keys(items).length;
+			}
+
+			this.values = function () {
+				let values = [];
+				for (let i = 0, keys = Object.keys(items); i < keys.length; i++) {
+					values.push(item[keys[i]]);
+				}
+				return values;
+			}
 			
+	=> 字典
+	
+	=> 散列表		
+
+	=> 树
+		二叉搜索树（BST）是二叉树的一种，但是它只允许你在左侧节点存储（比父节点）小的值，在右侧存储（比父节点）大的值。
+
+		创建BinarySearchTree类
+		function BinarySearchTree() {
+			let Node = function (key) {
+				this.key = key;
+				this.left = null;
+				this.right = null;
+			}
+
+			let root = null;
+		}		
+
+		>> 操作
+			insert(key): 向树中插入一个新的键。
+			search(key): 在树中查找一个键，如果节点存在，则返回true；如果不存在，则返回false。
+			inOrderTraverse: 通过中序遍历方式遍历所有节点。
+			preOrderTraverse: 通过先序遍历方式遍历所有节点。
+			postOrderTraverse: 通过后序遍历方式遍历所有节点。
+			min: 返回树中最小的键。
+			max: 返回树中最大的键。
+			remove: 从树中移除某个键。
+
+			class BinarySearchTree() {
+
+				let Node = function (key) {
+					this.key = key;
+					this.left = null;
+					this.right = null;
+				}
+
+				constructor() {
+					this.root = null;
+				}
+
+				insert(key) {
+					let newNode = new Node(key);
+
+					if (this.root = null) {
+						this.root = newNode;
+					} else {
+						inserNode(root, newNode);
+					}
+				}
+
+				insertNode(node, newNode) {
+					if (newNode.key < node.key) {
+						if (node.left === null) {
+							node.left = newNode;
+						} else {
+							insertNode(node.left, newNode);
+						}
+					} else {
+						if (node.rigth === null) {
+							node.right = newNode;
+						} else{
+							insertNode(node.right, newNode);
+						}
+					}
+				}
+
+				// 树的遍历
+
+				/**
+				 * 中序遍历
+				 */
+				inOrderTraverse(callback) {
+					this.inOrderTraverseNode(this.root, callback);
+				}
+
+				inOrderTraverseNode(node, callback) {
+					if (node !== null) {
+						this.inOrderTraverseNode(node.left, callback);
+						callback(node.key);
+						this.inOrderTraverseNode(node.right, callback);
+					}
+				}
+
+				/**
+				 * 先序遍历
+				 */
+				preOrderTraverse(callback) {
+					this.perOrderTraverseNode(this.root, callback);
+				}
+
+				perOrderTraverseNode(node, callback) {
+					if (node !== null) {
+						callback(node.key);
+						this.perOrderTraverseNode(node.left, callback);
+						this.perOrderTraverseNode(node.rigth, callback);
+					} 
+				}
+
+				/**
+				 * 后序遍历
+				 */
+				postOrderTraverse(callback) {
+					this.postOrderTraverseNode(this.root, callback);
+				}
+
+				postOrderTraverseNode(node, callback) {
+					if (node !== null) {
+						this.postOrderTraverseNode(node.left, callback);
+						this.postOrderTraverseNode(node.right, callback);
+						callback(node.key);
+					}
+				}
+
+				/**
+				 * 搜索最小值
+				 */
+				min() {
+					return this.minNode(this.root);
+				}
+
+				minNode(node) {
+					if (node) {
+						while (node && node.left !== null) {
+							node = node.left;
+						}
+						return node.key;
+					}
+					reunurn null;
+				}
+
+				/**
+				 * 搜索最大值
+				 */
+				max() {
+					return this.maxNode(this.root);
+				}
+
+				maxNode(node) {
+					if (node) {
+						while (node && node.right !== null) {
+							node = node.right;
+						}
+						return node.key;
+					}
+					return null;
+				}
+
+				/**
+				 * 搜索一个选定值
+				 */
+				search(key) {
+					return this.searchNode(this.root, key);
+				}
+
+				searchNode(node, key) {
+					if (node === null) {
+						return false;
+					}
+
+					if (key < node.key) {
+						return this.searchNode(node.left, key);
+					} else(key > node.key) {
+						return this.searchNode(node.rigth, key);
+					} else {
+						return true;
+					}
+				}
+
+				/**
+				 * 删除一个节点
+				 */
+				remove(key) {
+					this.root = this.removeNode(this.root, key);
+				}
+
+				removeNode(node, key) {
+
+					if (node === null) {
+						return null;
+					}
+
+					if (key < node.key) {
+						node.left = this.removeNode(node.left, key);
+						return node;
+					} else if (key > node.key) {
+						node.right = this.removeNode(node.right, key);
+						return node;
+					} else { // 键等于key
+
+						// 第一各情况——一个叶节点
+						if (node.left === null && node.right === null) {
+							node = null;
+							return node;
+						}
+
+						// 第二种情况——一个只有一个子节点的节点
+						if (node.left === null) {
+							node = node.right;
+							return node;
+						} else if (node.right === null) {
+							node = node.left;
+							return node;
+						}
+
+						// 第三种情况——一个有两个子节点的节点
+						let aux = this.findMinNode(node.right);
+						node.key = aux.key;
+						node.right = this.removeNode(node.right, aux.key);
+						return node;
+					}
+
+				}
+
+				findMinNode(node) {
+					while(node && node.left !== null) {
+						node = node.left;
+					}
+					return node;
+				}
+
+			}
+
+
+		<红黑树>
+		红黑树的定义
+			性质1：每个节点要么是黑色，要么是红色。
+			性质2：根节点是黑色。
+			性质3：每个叶子节点(NIL)是黑色。
+			性质4：每个红节点的两个子节点是黑节点。
+			性质5：任意一节点到每个叶节点的路径都包含数量相同的黑要点。
+			性质6：如果一个节点存在黑子节点，那么该结点肯定有两个子结点。
+		操作：
+			左旋：以某个节点作为支点(旋转节点)，其右子节点变为旋转节点的父节点，右子节点的左子节点变为旋转节点的右子节点，左子节点保持不变。
+			右旋：以某个节点作为支点(旋转节点)，其左子节点变为旋转节点的父节点，左子节点的右子节点变为旋转节点的左子节点，右子节点保持不变。
+			变色：结点的颜色由红变黑或黑变红
+
+
+	=> 图		
+		创建Grap类
+		function Grap() {
+			let vertices = [];
+			let adjList = new Dictionary();
+
+			/**
+		 	* 添加顶点
+		 	*/
+		 	this.addVertex = function(v) {
+		 		vertices.push(v);
+		 		adjList.set(v, []);
+		 	}
+
+		 	/**
+		 	 * 添加边
+		 	 */
+		 	this.addEdge = function(v, w) {
+		 		adjList.get(v).push(w);
+		 		adjList.get(w).push(v);
+		 	}
+		}
+
+		>> 图的遍历
+		白色：表示该顶点没有被访问
+		灰色：表示该顶点被访问过，但并未被探索过
+		黑色：表示该顶点被访问过且被完全探索过
+
+		1.创建一个队列Q
+		2.将v标注为被发现的（灰色），并将v入队列Q
+		3.如果Q非空，则运行以下步骤：
+			.将u从Q中出队列；
+			.将标注u为被发现的；（灰色）
+			.将u所有未被访问过的邻点（白色）如队列；
+			.将u标注为已被探索过。
+
+		const initializeColor = function() {
+			let color = {};
+			for (let i = 0; i < vertices.length; i++) {
+				color[vertices[i]] = 'white';
+			}
+			return color;
+		}	
+
+		this.bfs = function(v, callback) {
+			let color = initializeColor();  // 初始化每个项点为白色
+			let queue = new Queue();
+			queue.enqueue(v);   // 入队
+
+			while(!queue.isEmpty()) {
+				let u = queue.dequeue(); // 出队
+				let neighbors = adjList.get(u);
+				color[u] = 'grey';
+				for (let i = 0; i < neighbors.length; i++) {
+					let w = neighbors[i];
+					if (color[w] === 'white') {
+						color[w] = 'grey';
+						queue.enqueue(w); // 入队
+					}
+				}
+				color[u] = 'black';
+				if (callback) {
+					callback(u);
+				}
+			}
+		}
+
+		<使用BFS寻找最短路径>
+		this.BFS  = function (v) {
+			let color = initializeColor();
+			let queue = new Queue();
+			let d = {};
+			let pred = {};
+			queue.enqueue(v);
+
+			for (let i = 0; i < vertices.length; i++) {
+				d[vertices[i]] = 0;
+				pred[vertices[i]] = null;
+			}
+
+			while (!queue.isEmpty()) {
+				let u = queue.dequeue();
+				let neighbors = adjList.get(u);
+				color[u] = 'grey';
+				for (let i = 0; i < neighbors.length; i++) {
+					let w = neighbors[i];
+					if (color[w] === 'white') {
+						color[w] = 'grey';
+						d[w] = d[u] + 1;
+						pred[w] = u;
+						queue.enqueue(w);
+					}
+				}
+				color[u] = 'black';
+			}
+
+			return {
+				distance: d,
+				predecessors: pred
+			}
+		}
+
+		<深度优先搜索>
+		this.dfs = function(callback) {
+			let color = initializeColor();
+			for (let i = 0; i < vertices.length; i++) {
+				if (color[vertices[i]] === 'white') {
+					dfsVisite(vertices[i], color, callback);
+				}
+			}
+		}
+
+		function dfsVisit(u, color, callback) {
+			color[u] = 'grey';
+			if (callback) {
+				callback(u);
+			}
+			let neighbors = adjList.get(u);
+			for (let i = 0; i < neighbors.length; i++) {
+				let w = neighbors[i];
+				if (color[w] === 'white') {
+					dfsVisit(w, color, callback);
+				}
+			}
+			color[u] = 'black';
+		}
+
+		<Dijkstra算法> 迪杰斯特拉算法
+		const graph = [
+			[0, 2, 4, 0, 0, 0],
+			[0, 0, 1, 4, 2, 0],
+			[0, 0, 0, 0, 3, 0],
+			[0, 0, 0, 0, 0, 2],
+			[0, 0, 0, 3, 0, 2],
+			[0, 0, 0, 0, 0, 0]
+		];
+
+		function dijkstra (src) {
+			const dist = [], visited = [], length = graph.length; // length为图的节点总数
+
+			for (let i = 0; i < length; i++) {
+				dist[i] = INF; // 距离设置为最大
+				visited[i] = false;
+			}
+			dist[src] = 0;
+
+			for (let i = 0; i < length - 1; i++) {
+				let u = minDistance(dist, visited);
+				visited[u] = true;
+				for (let v = 0; v < length; v++) {
+					if (!visited[v] && 
+						graph[u][v] ！== 0 &&
+						dist[u] !== INF &&
+						dist[u] + graph[u][v] < dist[v]) {
+						dist[v] = dist[u]
+					}
+				}
+			}
+			return dist;
+		}
+
+		minDistance(dist, visited) {
+			let min = INF, minIndex = -1;
+			for (let v = 0; v < dist.length; v++) {
+				if (visited[v] === false; && dist[v] <= min) {
+					min = dist[v];
+					minIndex = v;
+				}
+			}
+
+			return minIndex;
+		}
