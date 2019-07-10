@@ -1,3 +1,178 @@
+=> Vue 版本前端路由实现		
+	<div>
+  	<ul>
+    	<li><router-link to="/home">home</router-link></li>
+    	<li><router-link to="/about">about</router-link></li>
+  	</ul>
+  	<router-view></router-view>
+	</div>
+  >> 基于hash实现
+	  <script>
+	  	const routes = {
+			  '/home': {
+			    template: '<h2>Home</h2>'
+			  },
+			  '/about': {
+			    template: '<h2>About</h2>'
+			  }
+			}
+
+			const app = new Vue({
+			  el: '.vue.hash',
+			  components: {
+			    'router-view': RouterView,
+			    'router-link': RouterLink
+			  },
+			  beforeCreate () {
+			    this.$routes = routes
+			  }
+			});
+	  </script>
+
+	>> router-view 实现
+	
+		<template>
+			<component :is="routeView"></component>
+		</template>
+		
+		<script>
+			import utils from "~/utils.js";
+			export default {
+				data() {
+					return {
+						routeView: null
+					}
+				},
+				created() {
+					this.boundHashChange = this.onBoudHaskChange.bind(this)
+				},
+				berforeMount() {
+					window.adddEventListener('hashchange', this.boundHashChange)
+				},
+				mounted() {
+					this.onHashChange();
+				},
+				beforeDestroy() {
+					window.removeEventListener('hashchange',  this.boundHashChange)
+				},
+				methods: {
+					onHashChange() {
+						const path = utils.extractHashPath(window.location.href);
+						this.routeView = this.$root.$routes[path] || null;
+						console.log('vue:hashchange', path);
+					}	
+				}
+			}
+		</script>
+
+	>> router-link 实现
+		<template>
+			<a @click.prevent='onClick'><slot></slot></a>
+		</template>
+		<script>
+			export default {
+				props: {
+					to: String
+				},
+				methods: {
+					onClick() {
+						window.location.hash = `#${this.to}`
+					}
+				}
+			}
+		</script>
+	>> 基于history实现	
+		使用方式和 vue-router 类似：	
+    <div>
+      <ul>
+        <li><router-link to="/home">home</router-link></li>
+        <li><router-link to="/about">about</router-link></li>
+      </ul>
+      <router-view></router-view>
+    </div>
+		<script>
+			const routes = {
+			  '/home': {
+			    template: '<h2>Home</h2>'
+			  },
+			  '/about': {
+			    template: '<h2>About</h2>'
+			  }
+			}
+
+			const app = new Vue({
+			  el: '.vue.history',
+			  components: {
+			    'router-view': RouterView,
+			    'router-link': RouterLink
+			  },
+			  created () {
+			    this.$routes = routes
+			    this.boundPopState = this.onPopState.bind(this)
+			  },
+			  beforeMount () {
+			    window.addEventListener('popstate', this.boundPopState) 
+			  },
+			  beforeDestroy () {
+			    window.removeEventListener('popstate', this.boundPopState) 
+			  },
+			  methods: {
+			    onPopState (...args) {
+			      this.$emit('popstate', ...args)
+			    }
+			  }
+			})
+		</script>
+
+	>> router-view 实现：
+		<template>
+  		<component :is="routeView" />
+		</template>
+		<script>
+			import utils from '~/utils.js'
+			export default {
+			  data () {
+			    return {
+			      routeView: null
+			    }
+			  },
+			  created () {
+			    this.boundPopState = this.onPopState.bind(this)
+			  },
+			  beforeMount () {
+			    this.$root.$on('popstate', this.boundPopState)
+			  },
+			  beforeDestroy() {
+			    this.$root.$off('popstate', this.boundPopState)
+			  },
+			  methods: {
+			    onPopState (e) {
+			      const path = utils.extractUrlPath(window.location.href)
+			      this.routeView = this.$root.$routes[path] || null
+			      console.log('[Vue] popstate:', path)
+			    }
+			  }
+			}
+		</script>			
+
+	>> router-link 实现
+		<template>
+  		<a @click.prevent="onClick" href=''><slot></slot></a>
+		</template>
+		<script>
+			export default {
+			  props: {
+			    to: String
+			  },
+			  methods: {
+			    onClick () {
+			      history.pushState(null, '', this.to)
+			      this.$root.$emit('popstate')
+			    }
+			  }
+			}
+		</script>	
+
 => 安装
 	如果在一个模块工程中使用它，必须通过Vue.use()明确的安装路由功能：
 	<script>
