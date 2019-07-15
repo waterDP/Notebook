@@ -14,7 +14,7 @@
 	})
 
 	/**
-	 * 希望当外一个进程创建一个锁文件时，我们不能打开文件。因为我们不想在当其他进程正在修改这个文件时篡改这个
+	 * 希望当前一个进程创建一个锁文件时，我们不能打开文件。因为我们不想在当其他进程正在修改这个文件时篡改这个
 	 * 文件。所以说独占锁机制在这个情况下很有用。
 	 * 但最好把当前进程写到这个锁文件中而不是写一个空文件，这样，当有异常发生时，我们知道最后拥有这个锁的进程
 	 */
@@ -71,7 +71,7 @@
 
 	process.on('exit', () => {
 		if (haslock) {
-			fs.unlickSync(lockDir + '/' + process.pid);
+			fs.unlickSync(lockDir + '/' + process.pid);   // 解除对目录的获取权限
 			fs.rmdirSync(lockDir);
 			console.log('removed lock');
 		}
