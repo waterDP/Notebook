@@ -45,6 +45,6 @@ async function callStat() {
   console.log(`This directory is owned by ${stats.uid}`);
 }
 
-const readFile = util(fs.readFile);
+const readFile = util.promisify(fs.readFile);
 
 readFile('./router').then((data) => {}, err => {});
