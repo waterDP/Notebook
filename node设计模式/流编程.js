@@ -233,3 +233,103 @@ fs.createReadStream(file)
 	}
 
 	module.exports = ReplaceStream;
+
+/*使用管道拼接流*/	
+
+/**
+ * 使用管道将两个流连接起来可以使数据自动传输到可写流中，所以没有必要再调用read()方法或者write()方法，
+ * 最重要的是我们再也不用考虑背压的问题，管道会自动处理。
+ */
+
+ 	const ReplaceStream = require('./replaceStream');
+ 	process.stdin
+ 		.pipe(new ReplaceStream(process.argv[2], process.argv[3])
+ 		.pipe(process.stdout);	
+
+/*
+	error事件不会在管道中自动传递。举个例子，看下面的代码片段
+		stream1
+			.pipe(stream2)
+			.on('error', function() {});
+	在上面这个管道中，只能捕捉到stream2产生的错误，即被添加了错误监听器的流。这意味着，如果想要捕捉任何stream1产生的错误，需要直接对其添加错误监听器。
+ */ 		
+
+/*使用流处理异步流程*/
+
+	> 顺序执行 
+		const through = require('./through2');
+		const fromArray = require('./from2-array');
+		const fs = require('fs');
+
+		console.log(fromArray);
+		function concatFiles(destination, files, callback) {
+			const destStream = fs.createWriteStream(destination);
+			fromArray.obj(files)
+				.pipe(through.obj((file, enc, done) => {
+					const src = fs.createReadStream(file);
+					src.pipe(destStream, {end: false});
+					src.on('end', done);
+				}))
+				.on('finish', () => {
+					destStream.end();
+					callback();
+				});
+		}
+
+		// module.exports = concatFiles
+		// 
+		concatFiles(process.argv[2], process.argv.slice(3), () => {
+			console.log('Files Concatenated successfully');
+		});
+
+		// node concat allTogether.txt file1.txt file2.txt
+		// 
+	> 无序并行执行
+		const stream = require('stream');
+
+		class ParalleStream extends stream.Transform {
+			constructor(userTransform) {
+				super({objectMode: true});
+				this.userTranform = userTransform;
+				this.running = 0;  // 救援队列
+				this.terminateCallback = null;
+			}
+
+			_transform() {
+				this.running++;
+				this.userTransform(
+					chunk, 
+					enc,
+					this.push.bind(this),
+					this._onComplete.bind(this)
+				);
+				done();
+			}
+
+			_flush(done) {
+				if (this.running > 0) {
+					this.terminateCallback = done;
+				} else{
+					done();
+				}
+			}
+
+			_onComplete(err) {
+				this.running--;
+				if (err) {
+					return this.emit('error', err);
+				}
+				if (this.running === 0) {
+					this.terminateCallback && this.terminateCallback();
+				}
+ 			}
+		}
+	/*
+		分析：如你所见，构造函数会接受一个userTransform()函数作为参数，并将其保存到一个实例中，同时我们调用父类的构造函数。为了处理简单，默认开启了对象模式。
+
+		接下来是_transform()方法。在该方法中，执行了userTranform()函数，并增加当前运行任务的数量，最终调用done()方法，表示当前变换过程的结束。触发并列进行另一个变换的关键就在于些，在调用done()方法之前我们不会等待userTransform()函数执行完成，而是在调用done()方法。换句语说，我们会为userTransform()函数提供一个特殊的回调函数this.onComplete(), 当userTransform()执行完毕时就会通知我们
+
+		只有流终止时_flush()方法才会被调用，所以如果还有任务在运行中，只要不立即调用done(),就能延迟finish事件的触发，相反可以将done()函数赋值给this.terminateCallback任务完成后，该方法就会被调用。该方法会检查当前是否还有正在运行的任务，如果没有话，就调用this.terminateCallback()函数，结束整个流，并触发finish事件，该事件在_flush()方法中被延迟触发了。
+
+		刚刚构建的ParallelStream类使我们可以轻松地创建一个变换流，并列执行其中的任务，但是有个需要注意的地方：该变化流无法保证它接收到任务的顺序。事实上，任何时刻异步操作都可以结束和摄像头数据，而不需要关心它是何时开始的。可以看到，这一特性对于二进制流并不适用，因为此时数据的顺序是至关重要的，但是该特性对于对象流来说却是非常有用的。
+	 */	

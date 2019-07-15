@@ -453,5 +453,27 @@ firstAddressStreet({
 	]
 });
 
+/*==================偏函数============================*/
+/**
+ * 偏函数的用法是指创建另外一个部分——参数或变量已经预置的函数——的函数的用法
+ */
+let toString = Object.prototype.toString;
 
-	
+let isString = function (obj) {
+	return toString.call(obj) === '[object String]'
+} 
+
+let isFunction = function (obj) {
+	return toString.call(obj) === '[object Function]'
+}
+
+
+/*偏函数*/
+let isType = function(type) {
+	return function(object) {
+		return toString.call(obj) === `[object ${type}]`
+	}
+}
+
+let isString = isType('String');
+let isFunction = isType('Function')

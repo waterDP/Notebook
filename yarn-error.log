@@ -1,0 +1,54 @@
+Arguments: 
+  C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\yarn\bin\yarn.js add --dev from2-array
+
+PATH: 
+  C:\ProgramData\Oracle\Java\javapath; (x86)\NVIDIA Corporation\PhysX\Common;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\; (x86)\Enterprise Vault\EVClient\x64\;C:\Program Files\Java\jdk1.8.0_144\bin;C:\Program Files\Java\jdk1.8.0_144\jre\bin;D:\Program Files\TortoiseGit\bin;%MAVEN_HOME%\bin;D:\Program Files (x86)\gradle-3.4.1\bin;D:\Program Files\Git\cmd;D:\Program Files (x86)\sbt\bin;D:\Program Files\TortoiseSVN\bin;C:\Users\haoran.li\AppData\Roaming\nvm;C:\Program Files\nodejs;C:\Program Files\;D:\node-v8.14.0-win-x64;D:\Program Files (x86)\Git\bin;%WORK%;C:\Users\haoran.li\AppData\Roaming\npm;D:\Program Files\Microsoft VS Code\bin
+
+Yarn version: 
+  1.9.4
+
+Node version: 
+  10.6.0
+
+Platform: 
+  win32 x64
+
+Trace: 
+  Error: http://npm.msxf.com/from2-array: no such package available
+      at Request.params.callback [as _callback] (C:\Users\haoran.li\AppData\Roaming\nvm\v10.6.0\node_modules\yarn\lib\cli.js:64202:18)
+      at Request.self.callback (C:\Users\haoran.li\AppData\Roaming\nvm\v10.6.0\node_modules\yarn\lib\cli.js:137468:22)
+      at Request.emit (events.js:182:13)
+      at Request.<anonymous> (C:\Users\haoran.li\AppData\Roaming\nvm\v10.6.0\node_modules\yarn\lib\cli.js:138440:10)
+      at Request.emit (events.js:182:13)
+      at IncomingMessage.<anonymous> (C:\Users\haoran.li\AppData\Roaming\nvm\v10.6.0\node_modules\yarn\lib\cli.js:138362:12)
+      at Object.onceWrapper (events.js:273:13)
+      at IncomingMessage.emit (events.js:187:15)
+      at endReadableNT (_stream_readable.js:1081:12)
+      at process._tickCallback (internal/process/next_tick.js:63:19)
+
+npm manifest: 
+  {
+    "name": "notebook",
+    "version": "1.0.0",
+    "description": "",
+    "main": "Rxjs.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/waterplay/notebook.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+      "url": "https://github.com/waterplay/notebook/issues"
+    },
+    "homepage": "https://github.com/waterplay/notebook#readme"
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
