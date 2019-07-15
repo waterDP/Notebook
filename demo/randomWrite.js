@@ -1,5 +1,5 @@
 const stream = require('stream');
-const Chance = require('chancejs'); // 一个用来生成各种随机值的模块
+const Chance = require('./chancejs'); // 一个用来生成各种随机值的模块
 const chance = new Chance();
 
 require('http').createServer((req, res) => {
