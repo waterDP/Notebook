@@ -287,15 +287,15 @@ fs.createReadStream(file)
 	> 无序并行执行
 		const stream = require('stream');
 
-		class ParalleStream extends stream.Transform {
+		class ParallelStream extends stream.Transform {
 			constructor(userTransform) {
 				super({objectMode: true});
-				this.userTranform = userTransform;
+				this.userTransform = userTransform;
 				this.running = 0;  // 救援队列
 				this.terminateCallback = null;
 			}
 
-			_transform() {
+			_transform(chunk, enc, done) {
 				this.running++;
 				this.userTransform(
 					chunk, 
@@ -327,9 +327,75 @@ fs.createReadStream(file)
 	/*
 		分析：如你所见，构造函数会接受一个userTransform()函数作为参数，并将其保存到一个实例中，同时我们调用父类的构造函数。为了处理简单，默认开启了对象模式。
 
-		接下来是_transform()方法。在该方法中，执行了userTranform()函数，并增加当前运行任务的数量，最终调用done()方法，表示当前变换过程的结束。触发并列进行另一个变换的关键就在于些，在调用done()方法之前我们不会等待userTransform()函数执行完成，而是在调用done()方法。换句语说，我们会为userTransform()函数提供一个特殊的回调函数this.onComplete(), 当userTransform()执行完毕时就会通知我们
+		接下来是_transform()方法。在该方法中，执行了userTranform()函数，并增加当前运行任务的数量，最终调用done()方法，表示当前变换过程的结束。触发并列进行另一个变换的关键就在于此，在调用done()方法之前我们不会等待userTransform()函数执行完成，而是在调用done()方法。换句语说，我们会为userTransform()函数提供一个特殊的回调函数this.onComplete(), 当userTransform()执行完毕时就会通知我们
 
 		只有流终止时_flush()方法才会被调用，所以如果还有任务在运行中，只要不立即调用done(),就能延迟finish事件的触发，相反可以将done()函数赋值给this.terminateCallback任务完成后，该方法就会被调用。该方法会检查当前是否还有正在运行的任务，如果没有话，就调用this.terminateCallback()函数，结束整个流，并触发finish事件，该事件在_flush()方法中被延迟触发了。
 
 		刚刚构建的ParallelStream类使我们可以轻松地创建一个变换流，并列执行其中的任务，但是有个需要注意的地方：该变化流无法保证它接收到任务的顺序。事实上，任何时刻异步操作都可以结束和摄像头数据，而不需要关心它是何时开始的。可以看到，这一特性对于二进制流并不适用，因为此时数据的顺序是至关重要的，但是该特性对于对象流来说却是非常有用的。
 	 */	
+
+	> 实现一个URL状态监控应用
+		/*
+			我们想要构建一个简单的服务来监控一大组URL的状态。设想所有这些URL都存放一个单独的文件中，并使用换行的方式进行分隔。
+		 */
+		const fs = require('fs');
+		const split = require('split');
+		const request = require('request');
+		const ParallelStream = require('./parallelStream');
+
+		fs.createReadStream(process.argv[2])
+			.pipe(split())
+			.pipe(new ParallelStream((url, enc, push, done) => {
+				if (!url) return done();
+				request.head(url, (err, response) => {
+					push(`${url}is${err ? 'down' : 'up'}\n`);
+					done();
+				});
+			}))
+			.pipe(fs.createWriteStream('result.txt'))
+			.on('finish', () => console.log('All urls were checked'));
+
+	> 无序有限制的并行执行
+	/*
+		如果我们试着用checkUrls这个应用来对包含了成千上条URL的文件进行处理，肯定会遇到麻烦。应用程序会一次创建不可控数量的连接，并行发送大量的数据，这有可能会破坏应用程序的可靠性和整个系统的可用性。我们已经知道，控制负载和资源使用的方法就是限制任务的并发执行。
+	 */		
+	class LimitedParallelStream extends stream.Transform {
+		/*
+			新增了一个控制并发的变量concurrency作为传入参数，同时保存两个回调函数，一个在调用transform方法时会的执行(continueCallback)，另一个在调用flush()方法时会执行(terminateCallback)
+		 */
+		constructor(concurrency, userTransform) {
+			super({objectMode: true});
+			this.concurrency = concurrency;
+			this.userTransform = userTransform;
+			this.running = 0;
+			this.terminateCallback = null;
+			this.continueCallback = null;
+		}
+
+		/*
+			此时在_transform()方法中，在调用done()方法和触发下一个处理流程之前需要检查是否还有空间的资源可以用于执行下一个任务。如果当前工作中的流总数已经达到了最大的限制，可以简单地将回调函数done()赋给continueCallback变量，当有任务执行完毕时该函数就会被调用。
+		 */
+		_transform(chunk, enc, done) {
+			this.running++;
+			this.userTransform(chunk, enc, this._onComplete.bind(this));
+			if (this.running < this.concurrency) {
+				done();
+			} else {
+				this.continueCallback = done;
+			}
+		}
+
+		_onComplete(err) {
+			this.running--;
+			if (err) {
+				return this.emit('error', err);
+			}
+			const tmpCallback = this.continueCallback;
+			this.continueCallback = null;
+			tmpCallback && tmpCallback();
+			if (this.running === 0) {
+				this.terminateCallback && this.terminateCallback();
+			}
+		}
+		
+	}
