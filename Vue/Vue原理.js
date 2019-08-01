@@ -14,7 +14,7 @@
 				if (val === newVal) {
 					return;
 				}
-				dep.forEach(d => d[newVal, val])
+				dep.forEach(d => d(newVal, val));
 				val = newVal;
 			}
 		})
@@ -23,8 +23,10 @@
 	Object 在getter中收集依赖，在setter中触发依赖。
 
 
+/*
 	这里我们新增了数组dep,用来存储被被收集的依赖。然后在set被触发时，循环dep以触发收集的依赖。
 	但是这样写有点耦合，我们把依赖收集的代码封装成一个Dep类，它专门帮助我们管理依赖。使用这个类，我们可以收集依赖、删除依赖或者向依赖发送通知等。
+ */
 
 	export default class Dep {
 		constructor() {
@@ -33,6 +35,10 @@
 
 		addSub (sub) {
 			this.subs.push(sub);
+		}
+
+		removeSub(sub) {
+			remove(this.subs, sub);
 		}
 
 		depend() {
@@ -76,7 +82,7 @@
 		});
 	}
 
-	> Watcher
+	> Watcher   /*依赖是Watcher*/ 
 	export default class Watcher {
 		constructor(vm, expOrFn, cb) {
 			this.vm = vm;
@@ -178,14 +184,32 @@
 
 	> 使用拦截器覆盖Array原型
 	有了拦截器之后，想要让它生效，就需要它去覆盖Array.prototype。但是我们又不能直接覆盖，因为这样会污染全局的Array，这并不是我们希望看到的结果。我们希望拦截的操作只针对那些侦测了变化的数据生效，也就是说希望拦截器只覆盖那些响应式数组的原型。
+	export class Observer {
+		constructor(value) {
+			this.value = value;
 
+			if (Array.isArray(value)) {
+				value.__proto__ = arrayMethods; // 新增
+			} else {
+				this.walk(value);
+			}
+		}
+	}
+
+
+	> 将拦截器方法挂载到数组的属性上
+	/*
+		虽然绝大多数浏览器都支持非标准的属性(在ES6之前并不是标准)来访问原型，但并不是所有浏览器都支持！因此，我们需要处理不能使用的__proto__的情况
+
+		Vue的做法非常粗暴，如果不能使用__proto__,就直接将arrayMethods身上的这些应运设置到时被侦测的数组上。
+	 */
 	// __proto__ 是否可用
 	const hasProto = '__proto__' in {}
 	const arrayKeys = Object.getOwnPrototypeNames(arrayMethods);
 	export class Observer {
 		constructor(value) {
 			this.value = value;
-			this.dep = new Dep();
+			this.dep = new Dep()
 			def(value, '__ob__', this);
 
 			if (Array.isArray(value)) {
@@ -208,7 +232,8 @@
 		} 
 	}
 
-	Array 在getter中收集依赖，在拦截器触发依赖。
+	> 收集依赖
+	// Array 在getter中收集依赖，在拦截器触发依赖。
 
 	function definedReactive(data, key, val) {
 		if (typeof val === 'object') new Observer(val);
@@ -220,7 +245,6 @@
 			get() {
 				dep.depend();
 				// 这里收集Array依赖
-				// 
 				if(childOb) {
 					childOb.dep.depend();
 				}
@@ -267,56 +291,150 @@
 		})
 	}
 
+	export class Observer {
+		constructor(value) {
+			this.value = value;
+			this.dep = new Dep();
+			def(value, '__ob__', this);  // 新增
+
+			if (Array.isArray(value)) {
+				const augment = hasProto ? protoAugment : copyAugment;
+				augment(value, arrayMethods, arrayKeys);
+			} else {
+				this.walk(value);
+			}
+		}
+	}
+
+	/*
+		在上面的代码中，我们在Observer中新增了一段代码，它可以在value上新增一个不可枚举的属性值__ob__,这个属性值就是当前Observer实例
+		这样我们就可以数据数组数据的__ob__属性拿到Obsever实例，然后就可以拿到__ob__上的dep啦。
+		当然，__ob__的作用不仅仅是为了在拦截器中访问Observer实例这么简单，还可以用来标记当前value是否已经被Observer转换成响应式数据。
+		也就是是说，所有被侦测了变化的数据身上都会有一个__ob__属性来表示它们是响应式的。上一节中的observe函数就是通过__ob__属性来判断: 如果vulue是响应式的，则直接返回__ob__;如果不是响应式的，则使用new Observer来将数据转换成响应式数据。
+		当value身上被标记了__ob__之后，就可以通过value.__ob__来访问Observer实例。如果是Array拦截器，因为拦截器是原型方法，所以可以直接通过this.__ob__来访问Observer;
+	 */
+	 [
+	 	'push',
+	 	'pop',
+	 	'shift',
+	 	'unshift',
+	 	'splice',
+	 	'sort',
+	 	'reverse'
+	 ].forEach(method => {
+			// 缓存原始方法
+			const original = arrayProto[method];
+			Object.definedProperty(arrayMethods, method, {
+				value: function mutator(...args) {
+					const ob = this.__ob__; // 新增
+					return original.apply(this, args);
+				},
+				enumerable: false,
+				writable: false,
+				configurable: true
+			});
+	 });
+
+	> 向数组的依赖发送通知
+	/*
+		当侦测到数组发生变化时，会向依赖发送通知。此时，首先要能访问到时依赖。前面已经介绍过如何在拦截器中访问Observer实例，所以这里只需要在Observer实例中拿到dep属性，然后直接发送通知就可以了。
+	 */ 
+	[
+		'push',
+	 	'pop',
+	 	'shift',
+	 	'unshift',
+	 	'splice',
+	 	'sort',
+	 	'reverse'
+	].forEach(method => {
+		// 缓存原始方法 
+		const original = arrayProto[method];
+		def(arrayMethods, method, function mutator(...args) {
+			const result = original.apply(this, args);
+			const ob = this.__ob__;
+			ob.dep.notify(); // 向依赖发送消息
+			return result;
+		});
+	});
+	
+	> 侦测数组中元素的变化
+	export class Observer {
+		constructor(value) {
+			this.value = value;
+			def(value, "__ob__", this);
+				// 新增
+			if (Array.isArray(value)) {
+				this.observeArray(value);
+			} else {
+				this.walk(value);		
+			}
+		}
+
+		/**
+		 * 侦测Array中的每一项
+		 */
+		observeArray(items) {
+			for (let i = 0, l = items.length; i < l; i++) {
+				observe(items[i]);
+			}
+		}
+
+		// ...
+	}
+
+	> 使用Observer侦测新增元素
+	[
+	 //...
+	].forEach(method => {
+		const original = arrayProto[method];
+		def(arrayMethods, method, function mutator(...args) {
+			const result = original.apply(this, args);
+			const ob = this.__ob__;
+			let inserted;
+			switch(method) {
+				case 'push':
+				case 'unshift': 
+					inserted = args;
+					break;
+				case 'splice': 
+					inserted = args.slice(2);
+					break;		
+			}
+			if (inserted) ob.observeArray(inserted);  // 新增
+			ob.dep.notify();
+			return result;
+		});
+	});
+
 	<变化侦测相关的API实现原理>
 	> vm.$watch
-	Vue.prototype.$watch = function(expOrFn, cb, options) {
+	Vue.prototype.$watch = (expOrFn, cb, options) => {
 		const vm = this;
-		options = options || {};
+		options = options||{};
 		const watcher = new Watcher(vm, expOrFn, cb, options);
-		if (options.immeiate) {
+		if (options.immediate) {
 			cb.call(vm, watcher.value);
 		}
 		return function unwatchFn() {
 			watcher.teardown();
-		} 
+		}
 	}
 
 	export default class Watcher {
 		constructor(vm, expOrFn, cb) {
 			this.vm = vm;
-			// expOrFn参数支持函数 
+			// expOrFn参数支持函数
 			if (typeof expOrFn === 'function') {
 				this.getter = expOrFn;
 			} else {
-				this.getter = parsePath(expOrFn);
+				this.getter =  parsePath(expOrFn);
 			}
-			this.cb = cb;
-			this.value = this.get(); 
-		}
-	}
-
-	export default class Watcher {
-		constructor(vm, expOrFn, cb) {
-			this.vm = vm;
-			this.deps = []; // 新增
-			this.depIds = new Set(); // 新增
-			this.getter = parsePath(expOrFn);
 			this.cb = cb;
 			this.value = this.get();
 		}
-
-		addDep(dep) {
-			const id = dep.id;
-			if (!this.depIds.has(id)) {
-				this.depIds.add(id);
-				this.deps.push(dep);
-				dep.addSub(this);
-			}
-		}
+		// ... ... 
 	}
-
-
-	// p34
 
 => 虚拟DOM
 	export default class VNode {

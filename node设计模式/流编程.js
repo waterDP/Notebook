@@ -1,7 +1,7 @@
 /*通过流实现Gzip*/
 const fs = require('fs');
 const zlib = require('zlib');
-const file = process.argz[2];
+const file = process.argv[2];
 
 fs.createReadStream(file)
 	.pipe(zlib.createGzip())
@@ -10,7 +10,7 @@ fs.createReadStream(file)
 
 /**
  * 现在让我们来考虑这样的情况，一个应用压缩一个文件并将其上传到远程的HTTP服务器，接着服务器会解压缩这个文件
- * 并将其上传到时远程的HTTP服务器，接着服务器会解压这个文件并将文件保存到文件系统中。
+ * 并将其上传到远程的HTTP服务器，接着服务器会解压这个文件并将文件保存到文件系统中。
  * 如果你在客户端使用缓存的方式实现，只有在整个文件被读取并压缩之后才会开始上传操作。
  * 同时，服务器端只有接收到所有数据之后才能开始解压文件。使用流来实现这个功能应该是一个更好的方式。
  * 在客户端，一旦从文件系统读取到数据块，流允许你立即进行压缩和发送这些数据块，
@@ -117,13 +117,13 @@ fs.createReadStream(file)
 	 const chance = new Chance();
 
 	 require('http').createServer((req, res) => {
-	 	res.writeHead(200, {'Content-Type': 'text/plain'});
-	 	while (chance.bool({likelihook: 95})) {
-	 		res.write(chance.string() + '\n');
-	 	}
+		 	res.writeHead(200, {'Content-Type': 'text/plain'});
+		 	while (chance.bool({likelihook: 95})) {
+		 		res.write(chance.string() + '\n');
+		 	}
 
-	 	res.end('\nThe end ... \n');
-	 	res.on('finish', () => console.log('All data was sent'));
+		 	res.end('\nThe end ... \n');
+		 	res.on('finish', () => console.log('All data was sent'));
 	 }).listen(8080, () => console.log('Listening on http://localhost: 8080'));
 
 
@@ -164,6 +164,13 @@ fs.createReadStream(file)
 	const mkdirp = require('mkdirp');
 
 	class ToFileStream extends stream.Writable {
+		/**
+ 	 	* super(options)
+ 	 	* @params: {Object} options
+ 	 	* objectMode: {Boolean} 指定流以对象模式工作(true)
+ 	 	* highWaterMark: (默认为16KB) 用来控制背压的限制
+ 	 	* decodeStrings: (默认为true) 这允许将字符串传入_write()应运之前其被自动解码成二进制流。在对象模式中会忽略该配置项。
+ 	 	*/
 		constructor() {
 			super({objectMode: true})
 		}
@@ -179,14 +186,6 @@ fs.createReadStream(file)
  	}
 
  	module.exports = ToFileStream;
-
- 	/**
- 	 * super(options)
- 	 * @params: {Object} options
- 	 * objectMode: {Boolean} 指定流以对象模式工作(true)
- 	 * highWaterMark: (默认为16KB) 用来控制背压的限制
- 	 * decodeStrings: (默认为true) 这允许将字符串传入_write()应运之前其被自动解码成二进制流。在对象模式中会忽略该配置项。
- 	 */
  	
  	const tfs = new ToFileStream();
 
@@ -198,7 +197,7 @@ fs.createReadStream(file)
  * 双向流指的是既可以读取又可以写入的流。当我们想要描述一个既是数据源双是数据目的的实体时，双向流就显得非常有用，比如网络
  * 套接字。双向流同是继承了stream.Readable和stream.Writable的方法，所以这对我们来说并不是全新的概念。
  * 这意味着我们既可以通过read()和write()方法读写数据，也可以同时监听readable和drain事件。
- * 想要创建算定的双向流，必须同时实现_read()和_write()方法，传递给Duplex()构造函数的options对象在内部会同时传递给可读
+ * 想要创建特定的双向流，必须同时实现_read()和_write()方法，传递给Duplex()构造函数的options对象在内部会同时传递给可读
  * 流和可写流的构造函数。配置项options和我们之前讨论的是一样的，只是添加了一个新选项allowHalfOpen(默认为true)，如果它被
  * 设置为false,只要读或者写的一部分终止，整个流都会终止。
  */
@@ -399,3 +398,79 @@ fs.createReadStream(file)
 		}
 		
 	}
+
+	> 顺序并行执行
+	/*
+		之前创建的并列流可能会改变处理数据的顺序，但在有些使用场景下这是不可接受的，事实上有时候，我们需要保证处理数据的顺序完全一致。当然，这也是可以做到的，仍然可以使用并列流，只需要将每个任务处理的数据块进行排序，使其和接受数据时的顺序一致。
+	 */
+	const throughParallel = require('through2-parallel');
+	fs.createReadStream(process.argv[2])
+		.pipe(split())
+		.pipe(throughParallel.obj({concurrency: 2}, (url, enc, done) => {
+			// ...
+		}))
+		.pipe(fs.createWriteStream('resulte.txt'))
+		.on('finish', () => console.log('All urls were checked'));
+
+=> 管道模式
+	/*
+		实现一个组合流
+		 .一个用来压缩和加密数据
+		 .一个用来解压和解密数据
+	 */		
+	const zlib = require('zlib');
+	const crypto = require('crypto');
+	const combine = require('multipipe');
+
+	module.exports.compressAndEncrypt = password => {
+		return combine(
+			zlib.createGzip(),
+			crypto.createCipher('aes192', password)
+		);	
+	}
+
+	module.exports.decryAndDecompress = password => {
+		return combine(
+			crypto.createDecipher('aes192', password),
+			zlib.createGunzip()
+		);
+	}
+
+	/*
+		可以将这些组合看作黑盒来使用，举个例子，我们创建一个小的应用程序对指定文件进行压缩和加密操作。
+	 */
+	const fs = require('fs');
+	const compressAndEncryptStream = 
+		require('./combinedStream').compressAndEncrypt;
+
+	fs.createReadStream(process.argv[3])	
+		.pipe(compressAndEncryptStream(process.argv[2]))
+		.pipe(fs.createWriteStream(process.argv[3] + '.gz.enc'));
+
+	/*
+		可以进一步增加上面代码，基于我们之前创建的管理来构建组合流，这次我们并不会创建一个类似黑盒的组合流，仅仅实现聚合错误管道的功能。事实上，如我们之前多次提到的，下面的代码仅仅会捕获最后一个流发的错误。
+	 */	
+	fs.createReadStream(process.argv[3])
+		.pipe(compressAndEncryptStream(process.argv[2]))
+		.pipe(fs.createWriteStream(process.argv[3] + '.gz.enc')|)
+		.on('error', err => {
+			// Only error from the last stream
+			console.log(err);
+		});
+
+	/*
+		然而，将这此流都组合起来，我们可以优雅地解决这个问题。
+	 */	
+	const combine = require('multipipe');
+	const fs = require('fs');
+	const compressAndEncryptStream =
+		require('./combinedStream').compressAndEncrypt;
+
+	combine(
+		fs.createReadStream(process.argv[3])
+		.pipe(compressAndEncryptStream(process.argv[2]))
+		.pipe(fs.createWriteStream(process.argv[3] + '.gz.enc'))
+	).on('error', err => {
+		// this error may come from any stream in the pipeline
+		console.log(err);
+	});
