@@ -13,7 +13,7 @@ npm and yarn:
 
 	yarn cache clean
 	清除所有缓存数据。
-
+ 
 
 git:
 	git remote update origin --prune 本地分支与远端分支同步
