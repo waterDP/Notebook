@@ -48,7 +48,7 @@
 			const app = new Vue({
 				el: '#app',
 				// 把store对象提供给‘store’选项，这可以把store的实例注入所有的子组件
-				store，
+				store,
 				components: {Counter},
 				template: `
 					<div class="app">
@@ -88,7 +88,7 @@
 					countPlusLocalState (state) {
 						return state.count + this.localCount;
 					}
-				});
+				})
 			}
 		</script>	
 
@@ -156,7 +156,7 @@
 						'doneTodosCount',
 						'anotherGetter',
 						// ...
-					]);
+					])
 				}
 			}
 		</script>
@@ -355,15 +355,12 @@
 			export default {
 				//...
 				methods: {
-					...mapActions: {
+					...mapActions({
 						'increment', // 将'this.increment()'映射为'this.$store.dispatch('increment')'
 
 						// 'mapActions' 也支持载荷：
 						'incrementBy' // 将'this.incrementBy(amout)'映射为'this.$store.dispatch('incrementBy', amount)'
-					},
-					...mapActions: {
-						add: 'increment' // 将'this.add()'映射为'this.$store.dispatch('increment')'
-					}
+					})
 				}
 			}
 		</script>
@@ -383,7 +380,7 @@
 				}
 			}
 
-			现在你可以：
+			// 现在你可以：
 			store.dispatch('actionA').then(() => {
 				// ...
 			});

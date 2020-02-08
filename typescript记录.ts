@@ -558,5 +558,3 @@
   		return method.apply(this, arguments);
   	}
   }
-
-/**/
