@@ -1,5 +1,3 @@
-import { promises } from "fs";
-
 /** 
  * 1.Promise 声明
  * 首先呢，Promise肯定是一个类，我们从class来声明
@@ -68,7 +66,7 @@ class Promise {
 
 /**
  * then 方法
- * Promise A+规定：Promise有一个叫做then的方法，里面有一两个参数 onFulfilled,onRejected  成功有成功的值，失败有失败的原因
+ * Promise A+规定：Promise有一个叫做then的方法，里面有两个参数 onFulfilled,onRejected  成功有成功的值，失败有失败的原因
  * 当状态state为fulfilled，则执行onFulfilled，传入this.value。当状态state为rejected,则执行onRejected，传入this.reason
  * onFulfilled, onRejected如果他们是函数，则必须分别在fulfilled, rejected后被调用，value或reason依次作为他们的第一个参数
  */
@@ -89,7 +87,7 @@ class Promise {
 
 /**
  * 解决异步实现
- * 现在基本可以实现简单的同步代码，但是当resolve在setTimeout内执行then时，state还是pending等待状态，我们就需要在thenm调用的时候，
+ * 现在基本可以实现简单的同步代码，但是当resolve在setTimeout内执行then时，state还是pending等待状态，我们就需要在then调用的时候，
  * 将成功和失败存到各自的数组中，一但reject或者resolve,就调用它们
  * 类似于发布订阅，先将then里面的两个函数储存起来，由于一个promise可以有多个then，所以存在同一个数组内
  */
@@ -228,4 +226,122 @@ Promise.all = function(promises) {
       })
     }
   })
+}
+
+/**
+ * 1. 为了达成链式，我们默认在第一个then里返回一个promise,  promise A+规定了一种方法，就是then里面返回一个新的promise,称为promise2
+ * promise2 = new Promise((resolve, reject) => {})
+ *  .将这个promise2返回的值传递到下一个then中
+ *  .如果返回一个普通的值，则将普通的值传递给下一个then中
+ * 2. 当我们在第一个then中return了一个参数（参数未知，需判断）。这个return出来的新的promise就是onFulfilled()或onRejected()的值
+ * Promise A+ 则规定onFulfilled或onRejected()的值，即第一个then返回的值，叫做x，判断x的函数叫做resolvePromise
+ *  .首先，要看x是不是Promise
+ *  .如果是promise，则取它的结果，作为新的promise2成功的结果
+ *  .如果是普通值，直接作为promise2成功的结果
+ *  .所以要比较x和promise2
+ *  .resolvePromise的参数有promise2(默认返回的promise)，x(我们自己return的对象)、resolve、reject
+ *  .resolve和reject是promise2的
+ */
+class Promise {
+  constructor(executor) {
+    this.state = 'pending'
+    this.value = undefined
+    this.reason = undefined
+    this.onResolvedCallbacks = []
+    this.onRejectedCallbacks = []
+    let resolve = value => {
+      if (this.state === 'pending') {
+        this.state = 'fulfilled|'
+        this.value = value
+        this.onRejectedCallbacks.forEach(fn => fn())
+      }
+    }
+    let reject = reason => {
+      if (this.state === 'pending') {
+        this.state = 'rejected'
+        this.reason = reason
+        this.onRejectedCallbacks.forEach(fn => fn())
+      }
+    }
+    try {
+      executor(resolve, reject)
+    } catch (err) {
+      reject(err)
+    }
+  }
+  then(onFulfilled, onRejected) {
+    // 声明返回的promise2
+    let promise2 = new Promise((resolve, reject) => {
+      if (this.state === 'fulfilled') {
+        let x = onFulfilled(this.value)        
+        // resolvePromise函数，处理自己return的promise和默认的promise2的关系
+        resolvePromise(promise2, x, resolve, reject)
+      }
+      if (this.state === 'rejected') {
+        let x = onRejected(this.reason)
+        resolvePromise(promise2, x, resolve, reject)
+      }
+      if (this.state === 'pending') {
+        this.onResolvedCallbacks.push(() => {
+          let x = onFulfilled(this.value)
+          resolvePromise(promise2, x, resolve, reject)
+        })
+        this.onRejectedCallbacks.push(() => {
+          let x = onRejected(this.reason)
+          resolvePromise(promise2, x, resolve, reject)
+        })
+      }
+    }) 
+    // 返回promise，完成链式
+    return promise2
+  }
+}
+
+/** 
+ * resolvePromise
+ * @param promise2
+ * @param x
+ * @param resolve
+ * @param reject 
+ */
+function resolvePromise(promise2, x, resolve, reject) {
+  // 循环引用报错
+  if (x === promise2) {
+    return reject(new TypeError('Chaining cycle detected for promise'))
+  }
+  // 防止多次调用
+  let called
+  // x不是null， 且x是对象或者函数
+  if (x !== null && (typeof x === 'object' || typeof x === 'object')) {
+    try {
+      // A+规定，声明then=x的then方法
+      let then = x.then
+      // 如果then是函数，就默认是promise了
+      if (typeof then === 'function') {
+        // 就让then执行第一个参数是this, 后面是成功的回调和失败的回调
+        then.call(x, y => {
+          // 成功和失败只能调用一个
+          if (called) return
+          called = true
+          // resolve的结果依旧是promise那就继续解析
+          resolvePromise(promise2, y, resolve, reject)
+        }, err => {
+          // 成功和失败只能调用一个
+          if (called) return
+          called = true
+          reject(err) // 失败了就失败了
+        })
+      } else {
+        resolve(x) // 直接成功即可
+      }
+    } catch (err) {
+      // 也属于失败
+      if (called) return 
+      called = true
+      // 取then出错了那就不要在继续执行了
+      reject(err)
+    }
+  } else {
+    resolve(x)
+  }
 }
