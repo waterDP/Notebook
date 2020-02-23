@@ -113,7 +113,7 @@ class Promise {
         // 一旦resolve执行，调用成功数组的函数
         this.onResolvedCallbacks.forEach(fn => fn())
       }
-    };
+    }
     let reject = reason => {
       if (this.state === 'pending') {
         this.state = 'rejected'
@@ -345,3 +345,7 @@ function resolvePromise(promise2, x, resolve, reject) {
     resolve(x)
   }
 }
+
+/** 
+ * @class Promise 
+ */
