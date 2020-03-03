@@ -1169,7 +1169,7 @@
 					}
 				});
 
-				// 3.注入组件
+				// 3.注入组件选项
 				Vue.mixin({
 					created: function() {
 

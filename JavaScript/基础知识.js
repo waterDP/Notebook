@@ -90,3 +90,100 @@ o.b = 2;
 //a和b皆为数据属性
 Object.getOwnPropertyDescriptor(o,"a") // {value: 1, writable: true, enumerable: true, configurable: true}
 Object.getOwnPropertyDescriptor(o,"b") // {value: 2, writable: true, enumerable: true, configurable: true}
+
+// => 高阶函数
+/* 可用于批量生成函数 */
+let toString = Object.prototype.toString;
+let isString = function (obj) {
+	return toString.call(obj) === '[object String]'
+}
+let isFunction = function(obj) {
+	return toString.call(obj) === `[object Function]`
+}
+let isType = function (type) {
+	return function(obj) {
+		return toString.call(obj) === `[object ${type}]`
+	}
+}
+/* 可以用于需要多次调用才执行的函数 */
+let after = function(times, task) {
+	return function() {
+		if (times--==1) {
+			return task.apply(this, arguments)
+		}
+	}
+}
+let fn = after(3, function() {
+	console.log(3)
+})
+fn();
+
+// xhr.withCredientials = true 允许ajax的cookie跨域访问
+/* request 设置请求头 */
+// 允许哪个源，可以访问我
+res.setHeader('Access-Control-Allow-Origin', '*')
+// 允许携带哪个头访问我
+res.setHeader('Access-Control-Allow-Headers', 'name')
+// 允许哪个方法访问我
+res.setHeader('Access-Control-Allow-Methods', 'PUT')
+// 允许携带cookie
+res.setHeader('Access-Control-Allow-Credentials', true)
+// 预检的存活时间 
+res.setHeader('Access-Control-Max-Age', 6)
+// 允许前端获取哪个头 
+res.setHeader('Access-Control-Expose-Headers', 'name')
+
+
+/** 
+ * 基于回调的方式来获取最获数据
+ */
+function after(times, callback) {
+	let renderObj = {}
+	return function (key, value) {
+		renderObj[key] = value
+		if (--times === 0) {
+			callback(renderObj);
+		}
+	}
+}
+
+let out = after(2, function(renderObj) {
+	console.log(renderObj)
+})
+
+fs.readFile('./age.txt', 'utf8', (error, data) => {
+	out('age', data)
+})
+
+fs.readFile('./name.txt', 'utf8', (error, data) => {
+	out('name', data)
+})
+
+/**
+ * 基于发布-订阅的方式来获取数据
+ */
+const e = {
+	_renderObj: {},
+	_methods: [],
+	on(callback) {
+		this._methods.push(callback)
+	},
+	emit(key, value) {
+		this._renderObj[key] = value;
+		this._methods.forEach(method => method(this._renderObj))
+	}
+}
+
+e.on((obj) => {
+	if (Object.keys(obj).length === 2) {
+		console.log(obj)
+	}
+})
+
+fs.readFile('./age.txt', 'utf8', (error, data) => {
+	e.emit('age', data)
+})
+
+fs.readFile('./name.txt', 'utf8', (error, data) => {
+	e.emit('name', data)
+})
