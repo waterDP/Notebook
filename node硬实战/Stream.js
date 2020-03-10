@@ -6,8 +6,8 @@
  * stream.Transform _flush(size) _transform(chunk, encoding, callback) 一个会以某种方式修改数据的双工流，没有输入数据要匹配输出数据的限制 
  */
 
-... 内置流
-  > 一个使用的流的简间静态web服务器
+//... 内置流
+  //> 一个使用的流的简间静态web服务器
   const http = require('http');
   const fs = require('fs');
  
@@ -31,7 +31,7 @@
   }).listen(8080);
 
 
-  > 使用gzip压缩的静态web服务器
+ // > 使用gzip压缩的静态web服务器
   const http = require('http');
   const fs = require('fs');
   const zlib = require('zlib');
@@ -43,8 +43,8 @@
   		.pipe(res);
   }).listen(8000);
 
-  ... 流的错误处理
-	> 在流处理过程中捕获错误
+  //... 流的错误处理
+	//> 在流处理过程中捕获错误
 	const fs = require('fs');
 	const stream =  fs.createReadStream('not found');
 
@@ -55,7 +55,7 @@
 	});
 
 
-... 第三方模块和流
+//... 第三方模块和流
 	在Express中使用流
 	const express = require('express');
 	const app = express();
@@ -66,7 +66,7 @@
 
 	app.listen(3000);
 
-	> 一个使用流的express应用
+//	> 一个使用流的express应用
 	const stream = require('stream');
 	const util = require('util');
 	const express = require('express');
@@ -98,8 +98,8 @@
 
 	app.listen(3000);
 
-... 使用流基类
-	> 从stream.Readalbe基类继承
+//... 使用流基类
+	//> 从stream.Readalbe基类继承
 	const Readable = require('stream').Readable;
 
 	function MyStream(options) {
@@ -117,7 +117,7 @@
 	 * objectMode: 允许流是一个对象，而不是字节
 	 */
 	
-	> 实现一个可读流
+	//> 实现一个可读流
 	/**
 	 * 当围绕一个所需要的底层数据而实现一个自定义stream.Readable类是很有用的。例如，我正在开发一个项目，客户端发
 	 * 送了json文件，包含数百万行的数据。我决定写一个简单的stream.Readable类来读取一个缓冲区，当一个新行出现，

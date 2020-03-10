@@ -206,24 +206,41 @@ Promise.race = function(promises) {
   })
 }
 
-// all方法（获取所有的promise, 都执行then，把结束放到数组，一起返回）
-Promise.all = function(promises) {
-  let arr = []
-  let i = 0
-  function processData(index, data) {
-    arr[index] = data
-    i++
-    if (i === promises.length) {
-      resolve(arr)
+
+/**
+ * 判断是否是Promise
+ * @param {any} x
+ * @return {boolean}
+ */ 
+function isPromise(x) {
+  if ((typeof x === 'object' && x !== null) || typeof x === 'function') {
+    if (typeof x.then === 'function') {
+      return true;
     }
   }
+  return false;
+}
+// all方法（获取所有的promise, 都执行then，把结束放到数组，一起返回）
+Promise.all = function(promises) {
   return new Promise((resolve, reject) => {
+    let arr = []
+    let idx = 0;
+    let processData = (value, index) => {
+      arr[index] = value;
+      if (++idx === promises.length) {
+        resolve(arr)
+      }
+    }
+
     for (let i = 0; i < promises.length; i++) {
-      promises[i].then(data => {
-        processData[i].then(data => {
-          processData(data);
+      let currentValue = promises[i]
+      if (isPromise(promise[i])) {
+        currentValue.then(data => {
+          processData(data, resolve);
         }, reject)
-      })
+      } else {
+        processData(currentValue, reject)
+      }
     }
   })
 }
@@ -251,7 +268,7 @@ class Promise {
     this.onRejectedCallbacks = []
     let resolve = value => {
       if (this.state === 'pending') {
-        this.state = 'fulfilled|'
+        this.state = 'fulfilled'
         this.value = value
         this.onRejectedCallbacks.forEach(fn => fn())
       }
@@ -273,22 +290,45 @@ class Promise {
     // 声明返回的promise2
     let promise2 = new Promise((resolve, reject) => {
       if (this.state === 'fulfilled') {
-        let x = onFulfilled(this.value)        
-        // resolvePromise函数，处理自己return的promise和默认的promise2的关系
-        resolvePromise(promise2, x, resolve, reject)
+        setTimeout(() => {
+          try {
+            let x = onFulfilled(this.value);
+            resolvePromise(promise2, x, resolve, reject)
+          } catch (err) {
+            reject(err)
+          }
+        }, 0)
       }
       if (this.state === 'rejected') {
-        let x = onRejected(this.reason)
-        resolvePromise(promise2, x, resolve, reject)
+        setTimeout(() => {
+          try {
+            let x = onRejected(this.reason)
+            resolvePromise(promise2, x, resolve, reject)
+          } catch (err) {
+            reject(err)
+          }
+        }, 0)
       }
       if (this.state === 'pending') {
         this.onResolvedCallbacks.push(() => {
-          let x = onFulfilled(this.value)
-          resolvePromise(promise2, x, resolve, reject)
+          setTimeout(() => {
+            try {
+              let x = onFulfilled(this.value)
+              resolvePromise(promise2, x, resolve, reject)
+            } catch (err) {
+              reject(err)
+            }
+          }, 0)
         })
         this.onRejectedCallbacks.push(() => {
-          let x = onRejected(this.reason)
-          resolvePromise(promise2, x, resolve, reject)
+          setTimeout(() => {
+            try {
+              let x = onRejected(this.reason)
+              resolvePromise(promise2, x, resolve, reject)
+            } catch(err) {
+              reject(err)
+            }
+          }, 0);
         })
       }
     }) 

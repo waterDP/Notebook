@@ -1,4 +1,4 @@
-... 从EventEmitter继承
+// 从EventEmitter继承
 	const util = require('util');
 	const events = require('events');
 
@@ -8,7 +8,7 @@
 
 	util.inherits(MusicPlayer, events.Emitter);
 
-... 从EventEmitter继承
+// 从EventEmitter继承
 	const util = require('util');
 	const events = require('events');
 	const AudioDevice = {
@@ -47,7 +47,7 @@
 		musicPlayer.emit('stop');
 	}, 1000);
 
-... 混合EventEmitter
+// 混合EventEmitter
 	/**
 	 * 除了将EventEmitter作为来继承，还可以交它的方法拷贝到另一个类中。
 	 * 这种情况适合于当你有一个现成的类，并且不能简单地将它继承EventEmitter的时候很有用
@@ -85,7 +85,7 @@
 
 	musicPlayer.emit('play');
 
-... 基于事件的错误
+// 基于事件的错误
 	/**
 	 * 问题
 	 * 你正在使用EventEmitter, 使用在异常发生时希望能够优雅地处理，但它却不断的抛出异常。
@@ -121,7 +121,7 @@
 	 * 在NOde中，error事件被当作特殊的情况，假如没有监听器，那么默认的动作是打印一个堆栈并退出程序。
 	 */
 	
-... 通过domains管理异常
+// 通过domains管理异常
 	/**
 	 * Node的domain模块能被用来集中地处理多个异步操作，这包括EventEmitter实例发出未处理的error事件
 	 */
@@ -169,11 +169,11 @@
 		const musicPlayer = new MusicPlayer();
 		musicPlayer.play();
 	});
-... 反射
+// 反射
 	/*
 		有时候你需要动态地响应一个EventEmitter实例的变化，或者查询现有它的监听
 	 */	
-  > 密切关注新的监听
+  //> 密切关注新的监听
   const util = require('util');
   const events = require('events');
 
@@ -192,7 +192,7 @@
   	// This will cause 'newListner' to fire
   });
 
-  > 在有新建监听器事件中自动触发事件
+//	在有新建监听器事件中自动触发事件
   // rxjs Hot vs Cold Observables
   const util = require('util');
   const events = require('events');
@@ -235,7 +235,7 @@
   	}
   }
 
-... 在Express中复用EventEmitter
+// Express中复用EventEmitter
 	const express = require('express');
 	const app = express();
 
@@ -250,7 +250,7 @@
 
 	app.listen(3000);
 
-... 组织事件名称
+// 组织事件名称
 	const util = require('util');
 	const events = require('events');
 

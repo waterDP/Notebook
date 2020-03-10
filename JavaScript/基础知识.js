@@ -187,3 +187,19 @@ fs.readFile('./age.txt', 'utf8', (error, data) => {
 fs.readFile('./name.txt', 'utf8', (error, data) => {
 	e.emit('name', data)
 })
+
+/** 
+ * promisify 
+ * @param {function} fn
+ * @return {function} 
+ */
+function promisify(fn) {
+	return function (...args) {
+		return new Promise((resolve, reject) => {
+			fn(...args, (err, data) => {
+				if (err) reject(err)
+				resolve(data)
+			})
+		})
+	}
+}
