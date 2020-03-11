@@ -23,8 +23,3 @@ export default {
 }
 
 // $vnode (placeHolderVnode)  _vnode(组件中包含的真实的那些div)
-
-
-// 源码 1） 组件的渲染初始化流程  parser
-// 周日 2） ssr  +  vue的单元测试
-// 下周 3） vue组件库 (文档 + 单元测)封装7-8个组件 ts  ts + vue
