@@ -255,7 +255,7 @@ fs.createReadStream(file)
 
 /*使用流处理异步流程*/
 
-	> 顺序执行 
+	//> 顺序执行 
 		const through = require('./through2');
 		const fromArray = require('./from2-array');
 		const fs = require('fs');
@@ -283,7 +283,7 @@ fs.createReadStream(file)
 
 		// node concat allTogether.txt file1.txt file2.txt
 		// 
-	> 无序并行执行
+	//> 无序并行执行
 		const stream = require('stream');
 
 		class ParallelStream extends stream.Transform {
@@ -333,7 +333,7 @@ fs.createReadStream(file)
 		刚刚构建的ParallelStream类使我们可以轻松地创建一个变换流，并列执行其中的任务，但是有个需要注意的地方：该变化流无法保证它接收到任务的顺序。事实上，任何时刻异步操作都可以结束和摄像头数据，而不需要关心它是何时开始的。可以看到，这一特性对于二进制流并不适用，因为此时数据的顺序是至关重要的，但是该特性对于对象流来说却是非常有用的。
 	 */	
 
-	> 实现一个URL状态监控应用
+	//> 实现一个URL状态监控应用
 		/*
 			我们想要构建一个简单的服务来监控一大组URL的状态。设想所有这些URL都存放一个单独的文件中，并使用换行的方式进行分隔。
 		 */
@@ -354,7 +354,7 @@ fs.createReadStream(file)
 			.pipe(fs.createWriteStream('result.txt'))
 			.on('finish', () => console.log('All urls were checked'));
 
-	> 无序有限制的并行执行
+	//> 无序有限制的并行执行
 	/*
 		如果我们试着用checkUrls这个应用来对包含了成千上条URL的文件进行处理，肯定会遇到麻烦。应用程序会一次创建不可控数量的连接，并行发送大量的数据，这有可能会破坏应用程序的可靠性和整个系统的可用性。我们已经知道，控制负载和资源使用的方法就是限制任务的并发执行。
 	 */		
@@ -399,7 +399,7 @@ fs.createReadStream(file)
 		
 	}
 
-	> 顺序并行执行
+	//> 顺序并行执行
 	/*
 		之前创建的并列流可能会改变处理数据的顺序，但在有些使用场景下这是不可接受的，事实上有时候，我们需要保证处理数据的顺序完全一致。当然，这也是可以做到的，仍然可以使用并列流，只需要将每个任务处理的数据块进行排序，使其和接受数据时的顺序一致。
 	 */
@@ -412,7 +412,7 @@ fs.createReadStream(file)
 		.pipe(fs.createWriteStream('resulte.txt'))
 		.on('finish', () => console.log('All urls were checked'));
 
-=> 管道模式
+// 管道模式
 	/*
 		实现一个组合流
 		 .一个用来压缩和加密数据
