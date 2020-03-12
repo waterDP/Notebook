@@ -1486,7 +1486,7 @@
 
 			let reciveMessage = function () {
 				let message = Array.prototype.shift.call(arguments);  // arguments的第一个参数为消息名称
-				operations[messages].apply(this, arguments); 
+				operations[message].apply(this, arguments); 
 			};
 
 			return {
