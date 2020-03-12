@@ -1,10 +1,10 @@
 /*设计模式*/
 
-=> 单例模式
-	单例模式的定义是：保证一个类仅有一个实例，并提供一个访问它的全局访问点。
+// => 单例模式
+// 	单例模式的定义是：保证一个类仅有一个实例，并提供一个访问它的全局访问点。
 
-	>>实现单例模式
-		要实现一个单例模式并不复杂，无非是用一个变量来标志当前是否已经为某个类创建过对象，如果是，则在下一次获取该类的实例时，直接返回之前创建的对象。
+// 	>>实现单例模式
+// 		要实现一个单例模式并不复杂，无非是用一个变量来标志当前是否已经为某个类创建过对象，如果是，则在下一次获取该类的实例时，直接返回之前创建的对象。
 		let Singlecton = function(name) {
 			this.name = name;
 		}
@@ -26,7 +26,7 @@
 
 		alert(a === b); //true;
 
-		或者：
+		// 或者：
 
 		let Singleton = function(name) {
 			this.name = name;
@@ -46,8 +46,8 @@
 			}
 		})();
 
-	>>透明的单例
-		我们现在的目标是实现一个“透明”的单例类，用户从这个类中创建对象的时候，可以像使用其他任何普通类一样。在下面的这个例子中，我们将使用CreateDiv单例类，它的作用是负责页面中唯一的div节点，代码如下：
+	// >>透明的单例
+	// 	我们现在的目标是实现一个“透明”的单例类，用户从这个类中创建对象的时候，可以像使用其他任何普通类一样。在下面的这个例子中，我们将使用CreateDiv单例类，它的作用是负责页面中唯一的div节点，代码如下：
 		let CreateDiv = (function() {
 
 			let instance = undefined;
@@ -78,8 +78,8 @@
 
 		alert(a === b); //true
 
-	>>用代理实现单例模式
-		首先在CreateDiv构造函数中，把负责管理单例的代码移除，使它成为一个普通的创建div的类：
+	// >>用代理实现单例模式
+	// 	首先在CreateDiv构造函数中，把负责管理单例的代码移除，使它成为一个普通的创建div的类：
 		let CreateDiv = function(html) {
 			this.html = html;
 			this.init();
@@ -107,11 +107,11 @@
 		let a = proxySingletonCreateDiv('sven1');
 		let b = proxySingletonCreateDiv('sven2');
 
-	>>JavaScript中的单例模式
-		作为普通的开发者，我们有必要尽量减少全局变量的使用，即使需要，也要把它的污染降到最低。以下几种方式可以相对降低全局变量带来的命名污染。
-		1.使用命名空间
-			适当地使用命名空间，并不会杜绝全局命题，但可以减少全局变量的数量。
-			最简单的方法依然用对象字面量的方式：
+	// >>JavaScript中的单例模式
+	// 	作为普通的开发者，我们有必要尽量减少全局变量的使用，即使需要，也要把它的污染降到最低。以下几种方式可以相对降低全局变量带来的命名污染。
+	// 	1.使用命名空间
+	// 		适当地使用命名空间，并不会杜绝全局命题，但可以减少全局变量的数量。
+	// 		最简单的方法依然用对象字面量的方式：
 			let namespace1 = {
 				a() {
 					alert(1);
@@ -121,7 +121,7 @@
 				}
 			}
 
-			我们还可以动态的创建命名空间
+			// 我们还可以动态的创建命名空间
 			let MyApp = {};
 			MyApp.nameSpace = function(name) {
 				let parts = name.split('.');
@@ -147,8 +147,8 @@
 				}
 			};
 
-		2.使用闭包封装私有变量
-			这种方法把一些变量封装在闭包内部，只暴露一些接口跟外界通信
+		// 2.使用闭包封装私有变量
+			// 这种方法把一些变量封装在闭包内部，只暴露一些接口跟外界通信
 			let user = (function() {
 
 				let __name = 'sven';
@@ -162,10 +162,10 @@
 
 			})();
 
-			我们用下划线来约定私有变量__name和__age，它们被封装在闭包产生的作用域中，外部是访问不到这两个变量的，这就避免了对全局的污染。
+			// 我们用下划线来约定私有变量__name和__age，它们被封装在闭包产生的作用域中，外部是访问不到这两个变量的，这就避免了对全局的污染。
 
-	>>惰性单例
-		惰性单例指的是在需要时候才创建实例。惰性单例是单例模式的重点，这种技术在实际开发中非常有用。
+	// >>惰性单例
+		// 惰性单例指的是在需要时候才创建实例。惰性单例是单例模式的重点，这种技术在实际开发中非常有用。
 		Singleton.getInstance = (function() {
 			let instance = undefined;
 			return function() {
@@ -177,7 +177,7 @@
 			}
 		})();	
 
-	 【惰性单例窗】
+	//  【惰性单例窗】
 		let createLoginLayer = (function() {
 			let div = undefined;
 			return function() {
@@ -196,13 +196,13 @@
 			loginLayer.style.display = 'block';
 		}
 
-	>>通用的惰性单例
+	// >>通用的惰性单例
 
-		上面我们完成了一个可用的惰性单例，但是我们发现它还有如下的一些问题：
-		1.这段代码仍然是违反单一职责原则的，创建对象和管理单例的逻辑都放在createLoginLayer对象内部。
-		2.如果我们下次需要创建页面中唯一的iframe，或者script标签，用来跨域请求数据，就必须得如法炮制，把createLoginLayer函数几乎照抄一遍。
+		// 上面我们完成了一个可用的惰性单例，但是我们发现它还有如下的一些问题：
+		// 1.这段代码仍然是违反单一职责原则的，创建对象和管理单例的逻辑都放在createLoginLayer对象内部。
+		// 2.如果我们下次需要创建页面中唯一的iframe，或者script标签，用来跨域请求数据，就必须得如法炮制，把createLoginLayer函数几乎照抄一遍。
 
-		> 管理单例：创建对象的方法fn被当成参数动态传入getSingleton函数
+		// > 管理单例：创建对象的方法fn被当成参数动态传入getSingleton函数
 			let getSingleton = function(fn) {
 				let result = undefined;
 				return function() {
@@ -210,7 +210,7 @@
 				}
 			}
 
-		> 创建浮窗
+		// > 创建浮窗
 			let createLoginLayer = function() {
 				let div = document.createElement('div');
 				div.innerHTML = '我是一个浮窗';
@@ -226,7 +226,7 @@
 				loginLayer.style.display = 'block';
 			}
 
-		> 创建唯一的iframe
+		// > 创建唯一的iframe
 			let createIframe = function() {
 				let iframe = document.createElement('iframe');
 				document.body.appendChild(iframe);
@@ -240,10 +240,10 @@
 				loginLayer.src = 'http://www.baidu.com';
 			} 	
 
-=> 策略模式
-	策略模式的定义是：定义一系列的算法，把它们一个个封装起来，并且使它们可以相互替换。
+// => 策略模式
+// 	策略模式的定义是：定义一系列的算法，把它们一个个封装起来，并且使它们可以相互替换。
 
-	我们先把每种绩效的计算规则都封装在对应的策略类里面：
+// 	我们先把每种绩效的计算规则都封装在对应的策略类里面：
 		
 		let performanceS = function() {};
 		performanceS.prototype.calculate = function(salary) {
@@ -260,7 +260,7 @@
 			return salary*2;
 		}
 
-	接下来定义奖金类Bonus
+	// 接下来定义奖金类Bonus
 
 		let Bonus = function() {
 			this.salary = null;   // 原始工资
@@ -279,7 +279,7 @@
 			return this.strategy.caclulate(this.salary);  // 把计算奖金的操作委托给对象的策略对象
 		}
 
-	使用：
+	// 使用：
 		let bonus = new Bonus();
 
 		bonus.setSalary(10000);
@@ -290,8 +290,8 @@
 		bonus.setStrategy(new performanceB()); // 设置策略对象
 		console.log(bonus.getBonus()); // 输出：30000
 	
-	>> JavaScript版本的策略模式
-		上面，我们让strategy对象从各个策略类中创建而来，这是模拟一些传统面向对象语言的实现。实际上在JavaScript中，函数也是对象，所以更简单和直接的做法是把strategy直接定义为函数：
+	// >> JavaScript版本的策略模式
+		// 上面，我们让strategy对象从各个策略类中创建而来，这是模拟一些传统面向对象语言的实现。实际上在JavaScript中，函数也是对象，所以更简单和直接的做法是把strategy直接定义为函数：
 		let strategies = {
 			S(salary) {
 				return salary*4;
@@ -311,8 +311,8 @@
 		console.log(calculateBonus('S', 20000)); // 输出：80000
 		console.log(calculateBonus('A', 10000)); // 输出：30000
 
-	>> 表单验证
-		1.表单验证的第一个版本
+	// >> 表单验证
+		// 1.表单验证的第一个版本
 			`<html>
 				<body>
 					<form action="httt://xxx.com/register" id='registerForm' method='post'>
@@ -341,13 +341,13 @@
 				}
 			}
 
-			这是一种常见的代码编写方式，它的缺点是：
-			1.registerForm.onsubmit函数庞大，包含了很多的if-else语句，这些语句需要覆盖所有的校验规则。
-			2.registerForm.onsubmit函数缺乏弹性，如果增加了一种新的校验规则，或者想把密码的长度校验从6改成8，我们都必须深入 registerForm.onsubmit 函数的内部实现，这是违反开放-封闭原则的。
-			3.算法的利用性差，如果在程序中增加了另外一个表单，这个表单也需要进行一些类似的校验，那我们很可能将这些校验逻辑处复制得漫天遍野。
+			// 这是一种常见的代码编写方式，它的缺点是：
+			// 1.registerForm.onsubmit函数庞大，包含了很多的if-else语句，这些语句需要覆盖所有的校验规则。
+			// 2.registerForm.onsubmit函数缺乏弹性，如果增加了一种新的校验规则，或者想把密码的长度校验从6改成8，我们都必须深入 registerForm.onsubmit 函数的内部实现，这是违反开放-封闭原则的。
+			// 3.算法的利用性差，如果在程序中增加了另外一个表单，这个表单也需要进行一些类似的校验，那我们很可能将这些校验逻辑处复制得漫天遍野。
 
-		2.用策略模式重构表单校验
-			下面我们将用策略模式来重构表彰校验的代码，很显然第一步我们要把这些校验逻辑都封装成策略对象：
+		// 2.用策略模式重构表单校验
+		// 	下面我们将用策略模式来重构表彰校验的代码，很显然第一步我们要把这些校验逻辑都封装成策略对象：
 			let strategies = {
 				isNonEmpty(value, errorMsg) { //不为空
 					if ( value === '') {
@@ -366,7 +366,7 @@
 				}
 			}
 
-			接下来我们准备实现Validator类。Valitator类在这里作为Context，负责接收用户的请求并委托给strategy对象。在给出Validator类的代码之前，有必要提前了解用户是如何向Validator类发送请求的，这有助于我们知道如何去编写Validator类的代码。如下：
+			// 接下来我们准备实现Validator类。Valitator类在这里作为Context，负责接收用户的请求并委托给strategy对象。在给出Validator类的代码之前，有必要提前了解用户是如何向Validator类发送请求的，这有助于我们知道如何去编写Validator类的代码。如下：
 
 			let validataFunc = function() {
 				let validator = new Validator(); // 创建一个validator对象
@@ -389,15 +389,15 @@
 				}
 			}
 
-			从这段代码中可以看到，我们先创建一个validator对象，然后通过 validator.add 方法，往validator对象中添加一些校验规则。validator.add 方法接受3个参数，以下面的这句代码说明：
-			validator.add(registerForm.password, 'minLength:6', '密码长度不能少于6位');
-			· registerForm.password为参与校验的input输入框。
-			· 'minLength:6'是一个以冒号隔开的字符串。冒号前面的minLength代表客户挑选的strategy对象，冒号后面的数字6表示在校验过程中所必需的一些参数。'minLength:6'的意思就是校验 registerForm.password 这个文本输入框的value的最小长度为6。如果这个字符串中不包含冒号，说明校验过程中不需要额外的参数信息，比如'isNonEmpty'。
-			· 第3个参数是当校验未通过时返回的错误信息。
+			// 从这段代码中可以看到，我们先创建一个validator对象，然后通过 validator.add 方法，往validator对象中添加一些校验规则。validator.add 方法接受3个参数，以下面的这句代码说明：
+			// validator.add(registerForm.password, 'minLength:6', '密码长度不能少于6位');
+			// · registerForm.password为参与校验的input输入框。
+			// · 'minLength:6'是一个以冒号隔开的字符串。冒号前面的minLength代表客户挑选的strategy对象，冒号后面的数字6表示在校验过程中所必需的一些参数。'minLength:6'的意思就是校验 registerForm.password 这个文本输入框的value的最小长度为6。如果这个字符串中不包含冒号，说明校验过程中不需要额外的参数信息，比如'isNonEmpty'。
+			// · 第3个参数是当校验未通过时返回的错误信息。
 
-			当我们往 validator 对象里添加完一系列的校验规则之后，会调用 validator.start()方法来启动校验。如果 validator.start()返回了一个确切的 errorMsg 字符串当作返回值，说明该次校验没有通过，此时需让 registerForm.onsubmit 方法返回 false 来阻止表单的提交。
+			// 当我们往 validator 对象里添加完一系列的校验规则之后，会调用 validator.start()方法来启动校验。如果 validator.start()返回了一个确切的 errorMsg 字符串当作返回值，说明该次校验没有通过，此时需让 registerForm.onsubmit 方法返回 false 来阻止表单的提交。
 
-			最后是Validator类的实现： 
+			// 最后是Validator类的实现： 
 
 				let Validator = function() {
 					this.cache = []; //保存校验规则
@@ -420,9 +420,9 @@
 					}
 				}
 
-=> 代理模式
+// => 代理模式
 	
-	>>虚拟代理实现图片加载
+	// >>虚拟代理实现图片加载
 		let myImage = (function() {
 			let imgNode = document.createElement('img');
 			document.body.appendChild(imgNode);
@@ -436,7 +436,7 @@
 
 		myImage.setSrc('http://...');
 
-		当网速很慢时，可以看到，在图片被加载好之前，页面中有段长长的空白时间。现在开始引入代理对象proxyImage，通过这个代理对象，在图片被真正加载好之前，页面中将出现一张点位的菊花 loading.gif, 来提示用户图片正在加载。
+		// 当网速很慢时，可以看到，在图片被加载好之前，页面中有段长长的空白时间。现在开始引入代理对象proxyImage，通过这个代理对象，在图片被真正加载好之前，页面中将出现一张点位的菊花 loading.gif, 来提示用户图片正在加载。
 
 		let myImage = (function() {
 			let imgNode = document.createElement('img');
@@ -467,8 +467,8 @@
 
 		proxyImage.setSrc('http://imgcache.qq.com/music/photo/k/000ggdkow.jpg');
 
-	>>虚拟代理合并HTTP请求
-		我们有一些复选框，接下来，给这些复选框绑定绑定点击事件，并且在点击的同时往另一台服务器同步文件
+	// >>虚拟代理合并HTTP请求
+		// 我们有一些复选框，接下来，给这些复选框绑定绑定点击事件，并且在点击的同时往另一台服务器同步文件
 		let synchronousFile = function (id) {
 			console.log(`开始同步文件，id为：${id}`)
 		};
@@ -483,7 +483,7 @@
 			}
 		};
 
-		代理合并HTTP请求：
+		// 代理合并HTTP请求：
 		let synchronousFile = function (id) {
 			console.log(`开始同步文件，id为：${id}`)
 		};
@@ -517,9 +517,9 @@
 			}
 		}
 
-	>>缓存代理
-		1.计算乘积
-		先创建一个用于求乘积的函数
+	// >>缓存代理
+		// 1.计算乘积
+		// 先创建一个用于求乘积的函数
 		let mult = function () {
 			console.log('开始计算乘积');
 			let a = 1;
@@ -532,7 +532,7 @@
 		mult(2, 3); // 6
 		mult(2, 3, 4) // 24
 
-		现在加入缓存代理函数
+		// 现在加入缓存代理函数
 		let proxyMult = (function() {
 			let cache = {};
 			return function() {
@@ -548,8 +548,8 @@
 		proxyMult(1, 2, 3, 4); // 输出：24
 		proxyMult(1, 2, 3, 4); // 输出：24
 
-		2.用高阶函数动态创建代理
-		通过传入高阶函数这种更加灵活的方式，可以为各种计算方法创建缓存代理。现在这些计算方法被当作参数传入一个专门用于创建缓存代理的工厂中，这样一来，我们就为乘法、加法、减法等创建缓存代理，代码如下：
+		// 2.用高阶函数动态创建代理
+		// 通过传入高阶函数这种更加灵活的方式，可以为各种计算方法创建缓存代理。现在这些计算方法被当作参数传入一个专门用于创建缓存代理的工厂中，这样一来，我们就为乘法、加法、减法等创建缓存代理，代码如下：
 		/***** 计算乘法 *****/
 		let mult = function () {
 			let result = 1;
@@ -588,10 +588,10 @@
 		alert(proxyPlus(1,2,3,4));
 		alert(proxyPlus(1,2,3,4));
 
-=> 迭代器模式
-	迭代器模式是指提供一种方法顺序访问一个聚合对象中的每个元素，而又不需要暴露该对象的内部表示。迭代器模式可以把迭代的过程从业务中分离出来，在使用迭代器模式之后，即使不关心对象的内部构造，也可以按顺序访问其中的每个元素。
-	>>实现自己的迭代器
-	现在我们来自己实现一个each函数，each函数接受2个参数，第一个为被循环的数组，第二个为循环中的每一步后将被触发的回调函数；
+// => 迭代器模式
+// 	迭代器模式是指提供一种方法顺序访问一个聚合对象中的每个元素，而又不需要暴露该对象的内部表示。迭代器模式可以把迭代的过程从业务中分离出来，在使用迭代器模式之后，即使不关心对象的内部构造，也可以按顺序访问其中的每个元素。
+// 	>>实现自己的迭代器
+// 	现在我们来自己实现一个each函数，each函数接受2个参数，第一个为被循环的数组，第二个为循环中的每一步后将被触发的回调函数；
 
 	let each = function(ary, callback) {
 		for (let i = 0, l = arg.length; i <	l; i++) {
@@ -603,8 +603,8 @@
 		alert([index, item]);
 	});
 
-	>>>内部迭代与外部迭代
-	1.内部迭代
+	// >>>内部迭代与外部迭代
+	// 1.内部迭代
 	let compare = function (ary1, ary2) {
 		if (ary1.length !== ary2.length) {
 			throw new Error('ary1和ary2不相等');
@@ -619,7 +619,7 @@
 
 	compare([1, 2, 3], [1, 2, 4]); // throw new Error('ary1和ary2不相等');
 
-	2.外部迭代
+	// 2.外部迭代
 	let Iterator = function (obj) {
 		let current = 0;
 		let next = function () {
@@ -641,7 +641,7 @@
 		}
 	}
 
-	改写compare
+	// 改写compare
 	let compare = function (iterator1, iterator2) {
 		while( !iterator1.isDone() && !iterator2.isDone()) {
 			if(iterator1.getCurrItem() !== iterator2.getCurrItem()) {
@@ -656,9 +656,9 @@
 	let iterator1 = Iterator([1,2,3]);
   compare(iterator1, iterator2);
 
-=> 发布—订阅模式
-	发布-订阅模式又叫观察者模式，它定义对象间的一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖于它的对象都将得到通知。在javaScript开发中，我们一般用事件模型替代传统的发布-订阅模式；
-	>>自定义一个事件
+// => 发布—订阅模式
+// 	发布-订阅模式又叫观察者模式，它定义对象间的一种一对多的依赖关系，当一个对象的状态发生改变时，所有依赖于它的对象都将得到通知。在javaScript开发中，我们一般用事件模型替代传统的发布-订阅模式；
+// 	>>自定义一个事件
 	let saleOffices = {};
 	saleOffices.clientList = [];
 
@@ -694,8 +694,8 @@
 		}
 	}
 
-	>>发布-订阅模式的通用实现
-		1.首先我们把发布-订阅的功能提取出来，放在一个单独的对象内：
+	// >>发布-订阅模式的通用实现
+	// 	1.首先我们把发布-订阅的功能提取出来，放在一个单独的对象内：
 			let event = {
 				clientList: {},
 				listen(key, fn) {
@@ -715,14 +715,14 @@
 					}
 				}
 			}
-		2.再定义一个installEvent函数，这个函数可以给所有对象动态安装发布-订阅功能
+		// 2.再定义一个installEvent函数，这个函数可以给所有对象动态安装发布-订阅功能
 			let installEvent = function (obj) {
 				for (let i in event) {
 					obj[i] = event[i];
 				}
 			}	
 
-		-> 测试：我们给售楼处对象saleOffices动态增加发布-订阅功能：
+		// -> 测试：我们给售楼处对象saleOffices动态增加发布-订阅功能：
 			let salesOffices = {};
 			installEvent(salesOffices);
 
@@ -737,7 +737,7 @@
 			salesOffices.trigger('squareMeter88', 2000000);
 			salesOffices.trigger('squareMeter100', 3000000);
 
-	>>取消订阅事件
+	// >>取消订阅事件
 		event.remove = function(key, fn) {
 			let fns = this.clientList[key];
 
@@ -757,8 +757,8 @@
 			}
 		}	
 
-=> 命令模式
-	>命令模式的例子 -- 菜单程序
+// => 命令模式
+// 	>命令模式的例子 -- 菜单程序
 	let button1 = document.getElementById('button1');
 	let button2 = document.getElementById('button2');
 	let button3 = document.getElementById('button3');
@@ -784,7 +784,7 @@
 		}
 	};
 
-	在让button变是有用起来之前，我们要先把这些行为都封装在命令之中：
+	// 在让button变是有用起来之前，我们要先把这些行为都封装在命令之中：
 	let RefreshMenuBarCommand = function (receiver) {
 		this.receiver = receiver;
 	};
@@ -809,7 +809,7 @@
 		console.log('删除子菜单！');
 	}
 
-	最后就是把命令接收者传入到command对象中，并且把command对象安装到button上面：
+	// 最后就是把命令接收者传入到command对象中，并且把command对象安装到button上面：
 	let refreshMenuBarCommand = new RefreshMenuBarCommand(MenuBar);
 	let addSubMenuCommand = new AddSubMenuCommand(SubMenu);
 	let delSubMenuCommand = new DelSubMenuCommand(SubMenu);
@@ -818,8 +818,8 @@
 	setCommand(button2, addSubMenuCommand);
 	setCommand(button3, delSubMenuCommand);
 
-	>>javaScript中的命令模式
-	 用闭包实现的命令模式如下代码：
+	// >>javaScript中的命令模式
+	//  用闭包实现的命令模式如下代码：
 	 let setCommand = function (button, func) {
 	 		button.onclick = function () {
 	 			func();
@@ -841,7 +841,7 @@
 	 let refreshMenuBarCommand = RefreshMenuBarCommand(MenuBar);
 	 setCommand(button, refreshMenuBarCommand);
 
-	 当然，如果想更明确的表达当前正在使用的命令模式，或者除了执行命令之外，将来有可能还要提供撤销命令等操作。那我们最好还是把执行函数改为调用execute方法：
+	//  当然，如果想更明确的表达当前正在使用的命令模式，或者除了执行命令之外，将来有可能还要提供撤销命令等操作。那我们最好还是把执行函数改为调用execute方法：
 	 let RefreshMenuBarCommand = function (receriver) {
 	 		return {
 	 			execute: function () {
@@ -859,8 +859,8 @@
 	 let refreshMenuBarCommand = RefreshMenuBarCommand(MenuBar);
 	 setCommand(button1, refreshMenuBarCommand);
 
-=> 组合模式
-	> 回顾宏命令 （单级树状结构）
+// => 组合模式
+// 	> 回顾宏命令 （单级树状结构）
 	let closeDoorCommand = {
 		execute: function() {
 			console.log('关门');
@@ -901,7 +901,7 @@
 
 	macroCommand.execute();
 	
-	> 更强大的宏命令 （多级树状结构）	 
+	// > 更强大的宏命令 （多级树状结构）	 
 		let MacroCommand = function () {
 			return {
 				commandList: [],
@@ -976,7 +976,7 @@
 			}
 		})(macroCommand);
 
-	>> 扫描文件夹
+	// >> 扫描文件夹
 		/*--Foloder--*/
 		let Folder = function (name) {
 			this.name = name;
@@ -989,7 +989,7 @@
 
 		Folder.prototype.scan = function () {
 			console.log(`开始扫描文件夹：${this.name}`);
-			for (let i = 0, file, files = this.files; file = files[i++]) {
+			for (let i = 0, file, files = this.files; file = files[i++]; file) {
 				file.scan();
 			}
 		};		
@@ -1007,7 +1007,7 @@
 			console.log(`开始扫描文件：${this.name}`);
 		};
 
-		接下来创建一些文件和文件对象，并且让它们组合成一棵树；
+		// 接下来创建一些文件和文件对象，并且让它们组合成一棵树；
 		let folder = new Folder('学习资料');
 		let folder1 = new Folder('javaScript');
 		let folder2 = new Folder('jQuery');
@@ -1023,18 +1023,18 @@
 		folder.add(folder2);
 		folder.add(file3);
 
-		现在的需求是把移动硬盘中的文件和文件夹都复制到这棵树中，假设我们已经得到这些文件对象：
+		// 现在的需求是把移动硬盘中的文件和文件夹都复制到这棵树中，假设我们已经得到这些文件对象：
 		let folder3 = new Folder('Nodejs');
 		let file4 = new File('深入浅出Node.js');
 		folder3.add(file4);
 
 		let file5 = new File('JavaScript语言精髓与编程实践！');
 
-		接下来就是把这些文件都添加到原来的树中：
+		// 接下来就是把这些文件都添加到原来的树中：
 		folder.add(folder3);
 		folder.add(file5);
 
-	>> 引用父对象
+	// >> 引用父对象
 		let Folder = function(name) {
 			this.name = name;
 			this.parent = null; //增加this.parent属性
@@ -1048,12 +1048,13 @@
 
 		Folder.prototype.scan = function() {
 			console.log(`开始扫描文件夹：${this.name}`);
-			for (let i = 0, file, files = this.files; file = files[i++]; ) {
+			for (let i = 0; i < this.files.length; ++i) {
+				const file = this.files[i]
 				file.scan();
 			}
 		};	
 
-		接下来增加 Folder.prototype.remove方法，表示移除文件夹：
+		// 接下来增加 Folder.prototype.remove方法，表示移除文件夹：
 		Folder.prototype.remove = function() {
 			if (!this.parent) {
 				return;
@@ -1067,7 +1068,7 @@
 			}
 		};
 
-		File类的实现基本一致
+		// File类的实现基本一致
 		let File = function (name) {
 			this.name = name;
 			this.parent = null;
@@ -1094,9 +1095,9 @@
 			}
 		}
 
-=> 模板方法模式
-	>>咖啡与茶
-	1.创建一个抽象父类Beverage
+// => 模板方法模式
+// 	>>咖啡与茶
+// 	1.创建一个抽象父类Beverage
 	let Beverage = function() {};
 
 	Beverage.prototype.boilWater = function() {
@@ -1116,7 +1117,7 @@
 		this.addCondiments();
 	};
 
-	2.定义咖啡与茶子类，并让他们继承饮料类；
+	// 2.定义咖啡与茶子类，并让他们继承饮料类；
 	let Coffee = function() {};
 
 	Coffee.prototype = new Beverage();
@@ -1138,7 +1139,7 @@
 	Coffee.init();
 
 
-	利用好莱坞原则，下面的这段代码可以达到和继承一样的效果
+	// 利用好莱坞原则，下面的这段代码可以达到和继承一样的效果
 	let Beverage = function(param) {
 
 		let boilWater = function() {
@@ -1200,15 +1201,15 @@
 	let tea = new Tea();
 	tea.init();
 
-=> 享元模式
-	内部状态与外部状态：
-	·内部状态存储于对象内部。
-	·内部状态可以被一些对象共享。
-	·内部状态独立于具体的场景，通常不会改变。
-	·外部状态取决于具体的场景，并根据场景而变化，外部状态不能被共享。
+// => 享元模式
+// 	内部状态与外部状态：
+// 	·内部状态存储于对象内部。
+// 	·内部状态可以被一些对象共享。
+// 	·内部状态独立于具体的场景，通常不会改变。
+// 	·外部状态取决于具体的场景，并根据场景而变化，外部状态不能被共享。
 
-	>>>享元模式下的文件上传
-		1.剥离外部状态
+	// >>>享元模式下的文件上传
+		// 1.剥离外部状态
 		let Upload = function() {
 			this.uploadType = uploadType;
 		}
@@ -1225,7 +1226,7 @@
 			};
 		}
 
-		2.工厂进行对象实例化
+		// 2.工厂进行对象实例化
 		let UploadFactory = (function() {
 			let createFlyWeightObjs = {};
 
@@ -1240,7 +1241,7 @@
 			}
 		})();
 
-		3.管理器封装外部状态
+		// 3.管理器封装外部状态
 		let uploadManager = (function() {
 			let uploadDatabase = {};
 
@@ -1278,7 +1279,7 @@
 			}
 		})();
 
-		然后是开始触发上传动作的startUpload函数：
+		// 然后是开始触发上传动作的startUpload函数：
 		let id = 0;
 		window.startUpload = function(uploadType, files) {
 			for (let i = 0, file; file = files[i++]; ){
@@ -1286,11 +1287,11 @@
 			}
 		}
 
-=> 职责链模式
-	职责链模式的定义是：使多个对象都有机会处理请求，从而避免请求的发送者和接收者之间的耦合关系，将这些对象连成一条链，并沿着这条链传递该请求，直到有一个对象处理它为止。
-	>> 灵活可拆分的职责链节点
+// => 职责链模式
+// 	职责链模式的定义是：使多个对象都有机会处理请求，从而避免请求的发送者和接收者之间的耦合关系，将这些对象连成一条链，并沿着这条链传递该请求，直到有一个对象处理它为止。
+// 	>> 灵活可拆分的职责链节点
 
-		> 首先定义热点函数。我们约定，如果某个节点不能处理请求，则返回一个特定的字符串'resolveNext'来表示需要继续往后面传递：
+// 		> 首先定义热点函数。我们约定，如果某个节点不能处理请求，则返回一个特定的字符串'resolveNext'来表示需要继续往后面传递：
 			let order500 = function (orderType, pay, stock) {
 				if (orderType === 1 && pay === true) {
 					console.log('500元定金预购，得到100元优惠券');
@@ -1315,8 +1316,8 @@
 				}
 			}
 
-		> 接下来需要把函数包装进职责链节点，我们定义一个构造函数Chain，在new Chain的时候传递的参数即为需要被包装的函数，同时它还拥有一个实际属性 this.next，表示在链中的下一个节点。
-		  此外Chain的prototype中还有函数，它们的作用如下：
+		// > 接下来需要把函数包装进职责链节点，我们定义一个构造函数Chain，在new Chain的时候传递的参数即为需要被包装的函数，同时它还拥有一个实际属性 this.next，表示在链中的下一个节点。
+		//   此外Chain的prototype中还有函数，它们的作用如下：
 			// Chain.prototype.setNext 指定在链中的下一个接点
 			// Chain.prototype.resolve 在当前节点运算
 
@@ -1338,22 +1339,22 @@
 				return ret;
 			}
 
-			> 现在我们把3个订单函数包装成职责链的节点：
+			// > 现在我们把3个订单函数包装成职责链的节点：
 			let chainOrder500 = new Chain(order500);
 			let chainOrder200 = new Chain(order200);
 			let chainOrderNormal = new Chain(orderNormal);
 
-			> 然后指定节点在责任链中的顺序（组装责任链）
+			// > 然后指定节点在责任链中的顺序（组装责任链）
 			chainOrder500
-				.setNext(chainOrder200);
+				.setNext(chainOrder200)
 				.setNext(chainOrderNormal);
 
-			> 最后把请求传递给第一个节点
+			// > 最后把请求传递给第一个节点
 			chainOrder500.resolve(1, true, 500); // 输出：500元定金预购，得到100优惠券
 			chainOrder200.resolve(2, true, 500); // 输出：200元定金预购，得到50优惠券
 			chainOrderNormal.resolve(1, false, 0); // 输出：手机库存不足
 
-			通过改进，我们可以自由灵活地增加、移除和修改链中的节点顺序，假如某天网站的运营人员又想出了支持300元定金购买，那我们就在该链中增加一个节点即可；
+			// 通过改进，我们可以自由灵活地增加、移除和修改链中的节点顺序，假如某天网站的运营人员又想出了支持300元定金购买，那我们就在该链中增加一个节点即可；
 			let order300 = function () {
 				// ...
 			}
@@ -1361,8 +1362,8 @@
 			chainOrder300 = new Chain(order300);
 			chainOrder500.setNext(chainOrder300);
 			chainOrder300.setNext(chainOrder200);
-	>> 异步的职责链模式
-		给Chain类再增加一个原型方法 Chain.prototype.setAsyncNode, 表示手动传递请求给下一个职责链中的下一个节点
+	// >> 异步的职责链模式
+		// 给Chain类再增加一个原型方法 Chain.prototype.setAsyncNode, 表示手动传递请求给下一个职责链中的下一个节点
 		Chain.prototype.setAsyncNode = function () {
 			return this.next && this.next.resolve.apply(this.next, arguments);
 		}	
@@ -1386,9 +1387,9 @@
 		fn1.setNext(fn2).setNext(fn3);
 		fn1.resolve();
 
-=> 中介者模式	
-	>> 用中介者模式改造泡泡堂游戏
-		>首先定义Player构造函数和player对象的原型方法，在Player对象的这些原型方法中，不负责具体的执行逻辑，而是把操作转交给中介者对象，我们把中介者对象命名为playerDirector。
+// => 中介者模式	
+// 	>> 用中介者模式改造泡泡堂游戏
+// 		>首先定义Player构造函数和player对象的原型方法，在Player对象的这些原型方法中，不负责具体的执行逻辑，而是把操作转交给中介者对象，我们把中介者对象命名为playerDirector。
 		function Player (name, teamColor) {
 			this.name = name; // 角色名字
 			this.teamCorlor = teamColor; // 队伍颜色
@@ -1426,10 +1427,10 @@
 			return newPlayer;
 		}
 
-		最后，我们需要实现这个中介者playDirector对象，一般有以下两种方式：
-		·利用发布—订阅模式。将playerDirector实现为订阅者，各player作为发布者，一旦player的状态发生改变，便推送消息给playerDirector，playerDirector处理消息后将反馈发送给其他player。
-		·在playerDirector中开放一些接收消息的接口，各player可以直接调用该接口来给playerDirector发送消息，player只需传递一个参数给playerDirector，这个参数的目的是使playDirector可以识别发送者。同样，playerDrector接收到消息之后会将处理结果反馈给其他player。
-		这两种方式的实现没有什么本质上的区别。在这里我们实现第二种方式，playerDirector开放一个对外暴露的接口reciveMessage，负责接收player对象发送的消息，而player对象发送消息的时候，总把自己this作为参数发送给playerDirector，便playerDirector识别消息来自于哪个玩家对象，代码如下：
+		// 最后，我们需要实现这个中介者playDirector对象，一般有以下两种方式：
+		// ·利用发布—订阅模式。将playerDirector实现为订阅者，各player作为发布者，一旦player的状态发生改变，便推送消息给playerDirector，playerDirector处理消息后将反馈发送给其他player。
+		// ·在playerDirector中开放一些接收消息的接口，各player可以直接调用该接口来给playerDirector发送消息，player只需传递一个参数给playerDirector，这个参数的目的是使playDirector可以识别发送者。同样，playerDrector接收到消息之后会将处理结果反馈给其他player。
+		// 这两种方式的实现没有什么本质上的区别。在这里我们实现第二种方式，playerDirector开放一个对外暴露的接口reciveMessage，负责接收player对象发送的消息，而player对象发送消息的时候，总把自己this作为参数发送给playerDirector，便playerDirector识别消息来自于哪个玩家对象，代码如下：
 
 		let playerDirector = (function () {
 			let player = {}, operations = {};  //保存所有玩家，中介者可以执行的操作
@@ -1444,8 +1445,8 @@
 			/*移除一个玩家*/
 			operations.removePlayer = function (player) {
 				let teamCorlor = player.teamColor,  //玩家的队伍颜色
-						teamPlayer[teamColor] = players[teamColor] || [];  // 该队伍的所有成员
-				for (let i = teamPlayer.length -1; i >= 0, i--) {  // 遍历删除
+						teamPlayer[teamColor] = players[teamCorlor] || [];  // 该队伍的所有成员
+				for (let i = teamPlayer.length -1; i >= 0; i--) {  // 遍历删除
 					if (teamPlayer[i] === player) {
 						teamplayer.splice(i, 1);
 					}
@@ -1459,7 +1460,8 @@
 
 				let all_dead = true;
 
-				for (let i = 0, player; player = teamPlayers ) {
+				for (let i = 0; i < teamPlayers.length; ++i) {
+					const play = teamplayer[i]
 					if (play.state !== 'dead') {
 						all_dead = false;
 						break;
@@ -1511,20 +1513,20 @@
 			player4.die();
 		*/
 
-=> 装饰者模式
+// => 装饰者模式
 	
-	定义：给对象动态地增加职责的方式被为装饰都模式
+// 	定义：给对象动态地增加职责的方式被为装饰都模式
 
-	..模拟传统面向对象语言的装饰者模式	
-	假设我们编写一个飞机大战的游戏，随着经验值的增加，我们操作的飞机对象可以升级成更厉害的飞机，一开始这些飞机只能发射普通的子弹，升到第二级时可以发射导弹，升级到第三级时可以发身原子弹。
-	下面来看代码实现，首先是原始的飞机类：
+// 	..模拟传统面向对象语言的装饰者模式	
+// 	假设我们编写一个飞机大战的游戏，随着经验值的增加，我们操作的飞机对象可以升级成更厉害的飞机，一开始这些飞机只能发射普通的子弹，升到第二级时可以发射导弹，升级到第三级时可以发身原子弹。
+// 	下面来看代码实现，首先是原始的飞机类：
 	let Plane = function () {}
 
 	Plane.prototype.fire = function () {
 		console.log('发射普通子弹');
 	}
 
-	接下来增加两个装饰类，分别是导弹和原子弹：
+	// 接下来增加两个装饰类，分别是导弹和原子弹：
 	let MissileDecorator = function (plane) {
 		this.plane = plane;
 	}
@@ -1551,7 +1553,7 @@
 	plane.fire();
 	// 分别输出：发身射普通子弹、发射导弹、发射原子弹
 	// 
-	.. javascript装饰器
+	// .. javascript装饰器
 	let plane = {
 		fire: function () {
 			console.log('发射普通子弹')
@@ -1582,10 +1584,10 @@
 	plain.fire();
 	// 分别输出： 发射普通子弹，发射导弹，发射原子弹
 	// 
-	>> 装饰函数
-		javascript中，几乎所有的一切都是对象，其中函数又称为一等对象。在平时的开发工作中，也许大部分时间都在和函数打交道。在JavaScript中可以很方便的给某个对象扩展属性和方法，但却很难在不改动某个函数原代码的情况下，给该函数添加一些额外的功能。在代码运行期间，我们很难切入某个函数的执行环境。
+	// >> 装饰函数
+		// javascript中，几乎所有的一切都是对象，其中函数又称为一等对象。在平时的开发工作中，也许大部分时间都在和函数打交道。在JavaScript中可以很方便的给某个对象扩展属性和方法，但却很难在不改动某个函数原代码的情况下，给该函数添加一些额外的功能。在代码运行期间，我们很难切入某个函数的执行环境。
 
-		要想为函数添加一些功能，最简单粗暴的方式就是直接改写该函数，但这是最差的办法，直接违反开放-封闭原则；
+		// 要想为函数添加一些功能，最简单粗暴的方式就是直接改写该函数，但这是最差的办法，直接违反开放-封闭原则；
 		let a = function() {
 			alert(1);
 		}
@@ -1595,7 +1597,7 @@
 			alert(2);
 		}
 
-		很多时候我们不想去碰原函数，也许原函数是由其他同事编写的，里面的实现非常杂乱。甚至在古老的项目中，这个函数的原代码被隐藏在一个我们不愿碰触的一个阴暗角落。 现在需要一个办法，在不改变函数源代码的情况下，能给函数增加功能，这正是开放-封闭原则给我们指出的一条光明道路。
+		// 很多时候我们不想去碰原函数，也许原函数是由其他同事编写的，里面的实现非常杂乱。甚至在古老的项目中，这个函数的原代码被隐藏在一个我们不愿碰触的一个阴暗角落。 现在需要一个办法，在不改变函数源代码的情况下，能给函数增加功能，这正是开放-封闭原则给我们指出的一条光明道路。
 
 
 		const a = function() {
@@ -1611,7 +1613,7 @@
 
 		a();
 
-		这是实际开发中很常见的一种做法，比如我们想给 window 绑定 onload 事件，但是又不确定这个事件是不是已经被其他人绑定过，为了避免覆盖掉之前的 window.onload 函数中的行为，我们一般都会先保存好原先的 window.onload，把它放入新的 window.onload 里执行：0
+		// 这是实际开发中很常见的一种做法，比如我们想给 window 绑定 onload 事件，但是又不确定这个事件是不是已经被其他人绑定过，为了避免覆盖掉之前的 window.onload 函数中的行为，我们一般都会先保存好原先的 window.onload，把它放入新的 window.onload 里执行：0
 
 		window.onload = function() {
 			alert();
@@ -1624,12 +1626,12 @@
 			alert(2);
 		}
 
-		这样的代码当然是符合开放封闭原则的，我们在增加新功能的时候，确实没有修改原来的window.onload 代码，但是这种方式存在以下两个问题。
-		1.必须维护_onload这个中间变量，虽然看起来并不起眼，但如果函数的装饰较长，或者需要的函数变多，这些中间变量的数量也会越来越多。
-		2.其实还遇到了this被劫持的问题，在window.onload的例子中没有这个烦恼，是因为调用变通函数_onload时，this也指向window，跟调用window.onload是一样（函数作为对象的方法被调用时，this指向该对象，所以此处this也只指向window）
+	// 	这样的代码当然是符合开放封闭原则的，我们在增加新功能的时候，确实没有修改原来的window.onload 代码，但是这种方式存在以下两个问题。
+	// 	1.必须维护_onload这个中间变量，虽然看起来并不起眼，但如果函数的装饰较长，或者需要的函数变多，这些中间变量的数量也会越来越多。
+	// 	2.其实还遇到了this被劫持的问题，在window.onload的例子中没有这个烦恼，是因为调用变通函数_onload时，this也指向window，跟调用window.onload是一样（函数作为对象的方法被调用时，this指向该对象，所以此处this也只指向window）
 
-	>> 用AOP装饰函数 （AOP面向切面编程）
-		首先给出Function.prototype.before 方法和 Function.prototype.after方法：
+	// >> 用AOP装饰函数 （AOP面向切面编程）
+		// 首先给出Function.prototype.before 方法和 Function.prototype.after方法：
 		Function.prototype.before = function(fn) {
 			const _self = this; // 保留原函数的引用；
 			return function() {
@@ -1656,7 +1658,7 @@
 			}
 		}
 
-		window.onload的例子，看看用 Function.prototype.before 来增加新的window.onload
+		// window.onload的例子，看看用 Function.prototype.before 来增加新的window.onload
 		window.onload = function () {
 			alert(2);
 		}
@@ -1669,8 +1671,8 @@
 			alert(4);
 		});
 
-=> 状态模式
-	定义： 允许一个对象在其内部状态改变时改变它的行为，对象看起来似乎修改它的类。
+// => 状态模式
+	// 定义： 允许一个对象在其内部状态改变时改变它的行为，对象看起来似乎修改它的类。
 	let State = function() {};
 	State.prototype.buttonWasPressed = function() {
 		throw new Error('父类的buttonWasPressed方法必须被重写');
@@ -1687,7 +1689,7 @@
 		this.light.setState(this.light.offLightState);
 	}
 
-	>> JavaScript版本的状态机
+	// >> JavaScript版本的状态机
 		const Light = function() {
 			this.currState = FSM.off;   // 设置当前状态
 			this.button = null;   
@@ -1723,7 +1725,7 @@
 		let light = new Light();
 		light.init();
 
-		接下来尝试另外一种方法，即利用下面的delegate函数来完成这个状态机编写。这是面向对象设计和闭包互换的一个例子，前者把变量保存为对象的属性，而后者把变量封闭在闭包形成的环境中。
+		// 接下来尝试另外一种方法，即利用下面的delegate函数来完成这个状态机编写。这是面向对象设计和闭包互换的一个例子，前者把变量保存为对象的属性，而后者把变量封闭在闭包形成的环境中。
 		const delegate = function(client, delegation) {
 			return {
 				buttonWasPressed: function() { // 将客户的操作委托给delegate对象

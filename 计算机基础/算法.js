@@ -1,16 +1,16 @@
 /*算法*/ 
 
->> 数据结构
-	=> 栈
-		>>操作
-			1.push(element): 添加一个（或几个）新元素到栈顶。
-			2.pop(): 移除栈顶的元素，同时返回被移除的元素。
-			3.peek(): 返回栈顶的元素，不对栈做任何修改（这个方法不会移除栈顶的元素，仅仅返回它）。
-			4.isEmpty(): 如果栈里没任何元素就返回true,否则返回false。
-			5.clear(): 移除栈里的所有元素。
-			6.size(): 返回栈里的元素个数。这个方法和数组的length属性很像。
+// >> 数据结构
+// 	=> 栈
+// 		>>操作
+// 			1.push(element): 添加一个（或几个）新元素到栈顶。
+// 			2.pop(): 移除栈顶的元素，同时返回被移除的元素。
+// 			3.peek(): 返回栈顶的元素，不对栈做任何修改（这个方法不会移除栈顶的元素，仅仅返回它）。
+// 			4.isEmpty(): 如果栈里没任何元素就返回true,否则返回false。
+// 			5.clear(): 移除栈里的所有元素。
+// 			6.size(): 返回栈里的元素个数。这个方法和数组的length属性很像。
 
-		有一种数据类型可以确保属性是私有的，这就是WeakMap;
+// 		有一种数据类型可以确保属性是私有的，这就是WeakMap;
 		let Stack = (function() {
 			const items = new WeakMap();
 			class Stack {
@@ -30,7 +30,7 @@
 			return Strack();
 		})();
 
-		>> 进制转化
+		// 进制转化
 			function baseConverter(decNumber, base) { // decNumber十进制的数据，base进制基
 				let remStack = new Stack();
 				let rem;
@@ -50,13 +50,13 @@
 				return baseString;
 			}
 
-	=> 队列	
-		>> 操作
-			1.enqueue(element): 向队列尾部添加一个（或多个）新的项。
-			2.dequeue(): 移除队列的第一（即在队列最前面的）项，并返回被移除的元素。
-			3.front(): 返回队列中第一个元素--最先被添加，也是将是最先被移除的元素。队列不做任何变动（不移除元素，只返回元素信息--与stack类的peek方法非常类似）。
-			4.isEmpty(): 如果队列中不包含任何元素，返回true, 否则返回false。
-			5.size(): 返回队列包含的元素个数，与数组的length属性类似。
+	// => 队列	
+	// 	>> 操作
+	// 		1.enqueue(element): 向队列尾部添加一个（或多个）新的项。
+	// 		2.dequeue(): 移除队列的第一（即在队列最前面的）项，并返回被移除的元素。
+	// 		3.front(): 返回队列中第一个元素--最先被添加，也是将是最先被移除的元素。队列不做任何变动（不移除元素，只返回元素信息--与stack类的peek方法非常类似）。
+	// 		4.isEmpty(): 如果队列中不包含任何元素，返回true, 否则返回false。
+	// 		5.size(): 返回队列包含的元素个数，与数组的length属性类似。
 
 			let Queue = (function () {
 				const items = new WeakMap();
@@ -79,7 +79,7 @@
 				return Queue;
 			})();
 
-		>> 优先队列
+		// 优先队列
 			function PriorityQueue() {
 				let items = [];
 
@@ -111,7 +111,7 @@
 				}
 			}	
 
-		>> 循环队列--击鼓传花
+		// 循环队列--击鼓传花
 			function hotPotato(nameList, num) {
 				let queue = new Queue();
 
@@ -135,18 +135,18 @@
 			let winner = hotPotato(name, 7);
 			console.log('The winner is' + winner);
 
-	=> 链表
-		>> 操作
-			1.append(element): 向列表尾部添加一个的新的项。
-			2.insert(position): element): 向列表的特定位置插入一个新的项。
-			3.remove(element): 从列表中移除一项。
-			4.indexOf(element): 返回元素在列表中的索引。如果列表中没有该元素则返回。
-			5.removeAt(position): 从列表的特定位置移除一项。
-			6.isEmpty(): 如果链表中不包含任何元素，返回true，如果链表长度大于0则返回false。
-			7.size(): 返回链表包含元素个数。与数组的length类似。
-			8.toString(): 由于列表项使用了Node类，就需要重写继承自JavaScript对象默认的toString方法，让其只输出元素的值。
+	// => 链表
+	// 	>> 操作
+	// 		1.append(element): 向列表尾部添加一个的新的项。
+	// 		2.insert(position): element): 向列表的特定位置插入一个新的项。
+	// 		3.remove(element): 从列表中移除一项。
+	// 		4.indexOf(element): 返回元素在列表中的索引。如果列表中没有该元素则返回。
+	// 		5.removeAt(position): 从列表的特定位置移除一项。
+	// 		6.isEmpty(): 如果链表中不包含任何元素，返回true，如果链表长度大于0则返回false。
+	// 		7.size(): 返回链表包含元素个数。与数组的length类似。
+	// 		8.toString(): 由于列表项使用了Node类，就需要重写继承自JavaScript对象默认的toString方法，让其只输出元素的值。
 
-		>> 实现
+	// 	>> 实现
 			function LinkedList() {
 				
 				// 辅助类，Node类表示链表中的结点
@@ -221,7 +221,7 @@
 			   * @在任意位置插入元素
 			   */
 			  this.insert = function(position, element) {
-			  	if (position >= 0 $$ position <= length) {
+			  	if (position >= 0 && position <= length) {
 			  		let node = new Node(element);
 			  		let current = head;
 			  		let previous, index = 0;
@@ -299,8 +299,8 @@
 
 			}		
 
-		>> 双向链表
-			双向链表和普通链表的区别在于，在链表中一个节点只有链向下一个节点的链接，而在双同链表中，链接是双向的：一个链向下一个元素，另一个链向上一下元素。
+		// >> 双向链表
+		// 	双向链表和普通链表的区别在于，在链表中一个节点只有链向下一个节点的链接，而在双同链表中，链接是双向的：一个链向下一个元素，另一个链向上一下元素。
 
 			function DoublyLinkedList() {
 				let Node = function (element) {
@@ -353,7 +353,7 @@
 
 						return true;
 					}
-				} else {
+
 					return false;
 				}
 
@@ -396,14 +396,14 @@
 				}
 			};
 
-	=> 集合
-		>> 操作
-			add(value): 向集合添加一个新的项。
-			remove(value): 从集合移除一个值。
-			has(value): 如果值在集合中，返回true，否则返回false。
-			clear(): 移除集合中的所有项。
-			size(): 返回集合中所有元素的数量。与数组的length属性类似。
-			values(): 返回一个包含集合中的有值的数组。
+	// => 集合
+	// 	>> 操作
+	// 		add(value): 向集合添加一个新的项。
+	// 		remove(value): 从集合移除一个值。
+	// 		has(value): 如果值在集合中，返回true，否则返回false。
+	// 		clear(): 移除集合中的所有项。
+	// 		size(): 返回集合中所有元素的数量。与数组的length属性类似。
+	// 		values(): 返回一个包含集合中的有值的数组。
 
 			this.has = function(value) {
 				return value in items;
@@ -442,15 +442,11 @@
 				}
 				return values;
 			}
-			
-	=> 字典
-	
-	=> 散列表		
 
-	=> 树
-		二叉搜索树（BST）是二叉树的一种，但是它只允许你在左侧节点存储（比父节点）小的值，在右侧存储（比父节点）大的值。
+	// => 树
+	// 	二叉搜索树（BST）是二叉树的一种，但是它只允许你在左侧节点存储（比父节点）小的值，在右侧存储（比父节点）大的值。
 
-		创建BinarySearchTree类
+	// 	创建BinarySearchTree类
 		function BinarySearchTree() {
 			let Node = function (key) {
 				this.key = key;
@@ -461,15 +457,15 @@
 			let root = null;
 		}		
 
-		>> 操作
-			insert(key): 向树中插入一个新的键。
-			search(key): 在树中查找一个键，如果节点存在，则返回true；如果不存在，则返回false。
-			inOrderTraverse: 通过中序遍历方式遍历所有节点。
-			preOrderTraverse: 通过先序遍历方式遍历所有节点。
-			postOrderTraverse: 通过后序遍历方式遍历所有节点。
-			min: 返回树中最小的键。
-			max: 返回树中最大的键。
-			remove: 从树中移除某个键。
+		// >> 操作
+		// 	insert(key): 向树中插入一个新的键。
+		// 	search(key): 在树中查找一个键，如果节点存在，则返回true；如果不存在，则返回false。
+		// 	inOrderTraverse: 通过中序遍历方式遍历所有节点。
+		// 	preOrderTraverse: 通过先序遍历方式遍历所有节点。
+		// 	postOrderTraverse: 通过后序遍历方式遍历所有节点。
+		// 	min: 返回树中最小的键。
+		// 	max: 返回树中最大的键。
+		// 	remove: 从树中移除某个键。
 
 			class BinarySearchTree() {
 
@@ -666,22 +662,22 @@
 			}
 
 
-		<红黑树>
-		红黑树的定义
-			性质1：每个节点要么是黑色，要么是红色。
-			性质2：根节点是黑色。
-			性质3：每个叶子节点(NIL)是黑色。
-			性质4：每个红节点的两个子节点是黑节点。
-			性质5：任意一节点到每个叶节点的路径都包含数量相同的黑要点。
-			性质6：如果一个节点存在黑子节点，那么该结点肯定有两个子结点。
-		操作：
-			左旋：以某个节点作为支点(旋转节点)，其右子节点变为旋转节点的父节点，右子节点的左子节点变为旋转节点的右子节点，左子节点保持不变。
-			右旋：以某个节点作为支点(旋转节点)，其左子节点变为旋转节点的父节点，左子节点的右子节点变为旋转节点的左子节点，右子节点保持不变。
-			变色：结点的颜色由红变黑或黑变红
+		// <红黑树>
+		// 红黑树的定义
+		// 	性质1：每个节点要么是黑色，要么是红色。
+		// 	性质2：根节点是黑色。
+		// 	性质3：每个叶子节点(NIL)是黑色。
+		// 	性质4：每个红节点的两个子节点是黑节点。
+		// 	性质5：任意一节点到每个叶节点的路径都包含数量相同的黑要点。
+		// 	性质6：如果一个节点存在黑子节点，那么该结点肯定有两个子结点。
+		// 操作：
+		// 	左旋：以某个节点作为支点(旋转节点)，其右子节点变为旋转节点的父节点，右子节点的左子节点变为旋转节点的右子节点，左子节点保持不变。
+		// 	右旋：以某个节点作为支点(旋转节点)，其左子节点变为旋转节点的父节点，左子节点的右子节点变为旋转节点的左子节点，右子节点保持不变。
+		// 	变色：结点的颜色由红变黑或黑变红
 
 
-	=> 图		
-		创建Grap类
+	// => 图		
+	// 	创建Grap类
 		function Grap() {
 			let vertices = [];
 			let adjList = new Dictionary();
@@ -703,18 +699,18 @@
 		 	}
 		}
 
-		>> 图的遍历
-		白色：表示该顶点没有被访问
-		灰色：表示该顶点被访问过，但并未被探索过
-		黑色：表示该顶点被访问过且被完全探索过
+		// >> 图的遍历
+		// 白色：表示该顶点没有被访问
+		// 灰色：表示该顶点被访问过，但并未被探索过
+		// 黑色：表示该顶点被访问过且被完全探索过
 
-		1.创建一个队列Q
-		2.将v标注为被发现的（灰色），并将v入队列Q
-		3.如果Q非空，则运行以下步骤：
-			.将u从Q中出队列；
-			.将标注u为被发现的；（灰色）
-			.将u所有未被访问过的邻点（白色）如队列；
-			.将u标注为已被探索过。
+		// 1.创建一个队列Q
+		// 2.将v标注为被发现的（灰色），并将v入队列Q
+		// 3.如果Q非空，则运行以下步骤：
+		// 	.将u从Q中出队列；
+		// 	.将标注u为被发现的；（灰色）
+		// 	.将u所有未被访问过的邻点（白色）如队列；
+		// 	.将u标注为已被探索过。
 
 		const initializeColor = function() {
 			let color = {};
@@ -747,7 +743,7 @@
 			}
 		}
 
-		<使用BFS寻找最短路径>
+		// <使用BFS寻找最短路径>
 		this.BFS  = function (v) {
 			let color = initializeColor();
 			let queue = new Queue();
@@ -782,7 +778,7 @@
 			}
 		}
 
-		<深度优先搜索>
+		// <深度优先搜索>
 		this.dfs = function(callback) {
 			let color = initializeColor();
 			for (let i = 0; i < vertices.length; i++) {
@@ -807,7 +803,7 @@
 			color[u] = 'black';
 		}
 
-		<Dijkstra算法> 迪杰斯特拉算法
+		// <Dijkstra算法> 迪杰斯特拉算法
 		const graph = [
 			[0, 2, 4, 0, 0, 0],
 			[0, 0, 1, 4, 2, 0],
@@ -844,7 +840,7 @@
 		minDistance(dist, visited) {
 			let min = INF, minIndex = -1;
 			for (let v = 0; v < dist.length; v++) {
-				if (visited[v] === false; && dist[v] <= min) {
+				if (visited[v] === false && dist[v] <= min) {
 					min = dist[v];
 					minIndex = v;
 				}

@@ -1,8 +1,8 @@
 /*函数式编程*/
 
-元编程：编写代码来做一些事情叫作编程，而元编程是当你写的代码改变了某些代码被解释的方法。
-幂等性：幂等性是指执行无数次后还具有相同的效果。
-Curry柯里化：函数柯里化是指，把接受多个参数的函数转换成接受一个单一参数的函数。
+// 元编程：编写代码来做一些事情叫作编程，而元编程是当你写的代码改变了某些代码被解释的方法。
+// 幂等性：幂等性是指执行无数次后还具有相同的效果。
+// Curry柯里化：函数柯里化是指，把接受多个参数的函数转换成接受一个单一参数的函数。
 function add(a, b) {
   return a + b;
 }
@@ -19,8 +19,8 @@ add2(1);
 // 3
 
 
-=>  一个阶乘的尾递归优化
-  传统的写法
+// =>  一个阶乘的尾递归优化
+  // 传统的写法
   function factorial(n) {
   	if (n === 1) return 1;
   	return n * factorial(n-1);
@@ -61,7 +61,7 @@ joinElements(1, 2);  // '1 2'
 joinElements('-', '$', '/', '!', ':');
 // '- $ / ! :'
 
-为了判断什么是索引的数据类型，我们可以创建一个isIndexed函数，实现如下所示
+// 为了判断什么是索引的数据类型，我们可以创建一个isIndexed函数，实现如下所示
 function isIndexed(data) {
 	return _.isArray(data) || _.isString(data);
 }
@@ -99,13 +99,13 @@ pingpong.div = function (n) {
 pingpong.div(3);
 // ReferenceError: PRIVATE is not defined
 
-=> 高阶函数 
-	1.以其它函数为参数的函数
-		>> max()
+// => 高阶函数 
+	// 1.以其它函数为参数的函数
+		// >> max()
 			let people = [{name: 'Fred', age: 65}, {name: 'Lucy', age: 36}];
 			_.max(people, item => item.age);
 
-		>>function finder(valueFun, bestFun, coll) {
+		  function finder(valueFun, bestFun, coll) {
 				return _.reduce(coll, (best, current) => {
 					let bestValue = valueFun(best);
 					let currentValue = valueFun(current);
@@ -117,7 +117,7 @@ pingpong.div(3);
 			finder(_.indentity, math.max, [1, 2, 3, 4, 5]);
 			// 5
 
-		>>简化finder
+		// 简化finder
 		function best(fun, coll) {
 			return _.reduce(coll, (x, y) => {
 				return fun(x, y) ? x : y;
@@ -134,7 +134,7 @@ pingpong.div(3);
 		repeat(4, 'Major');
 		// ['Major', 'Major', 'Major', 'Major']
 
-		>>使用函数，而不是值
+		// 使用函数，而不是值
 		function repeatedly(times, fun) {
 			return _.map(_.range(times), fun);
 		}
@@ -145,7 +145,7 @@ pingpong.div(3);
 
 		// [2, 4, 9]
 
-		>>函数iterateUntil接收两个函数：一个用来执行一些动作，另外一个用来进行结果检查，当结果满足“结束”值时返回 false;
+		// 函数iterateUntil接收两个函数：一个用来执行一些动作，另外一个用来进行结果检查，当结果满足“结束”值时返回 false;
 		function iterateUntil(fun, check, init) {
 			let ret = [];
 			let result = fun(init);
@@ -161,7 +161,7 @@ pingpong.div(3);
 		iterateUntil(n => n+n, n <= 1024, 1);
 		// [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
 
-	2.返回其它函数的函数
+	// 2.返回其它函数的函数
 		repeatdly(3, function() {return 'Odelay'});
 
 		function always(value) {
@@ -170,11 +170,11 @@ pingpong.div(3);
 			}
 		}
 
-		接下来，用always来替换之前的匿名函数，会更加简洁一些
+		// 接下来，用always来替换之前的匿名函数，会更加简洁一些
 		repeatedly(2, always('Odelay'));
-		像always这样的函数被称为组合子。
+		// 像always这样的函数被称为组合子。
 
-		>>invoker：接收一个方法，并在任何给定的对象上调用它。
+		//invoker：接收一个方法，并在任何给定的对象上调用它。
 		function invoker(NAME, METHOD) {
 			return function (target /* args ... */) {
 				if (!existy(target)) {
@@ -189,19 +189,18 @@ pingpong.div(3);
 		}
 
 		/*============防止不存在的函数fnull=================*/
-		function fnull(fun, /*, defaults*/) {
-			let default = _.rest(arguments);
+		function fnNull(fn) {
+			let def = _.rest(arguments)
 
-			return function(/* args */) {
+			return function () {
 				let args = _.map(arguments, (e, i) => {
-					return existy(e) ? e : default[i];
-				});
-
-				return fun.apply(null, args);
+					return existy(e) ? e : def[i]
+				})
+				return fun.apply(null, args)
 			}
-		} 
+		}
 
-=> 由函数构建函数 
+// 由函数构建函数 
 	function dispatch(/* funs */) {
 		let funs = _.toArray(arguments);
 		let size = funs.length;
@@ -228,7 +227,7 @@ pingpong.div(3);
 		str('a');   // => 'a'								 			
 		str(_.range(4)); // => '0,1,2,3'
 
-	>> 柯里化 (Curring)	
+	//柯里化 (Curring)	
 	function rightAwayInvoker() {
 		let args = _.toArray(arguments);
 		let method = args.shift();
@@ -239,20 +238,20 @@ pingpong.div(3);
 
 	rightAwayInvoker(Array.prototype.reverse, [1 ,2, 3]);
 
-	$ 自动柯里化参数
+	//自动柯里化参数
 	function curry(fun) {
 		return function (arg) {
 			return fun(arg);
 		}
 	}
-	curry的操作可以概括为
-		·接受一个函数
-		·返回一个只接收一个参数的函数
+	//curry的操作可以概括为
+		// ·接受一个函数
+		// ·返回一个只接收一个参数的函数
 
 	['11', '11', '11', '11'].map(curry(parseInt));
 	// => [11, 11, 11, 11]
 
-	一个柯里化两个参数的curry2函数
+	// 一个柯里化两个参数的curry2函数
 	function curry(fun) {
 		return function (secondeArg) {
 			return function (firstArg) {
@@ -260,13 +259,13 @@ pingpong.div(3);
 			}
 		}
 	}
-	curry2还可用于固化parseInt的行为，使其解析时只处理二进制 
+	// curry2还可用于固化parseInt的行为，使其解析时只处理二进制 
 	const parseBinaryString = curry2(parseInt)(2);
 	parseBinaryString('111'); // => 7
 	parseBinaryString('10'); // => 2
 
-	柯里化有利于指定JavaScript函数行为 ，并将现有函数“组合”为新函数。
-	1.使用柯里化构建新函数
+	// 柯里化有利于指定JavaScript函数行为 ，并将现有函数“组合”为新函数。
+	// 1.使用柯里化构建新函数
 		const plays = [
 			{artist: 'Burial', track: 'Archangel'},
 			{artist: 'Ben Frost', track: 'Stomp'},
@@ -286,7 +285,7 @@ pingpong.div(3);
 			}
 		*/
 
-		_.countBy 接收任意的函数作为第二个参数这一事实，你可以用 _.countBy 柯里化有用的函数来实现定制的计数功能。 
+		// _.countBy 接收任意的函数作为第二个参数这一事实，你可以用 _.countBy 柯里化有用的函数来实现定制的计数功能。 
 		function songToString(song) {
 			return [song.artist, song.tract].join(' - ');
 		}
@@ -302,8 +301,8 @@ pingpong.div(3);
 			}
 		*/
 
-	2.柯里化三个来实现HTML十六进制颜色构建器
-		使用实现curry2相同的模式，可以定义柯里化三个参数的函数
+	// 2.柯里化三个来实现HTML十六进制颜色构建器
+		// 使用实现curry2相同的模式，可以定义柯里化三个参数的函数
 		function curry3(fun) {
 			return function (last) {
 				return function (middle) {
@@ -326,7 +325,7 @@ pingpong.div(3);
 		rgbToHexString(255, 255, 255);
 		// => #ffffff
 
-		可以继续柯里化该函数来生成按按特定的颜色或色调;
+		// 可以继续柯里化该函数来生成按按特定的颜色或色调;
 		const blurGreenish = curry3(rgbToHexString)(255)(200);
 		blurGreenish(0);
 		// => '#00c8ff'
@@ -477,3 +476,31 @@ let isType = function(type) {
 
 let isString = isType('String');
 let isFunction = isType('Function')
+
+
+// => 高阶函数
+/* 可用于批量生成函数 */
+let toString = Object.prototype.toString;
+let isString = function (obj) {
+	return toString.call(obj) === '[object String]'
+}
+let isFunction = function(obj) {
+	return toString.call(obj) === `[object Function]`
+}
+let isType = function (type) {
+	return function(obj) {
+		return toString.call(obj) === `[object ${type}]`
+	}
+}
+/* 可以用于需要多次调用才执行的函数 */
+let after = function(times, task) {
+	return function() {
+		if (times--==1) {
+			return task.apply(this, arguments)
+		}
+	}
+}
+let fn = after(3, function() {
+	console.log(3)
+})
+fn();

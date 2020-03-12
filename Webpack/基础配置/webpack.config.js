@@ -10,7 +10,8 @@ module.exports = {
   entry: './src/index.js', // 入口
   output: { // 文件出口
     filename: 'bundle.[hash:8].js',  // 打包后的文件名  8位hash
-    path: path.resolve(__dirname, 'build') // 路径必须是一个绝对路径
+    path: path.resolve(__dirname, 'build'), // 路径必须是一个绝对路径
+    publicPath: 'cdnPath'
   },
   devServer: {  // 开发服务器配置
     port: 3000,
@@ -31,9 +32,29 @@ module.exports = {
   modules: {  // loader
     rules: [
       {
+        test: /\.html$/,
+        use: 'html-withimg-loader'
+      },
+      {
+        test: /\.(png|jpg|gif)$/,
+        use: {
+          loader: 'file-loader',
+        }
+      },
+      {
+        test: /\.(png|jpg|gif)$/,
+        // 做一个限制，当我们的图片 小于多少的时候 用base64来转化
+        use: {
+          loader: 'url-loader',
+          otions: {
+            limit: 200 * 1024
+          }
+        }
+      },
+      {
         test: /\.js$/,
         use: {
-          loader: 'eslint-loader',
+          loader: 'eslint-loader', 
           options: {
             enforce: "pre" // previous 这个loader会比下一个loader先执行 
           }
@@ -82,7 +103,9 @@ module.exports = {
     ]
   },
   resolve: { // 解析
+    modules: [path.resolve('node_modules')],
     extensions: ['.js', '.vue', '.json', '.less'],
+    mainFields: ['style', 'main'],  // 指定入口文件的目录
     alias: {
       '@': path.resolve(__dirname, 'src')
     }
@@ -102,7 +125,7 @@ module.exports = {
       __FLAG__: JSON.stringify(process.env.FLAG)
     }),
     new MiniCssExtractPlugin({
-      filename: 'main.css'
+      filename: 'css/main.css'
     }),
     new webpackk.ProvidePlugion({ // 在每个模块中都注入lodash 
       _: 'lodash'
@@ -118,6 +141,7 @@ module.exports = {
  * postcss-loader autoprefixer css样式自动加上前缀
  * babel-loader @babel/core @babel/preset-env
  * @babel/plugin-transform-runtime @babel-runtime
+ * @babel/preset-react -D
  * @babel/polyfill
  * @expose-loader 暴露全局的loader内联的loader 
  * pre 前执行的loader / normal 普通loader / 内联loader / 后置loader 
