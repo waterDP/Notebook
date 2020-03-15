@@ -19,15 +19,31 @@ module.exports = {
     contentBase: './build',  // 静态文件夹
     compress: true
   },
-  optimizarion: {  // 优化项
-    minimizer: [
+  optimization: {  // 优化项
+    minimizer: [  // 压缩代码
       new UglifyJsPlugin({
         cache: true,
         parellel: true,
         sourceMap: true
       }),
       new OptimizeCssAssetsWebpackPlugin()
-    ] 
+    ],
+    splitChunks: {  // 分割代码块  
+      cacheGroups: { // 缓存组
+        common: {  //  公共的模块
+          chunks: 'initial',
+          minSize: 0,
+          minChunks: 2
+        },
+        vendor: {
+          priority: 1,  // 优先级
+          test: /node_modules/,
+          chunks: 'initial',
+          minSize: 0,
+          minChunks: 2
+        }
+      }
+    }
   },
   modules: {  // loader
     rules: [

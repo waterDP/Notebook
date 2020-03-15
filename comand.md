@@ -1,4 +1,5 @@
 ## npm and yarn:
+-npm addUserc  登录用户
 -rimraf node_modules   删除node_modules 
 -yarn cache clean      清除yarn全局缓存
 

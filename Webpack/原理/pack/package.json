@@ -1,0 +1,13 @@
+{
+  "name": "pack",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "bin": {
+    "pack": "./bin/pack.js"
+  },
+  "devDependencies": {
+    "ejs": "^3.0.1",
+    "tapable": "^1.1.3"
+  }
+}

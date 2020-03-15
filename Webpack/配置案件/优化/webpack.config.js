@@ -9,6 +9,7 @@ module.exports = {
     path: path.resolve(__dirname, )
   },
   devServer: {
+    hot: true, // 启用热更新
     port: 3000,
     open: true,
     contentBase: './dist'
@@ -39,6 +40,8 @@ module.exports = {
     new webpack.IgnorePlugin(/\.\/locale/, /moment/),   // 忽略这里面的文件   不打包
     new HtmlWebpackPlugin({
       template: './public/index.html'
-    })
+    }),
+    new webpack.NamedModulesPlugin(),  // 打印更新的模块路径
+    new webpack.HotModuleReplacementPlugin() // 热更新插件
   ]
 }
