@@ -4,7 +4,7 @@ function loader(source) { // this loader的上下文
   let options = loaderUtils.getOptions(this)
   let cb = this.async()  // flag
   babel.transform(source, {
-    ...options,
+    ...options,  // presets
     sourceMap: true,
     filename: this.resourcePath.split('/').pop() // 文件名
   }, function (err, result) {
