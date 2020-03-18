@@ -4,4 +4,3 @@
   会调用createElement()
 2.vm._update() 去用虚拟节点创建真实节点(patch)
   vm._update(vm._render(), hydrating)
-
