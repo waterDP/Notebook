@@ -35,7 +35,7 @@ class Promise {
     // 失败的原因
     this.reason = undefined
 
-    this.resolve = value => {
+    let resolve = value => {
       // state改变，resolve调用就会失败
       if (this.state === 'pending') {
         // resolve调用后，state转化为成功态
@@ -45,7 +45,7 @@ class Promise {
       }
     }
 
-    this.reject = reason => {
+    let reject = reason => {
       // state改变，reject调用就会失败
       if (this.state === 'pending') {
         // reject调用后，state转化为失败态
