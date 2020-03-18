@@ -529,6 +529,24 @@ Promise.race = function(promises) {
  * @param {array<promise>} promises
  */
 Promise.all = function(promises) {
-  
+  let arr = []
+  let i = 0
+  if (i === promises.length) {
+    this.resolve(err)
+  }
+  function processData(index, data) {
+    arr[index] = data
+    i++
+    if (i === promises.length) {
+      resolve(arr)
+    }
+  }
+  return new Promise((resolve, reject) => {
+    for (let i = 0; i < promises.length; i++) {
+      promises[i].then(data => {
+        processData(i, data)
+      }, reject)
+    }
+  })
 }
 
