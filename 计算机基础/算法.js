@@ -485,7 +485,7 @@
 					if (this.root = null) {
 						this.root = newNode;
 					} else {
-						inserNode(root, newNode);
+						insertNode(root, newNode);
 					}
 				}
 
@@ -497,7 +497,7 @@
 							insertNode(node.left, newNode);
 						}
 					} else {
-						if (node.rigth === null) {
+						if (node.right === null) {
 							node.right = newNode;
 						} else{
 							insertNode(node.right, newNode);
@@ -566,7 +566,7 @@
 						}
 						return node.key;
 					}
-					reunurn null;
+					return null;
 				}
 
 				/**
@@ -600,11 +600,12 @@
 
 					if (key < node.key) {
 						return this.searchNode(node.left, key);
-					} else(key > node.key) {
-						return this.searchNode(node.rigth, key);
-					} else {
-						return true;
-					}
+					} 
+					if (key > node.key) {
+						return this.searchNode(node.right, key);
+					} 
+
+					return true;
 				}
 
 				/**
@@ -827,7 +828,7 @@
 				visited[u] = true;
 				for (let v = 0; v < length; v++) {
 					if (!visited[v] && 
-						graph[u][v] ！== 0 &&
+						graph[u][v] !== 0 &&
 						dist[u] !== INF &&
 						dist[u] + graph[u][v] < dist[v]) {
 						dist[v] = dist[u]

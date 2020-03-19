@@ -38,7 +38,7 @@ export class LifeCycle extends Component {
     console.log('8. 属性将要更新')
   }
   componentWillUnmount() {
-    console.log('9. ')
+    console.log('9. 组件即将卸载')
   }
   add = () => {
     this.setState({ number: this.state.number + 1 })

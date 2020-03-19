@@ -19,7 +19,9 @@ function createElement(type, config, children) {
 }
 
 function createRef() {
-  
+  return {
+    current: null
+  }
 }
 
 class Component {
