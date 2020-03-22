@@ -1,4 +1,4 @@
 const ActionTypes = {
-    INIT:`@@redux/INIT`
+	INIT: `@@redux/INIT`
 }
 export default ActionTypes;

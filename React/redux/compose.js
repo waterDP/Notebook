@@ -1,4 +1,4 @@
 function compose(...funcs){
-  return funcs.reduce((a,b)=>(...args)=>a(b(...args)));
+  return funcs.reduce((func, next) => (...args) => func(next(...args)));
 }
 export default compose;
