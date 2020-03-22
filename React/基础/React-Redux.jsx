@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
+import {bindActionCreators} from "redux";
 import store from './store'
-import actions from './actions'
+import actions from './store/actions/counter'
 
 let boundActions = bindActionCreators(actions, store.dispatch)
 
@@ -8,7 +9,7 @@ export class ReduxComponent extends Component {
   state = {number: store.getState()}
   componentDidMount() {
     this.unsubscribe = store.subscribe(() => {
-      this.setState({number: store.getState()})
+      this.setState({number: store.getState().counter})
     })
   }
   componentWillUnmount() {

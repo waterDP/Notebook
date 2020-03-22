@@ -16,7 +16,7 @@ export default function createStore(reducer, preloadedState){
         if(!isPlainObject(action)){
             throw new Error('action必须是一个纯对象');
         }
-        if(typeof action.type =='undefined'){
+        if(typeof action.type === 'undefined'){
             throw new Error('action的type属性不能是 undefined');
         }
         currentState = currentReducer(currentState,action);
