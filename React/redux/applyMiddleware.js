@@ -1,5 +1,5 @@
 import compose from './compose';
-export default function applyMiddleware(...middlewares){//[thunk,logger1]
+export default function applyMiddleware(...middleWares){//[thunk,logger1]
     return function(createStore){
         return function(reducer){
             let store = createStore(reducer);//这就是最原始的仓库
@@ -8,7 +8,7 @@ export default function applyMiddleware(...middlewares){//[thunk,logger1]
                 getState:store.getState,
                 dispatch:(...args)=>dispatch(...args)
             }
-            const chain = middlewares.map(middleware=>middleware(middlewareAPI));
+            const chain = middleWares.map(middleware=>middleware(middlewareAPI));
             //[thunk,logger1,store.dispatch]
             dispatch = compose(...chain)(store.dispatch);
             return {

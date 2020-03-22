@@ -1,29 +1,31 @@
-import React, { Component } from 'react';
-import {bindActionCreators} from "redux";
+import React, { Component } from 'react'
+import ReactDOM from 'react-dom'
+import {Provider, connect} from "react-redux"
 import store from './store'
-import actions from './store/actions/counter'
+import counter from './store/actions/counter'   // action
 
-let boundActions = bindActionCreators(actions, store.dispatch)
-
-export class ReduxComponent extends Component {
-  state = {number: store.getState()}
-  componentDidMount() {
-    this.unsubscribe = store.subscribe(() => {
-      this.setState({number: store.getState().counter})
-    })
-  }
-  componentWillUnmount() {
-    this.unsubscribe();
-  }
+export class Counter extends Component {
   render() {
     return (
       <>
-        <p>{this.state.number}</p>
-        <button onClick={()=>boundActions.increment()}>+</button>
-        <button onClick={()=>boundActions.increment()}>-</button>
+        <p>{this.props.number}</p>
+        <button onClick={this.props.increment}>+</button>
+        <button onClick={this.props.increment}>-</button>
       </>
     );
   }
 }
 
-export default ReduxComponent;
+// connect 负责连接仓库和组件
+export default connect(
+  state => state,
+  counter
+)(Counter);
+
+
+/* Root Component */
+ReactDOM.render((
+  <Provider store={store}>
+    <Counter />
+  </Provider>
+), document.getElementById('root'))
