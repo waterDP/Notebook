@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 
 export class LifeCycle extends Component {
   /**
-   * 默认属性，如果你传了，就用这里面的值如果你没有传，就会用默认的值
+   * 默认属性，如果你传了，就用这里面的值。如果你没有传，就会用默认的值
    */
   static defaultProps = {
     name: '计数器'
@@ -23,7 +23,7 @@ export class LifeCycle extends Component {
   componentDidMount() {
     console.log('4. 组件挂载完成')
   }
-  // 调用些方法时会把新的属性对象和新的状态对象
+  // 调用些方法时会把新的属性对象和新的状态对象传入
   shouldComponentUpdate(nextProps, nextState) {
     console.log('5. 询问组件是否需要更新')
     return true
