@@ -2,7 +2,7 @@ import isPlainObject from "./utils/isPlainObject";
 import ActionTypes from "./utils/actionTypes";
 
 export default function createStore(reducer, preloadedState) {
-	if (typeof reducer != 'function') {
+	if (typeof reducer !== 'function') {
 		throw new Error('reducer必须是一个函数');
 	}
 	let currentReducer = reducer;//当前的处理器
