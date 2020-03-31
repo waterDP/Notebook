@@ -52,7 +52,7 @@ Vue.prototype._render = function() {
 Vue.prototype.$mount = function () {
   let vm = this
   let el = vm.$options.el
-  el = query(el)
+  el = vm.$el = query(el)
 
   // 渲染是通过watcher来渲染的
   // 渲染watcher用于渲染的watcher

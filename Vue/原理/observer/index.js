@@ -27,7 +27,10 @@ export function observe(data) {
   return new Observer(data)
 }
 
-function proxy(vm, source, key) {
+// 代理
+function proxy(vm, source, key) {  // 代理数据vm.msg = vm._data.msg
+  // vm.msg = 'hello'
+  // vm._data.msg = 'hello'
   Object.defineProperty(vm, key, {
     get() {
       return vm[source][key]
@@ -38,11 +41,11 @@ function proxy(vm, source, key) {
   })
 }
 
-function initData(vm) {
-  let data = vm.$options.data
+function initData(vm) { // 将用户插入的数据 通过object.defineProperty重新定义
+  let data = vm.$options.data // 用户传入的data
   data = vm._data = typeof data === 'function' ? data.call(vm) : data || {}
   for (let key in data) {
-    proxy(vm, '_data', key)
+    proxy(vm, '_data', key)  // 会将对vm上的取值操作和赋值操作代理给vm._data属性
   }
   observe(vm._data)  // 观察函数
 }

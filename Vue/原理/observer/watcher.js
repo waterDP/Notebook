@@ -6,10 +6,10 @@ class Watcher {
   /**
    * @param {Object} vm 当前组件的实例vm
    * @param {function} exprOrFn 用户可能传入的是一个表达式，也可能传入的是一个函数
-   * @param {function} cb 用户传入的回调函数 vm.$watch('msd', )
-   * @param {object} opts 
+   * @param {function} cb 用户传入的回调函数 vm.$watch('msd', cb)
+   * @param {object} opts 一些其它的值
    */
-  constructor(vm, exprOrFn, cb, opts) {
+  constructor(vm, exprOrFn, cb = () => {}, opts =  {}) {
     this.vm = vm
     this.exprOrFn = exprOrFn
     this.cb = cb

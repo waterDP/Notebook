@@ -1,4 +1,4 @@
-/*
+ /*
 	在 Node.js 中，eventLoop是基于libuv的。通过查看libuv的文档可以发现整个eventLoop 分为 6 个阶段：
 	1.timers: 定时器相关任务，node中我们关注的是它会执行 setTimeout() 和 setInterval() 中到期的回调
 	2.pending callbacks: 执行某些系统操作的回调

@@ -1,6 +1,7 @@
 import {observe} from "./index"
 import {arrayMethods, observerArray, dependArray} from "./array"
 import Dep from "./dep"
+
 export function definedReactive(data, key, value) { // 定义响应式的数据变化
   // 如果value依旧是一个对象的话，需要深度观察
   let childOb = observe(value)
@@ -20,9 +21,10 @@ export function definedReactive(data, key, value) { // 定义响应式的数据�
       return value
     },
     // 触发依赖
-    set(v) {
-      if (v === value) return 
-      value = v
+    set(newValue) {
+      if (newValue === value) return 
+      observe(newValue) // 如果你设置的值是一个对象的话，应该再进行监控这个新值  
+      value = newValue
       dep.notify()
     }
   })
@@ -38,8 +40,8 @@ class Observer{
     })
     if (Array.isArray(data)) {
       // 只能拦截数组的方法，数组里的每一项 还需要去观测一下  
-      data.__proto__ = arrayMethods
-      observerArray(data)  // 观测数据中的每一项
+      data.__proto__ = arrayMethods  // 让数组通过链来查找我们自己编写的原型
+      observerArray(data)  // 观测数据（数组）中的每一项
     } else {
       this.walk(data)
     }

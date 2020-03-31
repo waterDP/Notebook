@@ -4,10 +4,10 @@
 
 import {observe} from "./index"
 // 先获取老的数组方法
-let arrayProto = Array.prototype
+let arrayProtoMethods = Array.prototype
 
 // 拷贝的一个新的对象，可以查找到老的方法
-export let arrayMethods = Object.create(arrayProto)
+export let arrayMethods = Object.create(arrayProtoMethods)
 
 let methods = [
   'push',
@@ -37,8 +37,8 @@ export function dependArray(value) { // 递归收集数组的依赖
 }
 
 methods.forEach(method => {
-  arrayMethods[method] = function(...args) { // 函数支持  切片编程
-    const result = arrayProto[method].apply(this, args)
+  arrayMethods[method] = function(...args) { // 函数劫持  切片编程
+    const result = arrayProtoMethods[method].apply(this, args)
     let inserted
     switch(method) {
       case 'push':
