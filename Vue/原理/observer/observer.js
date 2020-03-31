@@ -1,7 +1,7 @@
 import {observe} from "./index"
 import {arrayMethods, observerArray, dependArray} from "./array"
 import Dep from "./dep"
-export function definedReactive(data, key, value) {
+export function definedReactive(data, key, value) { // 定义响应式的数据变化
   // 如果value依旧是一个对象的话，需要深度观察
   let childOb = observe(value)
   // 相同的属性用的相同的dep
@@ -40,7 +40,7 @@ class Observer{
       // 只能拦截数组的方法，数组里的每一项 还需要去观测一下  
       data.__proto__ = arrayMethods
       observerArray(data)  // 观测数据中的每一项
-    } else {d
+    } else {
       this.walk(data)
     }
   }

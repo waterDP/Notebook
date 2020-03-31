@@ -13,7 +13,7 @@ function create(Con, ...args) {
 	// 创建空对象
 	let obj = {};
 	// 设置空对象的原型(链接对象的原型)
-	obj._proto_ = Con.prototype;
+	obj.__proto__ = Con.prototype;
 	// 绑定this并执行构造函数（为对象设置属性）
 	let result = Con.apply(obj, args);
 	// 如果result没有其他选择的对象，就返回obj对象

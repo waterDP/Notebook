@@ -226,7 +226,7 @@ Promise.all = function(promises) {
     let arr = []
     let idx = 0;
     let processData = (value, index) => {
-      arr[index] = value;
+      arr[index] = value; // 赋值
       if (++idx === promises.length) {
         resolve(arr)
       }
@@ -290,7 +290,7 @@ class Promise {
     // 声明返回的promise2
     let promise2 = new Promise((resolve, reject) => {
       if (this.state === 'fulfilled') {
-        setTimeout(() => {
+        setTimeout(() => {  // 定时器的目的是为了拿到promise2
           try {
             let x = onFulfilled(this.value);
             resolvePromise(promise2, x, resolve, reject)
@@ -339,10 +339,10 @@ class Promise {
 
 /** 
  * resolvePromise
- * @param promise2
- * @param x
- * @param resolve
- * @param reject 
+ * @param {promise} promise2 promise1.then方法返回的新的promise对象
+ * @param {[type]} x promise1中onFulfilled|onRejected的返回值
+ * @param {[type]} resolve promise2的resolve方法
+ * @param {[type]} reject promise2的reject方法 
  */
 function resolvePromise(promise2, x, resolve, reject) {
   // 循环引用报错
@@ -352,7 +352,7 @@ function resolvePromise(promise2, x, resolve, reject) {
   // 防止多次调用
   let called
   // x不是null， 且x是对象或者函数
-  if (x !== null && (typeof x === 'object' || typeof x === 'object')) {
+  if (x !== null && (typeof x === 'object' || typeof x === 'function')) {
     try {
       // A+规定，声明then=x的then方法
       let then = x.then
@@ -519,7 +519,7 @@ Promise.resolve = function(val) {
 Promise.race = function(promises) {
   return new Promise((resolve, reject) => {
     for (let i = 0; i < promises.length; i++) {
-      prosmises[i].then(resolve, reject)
+      promises[i].then(resolve, reject)
     }
   })
 }
