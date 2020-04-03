@@ -1,5 +1,5 @@
 const install = Vue => {
-  Vue.prototype.$dispath = function(eventName, componentName, value) {
+  Vue.prototype.$dispatch = function(eventName, componentName, value) {
     let parent = this.$parent
     while(parent) {
       if (parent.$options.name === componentName) {
