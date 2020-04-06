@@ -507,8 +507,8 @@ function resolvePromise(promise2, x, resolve, reject) {
  * @param {any} val
  */
 Promise.resolve = function(val) {
-  return new Promise((resolve, reject) => {
-    reject(value)
+  return new Promise((resolve) => {
+    resolve(val)
   })
 }
 
