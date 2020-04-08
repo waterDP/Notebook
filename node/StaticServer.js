@@ -124,15 +124,3 @@ class Server {
 }
 
 module.exports = Server;
-
-// http 304 怎么实现304
-
-
-// C:\Users\test1\Desktop\2019架构课\9.http\template.htm
-
-// header 其他的header的用法 2次课 useragent 防盗链 206 虚拟主机
-// 手写koa + 中间件 +  express + 手写express
-// mongo + redis
-
-
-// react + mysql
