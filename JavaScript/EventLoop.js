@@ -39,3 +39,10 @@ setTimeout(function() {
  * promise
  * setTimeout2
  */
+
+ // process.nextTick node中的事件环，node实现的微任务，他的优先级比promise还要高
+
+// 微任务 promise.then / mutationObserver / process.nextTick
+// 宏任务 script标签 ui渲染 messageChannel(浏览器) ajax click setTimeout setImmediate requestFrameAnimation
+// 浏览器	是一个宏任务队列  node 的话是多个宏任务任队列
+// 执行顺序是一样的 
