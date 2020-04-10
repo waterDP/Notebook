@@ -3,7 +3,7 @@
  * @param useSubdirectories 是否搜索子目录
  * @param regExp 匹配文件的正则表达式
  * @return {Object} 返回一个具有resolve, keys, id 三个属性的方法
- * ! resolve() 它返回的是被解析模块的id，接受一个参数reqest 
+ * ! resolve() 它返回的是被解析模块的id，接受一个参数request 
  * ! keys() 它返回一个数组，由所有符合上下文模块处理的请求组成
  * ! id 是上下文模块里面所包含的模块id，它可能在你的使用module.hot.accept的时候被用到
  */  
