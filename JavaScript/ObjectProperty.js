@@ -6,7 +6,7 @@
  * 	1.value 属性的值
  * 	2.writable 决定属性能否被赋值
  *  3.enumerable 决定for in 能否枚举该属性
- * 	4.configurable 决定该属性能否被删除或者改变特征值 
+ * 	4.configurable 决定该属性能否被删除或者改变特征值
  * 访问器属性
  * 	1.getter 函数或undefined，在取属性时被调用
  *  2.setter 函数或undefined，在设置属性仁政时被调用

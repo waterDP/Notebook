@@ -68,6 +68,20 @@ const arr1 = [1, 3, 5]
 const arr2 = [5, 6, 7]
 const con = [...arr1, ...arr2]
 
+// todo 获取数组的片段
+/**
+ * ! array.slice() 方法
+ * array.slice([fromIndex [, toIndex]) 返回数组的一个片段，该片段从fromIndex开始，以toIndex结尾（不包括toIndex本身）。
+ * fromIndex可选参数默认为0，toIndex可选参数，默认为array.length
+ */
+const names = ["小智", "前端小智", "老王", "小三"]
+
+const heroes = names.slice(0, 2)
+const villains = names.splice(2)
+
+// heroes => ["小智", "前端小智"]
+// villains => ["老王", "小三"]
+
 // todo 数组的拷贝
 /**
  * ! array.slice() 方法
@@ -130,7 +144,7 @@ const evens = numbers.filter(isEvent)
  * ! array.push() 方法，将一个或多个项追加数组的末尾，并返回新的数组长度
  * ! array.unshift() 方法，将一个或多个项追加到数组的开头，返回新的数组长度
  * ! array.pop() 方法从数组中删除最后一个元素，然后返回该元素。
- * ! shift() 方法从数组中删除第一个元素，然后返回该元素
+ * ! array.shift() 方法从数组中删除第一个元素，然后返回该元素
  */
 
 // todo 填充数组
