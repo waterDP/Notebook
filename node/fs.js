@@ -1,5 +1,5 @@
 function mkdir(p, cb) {
-  let arr = p.splite('/')
+  let arr = p.split('/')
   let index = 0
   function next() {
     if (index === arr.length) cb()
