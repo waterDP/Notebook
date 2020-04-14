@@ -36,7 +36,7 @@ export default {
        * -修饰符为some或者没有时，value数组所有元素都不存在accessAuth权限集内，隐藏元素
        */
       if ((modifiers.every && (value.some(v => !accessAuthData.includes(v)))) ||
-        (!modifiers.every && (value.some(v => !accessAuthData.includes(v))))) {
+        (!modifiers.every && (value.every(v => !accessAuthData.includes(v))))) {
           remove(el)
         }
     }

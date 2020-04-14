@@ -11,7 +11,7 @@ todo 防抖
 		. 按钮点击
 
 	> 原理:
-			通过定时器将回调函数进行延时。如果在规定时间内继续回调,发现存在之前的定时器,则将该定时器清除,并重新设置定时器。这里有个细节,就是后面所有的回调函数都要能访问到之前设置的定时器,这时就需要用到闭包
+		通过定时器将回调函数进行延时。如果在规定时间内继续回调,发现存在之前的定时器,则将该定时器清除,并重新设置定时器。这里有个细节,就是后面所有的回调函数都要能访问到之前设置的定时器,这时就需要用到闭包
 
 	> 两种版本
 		防抖分为两种:
@@ -25,43 +25,41 @@ todo 防抖
 			//2.返回闭包函数
 */
 
-			// 一个回调函数
-			function callback(content) {
-				console.log(content)
+		// 一个回调函数
+		function callback(content) {
+			console.log(content)
+		}
+
+		function debounceFactory(cb, delay = 500) {
+			let timer = null; // 定时器
+			return (...args) => {
+				clearTimeout(timer);
+				timer = setTimeout(cb.bind(this, ...args), delay);
 			}
+		}
 
-			function debounceFactory(cb, delay = 500) {
-				let timer = null; // 定时器
-				return args => {
-					clearTimeout(timer);
-					timer = setTimeout(cb.bind(this, args), delay);
+		// 接着用变量保存保存 debounce 返回的带有延时功能的函数
+		let debounce = debounceFactory(callback, 500)
+
+		// 添加事件监听
+		let input = document.getElementById('debounce');
+		input.addEventListener('keyup', e => debounce.apply(this, e.target.value));
+
+	//<立即执行版>
+	function debounce(cb, delay = 500, immediate = true) {
+		let timer; // 定时器
+		return (...args) => {
+			clearTimeout(timer);  // 不管是否立即执行，都要先删除定时器
+			if (immediate) {  // 立即执行版本
+				if (!timer) {
+					cb(args);
 				}
+				timer = setTimeout(() => timer = null, delay);
+			} else{  // 非立即执行
+				timer = setTimeout(cb.bind(this, ...args), delay);
 			}
-
-			// 接着用变量保存保存 debounce 返回的带有延时功能的函数
-			let debounce = debounceFactory(callback, 500)
-
-			// 添加事件监听
-			let input = document.getElementById('dobunce');
-			input.addEventListener('keyup', e => debounce.apply(this, e.target.value));
-
-		//<立即执行版>
-			function debounce(cb, delay = 500, immediate = true) {
-				let timer; // 定时器
-				return args => {
-					clearTimeout(timer);  // 不管是否立即执行，都要先删除定时器
-					if (immediate) {  // 立即执行版本
-						if (!timer) {
-							cb(args);
-						}
-						timer = setTimeout(() => timer = null, delay);
-					} else{  // 非立即执行
-						timer = setTimeout(cb.bind(this, args), delay);
-					}
-				}
-			}	
-
-
+		}
+	}	
 			
 // todo 节流
 // 	> 条件
@@ -81,26 +79,32 @@ todo 防抖
 
 	// 时间戳版本		
 	function throttle(fn, delay = 500) {
-		let previous = 0; // 记录上一次触发的时间戳，这里初始化为0，是为了第一次触发产生回调
-		return function(args) {
-			let now = Date.now();
-			let that = this;
-			let _args = args;
-			if (now - previous > delay) { // 如果时间差大于规定时间，则触发
-				fn.apply(that, _args);
+		let previous = null // 记录上一次触发的时间戳，这里初始化为0，是为了第一次触发产生回调
+		return (...args) => {
+			let now = Date.now()
+			if (previous) {
+				if (now - previous > delay) { // 如果时间差大于规定时间，则触发
+					previous = now
+					fn(...args)
+				}
+			} else {
+				previous = now
+				fn(...args)
 			}
 		}
 	}
 
 	// 定时器版本
 	function throttle(fn, delay = 500) {
-		let timer;
-		let args = args;
-		if (!timer) { // 如果定时器不存在，则设置新的定时器，到时后，才执行回调，并将定时器置为null
-			timer = setTimeout(function () {
-				timer = null;
-				fn.apply(that, age);
-			}, delay);
+		let timer
+		return (...args) => {
+			if (!timer) {
+				fn(...args)
+				timer = setTimeout(() => {
+					clearTimeout(timer)
+					timer = null
+				}, delay)
+			}
 		}
 	}
 

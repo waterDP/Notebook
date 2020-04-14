@@ -22,11 +22,9 @@ function flat(arr) {
 arr.flat(Infinity)
 
 // todo 扩展运算符
-function flat(arr) { 
-  while (arr.some(item => Array.isArray(item))) {
+function flat(arr) {
+  while(arr.some(Array.isArray)){
     arr = [].concat(...arr)
   }
   return arr
 }
-
-
