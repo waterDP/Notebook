@@ -54,6 +54,6 @@ module.exports = {
     new CopyWebpackPlugin([ // 拷贝插件
       {from: './doc', to: './dist'} // 将doc中的文件放入dist文件夹中
     ]),
-    new webpack.BannerPlugin('make 2019 by auther')
+    new webpack.BannerPlugin('make 2019 by author')
   ]
 }
