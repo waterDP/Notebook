@@ -35,7 +35,7 @@ module.exports = {
   },
   plugins: [
     new webpack.DllReferencePlugin({
-      minifest: path.resolve(__dirname, 'dist', 'manifest.json')
+      manifest: path.resolve(__dirname, 'dist', 'manifest.json')
     }),
     new webpack.IgnorePlugin(/\.\/locale/, /moment/),   // 忽略这里面的文件   不打包
     new HtmlWebpackPlugin({

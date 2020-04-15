@@ -20,3 +20,5 @@ module.exports = {
     })
   ]
 }
+
+// webpack --config dll.webpack
