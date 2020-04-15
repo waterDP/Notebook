@@ -143,7 +143,7 @@ module.exports = {
     new MiniCssExtractPlugin({
       filename: 'css/main.css'
     }),
-    new webpackk.ProvidePlugion({ // 在每个模块中都注入lodash 
+    new webpack.ProvidePlugin({ // 在每个模块中都注入lodash 
       _: 'lodash'
     })
   ],
