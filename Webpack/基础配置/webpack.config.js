@@ -2,7 +2,7 @@ const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const OptimizeCssAssetsWebpackPlugin = require('optimize-css-assets-webpack-plugin')
-const UglifyJsPlugin = require('uglify-js-plugin')
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 const webpack = require('webpack')
 
 module.exports = {
@@ -23,10 +23,10 @@ module.exports = {
     minimizer: [  // 压缩代码
       new UglifyJsPlugin({
         cache: true,
-        parellel: true,
+        parallel: true,  // 并行压缩
         sourceMap: true
       }),
-      new OptimizeCssAssetsWebpackPlugin()
+      new OptimizeCssAssetsWebpackPlugin()  // 压缩css
     ],
     splitChunks: {  // 分割代码块  
       cacheGroups: { // 缓存组
@@ -62,7 +62,7 @@ module.exports = {
         // 做一个限制，当我们的图片 小于多少的时候 用base64来转化
         use: {
           loader: 'url-loader',
-          otions: {
+          options: {
             limit: 200 * 1024
           }
         }
@@ -97,7 +97,8 @@ module.exports = {
       // css-loader 解译@import这种语法的
       // style-loader 把css插入到head的标签中
       {
-        test: /\.css$/, use: [
+        test: /\.css$/,
+        use: [
           {
             loader: 'style-loader',
             options: {
@@ -109,12 +110,15 @@ module.exports = {
       },
 
       /* 需要 less 和less-loader 两个组件 */
-      {test: /\.less$/, less: [
-        MiniCssExtractPlugin.loader, 
-        'css-loader',
-        'postcss-loader',
-        'less-loader'
-      ]},
+      {
+        test: /\.less$/, 
+        use: [
+          MiniCssExtractPlugin.loader, // 抽离css文件
+          'css-loader',
+          'postcss-loader',  // css加前缀 -webkit-
+          'less-loader'   
+        ]
+      },
 
     ]
   },
@@ -140,7 +144,7 @@ module.exports = {
       __VERSION__: JSON.stringify(appVersion),
       __FLAG__: JSON.stringify(process.env.FLAG)
     }),
-    new MiniCssExtractPlugin({
+    new MiniCssExtractPlugin({ // 抽离css文件
       filename: 'css/main.css'
     }),
     new webpack.ProvidePlugin({ // 在每个模块中都注入lodash 

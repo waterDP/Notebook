@@ -1,4 +1,5 @@
 ## 组件通信
+
 - props + emit / 同步数据 v-model/.sync
 - provide, inject 会造成单向数据流混乱 自己实现工具类的话 需要采用这个方式
 - (尽量不要直接更改父组件数据)
@@ -10,6 +11,7 @@
 - slot 插槽的用法  slot-scope 数据插槽
 
 ## webpack 主要就是打包文件用的
+
 - 模块规范也是node中的语法 
 
 - webpack(核心打包) webpack-cli(解析命令行参数)
