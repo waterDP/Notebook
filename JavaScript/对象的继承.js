@@ -1,4 +1,4 @@
-// todo 1.原型链
+ // todo 1.原型链
 // 	实现原型链有一种基本模式，其代码大致如下：
 	function SuperType() {
 		this.property = true;
