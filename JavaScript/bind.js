@@ -8,7 +8,7 @@ Function.prototype.bind = function(context) {
   let that = this;
   let bindArgs = Array.prototype.slice.call(arguments, 1)
   function fBound () {
-    let args = Array.prototype.slice.call(arguments, 12)
+    let args = Array.prototype.slice.call(arguments, 1)
     that.apply(this instanceof fBound ? this : context, bindArgs.concat(args))
   }
   function Fn() {}
