@@ -48,15 +48,19 @@ export function proxy (target: Object, sourceKey: string, key: string) {
 export function initState (vm: Component) {
   vm._watchers = []
   const opts = vm.$options
+  //  todo: 初始化props
   if (opts.props) initProps(vm, opts.props)
   if (opts.methods) initMethods(vm, opts.methods)
   if (opts.data) {
+    // todo: 初始化data
     initData(vm)
   } else {
     observe(vm._data = {}, true /* asRootData */)
   }
+  // todo: 初始化computed
   if (opts.computed) initComputed(vm, opts.computed)
   if (opts.watch && opts.watch !== nativeWatch) {
+    // todo: 初始化watcher
     initWatch(vm, opts.watch)
   }
 }
@@ -111,10 +115,12 @@ function initProps (vm: Component, propsOptions: Object) {
 
 function initData (vm: Component) {
   let data = vm.$options.data
+  // todo: 如果当前的组件是一个函数，就执行这个函数，并拿到返回值
   data = vm._data = typeof data === 'function'
     ? getData(data, vm)
     : data || {}
   if (!isPlainObject(data)) {
+    // ! 如果当前data不是对象，就给把data赋成一个空对象，并在开发环境下抛出错误
     data = {}
     process.env.NODE_ENV !== 'production' && warn(
       'data functions should return an object:\n' +
@@ -127,9 +133,11 @@ function initData (vm: Component) {
   const props = vm.$options.props
   const methods = vm.$options.methods
   let i = keys.length
+  // todo 遍历data
   while (i--) {
     const key = keys[i]
     if (process.env.NODE_ENV !== 'production') {
+      // todo 当前methods与Vue原型中定义的方法同名时，抛出警告
       if (methods && hasOwn(methods, key)) {
         warn(
           `Method "${key}" has already been defined as a data property.`,
@@ -138,16 +146,17 @@ function initData (vm: Component) {
       }
     }
     if (props && hasOwn(props, key)) {
+      // todo 同理props中的属性，也不要和Vue原型中的属性同名
       process.env.NODE_ENV !== 'production' && warn(
         `The data property "${key}" is already declared as a prop. ` +
         `Use prop default value instead.`,
         vm
       )
-    } else if (!isReserved(key)) {
-      proxy(vm, `_data`, key)
+    } else if (!isReserved(key)) { //?当前的key不能以_和$开头
+      proxy(vm, `_data`, key)  // todo 代理   使我们可以通过this.key访问 而不用this._data.key来访问
     }
   }
-  // observe data
+  // todo 监听data
   observe(data, true /* asRootData */)
 }
 
@@ -212,11 +221,11 @@ export function defineComputed (
   key: string,
   userDef: Object | Function
 ) {
-  const shouldCache = !isServerRendering()
+  const shouldCache = !isServerRendering()  // todo 如果不是ssr就应该做缓存
   if (typeof userDef === 'function') {
     sharedPropertyDefinition.get = shouldCache
       ? createComputedGetter(key)
-      : createGetterInvoker(userDef)
+      : createGetterInvoker(userDef)  // ? 如果是做缓存就走上面的  否则走下面的
     sharedPropertyDefinition.set = noop
   } else {
     sharedPropertyDefinition.get = userDef.get

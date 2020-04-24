@@ -99,6 +99,7 @@ export default class Watcher {
    * Evaluate the getter, and re-collect dependencies.
    */
   get () {
+    // todo 将当前watcher推入deps队列，以使数据更改时，deps通知watcher触发
     pushTarget(this)
     let value
     const vm = this.vm

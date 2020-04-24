@@ -9,6 +9,7 @@ export const unicodeRegExp = /a-zA-Z\u00B7\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037
 
 /**
  * Check if a string starts with $ or _
+ * todo 当前字符不能以_或$开头
  */
 export function isReserved (str: string): boolean {
   const c = (str + '').charCodeAt(0)
