@@ -58,7 +58,11 @@ export default class Watcher {
     if (options) {
       this.deep = !!options.deep
       this.user = !!options.user
+
+      // todo: lazy表示的惰性运算，computed中会使用这个属性
       this.lazy = !!options.lazy
+
+      // todo sync可以控制是否是同步的watch 默认watch是异步的
       this.sync = !!options.sync
       this.before = options.before
     } else {

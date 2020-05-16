@@ -209,7 +209,7 @@
 
 	function SuperType(name) {
 		this.name = name;
-		thos.colors = ['red', 'blue', 'green']
+		this.colors = ['red', 'blue', 'green']
 	}
 
 	SuperType.prototype.sayName = function() {

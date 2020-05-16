@@ -131,6 +131,7 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
 
 /**
  * Define a reactive property on an Object.
+ * todo 定义响应
  */
 export function defineReactive (
   obj: Object,
@@ -142,7 +143,7 @@ export function defineReactive (
   const dep = new Dep()
 
   const property = Object.getOwnPropertyDescriptor(obj, key)
-  if (property && property.configurable === false) {
+  if (property && property.configurable === false) {  // 如果是不可更改的属性  不做响应
     return
   }
 

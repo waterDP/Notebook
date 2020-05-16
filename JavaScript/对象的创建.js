@@ -109,7 +109,7 @@
 
 		// 添加方法
 		values.toPipedString = function() {
-			return this.join('|');
+			return values.join('|');
 		}
 
 		// 返回数组
@@ -129,7 +129,8 @@
 		// 创建返回的对象
 		let o = new Object();
 		// 可以在这里定义私有变量和函数
-
+		let name = name
+		let age = age
 		// 添加方法
 		o.sayName = function() {
 			alert(name);
@@ -138,3 +139,6 @@
 		return o;
 	}
 
+	// 1.稳妥构造函数中变量不能挂到要返回的对象o中
+	// 2.在稳妥构造函数的自定义函数操作元素时不要使用this
+	// 3.在函数外部使用稳妥构造函数时不用new 

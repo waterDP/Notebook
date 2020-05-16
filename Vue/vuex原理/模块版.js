@@ -40,8 +40,8 @@ function installModule(store, rootState, path, rawModule) {
       }
     })
   }
-  let mutations = rawModule._raw.motations
-  if (mutaions) {
+  let mutations = rawModule._raw.mutations
+  if (mutations) {
     forEach(mutations, (mutationName, mutation) => {
       let arr = store.mutations[namespace+mutationName] || (store.mutations[namespce+mutationName] = [])
       arr.push((payload) => {
@@ -53,7 +53,7 @@ function installModule(store, rootState, path, rawModule) {
   let actions = rawModule._raw.actions
   if (actions) {
     forEach(actions, (actionName, action) => {
-      let arr = store.actions[namespace+actionName] || (store.actions[namespce+actionName] = [])
+      let arr = store.actions[namespace+actionName] || (store.actions[namespace+actionName] = [])
       arr.push((payload) => {
         action(store, payload)
       })
@@ -74,7 +74,7 @@ function getState(store, path) {
 class Store {
   constructor(options) {
     this.strict = options.strict || false;
-    this._commtting = false;
+    this._committing = false;
     // 获取用户new实例时传入的所有属性
     this.vm = new Vue({ // 创建vue的实例，保证状态一更新可以刷新视图 
       data: { // 默认这个状态 会被使用Object.defineProperty重新定义

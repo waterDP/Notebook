@@ -139,3 +139,86 @@ function enhance(WrappedComponent) {
   hoistNonReactStatic(Enhance, WrappedComponent);
   return Enhance;
 }
+
+/* 
+  请注意，HOC 不会修改传入的组件，也不会使用继承来复制其行为。
+  相反，HOC 通过将组件包装在容器组件中来组成新组件。HOC 是纯函数，没有副作用。
+*/
+
+// ! 不要改变原始组件，使用组合
+// HOC不应该修改传入的组件，而应该使用组合的方法，通过将组件包装在容器组件中实现功能
+function logProps(WrappedComponent) {
+  return class extends React.Component {
+    componentDidUpdate(prevProps) {
+      console.log('Current props', this.props)
+      console.log('Previous Props', prevProps)
+    }
+    render() {
+      return <WrappedComponent {...this.props} />
+    }
+  }
+}
+
+// ! 约定：将不相关的props传递给被包裹的组件
+/* 
+  HOC为组件添加特性。自身不应该大幅改变约定。HOC返回的组件与原始组件应该保持类似的接口
+  HOC应该透传与自身无关的props。大多数HOC都应该包含一个类似于下面的render方法
+*/
+function hocTmp(WrappedComponent) {
+  return class extends React.Component {
+    render() {
+      // 过滤掉非此HOC额外的props,且不要进行透传
+      const {extraProps, ...passThroughProps} = this.props
+
+      // 将props注入到被包装的组件中
+      // 通常为state的值或者实例方法
+      const injectedProps = someStateOrInstanceMethod
+
+      // 将props传递给被包裹的组件
+      return (
+        <WrappedComponent 
+          injectedProps={injectedProps}
+          {...passThroughProps}
+        />
+      )
+    }
+  }
+}
+
+// ! 约定：最大化可组合性
+// 并不是所有的HOC都一样。有时候它仅接受一个参数，也就是被包裹的组件：
+const NavbarWithRouter = withRouter(Navbar)
+
+// HOC通常可以接收多个参数。比如Relay中，HOC额外接收了一个配置对象用于指定组件的数据依赖：
+const CommentWithRelay = Relay.createContainer(Comment, config)
+
+// 最常见的HOC签名如下
+const ConnectedComment = connect(commentSelector, commentActions)(CommentList)
+
+// ! 注意事项
+// 1. 不要在render方法中使用HOC
+// 2. 务必复制静态方法
+function enhance(WrappedComponent) {
+  class Enhance extends React.Component {/*  */}
+  // 必须准确知道拷贝哪些方法
+  Enhance.staticMethod = WrappedComponent.staticMethod
+  return 
+}
+
+// 但要这样做，你需要知道哪些方法应该被拷贝。你可以使用hoist-non-react-statics自动拷贝所有非React静态方法
+import hoistNonReactStatic from 'hoist-non-react-statics'
+function enhance(WrappedComponent) {
+  class Enhance extends React.Component {/*  */}
+  hoistNonReactStatic(Enhance, WrappedComponent)
+  return Enhance
+}
+
+// 除了导出组件，另一个可行的方法是再额外导出这个静态方法
+MyComponent.someFunction = someFunction
+export default MyComponent
+
+// ...单独导出该方法...
+export {someFunction}
+
+// ...并在要使用的组件中，import它们
+import MyComponent, {someFunction} from './MyComponent.js'

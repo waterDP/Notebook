@@ -1,8 +1,10 @@
+// todo 从Vue的出生文件导入Vue
 import Vue from './instance/index'
 import { initGlobalAPI } from './global-api/index'
 import { isServerRendering } from 'core/util/env'
 import { FunctionalRenderContext } from 'core/vdom/create-functional-component'
 
+// todo 将Vue构造函数作为参数，传递给initGlobalAPI方法
 initGlobalAPI(Vue)
 
 Object.defineProperty(Vue.prototype, '$isServer', {

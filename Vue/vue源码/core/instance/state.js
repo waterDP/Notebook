@@ -345,8 +345,8 @@ export function stateMixin (Vue: Class<Component>) {
       warn(`$props is readonly.`, this)
     }
   }
-  Object.defineProperty(Vue.prototype, '$data', dataDef)
-  Object.defineProperty(Vue.prototype, '$props', propsDef)
+  Object.defineProperty(Vue.prototype, '$data', dataDef) // todo 代理 this.$data = this._data readonly
+  Object.defineProperty(Vue.prototype, '$props', propsDef) // todo 代理 this.$props = this._props readonly
 
   Vue.prototype.$set = set
   Vue.prototype.$delete = del

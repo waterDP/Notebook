@@ -27,6 +27,5 @@ var twoSum = function(nums, target) {
   return [-1, -1]
 };
 
-twoSum([2, 7, 11, 15], 9)
 // @lc code=end
 
