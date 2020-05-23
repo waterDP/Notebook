@@ -58,7 +58,7 @@ class Sum3 extends React.Component {
         <input type="text" ref={this.numA}/> +
         <input type="text" ref={this.numB}/>
         <button onClick={this.add}>=</button>
-        <input type="text" ref={this.resultk}/>
+        <input type="text" ref={this.result}/>
       </>
     )
   }
