@@ -51,6 +51,7 @@ Router.prototype.handle = function(req, res, out) {
       } else {
         // 路由
         if (layer.route.handle_method(req.method.toLowerCase())) {
+          req.params = layer.params
           layer.handle_request(req, res, next)
         } else {
           next()

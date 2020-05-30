@@ -9,6 +9,9 @@ class Greeting extends React.Component {
   static propTypes = {
     name: PropTypes.string
   }
+  static defaultProps = {
+    name: 'mode'
+  }
 }
 
 // todo 以下提供了使用不同验证器的例子
