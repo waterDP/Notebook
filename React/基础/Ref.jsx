@@ -42,12 +42,12 @@ class Sum2 extends React.Component {
 class Sum3 extends React.Component {
   constructor(props) {
     super(props)
-    this.numA = React.createRef()
+    this.numA = React.createRef() // {current: null} 支持函数式组件 上面两种不能支持
     this.numB = React.createRef()
     this.result = React.createRef()
   }
   add = () => {
-    let numA = this.numA.current.value
+    let numA = this.numA.current.value 
     let numB = this.numB.current.value
     let result = parseInt(numA) + parseInt(numB)
     this.result.current.value = result
@@ -70,14 +70,6 @@ const FancyButton = React.forwardRef((props, ref) => {
     {props.children}
   </button>
 })
-
-
-function MyFancy() {
-  const ref = React.createRef()
-  return (
-    <FancyButton ref={ref}></FancyButton>
-  )
-}
 
 // ref.current
 

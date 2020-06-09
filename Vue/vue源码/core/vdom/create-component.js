@@ -128,6 +128,7 @@ export function createComponent (
   // async component
   let asyncFactory
   if (isUndef(Ctor.cid)) {
+    // todo 加载一个异步组件
     asyncFactory = Ctor
     Ctor = resolveAsyncComponent(asyncFactory, baseCtor)
     if (Ctor === undefined) {

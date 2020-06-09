@@ -70,6 +70,7 @@ Axios.prototype.getUri = function getUri(config) {
 };
 
 // Provide aliases for supported request methods
+// todo 为支持的请求方法提供别名
 utils.forEach(['delete', 'get', 'head', 'options'], function forEachMethodNoData(method) {
   /*eslint func-names:0*/
   Axios.prototype[method] = function(url, config) {

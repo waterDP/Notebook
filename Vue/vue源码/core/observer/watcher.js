@@ -50,12 +50,16 @@ export default class Watcher {
     isRenderWatcher?: boolean
   ) {
     this.vm = vm
+    // todo 判断当前是否是一个渲染watcher
     if (isRenderWatcher) {
+      //todo 把当前的watcher赋值给当前组件的_watcher实例
       vm._watcher = this
     }
+    // todo 把当前的watcher赋值给当前组件的_watchers队列
     vm._watchers.push(this)
     // options
     if (options) {
+      // todo deep 是否深度监听某一个对象（数组）的数据
       this.deep = !!options.deep
       this.user = !!options.user
 
@@ -170,7 +174,7 @@ export default class Watcher {
     /* istanbul ignore else */
     if (this.lazy) {
       this.dirty = true
-    } else if (this.sync) {
+    } else if (this.sync) { // ! 如果当前是同步监听，就立即执行run()
       this.run()
     } else {
       queueWatcher(this)

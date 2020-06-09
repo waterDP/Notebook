@@ -52,11 +52,11 @@ export function initMixin (Vue: Class<Component>) {
     initLifecycle(vm)
     initEvents(vm)
     initRender(vm)
-    callHook(vm, 'beforeCreate')
+    callHook(vm, 'beforeCreate') // todo 执行beforeCreated周期函数
     initInjections(vm) // resolve injections before data/props
-    initState(vm)
+    initState(vm)  // !在这里完成响应式 初始化data computed watcher props
     initProvide(vm) // resolve provide after data/props
-    callHook(vm, 'created')
+    callHook(vm, 'created')  // todo 执行这个created周期函数
 
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
@@ -66,6 +66,7 @@ export function initMixin (Vue: Class<Component>) {
     }
 
     if (vm.$options.el) {
+      // todo 挂载
       vm.$mount(vm.$options.el)
     }
   }

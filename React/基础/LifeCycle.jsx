@@ -15,8 +15,19 @@ export class LifeCycle extends Component {
     console.log('1. 初始化 props and state')
   }
   // 在渲染过程中可能会执行多次
+  UNSAFE_componentWillMount() {}
   componentWillMount() {
     console.log('2. 组件将要挂载')
+  }
+  render() {
+    console.log('3. render渲染，也是挂载')
+    return (
+      <div>
+        <p>{this.state.number}</p>
+        <button onClick={this.add}>+</button>
+        {this.state.number % 2 == 0 && <SubContainer number={this.state.number} />}
+      </div>
+    );
   }
   // 一般是在component中执行副作用的操作
   // 永远只会执行一次
@@ -28,12 +39,14 @@ export class LifeCycle extends Component {
     console.log('5. 询问组件是否需要更新')
     return true
   }
+  UNSAFE_componentWillUpdate() {}
   componentWillUpdate() {
     console.log('6. 组件将要更新')
   }
   componentDidUpdate() {
     console.log('7. 组件更新完成')
   }
+  UNSAFE_componentWillReceiveProps(){}
   componentWillReceiveProps() {
     console.log('8. 属性将要更新')
   }
@@ -53,14 +66,9 @@ export class LifeCycle extends Component {
 
   }
 
-  render() {
-    console.log('3. render渲染，也是挂载')
-    return (
-      <div>
-        <p>{this.state.number}</p>
-        <button onClick={this.add}>+</button>
-        {this.state.number % 2 == 0 && <SubContainer number={this.state.number} />}
-      </div>
-    );
+  static getDerivedStateFromProps(nextProps, prevState) {
+
+    return {}  // 返回一个当前的状态
   }
+
 }

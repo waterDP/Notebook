@@ -43,6 +43,8 @@ export class Observer {
     this.value = value
     this.dep = new Dep()
     this.vmCount = 0
+
+    // !__ob__这个属性的enumerable为false,即不可枚举，稍后在为对象属性做响应式处理时不会遍历到这个属性
     def(value, '__ob__', this)
     if (Array.isArray(value)) {
       if (hasProto) {

@@ -2,10 +2,12 @@
   "cSpell.ignoreWords": [
     "",
     "arraybuffer",
+    "numberic",
     "ref",
     "ttfb"
   ],
   "cSpell.words": [
+    "numberic",
     "tapable"
   ]
 }

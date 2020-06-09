@@ -440,7 +440,7 @@ export function mergeOptions (
  * to assets defined in its ancestor chain.
  */
 export function resolveAsset (
-  options: Object,
+  options: Object,  // ? vm.options
   type: string,
   id: string,
   warnMissing?: boolean

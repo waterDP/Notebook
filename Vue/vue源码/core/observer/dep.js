@@ -11,9 +11,9 @@ let uid = 0
  * directives subscribing to it.
  */
 export default class Dep {
-  static target: ?Watcher;
+  static target: ?Watcher;  // ! 全局的当前watcher
   id: number;
-  subs: Array<Watcher>;
+  subs: Array<Watcher>; // ! watchers队列
 
   constructor () {
     this.id = uid++

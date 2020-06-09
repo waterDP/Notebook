@@ -64,3 +64,15 @@ class ThemedButton extends React.Component {
     return <Button theme={this.context} />
   }
 }
+
+function Title(props) {
+  return (
+    <ThemeContext.Consumer>
+      {
+        value => (
+          <div style={{margin: '10px', border: `5px solid ${value.color}`, padding:  '5px'}}>Title</div>
+        )
+      }
+    </ThemeContext.Consumer>
+  )
+}

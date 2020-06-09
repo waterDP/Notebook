@@ -99,7 +99,7 @@ export function lifecycleMixin (Vue: Class<Component>) {
     if (vm._isBeingDestroyed) {
       return
     }
-    callHook(vm, 'beforeDestroy')
+    callHook(vm, 'beforeDestroy') // ! beforeDestroy 先父后子
     vm._isBeingDestroyed = true
     // remove self from parent
     const parent = vm.$parent
@@ -124,7 +124,7 @@ export function lifecycleMixin (Vue: Class<Component>) {
     // invoke destroy hooks on current rendered tree
     vm.__patch__(vm._vnode, null)
     // fire destroyed hook
-    callHook(vm, 'destroyed')
+    callHook(vm, 'destroyed') // ! destroyed 先子后父
     // turn off all instance listeners.
     vm.$off()
     // remove __vue__ reference
@@ -138,6 +138,7 @@ export function lifecycleMixin (Vue: Class<Component>) {
   }
 }
 
+// todo 挂载
 export function mountComponent (
   vm: Component,
   el: ?Element,
@@ -164,6 +165,8 @@ export function mountComponent (
       }
     }
   }
+
+  // todo 组件挂载之前执行beforeMount这个周期函数
   callHook(vm, 'beforeMount')
 
   let updateComponent
@@ -205,8 +208,10 @@ export function mountComponent (
 
   // manually mounted instance, call mounted on self
   // mounted is called for render-created child components in its inserted hook
+  // !这里的这个$vnode是父的vnode 当$vnode == null时，表示当前组件没有父组件，即当前组件是根组件
   if (vm.$vnode == null) {
     vm._isMounted = true
+    // todo 根组件执行mounted
     callHook(vm, 'mounted')
   }
   return vm

@@ -7,6 +7,7 @@ export function initAssetRegisters (Vue: GlobalAPI) {
   /**
    * Create asset registration methods.
    */
+  // ? ASSET_TYPES [component, directive, filter]
   ASSET_TYPES.forEach(type => {
     Vue[type] = function (
       id: string,
@@ -21,6 +22,7 @@ export function initAssetRegisters (Vue: GlobalAPI) {
         }
         if (type === 'component' && isPlainObject(definition)) {
           definition.name = definition.name || id
+          // !this.options._base = Vue
           definition = this.options._base.extend(definition)
         }
         if (type === 'directive' && typeof definition === 'function') {
