@@ -82,6 +82,7 @@ function flushSchedulerQueue () {
   //    user watchers are created before the render watcher)
   // 3. If a component is destroyed during a parent component's watcher run,
   //    its watchers can be skipped.
+  // todo 排序  保证父的watcher在前面，子的watcher在后面
   queue.sort((a, b) => a.id - b.id)
 
   // do not cache length because more watchers might be pushed
@@ -98,6 +99,7 @@ function flushSchedulerQueue () {
     if (process.env.NODE_ENV !== 'production' && has[id] != null) {
       circular[id] = (circular[id] || 0) + 1
       if (circular[id] > MAX_UPDATE_COUNT) {
+        // !如果出现循环更新，即在watch中修改了被监听的对象，会报出此错误（> 100）
         warn(
           'You may have an infinite update loop ' + (
             watcher.user

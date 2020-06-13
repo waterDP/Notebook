@@ -1,4 +1,3 @@
-
 const slice = Array.prototype.slice
 
 module.exports = co['default'] = co.co = co

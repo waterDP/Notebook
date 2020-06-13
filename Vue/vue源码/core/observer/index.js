@@ -207,11 +207,13 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
   ) {
     warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+  // todo 数组的set实际上是调用的splice
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.length = Math.max(target.length, key)
     target.splice(key, 1, val)
     return val
   }
+  // todo 如果对象上本来就有这个属性了，就直接赋值返回就行了
   if (key in target && !(key in Object.prototype)) {
     target[key] = val
     return val
@@ -228,7 +230,9 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     target[key] = val
     return val
   }
+  // todo 定义响应式对象
   defineReactive(ob.value, key, val)
+  // todo 手动通知
   ob.dep.notify()
   return val
 }

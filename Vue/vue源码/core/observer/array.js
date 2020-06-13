@@ -37,6 +37,7 @@ methodsToPatch.forEach(function (method) {
         inserted = args.slice(2)
         break
     }
+    // todo 新增加了数数组元素，对新增加的数组元素进行响应式处理
     if (inserted) ob.observeArray(inserted)
     // notify change
     ob.dep.notify()

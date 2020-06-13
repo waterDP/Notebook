@@ -177,7 +177,7 @@ export default class Watcher {
     } else if (this.sync) { // ! 如果当前是同步监听，就立即执行run()
       this.run()
     } else {
-      queueWatcher(this)
+      queueWatcher(this)  // todo scheduler 中的queueWatcher调度
     }
   }
 

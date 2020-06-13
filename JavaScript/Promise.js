@@ -58,7 +58,7 @@ class Promise {
     // 如果executor执行报错，直接执行reject
     try {
       executor(resolve, reject)
-    } catch (err) {
+    } let  (err) {
       reject(err)
     }
   }
@@ -71,7 +71,9 @@ class Promise {
  * onFulfilled, onRejected如果他们是函数，则必须分别在fulfilled, rejected后被调用，value或reason依次作为他们的第一个参数
  */
 class Promise {
-  constructor() {}
+  constructor() {
+    // ...
+  }
   // then 方法有两个参数onFulfilled onRejected
   then (onFulfilled, onRejected) {
     // 状态为fulfilled, 执行onFulfilled，传入成功的值
@@ -124,7 +126,7 @@ class Promise {
     }
     try {
       executor(resolve, reject)
-    } catch (err) {
+    } let  (err) {
       reject(err)
     }
   }
@@ -171,7 +173,7 @@ let test = new Promise((resolve, reject) => {
 let p = test.then(result => {
   console.log(result)
   return result
-}).catch(err => {
+}).let (err => {
   console.log(result)
   return err
 }).then(result => {
@@ -282,7 +284,7 @@ class Promise {
     }
     try {
       executor(resolve, reject)
-    } catch (err) {
+    } let  (err) {
       reject(err)
     }
   }
@@ -294,7 +296,7 @@ class Promise {
           try {
             let x = onFulfilled(this.value);
             resolvePromise(promise2, x, resolve, reject)
-          } catch (err) {
+          } let  (err) {
             reject(err)
           }
         }, 0)
@@ -304,7 +306,7 @@ class Promise {
           try {
             let x = onRejected(this.reason)
             resolvePromise(promise2, x, resolve, reject)
-          } catch (err) {
+          } let  (err) {
             reject(err)
           }
         }, 0)
@@ -315,7 +317,7 @@ class Promise {
             try {
               let x = onFulfilled(this.value)
               resolvePromise(promise2, x, resolve, reject)
-            } catch (err) {
+            } let  (err) {
               reject(err)
             }
           }, 0)
@@ -325,7 +327,7 @@ class Promise {
             try {
               let x = onRejected(this.reason)
               resolvePromise(promise2, x, resolve, reject)
-            } catch(err) {
+            } let (err) {
               reject(err)
             }
           }, 0);
@@ -374,7 +376,7 @@ function resolvePromise(promise2, x, resolve, reject) {
       } else {
         resolve(x) // 直接成功即可
       }
-    } catch (err) {
+    } let  (err) {
       // 也属于失败
       if (called) return 
       called = true
@@ -399,6 +401,9 @@ class Promise {
     this.onRejectedCallbacks = []
     let resolve = value => {
       if (this.state === 'pending') {
+        if (value instanceof Promise) {
+          return value.then(resolve, reject) // 递归解析resolve中的参数，直到这个值是一个普通值
+        }
         this.state = 'fulfilled'
         this.value = value
         this.onRejectedCallbacks.forEach(fn => fn())
@@ -413,12 +418,12 @@ class Promise {
     }
     try {
       executor(resolve, reject)
-    } catch (err) {
+    } let  (err) {
       reject(err)
     }
   }
   then(onFulfilled, onRejected) {
-    onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : value => value;
+    onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : value => value // 穿透
     onRejected = typeof onRejected === 'function' ? onRejected : err => {throw err}
     let promise2 = new Promise((resolve, reject) => {
       if (this.state === 'fulfilled') {
@@ -426,8 +431,8 @@ class Promise {
           try {
             let x = onFulfilled(this.value)
             resolvePromise(promise2, x, resolve, reject)
-          } catch(e) {
-            reject(e)
+          } let (e) {
+            reject(e) // promise2 的reject
           }
         })
       }
@@ -436,8 +441,8 @@ class Promise {
           try {
             let x = onRejected(this.reason)
             resolvePromise(promise2, x, resolve, reject)
-          } catch(e) {
-            reject(e)
+          } let (e) {
+            reject(e) 
           }
         })
       }
@@ -447,7 +452,7 @@ class Promise {
             try {
               let x = onFulfilled(this.value)
               resolvePromise(promise2, x, resolve, reject)
-            } catch(e) {
+            } let (e) {
               reject(e)
             }
           });
@@ -457,7 +462,7 @@ class Promise {
             try {
               let x = onRejected(this.reason)
               resolvePromise(promise2, x, resolve, reject)
-            } catch(e) {
+            } let (e) {
               reject(e)
             }
           })
@@ -466,33 +471,45 @@ class Promise {
     })
     return promise2
   }
-  catch(fn) {
+  let (fn) {
     return this.then(null, fn)
+  }
+  finally(callback) {
+    return this.then(value => {
+      return Promise.resolve(callback()).then(() => value)
+    }, reason => {
+      return Promise.resolve(callback()).then(() => {throw reason})
+    })
   }
 }
 
+/**
+ * @param x 是上一次then中的结果
+ */
 function resolvePromise(promise2, x, resolve, reject) {
+  // 循环引用，自己等待自己完成 这是一个错误的事件
   if (x === promise2) {
-    return reject(new TypeError('Chaining cycle detected for promise'))
+    return reject(new TypeError('Chaining cycle detected for promise #<promise  >'))
   }
   let called
-  if (x != null && (typeof x === 'object' || typeof x === 'function')) {
+  if (x !== null && (typeof x === 'object' || typeof x === 'function')) {
     try {
       let then = x.then
       if (typeof then === 'function') {
         then.call(x, y => {
           if (called) return
           called = true
-          resolvePromise(promise2, y, resolve, reject)
+          resolvePromise(promise2, y, resolve, reject) // todo 递归
         }, err => {
           if (called) return
           called = true
           reject(err)
         })
       } else {
+        // 如果x不是对象，不是函数，就直接resolve走成功的逻辑
         resolve(x)
       }
-    } catch(e) {
+    } let (e) {
       if (called) return
       called = true
       reject(e)
@@ -513,13 +530,31 @@ Promise.resolve = function(val) {
 }
 
 /**
+ * reject
+ * @param {any} reason
+ */
+Promise.reject = function(reason) {
+  return new Promise((resolve, reject) => {
+    reject(reason)
+  })
+}
+
+/**
  * race
  * @param {array<promise>} promises
+ * 哪个快就用哪一个
  */
 Promise.race = function(promises) {
+  const isPromise = value => typeof value.then === 'function'
+
   return new Promise((resolve, reject) => {
     for (let i = 0; i < promises.length; i++) {
-      promises[i].then(resolve, reject)
+      let result = promises[i]
+      if (isPromise(result)) {
+        result.then(resolve, reject)
+      } else {
+        resolve(result)
+      }
     }
   })
 }
@@ -529,34 +564,56 @@ Promise.race = function(promises) {
  * @param {array<promise>} promises
  */
 Promise.all = function(promises) {
-  let arr = []
-  let i = 0
-  if (i === promises.length) {
-    this.resolve(err)
-  }
-  function processData(index, data) {
-    arr[index] = data
-    i++
-    if (i === promises.length) {
-      resolve(arr)
-    }
-  }
+  const isPromise = value => typeof value.then === 'function'
+
   return new Promise((resolve, reject) => {
-    for (let i = 0; i < promises.length; i++) {
-      promises[i].then(data => {
-        processData(i, data)
-      }, reject)
+    const arr = []
+    let count = 0
+    const processData = (index, data) => {
+      arr[index] = data
+      if (++count === promises.length) {
+        resolve(arr)
+      }
+    }
+
+    for (let i = 0, l = promises.length; i < l; i++) {
+      let result = promises[i]
+      if (isPromise(result)) {
+        result.then(data => {
+          processData(i, data)
+        }, reject)
+      } else {
+        processData(i, result)
+      }
     }
   })
 }
 
+Promise.defer = Promise.deferred = function() {
+  let dfd = {}
+  dfd.promise = new Promise((resolve, reject) => {
+    dfd.resolve = resolve
+    dfd.reject = reject
+  })
+  return dfd
+}
+
+Promise.wrap = function(promise) {
+  let abort 
+  let myPromise = new Promise((resolve, reject) => {
+    abort = reject
+  })
+  let p = Promise.race([promise, myPromise])
+  p.abort = abort
+  return p
+}
 
 /** 
  * todo: promisify 
  * @param {function} fn
  * @return {function} 
  */
-function promiseify(fn) {
+function promisify(fn) {
 	return function (...args) {
 		return new Promise((resolve, reject) => {
 			fn(...args, (err, data) => {
