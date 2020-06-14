@@ -1,7 +1,7 @@
 /**
  * 0x 表示十六进制
  * 0b 表示二进进制
- * 0  表示八进制
+ * 0 表示八进制
  */
 
 // todo 声明方式  内存，大小不能发生变化
@@ -74,8 +74,8 @@ Buffer.isBuffer(buf1) // 判断是不是Buffer
 let buffer1 = Buffer.from('珠峰')
 let buffer2 = Buffer.from('架构')
 let buff = Buffer.alloc(buffer1.length + buffer2.length)
-buffer1.copy(buff, 6, 0, 6)
-buffer2.copy(buff, 0, 0, 6)
+buffer1.copy(buff, 0, 0, 6)
+buffer2.copy(buff, 6, 0, 6)
 console.log(buff.toString())
 
 let buffer = Buffer.concat([buffer1, buffer2], 9)

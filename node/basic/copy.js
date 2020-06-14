@@ -1,27 +1,47 @@
 const fs = require('fs')
-const BUFFER_SIZE = 5
-const buffer = Buffer.alloc(BUFFER_SIZE)
+const path = require('path')
 
-let offset = 0
-
-fs.open('./name.txt', 'r', (err, rfd) => {
-  fs.open('./name1.txt', 'w', (err, wfd) => {
-    function next() {
-      fs.read(rfd, buffer, 0, BUFFER_SIZE, offset, (err, bytesRead) => {
-        if (!bytesRead) {
-          fs.close(rfd, () => {})
-          fs.close(wfd, () => {})
-          return 
-        }
-        readOffset += bytesRead
-        fs.write(wfd, buffer, 0, bytesRead, (err, written) => {
-          next()
+function copy(source, target, callback) {
+  const BUFFER_SIZE = 5
+  const buffer = Buffer.alloc(BUFFER_SIZE)
+  let readOffset = 0
+  let writeOffset = 0
+  fs.open(source, 'r', (err, rfd) => {
+    if (err) return callback(err)
+    fs.open(target, 'w', (err, wfd) => {
+      if (err) return callback(err)
+      function next() {
+        fs.read(rfd, buffer, 0, BUFFER_SIZE, readOffset, (err, bytesRead) => {
+          if (err) return callback(err)
+          readOffset += bytesRead
+          fs.write(wfd, buffer, 0, bytesRead, writeOffset, (err, written) => {
+            if (err) return callback(err)
+            writeOffset += written
+            if (bytesRead === BUFFER_SIZE) {
+              next()
+            } else {
+              fs.close(rfd, () => {})
+              fs.close(wfd, () => {})
+              callback() 
+            }
+          })
         })
-      })
-    }
-    next()
+      }
+      next()
+    })
   })
-})
+}
+
+copy(
+  path.resolve(__dirname, 'name.txt'),
+  path.resolve(__dirname, 'copy.txt'),
+  err => {
+    if (err) {
+      return console.log(err)
+    }
+    console.log('拷贝成功')
+  }
+)
 
 // 发布订阅模式
 // 流：可读流  可写流

@@ -19,6 +19,11 @@ let result = process.argv.slice(2).reduce((memo, current, index, arr) => {
 
 // ? commander包
 const program = require('commander')
+
+program.parse('-p,--port <v>', 'set you port')
+program.parse('-c,--config <v>', 'set you config file')
+program.parse(process.argv)
+
 program.name('node')
 program.usage('global.js')
 program.version('1.0.0')
