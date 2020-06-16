@@ -46,7 +46,8 @@ export function initGlobalAPI (Vue: GlobalAPI) {
   Vue.nextTick = nextTick // todo 定义nextTick的静态方法
 
   // 2.6 explicit observable API
-  Vue.observable = <T>(obj: T): T => {
+  // ? <T>(obj: T): T  => ...
+  Vue.observable = obj => {
     observe(obj)
     return obj
   }

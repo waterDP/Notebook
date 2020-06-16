@@ -1,23 +1,47 @@
 export function patch(oldVnode, vnode) {
   // 递归创建真实节点，替换掉老的节点
   // 1.判断是更新还还是要渲染
+
+  if (!oldVnode) {
+    // 组件的挂载
+
+    return createElm(vnode)
+  }
   const isRealElement = oldVnode.nodeType
   if (isRealElement) {
     const oldElm = oldVnode
     const parentElm = oldVnode.parentNode
     let el = createElm(vnode)
     parentElm.insertBefore(el, oldElm.nextSibling)
-    parentElm.removeChildren(oldElm) 
+    parentElm.removeChildren(oldElm)
+
+    return el
   }
+
 }
 
+function createComponent(vnode) {
+  // 需要创建的组件的实例
+  let i = vnode.data
+  if ((i = i.hook) && (i = i.init)) {
+    i(vnode)
+  }
+  if (vnode.componentInstance) {
+    return true
+  }
+}
 /**
  * 模拟虚拟节点，创建真实的节点
- */ 
+ */
 function createElm(vnode) {
-  const {tag, children, key, data, text} = vnode
+  const { tag, children, key, data, text } = vnode
   if (typeof tag === 'string') {
-    // 中标签就创建标签
+    // 是标签就创建标签
+    // 实例化组件
+    if (createComponent(vnode)) {
+      // 这里应该返回的是真实的dom
+      return vnode.instance.$el
+    }
     vnode.el = document.createElement(tag)
     updateProperties(vnode)
     children.forEach(child => { // 递归创建儿子节点，将儿子节点放到父节点中

@@ -1,5 +1,5 @@
 import Watcher from './observer/watcher'
-import {noop} from './util'
+import {noop} from './util/index'
 import {patch} from './vnode/patch'
 
 export function lifecycleMixin(Vue) {
@@ -14,6 +14,7 @@ export function mountComponent(vm, el) {
   const options = vm.$options // render
   vm.$el = el // 真实的dom元素
 
+  callHook(vm, 'beforeMount')
   // 渲染页面
   // 无论是渲染还是更新，都会调用此方法
   // vm._render 通过解析的render方法 渲染出虚拟dom
@@ -22,6 +23,17 @@ export function mountComponent(vm, el) {
     // 返回的是虚拟dom
     vm._update(vm._render())
   }
-  // 渲染watcher 每个组件都有一个渲染watcher
+  // ! 渲染watcher 每个组件都有一个渲染watcher
   new Watcher(vm, updateComponent, noop, {}, {renderWatcher: true}) // true 表示他是一个渲染watcher
+  callHook(vm, 'mounted')
+}
+
+export function callHook(vm, hook) {
+  // 找到时对应的钩子，依次执行
+  const handlers = vm.$options[hook]
+  if (handlers) {
+    handlers.forEach(handle => {
+      handle.call(vm)
+    })
+  }
 }

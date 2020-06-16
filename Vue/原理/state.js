@@ -1,5 +1,5 @@
 import {observe} from './observer'
-import {proxy} from './util'
+import {proxy} from './util/index'
 
 export function initState(vm) {
   const opts = vm.$options

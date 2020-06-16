@@ -1,9 +1,11 @@
-import {isObject, def} from '../util'
+import {isObject, def} from '../util/index'
 import {arrayMethods} from './array'
+import Dep from './dep'
 
 class Observer {
   constructor(value) {
-    def(value, '__ob__', this)
+    this.dep = new Dep() // 这个是单独给数组用的
+    def(value, '__ob__', this) // 给数组用的
     if (Array.isArray(value)) {
       this.observerArray(value)
     } else {
@@ -25,15 +27,41 @@ class Observer {
 }
 
 function defineReactive(data, key, value) {
-  observe(value) // 递归劫持数据
+  let dep = new Dep() // 这个dep是给对象用的
+  // 这里这个value可能是数组 也可能是对象，返回的结果是observer的实例，当前这个value对应的observer
+  let childOb = observe(value) // 递归劫持数据
   Object.defineProperty(data, key, {
+    enumerable: true,
+    configurable: true,
     get () {
+      // 每个属性都对应着自己的watcher
+      if (Dep.target) {
+        dep.depend() // 意味着我要将watcher存起来
+        if (childOb) {
+          childOb.dep.depend() // 收集了数组的相关依赖
+          // 如果数组中还有数组
+          if (Array.isArray(value)) {
+            dependArray(value)
+          }
+        }
+      }
       return value
     },
     set(newValue) {
       if (newValue === value) return
       observe(newValue)
       value = newValue
+
+      dep.notify() // 通知依赖的watcher进行一个更新的操作
+    }
+  })
+}
+
+function dependArray(arr) {
+  arr.forEach(item => {
+    item.__ob__ && item.__ob__.dep.depend()
+    if (Array.isArray(item)) {
+      dependArray(item)
     }
   })
 }

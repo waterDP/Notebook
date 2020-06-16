@@ -4,7 +4,7 @@ import {generate} from './generate'
 export function compileToFunction(template) {
   // 1）解析html字符串 将html字符串 =》ast语法树
   let root = parseHTML(template)
-  // 2 需要将ast语法树生成最终的render函数
+  // 2 需要将ast语法树生成最终的render函数 模板引擎
   let code = generate(root)
 
   let renderFn = new Function(`width(this) { return ${code}}`)
