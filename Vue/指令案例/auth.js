@@ -12,8 +12,8 @@
 const remove = el => el.parentNode.removeChild(el)
 
 export default {
-  inserted(el, binding, vNode) {
-    const {$root: vm} = vNode.context
+  inserted(el, binding, vnode) {
+    const {$root: vm} = vnode.context
     // 获取当前用户拥有的权限列表（根据自身业务获取）
     const accessAuthData = vm.$store.state.accessAuthData
     // 判断非所有权限时进行权限校验

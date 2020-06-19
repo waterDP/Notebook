@@ -14,3 +14,16 @@ hook.tap('3', (name, age) => {
 })
 
 hook.call('zhufeng', 10) // call触发事件，或者说执行
+
+class SyncHook {
+  constructor(args) {
+    this._args = args
+    this.taps = []
+  }
+  tap(name, fn) {
+    this.taps.push(fn)
+  }
+  call(...args) {
+    this.taps.forEach(fn => fn(...args.slice(0, this._args.length)))
+  }
+}

@@ -15,3 +15,21 @@ hook.tap('3', (name, age) => {
 })
 
 hook.call('zhufeng', 10) // call触发事件，或者说执行
+
+class SyncBailHook {
+  constructor(args) {
+    this._args = args
+    this.taps = []
+  }
+  tap(name, fn) {
+    this.taps.push(fn)
+  }
+  call(...args) {
+    const length = this.taps.length
+    args = args.slice(0, this._args.length)
+    for (let i = 0; i < length; i++) {
+      let result = this.taps[i](...args)
+      if ('undefined' !== typeof result) return
+    }
+  }
+}

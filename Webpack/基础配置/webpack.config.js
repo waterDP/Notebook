@@ -4,14 +4,25 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const OptimizeCssAssetsWebpackPlugin = require('optimize-css-assets-webpack-plugin')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 const webpack = require('webpack')
+const TerserWebpackPlugin = require('terser-webpack-plugin')
+const HtmlWebpackExternalPlugin = require('html-webpack-externals-plugin')
+const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin') // 错误日志友好输出
+const SpeedMeasureWebpackPlugin = require('speed-measure-webpack-plugin')  // 费时分析
+const {BundleAnalyzerPlugin} = require('bundle-analyzer-plugin')
 
-module.exports = {
+const smw = new SpeedMeasureWebpackPlugin()
+
+module.exports = smw.wrap({
   mode: 'development', // 模式 默认有两种 production development
   entry: './src/index.js', // 入口
   output: { // 文件出口
     filename: 'bundle.[hash:8].js',  // 打包后的文件名  8位hash
     path: path.resolve(__dirname, 'build'), // 路径必须是一个绝对路径
-    publicPath: 'cdnPath'
+    publicPath: 'cdnPath',
+
+    library: 'name',
+    libraryTarget: 'umd|var|window|this', // 以何种方式导出
+    libraryExport: 'default' // 导出哪个属性
   },
   devServer: {  // 开发服务器配置
     port: 3000,
@@ -19,12 +30,18 @@ module.exports = {
     contentBase: './build',  // 静态文件夹
     compress: true
   },
+  stats: 'minimal', // 日志的输出配置
   optimization: {  // 优化项
     minimizer: [  // 压缩代码
-      new UglifyJsPlugin({
-        cache: true,
-        parallel: true,  // 并行压缩
-        sourceMap: true
+      // new UglifyJsPlugin({
+      //   cache: true,
+      //   parallel: true,  // 并行压缩
+      //   sourceMap: true
+      // }),
+      new TerserWebpackPlugin({
+        parallel: true,
+        sourceMap: true,
+        cache: true
       }),
       new OptimizeCssAssetsWebpackPlugin()  // 压缩css
     ],
@@ -45,7 +62,8 @@ module.exports = {
       }
     }
   },
-  modules: {  // loader
+  module: {  // loader  
+    noParse: /jquery|lodash/, // 配置哪些模块不需要读取并且转成语法树进行解析依赖
     rules: [
       {
         test: /\.html$/,
@@ -63,7 +81,11 @@ module.exports = {
         use: {
           loader: 'url-loader',
           options: {
-            limit: 200 * 1024
+            limit: 200 * 1024,
+            name: '[name]',
+            // 要把图片拷贝到images目录下
+            outputPath: 'images',
+            publicPath: '/images'
           }
         }
       },
@@ -78,19 +100,14 @@ module.exports = {
       },
       {
         test: /\.js$/,
-        use: {
-          loader: 'babel-loader',
-          options: { // 用babel-loader 需要把es6->es5
-            presets: [
-              '@babel/preset-env'
-            ],
-            plugins: [
-              ["@babel/plugin-proposal-decorators", {legacy: true}],
-              ["@babel/plugin-proposal-class-properties", {loose: true}],
-              "@babel/plugin-transform-runtime"
-            ]
-          }
-        },
+        loader: 'eslint-loader',
+        enforce: 'pre', // 强制提前执行
+        include: path.join(__dirname, 'src'),
+        exclude: /node_modules/
+      },
+      {
+        test: /\.js$/,
+        use: 'babel-loader',
         include: path.resolve(__dirname, 'src'),
         exclude: /node_modules/
       },
@@ -119,15 +136,32 @@ module.exports = {
           'less-loader'   
         ]
       },
-
+      // 字体文件
+      {
+        test: /.(ttf|svg|eot|woff|woff2|otf)$/,
+        use: {
+          loader: 'url-loader'
+        }
+      }
     ]
   },
   resolve: { // 解析
     modules: [path.resolve('node_modules')],
-    extensions: ['.js', '.vue', '.json', '.less'],
+    extensions: ['.js', '.vue', '.json', '.less'],  // 后缀规则 
     mainFields: ['style', 'main'],  // 指定入口文件的目录
+    mainFiles: [],
     alias: {
       '@': path.resolve(__dirname, 'src')
+    }
+  },
+  resolveLoaders: {
+    // 用来指定如何查找loaders
+    modules: [
+      path.resolve(__dirname, '/node_modules'),
+      path.resolve(__dirname, './loaders')
+    ],
+    alias: {
+      
     }
   },
   plugins: [ // 插件
@@ -145,16 +179,28 @@ module.exports = {
       __FLAG__: JSON.stringify(process.env.FLAG)
     }),
     new MiniCssExtractPlugin({ // 抽离css文件
-      filename: 'css/main.css'
+      filename: 'css/[name].[contentHash].css',
+      chunkFilename: '[id].css' // 在异步加载的时候用的
     }),
     new webpack.ProvidePlugin({ // 在每个模块中都注入lodash 
       _: 'lodash'
-    })
+    }),
+    new HtmlWebpackExternalsPlugin({
+      externals: [
+        {
+          module: 'jquery',
+          entry: 'https://cdn.bootcss.com/jquery/3.4.1/jQuery.js',
+          global: 'jQuery'
+        }
+      ]
+    }),
+    new FriendlyErrorsWebpackPlugin(),
+    new BundleAnalyzerPlugin()
   ],
   externals: {
     _: 'lodash'   // 文件不会被打包
   }
-}
+})
 
 /**
  * mini-css-extract-plugin 将css样式从文件中抽离出来

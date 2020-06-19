@@ -5,8 +5,16 @@ import {patch} from './vnode/patch'
 export function lifecycleMixin(Vue) {
   Vue.prototype._update = function(vnode) {
     let vm = this
-    // 我要通过通过虚拟节点，渲染出真实的dom
-    vm.$el = patch(vm.$el, vnode)
+    const prevVnode = vm._vnode
+    // 第一次默认不需要diff算法
+    vm._vnode = vnode
+    if (!prevVnode) {
+      // 我要通过通过虚拟节点，渲染出真实的dom
+      vm.$el = patch(vm.$el, vnode)
+    } else {
+      vm.$el = patch(prevVnode, vnode)
+    }
+ 
   }
 }
 

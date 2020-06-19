@@ -1,6 +1,6 @@
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-const CleanWebpackPlugin = require('clean-webpack-plugin')
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const webpack = require('webpack')
 module.exports = {
@@ -14,17 +14,24 @@ module.exports = {
     path: path.resolve(__dirname, 'dist')
   },
   devServer: {
+    port: 3000,
+    progress: true,
+    contentBase: './build',  // 静态文件夹
+    compress: true,
+    before(app) {
+      app.get('/api/users', (req, res) => {
+        res.json([{id: 1, name: 'zhufeng'}])
+      })
+    },
     proxy: {
+      'user': 'http://localhost: 80',
       '/api': {
         target: 'http://localhost:3000', // 配置一个代理
         pathReWrite: {
-          '/api': ''
+          '^/api': ''
         }
       }
     }
-  },
-  resolve: {
-    
   },
   /**
    * @devtool source-map 源码映射 会单独生成一个sourcemap文件 出错了 会标识当前出错的列和行
@@ -32,7 +39,7 @@ module.exports = {
    * @devtool cheap-module-source-map 不会产生列，但是是一个单独的映射文件
    * @devtool cheap-module-eval-source-map 不会产生文件，集成在打包后的文件中，不产生列
    */
-  devtool: 'source-map', 
+  devtool: 'source-map',
   watch: true,  // 实时打包
   watchOptions: { // 监控的选项
     poll: 1000, // 每秒 轮询1000次
@@ -43,16 +50,18 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'home.html',
-      chunks: ['home']
+      chunks: ['home'],
+      hash: true
     }),
     new HtmlWebpackPlugin({
       template: './index.html',
       filename: 'other.html',
-      chunks: ['other', 'home']
+      chunks: ['other', 'home'],
+      chunkSortMode: 'manual' // 对引入的代码块进行手动的排序
     }),
-    new CleanWebpackPlugin('./dist'), // 清空dist目录，然后再打包
+    new CleanWebpackPlugin(), // 清空dist目录，然后再打包
     new CopyWebpackPlugin([ // 拷贝插件
-      {from: './doc', to: './dist'} // 将doc中的文件放入dist文件夹中
+      { from: './doc', to: './dist' } // 将doc中的文件放入dist文件夹中
     ]),
     new webpack.BannerPlugin('make 2019 by author')
   ]

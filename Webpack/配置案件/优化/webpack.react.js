@@ -8,7 +8,7 @@ module.exports = {
     react: ['react', 'react-dom']
   },
   output: {
-    filename: '_dll_[name].js', // 产生的文件名
+    filename: '[name].dll.js', // 产生的文件名
     path: path.resolve(__dirname, 'dist'),
     library: '_dll_[name]', // _dll_react
     libraryTarget: 'var'  // commonjs umd var

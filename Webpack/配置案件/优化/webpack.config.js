@@ -1,6 +1,9 @@
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const webpack = require('webpack')
+const PurgeCssWebpackPlugin = require('purge-css-webpack-plugin')
+const glob = require('glob')
+
 module.exports = {
   model: 'development', 
   entry: './src/index.js',
@@ -42,6 +45,9 @@ module.exports = {
       template: './public/index.html'
     }),
     new webpack.NamedModulesPlugin(),  // 打印更新的模块路径
-    new webpack.HotModuleReplacementPlugin() // 热更新插件
+    new webpack.HotModuleReplacementPlugin(), // 热更新插件
+    new PurgeCssWebpackPlugin({
+      paths: glob.sync(`${path.join(__dirname, 'src')}/**/*`, {nodir: true})
+    })
   ]
 }

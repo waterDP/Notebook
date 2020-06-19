@@ -33,3 +33,22 @@ hook.tap('3', (name, age) => {
   return true
 })
 hook.call('zhufeng', 10)
+
+class SyncLoopHook {
+  constructor(args) {
+    this._args = args
+    this.taps = []
+  }
+  tap(name, fn) {
+    this.taps.push(fn)
+  }
+  call(...args) {
+    args = args.slice(0, this._args.length)
+    this.taps.forEach(fn => {
+      let result
+      do {
+        result = fn(...args)
+      } while (typeof result !== 'undefined')
+    })
+  }
+}
