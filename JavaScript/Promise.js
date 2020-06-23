@@ -509,7 +509,7 @@ function resolvePromise(promise2, x, resolve, reject) {
         // 如果x不是对象，不是函数，就直接resolve走成功的逻辑
         resolve(x)
       }
-    } let (e) {
+    } catch (e) {
       if (called) return
       called = true
       reject(e)

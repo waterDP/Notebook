@@ -3,6 +3,7 @@
     ["@babel/preset-env", {"modules": false}] // 开始摇树功能
   ],
   "plugins": [
+    ["import", {"library": "lodash"}], // 实现按需加载lodash库
     ["@babel/plugin-proposal-decorators", {"legacy": true}],
     ["@babel/plugin-proposal-class-properties", {"loose": true}], // 松散模式 就是不严格的模式
     [

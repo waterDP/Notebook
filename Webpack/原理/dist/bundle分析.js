@@ -1,6 +1,6 @@
 (function(modules){
   /**
-   * 1.把通过jsonp获取回来的新的模块定义 ./src/c.js 合并到modules对象上去，以方便下面的模块的加载
+   * 1.把通过jsonp获取回来的新的模块定义 ./src/c.js 合并到modules对象上去，以方便下面的模块加载
    * 2.在installedChunks里面进行标识，标识此c代码块成功
    * 3.让promise变成成功态
    */
@@ -17,6 +17,7 @@
     for (let moduleId in moreModules) {
       modules[moduleId] = moreModules[moduleId]
     }
+    parentJsonpFunction(data)
     // 遍历resolves数组，挨个执行里面的resolve方法
     while (resolves.length) {
       resolve.shift()()
@@ -28,6 +29,7 @@
     main: 0
   }
   function __webpack_required__(moduleId) {
+    // 判断一下这个模块是否缓存，如果有，说明这个模块已经加载过了，直接返回
     if (installedModules[moduleId]) {
       return installedModules[moduleId].exports
     }
@@ -37,8 +39,9 @@
       l: false,
       exports: {}
     }
+    // 执行模块中的方法
     modules[moduleId].call(module.exports, module, module.exports, __webpack_required__)
-    modules.l = true // 把此模块设置为已加载
+    module.l = true // 把此模块设置为已加载
     return module.exports
   }
 
@@ -85,23 +88,44 @@
     }
     return ns // 此方法在赖加载时会用到
   }
+
+  // todo Object.prototype.hasOwnProperty的代理
   __webpack_required__.o = function(object, property) {
     return Object.prototype.hasOwnProperty.call(object, property)
   }
-  // publicPath
+  // todo publicPath
   __webpack_required__.p = ''
 
+  // todo 获取默认导出，为了兼容各种模块
+  __webpack_require__.n = function(module) {
+    var getter = module && module.__esModule ?
+      function getDefault() { 
+        return module['default']
+      } :
+      function getModuleExports() { 
+        return module 
+      }
+    __webpack_require__.d(getter, 'a', getter)
+    return getter;
+  }
   
-  // todo 懒加载代码块chunkId
-
   let jsonArray = window['webpackJsonp'] = window['webpackJsonp']||[]
+  let oldJsonpFunction = jsonpArray.push.bind(jsonpArray) // 保存了push老方法
   // 重写了jsonArray.push方法，等于了webpackJsonpCallback
   jsonArray.push = webpackJsonpCallback
+  jsonArray = jsonArray.slice() // 把数组做了一个浅克隆
+
+  for (let i = 0; i < jsonpArray.length; i++) {
+    webpackJsonCallback(jsonpArray[i])
+  }
 
   function jsonpScript(chunkId) {
     return __webpack_required__.p + ''+({c: 'c'}[chunkId]||chunkId) + '.js'
   }
 
+  let parentJsonpFunction = oldJsonFunction
+
+  // todo 懒加载代码块chunkId
   __webpack_required__.e = function requireEnsure(chunkId) {
     let promises = []
     let installedChunkData = installedChunks[chunkId]

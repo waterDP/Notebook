@@ -7,7 +7,7 @@
  * ! keys() 它返回一个数组，由所有符合上下文模块处理的请求组成
  * ! id 是上下文模块里面所包含的模块id，它可能在你的使用module.hot.accept的时候被用到
  */  
-require.context('demo', false, /\.js$/)
+require.context('path', false, /\.js$/)
 
 // todo vue公共组件引入
 const files = require.context('.', true, /\.vue$/)
