@@ -49,8 +49,8 @@ export function initMixin (Vue: Class<Component>) {
     }
     // expose real self
     vm._self = vm
-    initLifecycle(vm)
-    initEvents(vm)
+    initLifecycle(vm) // todo 主要是定义组件的父子关系
+    initEvents(vm) // 组件的事件相关的
     initRender(vm)
     callHook(vm, 'beforeCreate') // todo 执行beforeCreated周期函数
     initInjections(vm) // resolve injections before data/props

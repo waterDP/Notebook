@@ -1,9 +1,9 @@
 import {updateComponent} from './react-dom'
 
 export class Component {
-  static isReactComponent = true
+  static isReactComponent = true // ! 表明这是一个类组件
   constructor(props) {
-    this.props = props
+    this.props = props // ! props
     this.updateQueue = []  // 这里放置临时的更新队列
     this.isBatchingUpdate = false // 表示当前是否处于批量更新模式
     this.callbacks = []
@@ -46,6 +46,7 @@ export class Component {
 export function createElement(type, config = {}, ...children) {
   let props = {...config, children}
   return {
+    $$typeof: Symbol.for('react.element'),
     type,
     props
   }

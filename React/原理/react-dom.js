@@ -48,7 +48,7 @@ function render(element, container, componentInstance) {
     element = Array.isArray(element) ? element[0] : element
     type = element.type
     props = element.props
-  } else if (typeof type === 'function') { // 说明是一个函数组件
+  } else if (typeof type === 'function') { // ? 说明是一个函数组件
     element = type(props) // 函数组件执行后会返回一个React函数
     element = Array.isArray(element) ? element[0] : element
     type = element.type
@@ -82,8 +82,9 @@ function addEvent(dom, eventType, listener, componentInstance) {
   eventType = eventType.toLowerCase()
   let eventStore = dom.eventStore || (dom.eventStore = {})
   eventStore[eventType] = {listener, componentInstance}
-  document.addEventListener(eventType.slice(2), dispatchEvent, false)
 }
+
+document.addEventListener(eventType.slice(2), dispatchEvent, false)
 
 function dispatchEvent(event) { // event是原生的DOM事件
   let {type, target} = event
@@ -106,6 +107,12 @@ function dispatchEvent(event) { // event是原生的DOM事件
   }
 }
 
+/**
+ * 生成真实的dom
+ * @param {string} type
+ * @param {object} props
+ * @param componentInstance
+ */ 
 function createDOM(type, props, componentInstance) {
   let dom = document.createElement(type)
   for (let propName in props) {

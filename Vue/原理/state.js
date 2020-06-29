@@ -25,12 +25,13 @@ function initProps(vm) {}
 function initMethods(vm) {}
 
 function initData(vm) {
+  // 数据的初始化工作
   let data = vm.$options.data
   data = vm._data = typeof data === 'function' ? data.call(vm) : data
   for (let key in data) {
     proxy(vm, '_data', key) // 代理
   }
-  observe(data)
+  observe(data)  // 对象劫持
 }
 
 function initComputed(vm) {}

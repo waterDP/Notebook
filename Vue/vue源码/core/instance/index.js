@@ -16,10 +16,10 @@ function Vue (options) {
   this._init(options)
 }
 
-initMixin(Vue)
-stateMixin(Vue)
-eventsMixin(Vue)
-lifecycleMixin(Vue)
-renderMixin(Vue)
+initMixin(Vue) // _init
+stateMixin(Vue) // $set, $delete $watch
+eventsMixin(Vue) // $on $emit $off $once
+lifecycleMixin(Vue) // _update vdom => dom
+renderMixin(Vue) // _render $nextTick(代理)
 
 export default Vue

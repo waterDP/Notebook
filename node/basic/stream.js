@@ -6,9 +6,9 @@ let fs = require('fs')
 // r+ 以读取为准 文件不存在 报错
 // w+ 以写为准   文件不存在 创建
 let rs = fs.createReadStream('./b', {
-  flags: 'w+',
+  flags: 'r',
   encoding: null,
-  mode: 0o666,
+  mode: 0o666,   // 模式 可读可写
   autoClose: true,
   start: 0,
   end: 5, // 包前也包后
@@ -16,7 +16,9 @@ let rs = fs.createReadStream('./b', {
 })
 
 let arr = []
+// !文件流特有的事件 
 rs.on('open', () => {})
+// !文件流特有的事件 
 rs.on('close', () => {})
 rs.on('data', data => {
   arr.push(data)
@@ -24,7 +26,10 @@ rs.on('data', data => {
 rs.on('end', () => {
   console.log(Buffer.concat(arr).toString())
 })
-rs.puse()  // 暂停流
-rs.resume() // 恢复流
+rs.on('error', err => {
+  throw err
+})
+rs.pause()  // ! 暂停流
+rs.resume() // ! 恢复流
 
 

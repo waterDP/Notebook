@@ -8,11 +8,12 @@ module.exports = class ReadStream extends EventEmitter {
 		this.flags = options.flags || 'r'
 		this.highWaterMark = options.highWaterMark || 64 * 1024
 		this.start = options.start || 0
+		this.mode = options.mode || 0o666
 		this.end = options.end
 		this.autoClose = options.autoClose || true
 
 		this.flowing = null // 默认非流动模式
-		this.pos = this.start
+		this.pos = this.start // 记读流动的偏移量 
 
 		this.open() // 只要创建可读流就会默认将这个文件打开
 
@@ -24,15 +25,13 @@ module.exports = class ReadStream extends EventEmitter {
 		})
 	}
 	destroy(err) {
-		if (this.autoClose) {
-			if (typeof this.fd === 'number') {
-				fs.close(this.fd, () => {
-					this.emit('close')
-				})
-			}
-			if (err) {
-				this.emit('error')
-			}
+		if (typeof this.fd === 'number') {
+			fs.close(this.fd, () => {
+				this.emit('close')
+			})
+		}
+		if (err) {
+			this.emit('error', err)
 		}
 	}
 	pipe(ws) {
@@ -52,9 +51,9 @@ module.exports = class ReadStream extends EventEmitter {
 	open() {
 		fs.open(this.path, this.flags, (err, fd) => {
 			if (err) {
-				return this.destroy(err) // 公用
+				return this.destroy(err)
 			}
-			this.fd = fd
+			this.fd = fd  // 公用 保存到实例上
 			this.emit('open', fd)
 		})
 	}
@@ -66,7 +65,7 @@ module.exports = class ReadStream extends EventEmitter {
 		//  计算一下每次读取多少个
 
 		// 0 - 4  100个字节   读取5个 每次读取3
-		let howMuchToRead = this.end ? Math.min(this.end - this.pos + 1, buffer.length) : buffer.length
+		let howMuchToRead = this.end ? Math.min(this.end - this.pos + 1, buffer.heighWaterMark) : buffer.heightWaterMark
 		fs.read(this.fd, buffer, 0, howMuchToRead, this.pos, (err, bytesRead) => {
 			if (err) {
 				return this.destroy(err)
@@ -79,7 +78,9 @@ module.exports = class ReadStream extends EventEmitter {
 				}
 			} else {
 				this.emit('end')
-				this.destroy()
+				if (this.autoClose) {
+					this.destroy()
+				}
 			}
 		})
 	}

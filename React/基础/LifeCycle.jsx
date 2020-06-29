@@ -47,7 +47,7 @@ export class LifeCycle extends Component {
     console.log('7. 组件更新完成')
   }
   UNSAFE_componentWillReceiveProps(){}
-  componentWillReceiveProps() {
+  componentWillReceiveProps() { // todo 属性发生改变
     console.log('8. 属性将要更新')
   }
   componentWillUnmount() {

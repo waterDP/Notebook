@@ -5,8 +5,9 @@ import Dep from './dep'
 class Observer {
   constructor(value) {
     this.dep = new Dep() // 这个是单独给数组用的
-    def(value, '__ob__', this) // 给数组用的
+    def(value, '__ob__', this) // 给数组用的 这个值不能枚举
     if (Array.isArray(value)) {
+      value.__proto__ = arrayMethods
       this.observerArray(value)
     } else {
       this.walk(value)
@@ -14,7 +15,6 @@ class Observer {
   }
   observerArray(value) {
     for (let i = 0; i < value.length; i++) {
-      value.__proto__ = arrayMethods
       observe(value[i])
     }
   }
@@ -26,10 +26,16 @@ class Observer {
   }
 }
 
+/**
+ * 定义响应式数据
+ * @param data
+ * @param {string} key
+ * @param value
+ */
 function defineReactive(data, key, value) {
   let dep = new Dep() // 这个dep是给对象用的
   // 这里这个value可能是数组 也可能是对象，返回的结果是observer的实例，当前这个value对应的observer
-  let childOb = observe(value) // 递归劫持数据
+  let childOb = observe(value) // ! 递归劫持数据
   Object.defineProperty(data, key, {
     enumerable: true,
     configurable: true,
@@ -49,7 +55,8 @@ function defineReactive(data, key, value) {
     },
     set(newValue) {
       if (newValue === value) return
-      observe(newValue)
+
+      observe(newValue) // 劫持新的数据 继续劫持用户设置的值
       value = newValue
 
       dep.notify() // 通知依赖的watcher进行一个更新的操作

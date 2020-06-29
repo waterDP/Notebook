@@ -26,7 +26,7 @@ methods.forEach(method => {
         inserted = args.slice(2)
         break
     }
-    if (inserted) ob.observerArray(inserted)
+    if (inserted) ob.observerArray(inserted) // 监听用户当前添加的元素
     ob.dep.notify()
     return result
   }
