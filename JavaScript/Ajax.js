@@ -32,7 +32,7 @@ class HttpRest {
    */
   _send(url, method, data, success, failure, async) {
     // 发送请求
-    this.xhr.open(method, url, data, async)
+    this.xhr.open(method, url, async)
     // onreadystatechange函数
     this.xhr.onreadystatechange = () => {
       // readyState的值等于4，从服务器拿到时数据
@@ -45,13 +45,24 @@ class HttpRest {
         // 4. 请求完成
         // 当请求状态发生改变时，触发 onreadystatechange 会被调用
         // 如果响应体成功下载，并且服务端返回 200 状态码
-        if (oReq.status === 200) {
+        const {status, responseText: result} = this.xhr
+        if (status === 200) {
           // 打印响应信息
-          success(oReq.responseText)
+          const response = {
+            data: JSON.parse(this.xhr.response),
+            status,
+            result
+          }
+          success(response)
         } else {
-          failure('Error', oReq.statusText)
+          failure(new Error(`request error status is: ${status}`))
         }
       }
+    }
+    if (method === 'GET') {
+      this.xhr.send()
+    } else {
+      this.xhr.send(JSON.stringify(data))
     }
   }
   /**

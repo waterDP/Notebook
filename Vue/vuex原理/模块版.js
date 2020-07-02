@@ -150,7 +150,7 @@ const install = (_Vue) => {
   Vue.mixin({
     beforeCreate() {
       // 把父组件里的store属性，放到每个实例上
-      if (this.options.store) {  // 根实例
+      if (this.$options.store) {  // 根实例
         this.$store = this.$options.store
       } else {
         this.$store = this.$parent && this.$parent.store

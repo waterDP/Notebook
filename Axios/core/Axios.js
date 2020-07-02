@@ -21,7 +21,8 @@ function Axios(instanceConfig) {
 
 /**
  * Dispatch a request
- *
+ * todo 用于发送请求的函数
+ * ! 我们使用的axios就是此函数bind()返回后的函数
  * @param {Object} config The config specific for this request (merged with this.defaults)
  */
 Axios.prototype.request = function request(config) {
@@ -48,7 +49,8 @@ Axios.prototype.request = function request(config) {
   // Hook up interceptors middleware
   var chain = [dispatchRequest, undefined];
   var promise = Promise.resolve(config);
-
+  
+  // todo 请求拦截器
   this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
     chain.unshift(interceptor.fulfilled, interceptor.rejected);
   });

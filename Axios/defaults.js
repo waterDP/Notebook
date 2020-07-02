@@ -26,8 +26,10 @@ function getDefaultAdapter() {
 }
 
 var defaults = {
+  // 得到当前环境对应的请求适配器
   adapter: getDefaultAdapter(),
 
+  // 请求转换器
   transformRequest: [function transformRequest(data, headers) {
     normalizeHeaderName(headers, 'Accept');
     normalizeHeaderName(headers, 'Content-Type');
@@ -47,6 +49,7 @@ var defaults = {
       setContentTypeIfUnset(headers, 'application/x-www-form-urlencoded;charset=utf-8');
       return data.toString();
     }
+    // 如果data是对象，指定请求体参数格式为json, 并奖参数对象转换为json
     if (utils.isObject(data)) {
       setContentTypeIfUnset(headers, 'application/json;charset=utf-8');
       return JSON.stringify(data);
@@ -54,6 +57,7 @@ var defaults = {
     return data;
   }],
 
+  // 响应数据转换器，解析字符串类型的data数据 
   transformResponse: [function transformResponse(data) {
     /*eslint no-param-reassign:0*/
     if (typeof data === 'string') {

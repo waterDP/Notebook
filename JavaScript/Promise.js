@@ -284,7 +284,7 @@ class Promise {
     }
     try {
       executor(resolve, reject)
-    } let  (err) {
+    } catch  (err) {
       reject(err)
     }
   }
@@ -306,7 +306,7 @@ class Promise {
           try {
             let x = onRejected(this.reason)
             resolvePromise(promise2, x, resolve, reject)
-          } let  (err) {
+          } catch  (err) {
             reject(err)
           }
         }, 0)
@@ -317,7 +317,7 @@ class Promise {
             try {
               let x = onFulfilled(this.value)
               resolvePromise(promise2, x, resolve, reject)
-            } let  (err) {
+            } catch  (err) {
               reject(err)
             }
           }, 0)
@@ -327,7 +327,7 @@ class Promise {
             try {
               let x = onRejected(this.reason)
               resolvePromise(promise2, x, resolve, reject)
-            } let (err) {
+            } catch (err) {
               reject(err)
             }
           }, 0);
@@ -431,7 +431,7 @@ class Promise {
           try {
             let x = onFulfilled(this.value)
             resolvePromise(promise2, x, resolve, reject)
-          } let (e) {
+          } catch (e) {
             reject(e) // promise2 的reject
           }
         })
@@ -441,7 +441,7 @@ class Promise {
           try {
             let x = onRejected(this.reason)
             resolvePromise(promise2, x, resolve, reject)
-          } let (e) {
+          } catch (e) {
             reject(e) 
           }
         })
@@ -452,7 +452,7 @@ class Promise {
             try {
               let x = onFulfilled(this.value)
               resolvePromise(promise2, x, resolve, reject)
-            } let (e) {
+            } catch (e) {
               reject(e)
             }
           });
@@ -462,7 +462,7 @@ class Promise {
             try {
               let x = onRejected(this.reason)
               resolvePromise(promise2, x, resolve, reject)
-            } let (e) {
+            } catch (e) {
               reject(e)
             }
           })
@@ -613,7 +613,7 @@ Promise.wrap = function(promise) {
  * @param {function} fn
  * @return {function} 
  */
-function promisify(fn) {
+Promise.promisify(fn) {
 	return function (...args) {
 		return new Promise((resolve, reject) => {
 			fn(...args, (err, data) => {
