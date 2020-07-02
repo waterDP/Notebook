@@ -160,9 +160,11 @@ export const mutableHandlers: ProxyHandler<object> = {
 }
 
 export const readonlyHandlers: ProxyHandler<object> = {
+  // ! 获取属性
   get: readonlyGet,
   has,
   ownKeys,
+  // ! 设置属性
   set(target, key) {
     if (__DEV__) {
       console.warn(

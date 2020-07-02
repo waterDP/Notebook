@@ -14,6 +14,7 @@ const smw = new SpeedMeasureWebpackPlugin()
 
 module.exports = smw.wrap({
   mode: 'development', // 模式 默认有两种 production development
+  context: process.cwd(), // 上下文目录
   entry: './src/index.js', // 入口
   output: { // 文件出口
     filename: 'bundle.[hash:8].js',  // 打包后的文件名  8位hash
