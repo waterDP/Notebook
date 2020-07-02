@@ -158,7 +158,7 @@ async function uploadParts(partList, filename) {
 		return message.success('上传成功')
 	}
 	try {
-		let requests = createRequests(partList, uploadList, filename)
+		let requests = createRequests(partList, uploadList,)
 		await Promise.all(requests)
 		await request({ url: `/merge/${filename}` }) // 分片上传完成，通知后台合并
 		message.success('上传成功')
@@ -207,7 +207,7 @@ export default function Upload() {
 	return (
 		<>
 			<Row>
-				<Col span={12}>，。
+				<Col span={12}>
 					<Input type="file" style={{ width: 300 }} onChange={handleChange} />
 					{
 						uploadStatus === UploadStatus.INIT &&
