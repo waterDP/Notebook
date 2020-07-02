@@ -28,15 +28,7 @@ export const NO = () => false
 const onRE = /^on[^a-z]/
 export const isOn = (key: string) => onRE.test(key)
 
-export const extend = <T extends object, U extends object>(
-  a: T,
-  b: U
-): T & U => {
-  for (const key in b) {
-    ;(a as any)[key] = b[key]
-  }
-  return a as any
-}
+export const extend = Object.assign
 
 export const remove = <T>(arr: T[], el: T) => {
   const i = arr.indexOf(el)
@@ -122,6 +114,7 @@ export const invokeArrayFns = (fns: Function[], arg?: any) => {
 export const def = (obj: object, key: string | symbol, value: any) => {
   Object.defineProperty(obj, key, {
     configurable: true,
+    enumerable: false,
     value
   })
 }

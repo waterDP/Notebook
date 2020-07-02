@@ -32,6 +32,7 @@ import { TeleportImpl, isTeleport } from './components/Teleport'
 import { currentRenderingInstance } from './componentRenderUtils'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
+import { hmrDirtyComponents } from './hmr'
 
 export const Fragment = (Symbol(__DEV__ ? 'Fragment' : undefined) as any) as {
   __isFragment: true
@@ -120,7 +121,7 @@ export interface VNode<HostNode = RendererNode, HostElement = RendererElement> {
   component: ComponentInternalInstance | null
   suspense: SuspenseBoundary | null
   dirs: DirectiveBinding[] | null
-  transition: TransitionHooks | null
+  transition: TransitionHooks<HostElement> | null
 
   // DOM
   el: HostNode | null
@@ -161,7 +162,7 @@ let currentBlock: VNode[] | null = null
  * disableTracking is true when creating a v-for fragment block, since a v-for
  * fragment always diffs its children.
  *
- * @internal
+ * @private
  */
 export function openBlock(disableTracking = false) {
   blockStack.push((currentBlock = disableTracking ? null : []))
@@ -187,7 +188,7 @@ let shouldTrack = 1
  * )
  * ```
  *
- * @internal
+ * @private
  */
 export function setBlockTracking(value: number) {
   shouldTrack += value
@@ -198,7 +199,7 @@ export function setBlockTracking(value: number) {
  * A block root keeps track of dynamic nodes within the block in the
  * `dynamicChildren` array.
  *
- * @internal
+ * @private
  */
 export function createBlock(
   type: VNodeTypes | ClassComponent,
@@ -236,7 +237,7 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
     __DEV__ &&
     n2.shapeFlag & ShapeFlags.COMPONENT &&
-    (n2.type as Component).__hmrUpdated
+    hmrDirtyComponents.has(n2.type as Component)
   ) {
     // HMR only: if the component has been hot-updated, force a reload.
     return false
@@ -276,19 +277,20 @@ export const InternalObjectKey = `__vInternal`
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] =>
-  (ref != null
+const normalizeRef = ({ ref }: VNodeProps): VNode['ref'] => {
+  return (ref != null
     ? isArray(ref)
       ? ref
       : [currentRenderingInstance!, ref]
     : null) as any
+}
 
 export const createVNode = (__DEV__
   ? createVNodeWithArgsTransform
   : _createVNode) as typeof _createVNode
 
 function _createVNode(
-  type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
+  type: VNode | VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
   props: (Data & VNodeProps) | null = null,
   children: unknown = null,
   patchFlag: number = 0,
@@ -300,6 +302,10 @@ function _createVNode(
       warn(`Invalid vnode type when creating vnode: ${type}.`)
     }
     type = Comment
+  }
+
+  if (isVNode(type)) {
+    return cloneVNode(type, props, children)
   }
 
   // class component normalization.
@@ -404,22 +410,23 @@ function _createVNode(
 
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
-  extraProps?: Data & VNodeProps
+  extraProps?: Data & VNodeProps | null,
+  children?: unknown
 ): VNode<T, U> {
-  const props = (extraProps
+  const props = extraProps
     ? vnode.props
       ? mergeProps(vnode.props, extraProps)
       : extend({}, extraProps)
-    : vnode.props) as any
+    : vnode.props
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
-  return {
+  const cloned: VNode<T, U> = {
     __v_isVNode: true,
     __v_skip: true,
     type: vnode.type,
     props,
     key: props && normalizeKey(props),
-    ref: props && normalizeRef(props),
+    ref: extraProps && extraProps.ref ? normalizeRef(extraProps) : vnode.ref,
     scopeId: vnode.scopeId,
     children: vnode.children,
     target: vnode.target,
@@ -450,17 +457,21 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor
   }
+  if (children) {
+    normalizeChildren(cloned, children)
+  }
+  return cloned
 }
 
 /**
- * @internal
+ * @private
  */
 export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
   return createVNode(Text, null, text, flag)
 }
 
 /**
- * @internal
+ * @private
  */
 export function createStaticVNode(
   content: string,
@@ -474,7 +485,7 @@ export function createStaticVNode(
 }
 
 /**
- * @internal
+ * @private
  */
 export function createCommentVNode(
   text: string = '',
@@ -552,8 +563,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
 const handlersRE = /^on|^vnode/
 
 export function mergeProps(...args: (Data & VNodeProps)[]) {
-  const ret: Data = {}
-  extend(ret, args[0])
+  const ret = extend({}, args[0])
   for (let i = 1; i < args.length; i++) {
     const toMerge = args[i]
     for (const key in toMerge) {
@@ -569,7 +579,7 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
         const incoming = toMerge[key]
         if (existing !== incoming) {
           ret[key] = existing
-            ? [].concat(existing as any, toMerge[key] as any)
+            ? [].concat(existing as any, toMerge[key])
             : incoming
         }
       } else {

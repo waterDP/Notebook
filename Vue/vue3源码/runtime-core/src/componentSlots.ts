@@ -18,7 +18,7 @@ import {
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
 import { withCtx } from './helpers/withRenderContext'
-import { queuePostFlushCb } from './scheduler'
+import { isHmrUpdating } from './hmr'
 
 export type Slot = (...args: any[]) => VNode[]
 
@@ -36,6 +36,10 @@ export type RawSlots = {
   // normalizeChildren when the component vnode is created.
   _ctx?: ComponentInternalInstance | null
   // internal, indicates compiler generated slots
+  // we use a reserved property instead of a vnode patchFlag because the slots
+  // object may be directly passed down to a child component in a manual
+  // render funciton, and the optimization hint need to be on the slot object
+  // itself to be preserved.
   _?: 1
 }
 
@@ -103,6 +107,8 @@ export const initSlots = (
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     if ((children as RawSlots)._ === 1) {
       instance.slots = children as InternalSlots
+      // make compiler marker non-enumerable
+      def(children as InternalSlots, '_', 1)
     } else {
       normalizeObjectSlots(children as RawSlots, (instance.slots = {}))
     }
@@ -125,14 +131,10 @@ export const updateSlots = (
   if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     if ((children as RawSlots)._ === 1) {
       // compiled slots.
-      if (__DEV__ && instance.parent && instance.parent.hmrUpdated) {
+      if (__DEV__ && isHmrUpdating) {
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
         extend(slots, children as Slots)
-        instance.hmrUpdated = true
-        queuePostFlushCb(() => {
-          instance.hmrUpdated = false
-        })
       } else if (
         // bail on dynamic slots (v-if, v-for, reference of scope variables)
         !(vnode.patchFlag & PatchFlags.DYNAMIC_SLOTS)
