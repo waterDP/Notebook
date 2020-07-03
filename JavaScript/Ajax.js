@@ -36,7 +36,7 @@ class HttpRest {
     // onreadystatechange函数
     this.xhr.onreadystatechange = () => {
       // readyState的值等于4，从服务器拿到时数据
-      if (this.xhr.readState === 4) {
+      if (this.xhr.readyState === 4) {
         // 请求的整个过程中有五种状态，且同一时刻只能存在一种状态：
         // 0. 未打开
         // 1. 未发送

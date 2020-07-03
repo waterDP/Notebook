@@ -4,7 +4,8 @@
     "arraybuffer",
     "numberic",
     "ref",
-    "ttfb"
+    "ttfb",
+    "unhandledrejection"
   ],
   "cSpell.words": [
     "numberic",
