@@ -8,11 +8,27 @@ export default class Watcher {
     this.vm = vm
     this.callback = callback
     this.options = options
+    this.user = options.user
+    this.sync = options.sync
     this.id = id++
-    this.getter = exprOrFn // 将内部传过来的回调函数放到getter属性上
+    this.lazy = options.lazy
+    this.dirty = this.lazy
+
+    if (typeof exprOrFn === 'function') {
+      this.getter = exprOrFn // 将内部传过来的回调函数放到getter属性上
+    } else {
+      this.getter = function() {
+        let path = exprOrFn.split('.')
+        let val = vm
+        for (let i = 0; i < path.length; i++) {
+          val = val[path[i]]
+        }
+        return val
+      }
+    }
     this.depsId = new Set()
     this.deps = []
-    this.get()
+    this.value = this.lazy || this.get()
   }
   addDep(dep) { // watcher不能放重复的dep dep里不能放重复的watcher
     let id = dep.id
@@ -24,13 +40,36 @@ export default class Watcher {
   }
   get() {
     pushTarget(this)
-    this.getter() // 渲染watcher的执行
+    let value = this.getter.call(this.vm) // 渲染watcher的执行
     popTarget()
+
+    return value
   }
   update() {
-    queueWatcher(this)
+    if (this.sync) {
+      this.run()
+    } else if (this.lazy) {
+      this.dirty = true
+    } else {
+      queueWatcher(this)
+    }
+  }
+  evaluate() {
+    this.value = this.get()
+    this.dirty = false
   }
   run() {
-    this.get()
+    let oldValue = this.value
+    let newValue = this.get()
+    this.value = newValue
+    if (this.user) {
+      this.callback.call(vm, oldValue, newValue)
+    }
+  }
+  depend() {
+    let i = this.deps.length
+    while(i--) {
+      this.deps[i].depend()
+    }
   }
 }

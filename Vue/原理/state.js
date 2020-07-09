@@ -1,28 +1,35 @@
 import {observe} from './observer'
-import {proxy} from './util/index'
+import Dep from './observer/dep'
+import {proxy, isObject} from './util/index'
+import Watcher from './observer/watcher'
 
+// 此方法在init中调用
 export function initState(vm) {
   const opts = vm.$options
   if (opts.props) {
     initProps(vm)
   }
   if (opts.methods) {
-    initMethods(vm)
+    initMethods(vm, opts.methods)
   }
   if (opts.data) {
     initData(vm)
   }
   if (opts.computed) {
-    initComputed(vm)
+    initComputed(vm, opts.computed)
   }
   if (opts.watch) {
-    initWatch(vm)
+    initWatch(vm, opts.watch)
   }
 }
 
 function initProps(vm) {}
 
-function initMethods(vm) {}
+function initMethods(vm) {
+  for (const key in methods) {
+    vm[key] = typeof methods[key] !== 'function' ? noop : methods[key].bind(vm) 
+  }
+}
 
 function initData(vm) {
   // 数据的初始化工作
@@ -34,8 +41,84 @@ function initData(vm) {
   observe(data)  // 对象劫持
 }
 
-function initComputed(vm) {}
+function initComputed(vm, computed) {
+  const watchers = vm._computedWatchers = {}
+  for (let key in computed) {
+    const userDef = computed[key]
+    const getter = typeof userDef === 'function' ? userDef : userDef.get
 
-function initWatch(vm) {
+    watchers[key] = new Watcher(vm, getter, noop, {lazy: true})
 
+    defineComputed(vm, key, userDef)
+  }
+}
+
+const sharedPropertyDefinition = {
+  enumerable: true,
+  configurable: true,
+  get: noop,
+  set: noop
+}
+
+function defineComputed(target, key, userDef) {
+  // 这里需要添加缓存效果
+  if (typeof userDef === 'function') {  
+    sharedPropertyDefinition.get = createComputedGetter(key)
+  } else {
+    sharedPropertyDefinition.get = createComputedGetter(key)
+    sharedPropertyDefinition.set = userDef.set || (()=>{})
+  }
+  Object.defineProperty(target, key, sharedPropertyDefinition)
+}
+
+function createComputedGetter(key) {
+  return function() { // 做缓存
+    let watcher = this._computedWatchers[key]
+    if (watcher.dirty) { // 如果dirty为true, 就调用用户的方法
+      watcher.evaluate()
+    }
+    if (Dep.target) {
+      watcher.depend()
+    }
+    return watcher.value
+  }
+}
+
+function initWatch(vm, watch) {
+  for (let key in watch) {
+    const handler = watch[key]
+    if (Array.isArray(handler)) {
+      for (let i = 0; i < handler.length; i++) {
+        createWatcher(vm, key, handler[i])
+      }
+    } else {
+      createWatcher(vm, key, handler)
+    }
+  }
+}
+
+/**
+ * @param {object} vm
+ * @param {string} key
+ * @param {function} handler
+ * @param {object} options
+ */
+function createWatcher(vm, key, handler, options) {
+  if (isObject(handler)) {
+    options = handler
+    handler = handler.handler
+  }
+  if (typeof handler === 'string') { // 获取method中的方法替换掉handler
+    handler = vm[handler]
+  }
+  return vm.$watch(key, handler, options)
+}
+
+export function stateMixin(Vue) {
+  Vue.prototype.$watch = function(exprOrFn, cb, options) {
+    const vm = this
+    // ! 用户自己写的watcher
+    options.user = true
+    new Watcher(vm, exprOrFn, cb, options)
+  }
 }

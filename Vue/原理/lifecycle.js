@@ -32,7 +32,7 @@ export function mountComponent(vm, el) {
     vm._update(vm._render())
   }
   // ! 渲染watcher 每个组件都有一个渲染watcher
-  new Watcher(vm, updateComponent, noop, {}, {renderWatcher: true}) // true 表示他是一个渲染watcher
+  new Watcher(vm, updateComponent, noop, {}, true /* isRenderWatcher */)
   callHook(vm, 'mounted')
 }
 

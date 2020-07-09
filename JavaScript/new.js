@@ -4,6 +4,7 @@
  * 2.这个新对象的__proto__属性指向原函数的prototype属性。（即继承原函数的原型）
  * 3.将这个新对象绑定到此函数的this上。
  * 4.返回新对象，如果这个函数没有返回其他对象
+ * ! let obj = {}; obj.__proto__ = Base.prototype; return Base.call(obj)
  */
 /**
  * @param {function} Con 构造函数 
@@ -11,13 +12,13 @@
  */
 function create(Con, ...args) {
 	// 创建空对象
-	let obj = {};
+	let obj = {}
 	// 设置空对象的原型(链接对象的原型)
-	obj.__proto__ = Con.prototype;
+	obj.__proto__ = Con.prototype
 	// 绑定this并执行构造函数（为对象设置属性）
-	let result = Con.apply(obj, args);
+	let result = Con.apply(obj, args)
 	// 如果result没有其他选择的对象，就返回obj对象
-	return result instanceof Object ? result : obj;
+	return result instanceof Object ? result : obj
 }
 
 // 构造函数

@@ -86,6 +86,7 @@ const middlewares = [
     console.log('Complete')
   })
 ]
+compose(middlewares)()
 
 // todo 解决方案 Promises
 const p1 = getFile("file1");

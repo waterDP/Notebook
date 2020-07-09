@@ -42,7 +42,7 @@ module.exports = smw.wrap({
       new TerserWebpackPlugin({
         parallel: true,
         sourceMap: true,
-        cache: true
+        cache: true 
       }),
       new OptimizeCssAssetsWebpackPlugin()  // 压缩css
     ],
@@ -102,7 +102,9 @@ module.exports = smw.wrap({
       {
         test: /\.js$/,
         loader: 'eslint-loader',
-        enforce: 'pre', // 强制提前执行
+        options: {
+          enforce: 'pre', // 强制提前执行
+        },
         include: path.join(__dirname, 'src'),
         exclude: /node_modules/
       },
@@ -118,9 +120,9 @@ module.exports = smw.wrap({
         test: /\.css$/,
         use: [
           {
-            loader: 'style-loader',
+            loader: 'style-loader',  // MiniCssExtractPlugin.loader
             options: {
-              insertAt: 'top'
+              insertAt: 'top'  // 插到顶部
             }
           },
           'css-loader'
@@ -184,7 +186,8 @@ module.exports = smw.wrap({
       chunkFilename: '[id].css' // 在异步加载的时候用的
     }),
     new webpack.ProvidePlugin({ // 在每个模块中都注入lodash 
-      _: 'lodash'
+      _: 'lodash',
+      $: 'jquery'
     }),
     new HtmlWebpackExternalsPlugin({
       externals: [
@@ -199,7 +202,8 @@ module.exports = smw.wrap({
     new BundleAnalyzerPlugin()
   ],
   externals: {
-    _: 'lodash'   // 文件不会被打包
+    'lodash': '_',   // ! 文件不会被打包
+    'jquery': '$'
   }
 })
 

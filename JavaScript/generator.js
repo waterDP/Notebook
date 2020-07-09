@@ -25,7 +25,7 @@ co(read()).then(console.log).catch()
 function co(it) {
   return new Promise((resolve, reject) => {
     function next(data) {
-      let {value, done} = it.next(data  )
+      let {value, done} = it.next(data)
       if (!done) {
         Promise.resolve(value).then(next, reject)
       } else {

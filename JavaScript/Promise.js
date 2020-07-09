@@ -376,7 +376,7 @@ function resolvePromise(promise2, x, resolve, reject) {
       } else {
         resolve(x) // 直接成功即可
       }
-    } let  (err) {
+    } catch(err) {
       // 也属于失败
       if (called) return 
       called = true
