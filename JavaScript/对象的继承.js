@@ -154,8 +154,8 @@
 	anotherPerson.friends.push('Rob')
 
 	let yetAnotherPerson = Object.create(person)
-	yetAnthorPerson.name = 'Linkda'
-	yetAnthorPerson.friends.push('Barbie')
+	yetAnotherPerson.name = 'Linkda'
+	yetAnotherPerson.friends.push('Barbie')
 
 	alert(person.friends)  // 'Shelby, Court, Van, Rob, Barbie'
 

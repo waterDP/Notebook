@@ -31,6 +31,7 @@ export function initMixin(Vue) {
       if (!template && el) {
         template = el.outerHTML
       }
+      // todo template compile to render function
       const render = compilerToFunction(template)
       options.render = render
     }

@@ -111,7 +111,7 @@ function updateChildren(parent, oldChildren, newChildren) {
       oldEndVnode = oldChildren[--oldEndIndex]
       newStartVnode = newChildren[++newStartIndex]
     } else { // todo 5.暴力比对 乱序
-      // 老根据老节点的key做一个映射表 拿新虚拟节点去映射表中查找
+      // 根据老节点的key做一个映射表 拿新虚拟节点去映射表中查找
       // 如果可以查找到，则进行移动操作 即移动到头指针前面的位置
       // 如果找不能直接将元素插入即可
       let moveIndex = map[newStartVnode.key]

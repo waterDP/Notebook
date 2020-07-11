@@ -6,4 +6,6 @@ const install = Vue => {
   Vue.directive('drag', drag)
 }
 
-export default install
+export default {
+  install
+}

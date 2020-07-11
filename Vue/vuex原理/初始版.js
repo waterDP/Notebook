@@ -31,8 +31,8 @@ class Store {
      * @mutations 
      */
     // 把用户定义的mutation放到store上  
-    let mutations = options.mutations;
-    this.mutations = {};
+    let mutations = options.mutations
+    this.mutations = {}
     foreEach(mutations, (mutation, mutationName) => {
       this.mutations[mutationName] = (payload) => {
         mutation(this.state, payload)
@@ -58,7 +58,7 @@ class Store {
   dispatch = (actionName, payload) => {
     this.actions[actionName](payload)  // 发布 
   }
-  get state() {  // 获取实例上的state属性就会执行此方法
+  get state() {  // ! 获取实例上的state属性就会执行此方法
     return this.vm.state
   }
 }
@@ -72,8 +72,7 @@ const install = (_Vue) => {
       // 把父组件里的store属性，放到每个实例上
       if (this.$options.store) {  // 根实例
         this.$store = this.$options.store
-      } 
-       {
+      } else {
         this.$store = this.$parent && this.$parent.store
       }
     }

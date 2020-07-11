@@ -68,6 +68,7 @@ export default class Watcher {
 
       // todo sync可以控制是否是同步的watch 默认watch是异步的
       this.sync = !!options.sync
+      // todo beforeUpdate 勾子函数
       this.before = options.before
     } else {
       this.deep = this.user = this.lazy = this.sync = false

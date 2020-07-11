@@ -63,7 +63,7 @@ export default class Watcher {
     let newValue = this.get()
     this.value = newValue
     if (this.user) {
-      this.callback.call(vm, oldValue, newValue)
+      this.callback.call(vm, newValue, oldValue)
     }
   }
   depend() {
