@@ -4,7 +4,7 @@
  * @param {object} props
  * @param componentInstance
  */ 
-export function createDOM(type, props, componentInstance) {
+export function createElement(type, props, componentInstance) {
   let dom = document.createElement(type)
   for (let propName in props) {
     if (propName === 'children') {
