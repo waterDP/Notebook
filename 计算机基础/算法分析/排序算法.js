@@ -12,6 +12,7 @@ function swap(arr, i, j) {
 }
 
 // todo 冒泡排序
+// 平均O(n^2) 最好情况O(1) 最坏情况O(n^2) 空间O(1) 稳定性 稳定
 function bubble_sort(arr) {
   for (let i = arr.length; i > 0; i--) {
     for (let j = 1; j < i; j++) {
@@ -22,7 +23,8 @@ function bubble_sort(arr) {
   }
 }
 
-// todo 选择排序  O(n^2)
+// todo 选择排序 
+// 平均O(n^2) 最好情况O(n^2) 最坏情况O(n^2) 空间O(1) 稳定性 不稳定
 function selection_sort(arr) {
   const len = arr.length
   let minIndex, temp
@@ -39,6 +41,7 @@ function selection_sort(arr) {
 }
 
 // todo 插入排序
+// 平均O(n^2) 最好情况O(n) 最坏情况O(n^2) 空间O(1) 稳定性 稳定
 function insertion_sort(arr) {
   const len = arr.length
   let preIndex, current
@@ -55,7 +58,7 @@ function insertion_sort(arr) {
 }
 
 // todo 希尔排序 
-// 最佳情况 T(n) = O(nlogn) 最坏情况T(n) = O(n) 平均情况T(n) = O(nlogn)
+// 平均O(n log n) 最好情况O(n log2 n) 最坏情况O(n log2 n) 空间O(1) 稳定性 不稳定
 function shell_sort(arr) {
   const len = arr.length
   let temp, gap = 1
@@ -76,7 +79,7 @@ function shell_sort(arr) {
 }
 
 // todo 归并排序(分冶策略)
-// 时间复杂度是O(n log n)  代价是需要额外的内存空间 
+// 平均O(n log n) 最好情况O(n log n) 最坏情况O(n log n) 空间O(n) 稳定性 稳定
 function merge_sort(arr) { // 采用自上而下的递归方法
   const len = arr.length
   if (len < 2) {
@@ -111,6 +114,7 @@ function merge_sort(arr) { // 采用自上而下的递归方法
 console.log('merge_sort', merge_sort([1,7,6,4,5,3,2]))
 
 // todo 快速排序(分冶)
+// 平均O(n log n) 最好情况O(n log n) 最坏情况O(n^2) 空间O(log n) 稳定性 不稳定
 function quick_sort(arr, left, right) {
   const len = arr.length
   let partitionIndex
@@ -152,6 +156,7 @@ function shuffle(arr) {
 }
 
 // todo 堆排序
+// 平均O(n log n) 2最好情况O(n log n) 最坏情况O(n^2) 空间O(log n) 不稳定
 /**
  * 推排序可以说一种艇推的概念来排序的选择排序。分为两种方法 
  * 大顶堆：每个节点的值都大于或等于其子节点的值，在推排序中用于升序排列
@@ -196,4 +201,56 @@ function heap_sort(arr) {
       heapify(arr, largest)
     }
   }
+}
+
+// todo 计数排序
+// 平均O(n+k) 最好情况O(n+k) 最坏情况O(n+k) 空间O(k) 稳定性 稳定 
+// todo 桶排序
+// 平均O(n+k) 最好情况O(n+k) 最坏情况O(n^2) 空间(n+k) 稳定性 稳定
+// todo 基数排序
+// 平均O(nxk) 最好情况O(nxk) 最坏情况O(n+k) 空间(n+k) 稳定性 稳定
+function radio_sort(arr) {
+  if (!arr || arr.length < 2) {
+    return arr
+  }
+  let len = arr.length
+  let max = arr[0]
+  // 找出最大值
+  for (let i = 1; i < len; i++) {
+    max = (max < arr[i]) ? arr[i] : max 
+  }
+  // 计算出最大数是几位
+  let num = 1
+  while (max / 10 > 0) {
+    num++
+    max = Math.floor(max / 10)
+  }
+  // 创建出10个桶
+  let arrList = new Array(10)
+  function init() {
+    for(let i = 0; i < 10; i++) {
+      arrList[i] = []
+    }
+  }
+  init()
+
+  // 进行每趟排序，从个位开始排
+  for (let i = 1; i < num; i++) {
+    for (let j = 0; j < len; j++) {
+      // 获取每个数最后第i位的数
+      let radio = Math.floor((arr[j]/Math.pow(10, i - 1)) % 10)
+      arrList[radio].push(arr[j])
+    }
+
+    // 合并放回原数组
+    let k = 0
+    for (let j = 0; j < 10; j++) {
+      arrList[j].forEach(item => {
+        arr[k++] = item
+      })
+    }
+    // 清空桶
+    init()
+  }
+  return arr
 }

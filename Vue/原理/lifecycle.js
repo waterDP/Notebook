@@ -19,7 +19,6 @@ export function lifecycleMixin(Vue) {
 }
 
 export function mountComponent(vm, el) {
-  const options = vm.$options // render
   vm.$el = el // 真实的dom元素
 
   callHook(vm, 'beforeMount')

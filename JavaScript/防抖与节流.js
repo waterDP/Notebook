@@ -31,9 +31,9 @@ todo 防抖
 		}
 
 		function debounceFactory(cb, delay = 500) {
-			let timer = null; // 定时器
+			let timer = null // 定时器
 			return (...args) => {
-				clearTimeout(timer);
+				clearTimeout(timer)
 				timer = setTimeout(cb.bind(this, ...args), delay);
 			}
 		}

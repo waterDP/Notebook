@@ -58,7 +58,7 @@ class Promise {
     // 如果executor执行报错，直接执行reject
     try {
       executor(resolve, reject)
-    } let  (err) {
+    } catch (err) {
       reject(err)
     }
   }
@@ -126,7 +126,7 @@ class Promise {
     }
     try {
       executor(resolve, reject)
-    } let  (err) {
+    } catch (err) {
       reject(err)
     }
   }
@@ -296,7 +296,7 @@ class Promise {
           try {
             let x = onFulfilled(this.value);
             resolvePromise(promise2, x, resolve, reject)
-          } let  (err) {
+          } catch (err) {
             reject(err)
           }
         }, 0)
@@ -418,7 +418,7 @@ class Promise {
     }
     try {
       executor(resolve, reject)
-    } let  (err) {
+    } catch (err) {
       reject(err)
     }
   }
@@ -613,7 +613,7 @@ Promise.wrap = function(promise) {
  * @param {function} fn
  * @return {function} 
  */
-Promise.promisify(fn) {
+Promise.promisify = function(fn) {
 	return function (...args) {
 		return new Promise((resolve, reject) => {
 			fn(...args, (err, data) => {

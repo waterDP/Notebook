@@ -17,8 +17,6 @@ function defineSetter(target, key) {
 defineGetter('request', 'url')
 defineGetter('request', 'path')
 defineGetter('request', 'query')
-
 defineGetter('response', 'body')
-defineSetter('response', 'body')
 // 导入context
 module.exports = context

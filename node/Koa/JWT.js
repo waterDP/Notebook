@@ -2,6 +2,12 @@
 // jwt 表示不需要在服务器端存储任何信息
 // 每次你访问服务器的时候，服务器会通过私钥，生成一个token
 // 浏览器再次访问服务器，带上这个token
+/**
+ * jwt的三个部分分别为
+ * Header(头部) {alg: 'HS256', typ: 'JWT'}
+ * Payload(负载)
+ * Signature(签名)
+ */
 
 const Koa = require('koa')
 const bodyparser = require('koa-bodyparser')

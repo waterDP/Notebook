@@ -17,7 +17,8 @@ export function createElement(type, props, componentInstance) {
         dom.style[attr] = styleObj[attr]
       }
     } else if (propName.startsWith('on')) {
-      addEvent(dom, propName, props[propName], componentInstance)
+      /*  addEvent(dom, propName, props[propName], componentInstance) */
+      // ? 事件委派
     } else {
       dom.setAttribute(propName, props[propName])
     }
