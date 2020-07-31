@@ -4,7 +4,6 @@
  * 1. 引用类型的属性被实例共享了
  * 2. 创建子类的时候，不能向父类传参 
  */
-// 	实现原型链有一种基本模式，其代码大致如下：
 function Parent() {}
 function Child() {}
 Child.prototype = new Parent()
@@ -27,7 +26,7 @@ alert(SubType.prototype.isPrototypeOf(instance))    // true
 
 // todo 2.借用构造函数(经典继承)
 // 优点：相对于原型链而言，借用构造函数有一个很大的优势，即可以在子类型构造函数中向超类型构造函数传递参数。
-// 缺点：方法都在构造函数中定义，每次创建实例都会创建一遍方法
+// 缺点：方法都在构造函数中定义，每次创建实例都会创建一遍方法 无法继承父类原型中的属性和方法
 function Parent(name) {}
 function Child(name) {
 	Parent.call(this, name)

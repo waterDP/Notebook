@@ -3,6 +3,7 @@ let context = {
 }
 
 function defineGetter(target, key) {
+  // 原生的方法
   context.__defineGetter__(key, function() {
     return this[target][key]
   })
@@ -17,6 +18,8 @@ function defineSetter(target, key) {
 defineGetter('request', 'url')
 defineGetter('request', 'path')
 defineGetter('request', 'query')
+
 defineGetter('response', 'body')
+defineSetter('response', 'body')
 // 导入context
 module.exports = context

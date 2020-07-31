@@ -14,6 +14,11 @@ export default class Watcher {
     this.lazy = options.lazy
     this.dirty = this.lazy
 
+    if (isRenderWatcher) {
+      //todo 把当前的watcher赋值给当前组件的_watcher实例
+      vm._watcher = this
+    }
+
     if (typeof exprOrFn === 'function') {
       this.getter = exprOrFn // 将内部传过来的回调函数放到getter属性上
     } else {

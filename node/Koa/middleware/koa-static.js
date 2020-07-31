@@ -1,13 +1,14 @@
 const fs = require('fs').promise
 const path = require('path')
+const mime = require('mime')
 
-const static = (filePath) => {
+const static = root => {
   return async (ctx, next) => {
     try {
-      let path = path.join(filePath, ctx.path)
-      let statObj = await fs.stat(path)
+      let filePath = path.join(root, ctx.path)
+      let statObj = await fs.stat(filePath)
       if (statObj.isFile()) {
-        ctx.set('Context-Type', 'text/html;charset=utf-8')
+        ctx.type = mime.getType(filePath) + '; charset=utf8 '
         ctx.body = await fs.readFile(path)
       } else {
         await next()

@@ -5,7 +5,7 @@ const context = require('./context')
 const EventEmitter = require('events')
 const Stream = require('stream')
 
-module.exports = class Application extends EventEmitter {
+class Application extends EventEmitter {
   constructor() {
     super()
     this.handleRequest = this.handleRequest.bind(this)
@@ -24,7 +24,11 @@ module.exports = class Application extends EventEmitter {
     let request = Object.create(this.request)
     let context = Object.create(this.context)
 
-    context.req = context.request.req = req
+    context.request = request
+    context.response = response
+    context.request.req = context.req = req
+    context.response.res = context.res = res
+
     return context
   }
   compose(ctx) {
@@ -87,7 +91,9 @@ module.exports = class Application extends EventEmitter {
     })
   }
   listen(...args) {
-    const server = http.createServer(this.handleRequest)
+    const server = http.createServer(this.handleRequest.bind(this))
     server.listen(...args)
   }
 }
+
+module.exports = Application

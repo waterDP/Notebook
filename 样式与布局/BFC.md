@@ -33,7 +33,7 @@ BFC就是页面上的一个隔离的独立容器，容器里面的子元素不�
 
 1、float的值不是none。
 2、position的值不是static或者relative。
-3、display的值是inline-block、table-cell、flex、table-caption或者inline-flex。
+3、display的值是inline-block、table-cell、flex、flow-root、table-caption或者inline-flex。
 4、overflow的值不是visible。
 
 ## BFC作用

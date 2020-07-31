@@ -2,8 +2,8 @@
 	策略模式允许一个称作上下文本的对象，将变量部分提取到独立的，可变换策略对象中，从而支持逻辑中的变化。上下文部分实现了一套算法的公共逻辑部分，而策略实现可变部分，允许上下文根据不同因素，通过系统配置或者用户选择来调整它的行为。策略通常是解决方案的一部分，并且实现了上下文所期望的相同接口。
  */
 /*支持多种格式的配置对象*/
-const fs = require('fs');
-const objectPath = require('object-path');
+const fs = require('fs')
+const objectPath = require('object-path')
 
 /*通用部分*/
 class Config {
@@ -60,4 +60,4 @@ jsonConfig.save('samples/conf_mod.json');
 const iniConfig = new Config(strategies.ini);
 iniConfig.read('samples/conf.ini');
 iniConfig.set('book.nodejs', 'design pattern');
-iniConfig.save('samples/conf_mod.ini');
+iniConfig.save('samples/conf_mod.ini')

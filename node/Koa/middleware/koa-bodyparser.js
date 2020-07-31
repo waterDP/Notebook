@@ -10,7 +10,7 @@ const bodyparser = () => {
         resolve()
       })
     })
-    return next()
+    await next()
   }
 }
 

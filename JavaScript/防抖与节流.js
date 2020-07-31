@@ -30,20 +30,20 @@ todo 防抖
 			console.log(content)
 		}
 
-		function debounceFactory(cb, delay = 500) {
+		function debounce(cb, delay = 500) {
 			let timer = null // 定时器
 			return (...args) => {
 				clearTimeout(timer)
-				timer = setTimeout(cb.bind(this, ...args), delay);
+				timer = setTimeout(cb.bind(this, ...args), delay)
 			}
 		}
 
 		// 接着用变量保存保存 debounce 返回的带有延时功能的函数
-		let debounce = debounceFactory(callback, 500)
+		let handler = debounceFactory(callback, 500)
 
 		// 添加事件监听
 		let input = document.getElementById('debounce');
-		input.addEventListener('keyup', e => debounce.apply(this, e.target.value));
+		input.addEventListener('keyup', e => handler.apply(this, e.target.value));
 
 	//<立即执行版>
 	function debounce(cb, delay = 500, immediate = true) {

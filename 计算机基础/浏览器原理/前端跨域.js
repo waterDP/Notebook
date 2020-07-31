@@ -12,7 +12,7 @@ res.setHeader('Access-Control-Allow-Methods', 'PUT')
 // 允许携带cookie
 res.setHeader('Access-Control-Allow-Credentials', true)
 // 预检的存活时间 options
-res.setHeader('Access-Control-Max-Age', 6)
+res.setHeader('Access-Control-Max-Age', '6')
 // 允许前端获取哪个头 
 res.setHeader('Access-Control-Expose-Headers', 'name')
 

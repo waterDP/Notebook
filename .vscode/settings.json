@@ -1,10 +1,13 @@
 {
   "cSpell.ignoreWords": [
     "",
+    "abcdefghijklmnopqrstuvwxwz",
     "arraybuffer",
     "bodyparser",
     "csrf",
     "f",
+    "fres",
+    "microtask",
     "numberic",
     "ref",
     "referer",
