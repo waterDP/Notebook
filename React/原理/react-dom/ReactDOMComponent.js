@@ -1,3 +1,4 @@
+import {render} from "./ReactDOMLegacy"
 /**
  * 生成真实的dom
  * @param {string} type
