@@ -168,7 +168,7 @@ function heap_sort(arr) {
   for (let i = arr.length -1; i>0; i--) {
     swap(arr, 0, i)
     len--
-    heapify(arr, 0)
+    sift(arr, 0)
   }
   return arr
   
@@ -179,11 +179,11 @@ function heap_sort(arr) {
   function buildMaxHead(arr) { // 建立大顶推
     len = arr.length
     for (let i = Math.floor(len/2); i >= 0; i--) {
-      heapify(arr, i)
+      sift(arr, i)
     }
   }
 
-  function heapify(arr, i) { // 堆调整
+  function sift(arr, i) { // 堆调整
     let left = i * 2 + 1
     let right = i * 2 + 2
     let largest = i
@@ -198,7 +198,7 @@ function heap_sort(arr) {
 
     if (largest !== i) {
       swap(arr, i, largest)
-      heapify(arr, largest)
+      sift(arr, largest)
     }
   }
 }

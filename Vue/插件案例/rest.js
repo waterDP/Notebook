@@ -28,4 +28,4 @@ const install = Vue => {
   Vue.prototype.RES_CODE = RES_CODE
 }
 
-export default install;
+export default install

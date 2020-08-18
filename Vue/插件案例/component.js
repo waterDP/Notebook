@@ -1,5 +1,5 @@
 // 自动加载公共组件
-const files = require('./', true, /\.vue$/)
+const files = require.context('./', true, /\.vue$/)
 
 const install = Vue => {
   files.keys().forEach(fileName => {
