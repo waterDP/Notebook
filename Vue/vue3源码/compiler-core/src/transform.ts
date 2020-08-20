@@ -117,9 +117,12 @@ export function createTransformContext(
     directiveTransforms = {},
     transformHoist = null,
     isBuiltInComponent = NOOP,
+    isCustomElement = NOOP,
     expressionPlugins = [],
     scopeId = null,
     ssr = false,
+    ssrCssVars = ``,
+    bindingMetadata = {},
     onError = defaultOnError
   }: TransformOptions
 ): TransformContext {
@@ -132,9 +135,12 @@ export function createTransformContext(
     directiveTransforms,
     transformHoist,
     isBuiltInComponent,
+    isCustomElement,
     expressionPlugins,
     scopeId,
     ssr,
+    ssrCssVars,
+    bindingMetadata,
     onError,
 
     // state
@@ -146,7 +152,7 @@ export function createTransformContext(
     imports: new Set(),
     temps: 0,
     cached: 0,
-    identifiers: {},
+    identifiers: Object.create(null),
     scopes: {
       vFor: 0,
       vSlot: 0,

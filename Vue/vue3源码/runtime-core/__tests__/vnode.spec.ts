@@ -62,6 +62,7 @@ describe('vnode', () => {
     }
     expect(createVNode('div').key).toBe(null)
     expect(createVNode('div', { key: undefined }).key).toBe(null)
+    expect(`VNode created with invalid key (NaN)`).toHaveBeenWarned()
   })
 
   test('create with class component', () => {
@@ -254,7 +255,7 @@ describe('vnode', () => {
 
     // cloning with new ref, but with same context instance
     const cloned5 = cloneVNode(original, { ref: 'bar' })
-    // new ref should use current context instance and overwrite orgiinal
+    // new ref should use current context instance and overwrite original
     expect(cloned5.ref).toEqual([mockInstance2, 'bar'])
 
     // cloning and adding ref to original that has no ref

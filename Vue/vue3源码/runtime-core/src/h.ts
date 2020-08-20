@@ -12,6 +12,7 @@ import { isObject, isArray } from '@vue/shared'
 import { RawSlots } from './componentSlots'
 import { FunctionalComponent, Component } from './component'
 import { ComponentOptions } from './componentOptions'
+import { EmitsOptions } from './componentEmits'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -49,7 +50,7 @@ type RawProps = VNodeProps & {
   __v_isVNode?: never
   // used to differ from Array children
   [Symbol.iterator]?: never
-}
+} & { [key: string]: any }
 
 type RawChildren =
   | string
@@ -66,11 +67,6 @@ interface Constructor<P = any> {
   __isSuspense?: never
   new (): { $props: P }
 }
-
-// Excludes Component type from returned `defineComponent`
-type NotDefinedComponent<T extends Component> = T extends Constructor
-  ? never
-  : T
 
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
@@ -107,8 +103,8 @@ export function h(
 ): VNode
 
 // functional component
-export function h<P>(
-  type: FunctionalComponent<P>,
+export function h<P, E extends EmitsOptions = {}>(
+  type: FunctionalComponent<P, E>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
@@ -116,9 +112,9 @@ export function h<P>(
 // catch-all for generic component types
 export function h(type: Component, children?: RawChildren): VNode
 
-// exclude `defineComponent`
-export function h<Options extends ComponentOptions | FunctionalComponent<{}>>(
-  type: NotDefinedComponent<Options>,
+// exclude `defineComponent` constructors
+export function h<T extends ComponentOptions | FunctionalComponent<{}>>(
+  type: T,
   props?: RawProps | null,
   children?: RawChildren | RawSlots
 ): VNode

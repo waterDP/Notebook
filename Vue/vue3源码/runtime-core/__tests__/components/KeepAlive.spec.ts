@@ -14,7 +14,8 @@ import {
   ComponentPublicInstance,
   Ref,
   cloneVNode,
-  provide
+  provide,
+  withScopeId
 } from '@vue/runtime-test'
 import { KeepAliveProps } from '../../src/components/KeepAlive'
 
@@ -162,6 +163,36 @@ describe('KeepAlive', () => {
     expect(serializeInner(root)).toBe(`<!---->`)
     assertHookCalls(one, [1, 1, 2, 2, 0])
     assertHookCalls(two, [1, 1, 2, 2, 0])
+  })
+
+  // #1742
+  test('should call lifecycle hooks on nested components when root component no hooks', async () => {
+    const two = {
+      name: 'two',
+      data: () => ({ msg: 'two' }),
+      render(this: any) {
+        return h('div', this.msg)
+      },
+      activated: jest.fn()
+    }
+    const one = {
+      name: 'one',
+      data: () => ({ msg: 'one' }),
+      render(this: any) {
+        return h(two)
+      }
+    }
+
+    const toggle = ref(true)
+    const App = {
+      render() {
+        return h(KeepAlive, () => (toggle.value ? h(one) : null))
+      }
+    }
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(`<div>two</div>`)
+    expect(two.activated).toHaveBeenCalledTimes(1)
   })
 
   test('should call correct hooks for nested keep-alive', async () => {
@@ -654,5 +685,31 @@ describe('KeepAlive', () => {
     await nextTick()
     expect(spyMounted).toHaveBeenCalledTimes(3)
     expect(spyUnmounted).toHaveBeenCalledTimes(4)
+  })
+
+  // #1513
+  test('should work with cloned root due to scopeId / fallthrough attrs', async () => {
+    const viewRef = ref('one')
+    const instanceRef = ref<any>(null)
+    const withId = withScopeId('foo')
+    const App = {
+      __scopeId: 'foo',
+      render: withId(() => {
+        return h(KeepAlive, null, {
+          default: () => h(views[viewRef.value], { ref: instanceRef })
+        })
+      })
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div foo>one</div>`)
+    instanceRef.value.msg = 'changed'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div foo>changed</div>`)
+    viewRef.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div foo>two</div>`)
+    viewRef.value = 'one'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div foo>changed</div>`)
   })
 })

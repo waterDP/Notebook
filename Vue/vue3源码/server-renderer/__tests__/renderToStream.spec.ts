@@ -10,14 +10,11 @@ import {
   createTextVNode,
   createStaticVNode
 } from 'vue'
-import { escapeHtml, mockWarn } from '@vue/shared'
+import { escapeHtml } from '@vue/shared'
 import { renderToStream as _renderToStream } from '../src/renderToStream'
 import { Readable } from 'stream'
 import { ssrRenderSlot } from '../src/helpers/ssrRenderSlot'
 import { ssrRenderComponent } from '../src/helpers/ssrRenderComponent'
-
-mockWarn()
-
 const promisifyStream = (stream: Readable) => {
   return new Promise((resolve, reject) => {
     let result = ''
@@ -84,7 +81,7 @@ describe('ssr: renderToStream', () => {
       expect(
         await renderToStream(
           createApp(
-            defineComponent((props: {}) => {
+            defineComponent(() => {
               const msg = ref('hello')
               return () => h('div', msg.value)
             })
@@ -266,7 +263,7 @@ describe('ssr: renderToStream', () => {
                   { msg: 'hello' },
                   {
                     // optimized slot using string push
-                    default: ({ msg }: any, push: any, p: any) => {
+                    default: ({ msg }: any, push: any) => {
                       push(`<span>${msg}</span>`)
                     },
                     // important to avoid slots being normalized

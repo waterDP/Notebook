@@ -1,5 +1,5 @@
 import {
-  Component,
+  ConcreteComponent,
   getCurrentInstance,
   FunctionalComponent,
   SetupContext,
@@ -9,7 +9,13 @@ import {
 } from '../component'
 import { VNode, cloneVNode, isVNode, VNodeProps } from '../vnode'
 import { warn } from '../warning'
-import { onBeforeUnmount, injectHook, onUnmounted } from '../apiLifecycle'
+import {
+  onBeforeUnmount,
+  injectHook,
+  onUnmounted,
+  onBeforeMount,
+  onBeforeUpdate
+} from '../apiLifecycle'
 import {
   isString,
   isArray,
@@ -27,7 +33,7 @@ import {
   invokeVNodeHook
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
-import { ComponentRenderContext } from '../componentProxy'
+import { ComponentRenderContext } from '../componentPublicInstance'
 
 type MatchPattern = string | RegExp | string[] | RegExp[]
 
@@ -37,7 +43,7 @@ export interface KeepAliveProps {
   max?: number | string
 }
 
-type CacheKey = string | number | Component
+type CacheKey = string | number | ConcreteComponent
 type Cache = Map<CacheKey, VNode>
 type Keys = Set<CacheKey>
 
@@ -145,7 +151,7 @@ const KeepAliveImpl = {
 
     function pruneCache(filter?: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getName(vnode.type as Component)
+        const name = getName(vnode.type as ConcreteComponent)
         if (name && (!filter || !filter(name))) {
           pruneCacheEntry(key)
         }
@@ -173,6 +179,17 @@ const KeepAliveImpl = {
       }
     )
 
+    // cache sub tree in beforeMount/Update (i.e. right after the render)
+    let pendingCacheKey: CacheKey | null = null
+    const cacheSubtree = () => {
+      // fix #1621, the pendingCacheKey could be 0
+      if (pendingCacheKey != null) {
+        cache.set(pendingCacheKey, instance.subTree)
+      }
+    }
+    onBeforeMount(cacheSubtree)
+    onBeforeUpdate(cacheSubtree)
+
     onBeforeUnmount(() => {
       cache.forEach(cached => {
         const { subTree, suspense } = instance
@@ -189,6 +206,8 @@ const KeepAliveImpl = {
     })
 
     return () => {
+      pendingCacheKey = null
+
       if (!slots.default) {
         return null
       }
@@ -209,7 +228,7 @@ const KeepAliveImpl = {
         return vnode
       }
 
-      const comp = vnode.type as Component
+      const comp = vnode.type as ConcreteComponent
       const name = getName(comp)
       const { include, exclude, max } = props
 
@@ -227,7 +246,12 @@ const KeepAliveImpl = {
       if (vnode.el) {
         vnode = cloneVNode(vnode)
       }
-      cache.set(key, vnode)
+      // #1513 it's possible for the returned vnode to be cloned due to attr
+      // fallthrough or scopeId, so the vnode here may not be the final vnode
+      // that is mounted. Instead of caching it directly, we store the pending
+      // key and cache `instance.subTree` (the normalized vnode) in
+      // beforeMount/beforeUpdate hooks.
+      pendingCacheKey = key
 
       if (cachedVNode) {
         // copy over mounted state
@@ -261,12 +285,13 @@ const KeepAliveImpl = {
 // export the public type for h/tsx inference
 // also to avoid inline import() in generated d.ts files
 export const KeepAlive = (KeepAliveImpl as any) as {
+  __isKeepAlive: true
   new (): {
     $props: VNodeProps & KeepAliveProps
   }
 }
 
-function getName(comp: Component): string | void {
+function getName(comp: ConcreteComponent): string | void {
   return (comp as FunctionalComponent).displayName || comp.name
 }
 
