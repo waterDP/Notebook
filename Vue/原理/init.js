@@ -11,7 +11,7 @@ export function initMixin(Vue) {
     vm.$options = mergeOptions(vm.constructor.options, options)
     
     callHook(vm, 'beforeCreate')
-    // 初始化状态
+    // ! 初始化状态  依赖收集
     initState(vm)
     callHook(vm, 'created')
 
