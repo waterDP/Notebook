@@ -13,18 +13,10 @@ class ZipPlugin {
         zip.file(name, compilation.assets[name].source())
       })
       zip.generateAsync({type: 'nodeBuffer'}).then(content => {
-        /* compilation.assets[this.options.name] = {
-          source() {
-            return content
-          },
-          size() {
-            return content.length
-          }
-        } */
         compilation.assets[this.options.name] = new RawSource(content)
         callback(null, compilation)
       })
     })
   }
 }
-modules
+modules.exports = ZipPlugin
