@@ -113,6 +113,7 @@ describe('api: options', () => {
     const spyB = jest.fn(returnThis)
     const spyC = jest.fn(returnThis)
     const spyD = jest.fn(returnThis)
+    const spyE = jest.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -123,7 +124,10 @@ describe('api: options', () => {
           baz: {
             qux: 3
           },
-          qux: 4
+          qux: 4,
+          dot: {
+            path: 5
+          }
         }
       },
       watch: {
@@ -137,7 +141,8 @@ describe('api: options', () => {
         },
         qux: {
           handler: 'onQuxChange'
-        }
+        },
+        'dot.path': spyE
       },
       methods: {
         onFooChange: spyA,
@@ -175,6 +180,11 @@ describe('api: options', () => {
     await nextTick()
     expect(spyD).toHaveBeenCalledTimes(1)
     assertCall(spyD, 0, [5, 4])
+
+    ctx.dot.path++
+    await nextTick()
+    expect(spyE).toHaveBeenCalledTimes(1)
+    assertCall(spyE, 0, [6, 5])
   })
 
   test('watch array', async () => {
@@ -241,7 +251,7 @@ describe('api: options', () => {
   })
 
   test('provide/inject', () => {
-    const Root = {
+    const Root = defineComponent({
       data() {
         return {
           a: 1
@@ -253,45 +263,95 @@ describe('api: options', () => {
         }
       },
       render() {
-        return [h(ChildA), h(ChildB), h(ChildC), h(ChildD)]
+        return [
+          h(ChildA),
+          h(ChildB),
+          h(ChildC),
+          h(ChildD),
+          h(ChildE),
+          h(ChildF),
+          h(ChildG),
+          h(ChildH)
+        ]
       }
-    } as any
-    const ChildA = {
+    })
+
+    const defineChild = (injectOptions: any, injectedKey = 'b') =>
+      ({
+        inject: injectOptions,
+        render() {
+          return this[injectedKey]
+        }
+      } as any)
+
+    const ChildA = defineChild(['a'], 'a')
+    const ChildB = defineChild({ b: 'a' })
+    const ChildC = defineChild({
+      b: {
+        from: 'a'
+      }
+    })
+    const ChildD = defineChild(
+      {
+        a: {
+          default: () => 0
+        }
+      },
+      'a'
+    )
+    const ChildE = defineChild({
+      b: {
+        from: 'c',
+        default: 2
+      }
+    })
+    const ChildF = defineChild({
+      b: {
+        from: 'c',
+        default: () => 3
+      }
+    })
+    const ChildG = defineChild({
+      b: {
+        default: 4
+      }
+    })
+    const ChildH = defineChild({
+      b: {
+        default: () => 5
+      }
+    })
+    expect(renderToString(h(Root))).toBe(`11112345`)
+  })
+
+  test('provide accessing data in extends', () => {
+    const Base = defineComponent({
+      data() {
+        return {
+          a: 1
+        }
+      },
+      provide() {
+        return {
+          a: this.a
+        }
+      }
+    })
+
+    const Child = {
       inject: ['a'],
       render() {
-        return this.a
+        return (this as any).a
       }
-    } as any
-    const ChildB = {
-      // object alias
-      inject: { b: 'a' },
-      render() {
-        return this.b
-      }
-    } as any
-    const ChildC = {
-      inject: {
-        b: {
-          from: 'a'
-        }
-      },
-      render() {
-        return this.b
-      }
-    } as any
-    const ChildD = {
-      inject: {
-        b: {
-          from: 'c',
-          default: 2
-        }
-      },
-      render() {
-        return this.b
-      }
-    } as any
+    }
 
-    expect(renderToString(h(Root))).toBe(`1112`)
+    const Root = defineComponent({
+      extends: Base,
+      render() {
+        return h(Child)
+      }
+    })
+    expect(renderToString(h(Root))).toBe(`1`)
   })
 
   test('lifecycle', async () => {
@@ -446,7 +506,7 @@ describe('api: options', () => {
         calls.push('mixinA created')
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
-        expect(this.c).toBe(3)
+        expect(this.c).toBe(4)
       },
       mounted() {
         calls.push('mixinA mounted')
@@ -468,7 +528,7 @@ describe('api: options', () => {
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
         expect(this.bP).toBeUndefined()
-        expect(this.c).toBe(3)
+        expect(this.c).toBe(4)
         expect(this.cP1).toBeUndefined()
       },
       mounted() {
@@ -484,7 +544,8 @@ describe('api: options', () => {
       },
       created() {
         calls.push('mixinC created')
-        expect(this.c).toBe(3)
+        // component data() should overwrite mixin field with same key
+        expect(this.c).toBe(4)
         expect(this.cP1).toBeUndefined()
       },
       mounted() {
@@ -498,6 +559,7 @@ describe('api: options', () => {
       mixins: [defineComponent(mixinA), defineComponent(mixinB), mixinC],
       data() {
         return {
+          c: 4,
           z: 4
         }
       },
@@ -506,7 +568,7 @@ describe('api: options', () => {
         expect(this.a).toBe(1)
         expect(this.b).toBe(2)
         expect(this.bP).toBeUndefined()
-        expect(this.c).toBe(3)
+        expect(this.c).toBe(4)
         expect(this.cP2).toBeUndefined()
         expect(this.z).toBe(4)
       },
@@ -517,7 +579,7 @@ describe('api: options', () => {
         return `${this.a}${this.b}${this.c}`
       }
     })
-    expect(renderToString(h(Comp))).toBe(`123`)
+    expect(renderToString(h(Comp))).toBe(`124`)
     expect(calls).toEqual([
       'mixinA created',
       'mixinB created',
@@ -546,7 +608,8 @@ describe('api: options', () => {
     const Base = {
       data() {
         return {
-          a: 1
+          a: 1,
+          b: 1
         }
       },
       methods: {
@@ -582,7 +645,8 @@ describe('api: options', () => {
     const Base = {
       data() {
         return {
-          a: 1
+          a: 1,
+          x: 'base'
         }
       },
       methods: {
@@ -595,22 +659,23 @@ describe('api: options', () => {
         calls.push('base')
       }
     }
-    const Base2 = {
+    const Mixin = {
       data() {
         return {
-          b: true
+          b: true,
+          x: 'mixin'
         }
       },
       mounted(this: any) {
         expect(this.a).toBe(1)
         expect(this.b).toBeTruthy()
         expect(this.c).toBe(2)
-        calls.push('base2')
+        calls.push('mixin')
       }
     }
     const Comp = defineComponent({
       extends: defineComponent(Base),
-      mixins: [defineComponent(Base2)],
+      mixins: [defineComponent(Mixin)],
       data() {
         return {
           c: 2
@@ -620,12 +685,121 @@ describe('api: options', () => {
         calls.push('comp')
       },
       render() {
-        return `${this.a}${this.b}${this.c}`
+        return `${this.a}${this.b}${this.c}${this.x}`
       }
     })
 
-    expect(renderToString(h(Comp))).toBe(`1true2`)
-    expect(calls).toEqual(['base', 'base2', 'comp'])
+    expect(renderToString(h(Comp))).toBe(`1true2mixin`)
+    expect(calls).toEqual(['base', 'mixin', 'comp'])
+  })
+
+  test('beforeCreate/created in extends and mixins', () => {
+    const calls: string[] = []
+    const BaseA = {
+      beforeCreate() {
+        calls.push('beforeCreateA')
+      },
+      created() {
+        calls.push('createdA')
+      }
+    }
+    const BaseB = {
+      extends: BaseA,
+      beforeCreate() {
+        calls.push('beforeCreateB')
+      },
+      created() {
+        calls.push('createdB')
+      }
+    }
+
+    const MixinA = {
+      beforeCreate() {
+        calls.push('beforeCreateC')
+      },
+      created() {
+        calls.push('createdC')
+      }
+    }
+    const MixinB = {
+      mixins: [MixinA],
+      beforeCreate() {
+        calls.push('beforeCreateD')
+      },
+      created() {
+        calls.push('createdD')
+      }
+    }
+
+    const Comp = {
+      extends: BaseB,
+      mixins: [MixinB],
+      beforeCreate() {
+        calls.push('selfBeforeCreate')
+      },
+      created() {
+        calls.push('selfCreated')
+      },
+      render() {}
+    }
+
+    renderToString(h(Comp))
+    expect(calls).toEqual([
+      'beforeCreateA',
+      'beforeCreateB',
+      'beforeCreateC',
+      'beforeCreateD',
+      'selfBeforeCreate',
+      'createdA',
+      'createdB',
+      'createdC',
+      'createdD',
+      'selfCreated'
+    ])
+  })
+
+  test('flatten merged options', async () => {
+    const MixinBase = {
+      msg1: 'base'
+    }
+    const ExtendsBase = {
+      msg2: 'base'
+    }
+    const Mixin = {
+      mixins: [MixinBase]
+    }
+    const Extends = {
+      extends: ExtendsBase
+    }
+    const Comp = defineComponent({
+      extends: defineComponent(Extends),
+      mixins: [defineComponent(Mixin)],
+      render() {
+        return `${this.$options.msg1},${this.$options.msg2}`
+      }
+    })
+
+    expect(renderToString(h(Comp))).toBe('base,base')
+  })
+
+  test('options defined in component have higher priority', async () => {
+    const Mixin = {
+      msg1: 'base'
+    }
+    const Extends = {
+      msg2: 'base'
+    }
+    const Comp = defineComponent({
+      msg1: 'local',
+      msg2: 'local',
+      extends: defineComponent(Extends),
+      mixins: [defineComponent(Mixin)],
+      render() {
+        return `${this.$options.msg1},${this.$options.msg2}`
+      }
+    })
+
+    expect(renderToString(h(Comp))).toBe('local,local')
   })
 
   test('accessing setup() state from options', async () => {

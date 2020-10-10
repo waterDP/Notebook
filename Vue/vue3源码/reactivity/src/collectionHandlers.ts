@@ -6,7 +6,8 @@ import {
   capitalize,
   hasOwn,
   hasChanged,
-  toRawType
+  toRawType,
+  isMap
 } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
@@ -20,7 +21,7 @@ const toReactive = <T extends unknown>(value: T): T =>
   isObject(value) ? reactive(value) : value
 
 const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value) : value
+  isObject(value) ? readonly(value as Record<any, any>) : value
 
 const toShallow = <T extends unknown>(value: T): T => value
 
@@ -59,7 +60,9 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
     !isReadonly && track(rawTarget, TrackOpTypes.HAS, key)
   }
   !isReadonly && track(rawTarget, TrackOpTypes.HAS, rawKey)
-  return target.has(key) || target.has(rawKey)
+  return key === rawKey
+    ? target.has(key)
+    : target.has(key) || target.has(rawKey)
 }
 
 function size(target: IterableCollections, isReadonly = false) {
@@ -73,7 +76,7 @@ function add(this: SetTypes, value: unknown) {
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
-  const result = proto.add.call(target, value)
+  const result = target.add(value)
   if (!hadKey) {
     trigger(target, TriggerOpTypes.ADD, value, value)
   }
@@ -83,7 +86,7 @@ function add(this: SetTypes, value: unknown) {
 function set(this: MapTypes, key: unknown, value: unknown) {
   value = toRaw(value)
   const target = toRaw(this)
-  const { has, get, set } = getProto(target)
+  const { has, get } = getProto(target)
 
   let hadKey = has.call(target, key)
   if (!hadKey) {
@@ -94,7 +97,7 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   }
 
   const oldValue = get.call(target, key)
-  const result = set.call(target, key, value)
+  const result = target.set(key, value)
   if (!hadKey) {
     trigger(target, TriggerOpTypes.ADD, key, value)
   } else if (hasChanged(value, oldValue)) {
@@ -105,7 +108,7 @@ function set(this: MapTypes, key: unknown, value: unknown) {
 
 function deleteEntry(this: CollectionTypes, key: unknown) {
   const target = toRaw(this)
-  const { has, get, delete: del } = getProto(target)
+  const { has, get } = getProto(target)
   let hadKey = has.call(target, key)
   if (!hadKey) {
     key = toRaw(key)
@@ -116,7 +119,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
 
   const oldValue = get ? get.call(target, key) : undefined
   // forward the operation before queueing reactions
-  const result = del.call(target, key)
+  const result = target.delete(key)
   if (hadKey) {
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
   }
@@ -127,12 +130,12 @@ function clear(this: IterableCollections) {
   const target = toRaw(this)
   const hadItems = target.size !== 0
   const oldTarget = __DEV__
-    ? target instanceof Map
+    ? isMap(target)
       ? new Map(target)
       : new Set(target)
     : undefined
   // forward the operation before queueing reactions
-  const result = getProto(target).clear.call(target)
+  const result = target.clear()
   if (hadItems) {
     trigger(target, TriggerOpTypes.CLEAR, undefined, undefined, oldTarget)
   }
@@ -145,17 +148,17 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
     callback: Function,
     thisArg?: unknown
   ) {
-    const observed = this
-    const target = toRaw(observed)
+    const observed = this as any
+    const target = observed[ReactiveFlags.RAW]
+    const rawTarget = toRaw(target)
     const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
-    !isReadonly && track(target, TrackOpTypes.ITERATE, ITERATE_KEY)
-    // important: create sure the callback is
-    // 1. invoked with the reactive map as `this` and 3rd arg
-    // 2. the value received should be a corresponding reactive/readonly.
-    function wrappedCallback(value: unknown, key: unknown) {
+    !isReadonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
+    return target.forEach((value: unknown, key: unknown) => {
+      // important: make sure the callback is
+      // 1. invoked with the reactive map as `this` and 3rd arg
+      // 2. the value received should be a corresponding reactive/readonly.
       return callback.call(thisArg, wrap(value), wrap(key), observed)
-    }
-    return getProto(target).forEach.call(target, wrappedCallback)
+    })
   }
 }
 
@@ -183,9 +186,10 @@ function createIterableMethod(
   ): Iterable & Iterator {
     const target = (this as any)[ReactiveFlags.RAW]
     const rawTarget = toRaw(target)
-    const isMap = rawTarget instanceof Map
-    const isPair = method === 'entries' || (method === Symbol.iterator && isMap)
-    const isKeyOnly = method === 'keys' && isMap
+    const targetIsMap = isMap(rawTarget)
+    const isPair =
+      method === 'entries' || (method === Symbol.iterator && targetIsMap)
+    const isKeyOnly = method === 'keys' && targetIsMap
     const innerIterator = target[method](...args)
     const wrap = isReadonly ? toReadonly : isShallow ? toShallow : toReactive
     !isReadonly &&

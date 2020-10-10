@@ -22,6 +22,20 @@ function log(constructor) {
   }
 }
 
+function Greeter(greeting) {
+  return function(target) {
+    target.prototype.greet = function() {
+      console.log(greeting)
+    }
+  }
+}
+
+@Greeter('Hello World')
+class Greeting {}
+
+let myGreeting = new Greeter()
+myGreeting.greet()
+
 /**
  * 属性装饰器
  * @param target 对于静态成员来说是类的构造函数，对于实例成员来说是类的原型对象

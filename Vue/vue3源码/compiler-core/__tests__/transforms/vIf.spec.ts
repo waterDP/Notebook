@@ -93,10 +93,12 @@ describe('compiler: v-if', () => {
       expect((node.branches[0].children[0] as ElementNode).tagType).toBe(
         ElementTypes.COMPONENT
       )
+      // #2058 since a component may fail to resolve and fallback to a plain
+      // element, it still needs to be made a block
       expect(
         ((node.branches[0].children[0] as ElementNode)!
           .codegenNode as VNodeCall)!.isBlock
-      ).toBe(false)
+      ).toBe(true)
     })
 
     test('v-if + v-else', () => {
@@ -602,6 +604,27 @@ describe('compiler: v-if', () => {
       const branch1 = codegenNode.consequent as VNodeCall
       expect(branch1.directives).not.toBeUndefined()
       expect(branch1.props).toMatchObject(createObjectMatcher({ key: `[0]` }))
+    })
+
+    test('with spaces between branches', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithIfTransform(
+        `<div v-if="ok"/> <div v-else-if="no"/> <div v-else/>`
+      )
+      expect(codegenNode.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[0]` })
+      })
+      const branch = codegenNode.alternate as ConditionalExpression
+      expect(branch.consequent).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[1]` })
+      })
+      expect(branch.alternate).toMatchObject({
+        tag: `"div"`,
+        props: createObjectMatcher({ key: `[2]` })
+      })
     })
 
     test('with comments', () => {

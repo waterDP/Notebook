@@ -8,7 +8,7 @@ import {
   Fragment,
   unref
 } from '@vue/runtime-core'
-import { ShapeFlags } from '@vue/shared/src'
+import { ShapeFlags } from '@vue/shared'
 
 export function useCssVars(
   getter: (ctx: ComponentPublicInstance) => Record<string, string>,
@@ -40,14 +40,12 @@ function setVarsOnVNode(
   prefix: string
 ) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
-    const { isResolved, isHydrating, fallbackTree, subTree } = vnode.suspense!
-    if (isResolved || isHydrating) {
-      vnode = subTree
-    } else {
-      vnode.suspense!.effects.push(() => {
-        setVarsOnVNode(subTree, vars, prefix)
+    const suspense = vnode.suspense!
+    vnode = suspense.activeBranch!
+    if (suspense.pendingBranch && !suspense.isHydrating) {
+      suspense.effects.push(() => {
+        setVarsOnVNode(suspense.activeBranch!, vars, prefix)
       })
-      vnode = fallbackTree
     }
   }
 

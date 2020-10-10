@@ -16,7 +16,9 @@ import {
   isString,
   hasChanged,
   NOOP,
-  remove
+  remove,
+  isMap,
+  isSet
 } from '@vue/shared'
 import {
   currentInstance,
@@ -159,9 +161,10 @@ function doWatch(
   }
 
   let getter: () => any
-  const isRefSource = isRef(source)
-  if (isRefSource) {
+  let forceTrigger = false
+  if (isRef(source)) {
     getter = () => (source as Ref).value
+    forceTrigger = !!(source as Ref)._shallow
   } else if (isReactive(source)) {
     getter = () => source
     deep = true
@@ -240,7 +243,7 @@ function doWatch(
     if (cb) {
       // watch(source, cb)
       const newValue = runner()
-      if (deep || isRefSource || hasChanged(newValue, oldValue)) {
+      if (deep || forceTrigger || hasChanged(newValue, oldValue)) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()
@@ -266,9 +269,10 @@ function doWatch(
   let scheduler: (job: () => any) => void
   if (flush === 'sync') {
     scheduler = job
-  } else if (flush === 'pre') {
-    // ensure it's queued before component updates (which have positive ids)
-    job.id = -1
+  } else if (flush === 'post') {
+    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
+  } else {
+    // default: 'pre'
     scheduler = () => {
       if (!instance || instance.isMounted) {
         queuePreFlushCb(job)
@@ -278,8 +282,6 @@ function doWatch(
         job()
       }
     }
-  } else {
-    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   }
 
   const runner = effect(getter, {
@@ -298,6 +300,8 @@ function doWatch(
     } else {
       oldValue = runner()
     }
+  } else if (flush === 'post') {
+    queuePostRenderEffect(runner, instance && instance.suspense)
   } else {
     runner()
   }
@@ -329,16 +333,18 @@ function traverse(value: unknown, seen: Set<unknown> = new Set()) {
     return value
   }
   seen.add(value)
-  if (isArray(value)) {
+  if (isRef(value)) {
+    traverse(value.value, seen)
+  } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
       traverse(value[i], seen)
     }
-  } else if (value instanceof Map) {
-    value.forEach((v, key) => {
+  } else if (isMap(value)) {
+    value.forEach((_, key) => {
       // to register mutation dep for existing keys
       traverse(value.get(key), seen)
     })
-  } else if (value instanceof Set) {
+  } else if (isSet(value)) {
     value.forEach(v => {
       traverse(v, seen)
     })
