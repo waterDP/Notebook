@@ -20,3 +20,20 @@
 - vue-style-loader(vue解析样式，插入到页面中) css-loader
 - vue-loader vue-template-compiler
 - html-webpack-plugin
+
+vue3中的setup函数是在beforeCreate之前调用的
+setup函数只能是同步的，不能是异步的
+composition api
+ref
+reactive
+isRef
+isReactive
+shallowRef 非递归监听
+shallowReactive
+triggerRef
+toRaw 取出原始数据
+markRaw
+toRef
+toRefs
+customRef
+readonly

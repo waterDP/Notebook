@@ -11,34 +11,29 @@
  */
 const remove = el => el.parentNode.removeChild(el)
 
-export default {
+const auth = {
   inserted(el, binding, vnode) {
     const {$root: vm} = vnode.context
-    // 获取当前用户拥有的权限列表（根据自身业务获取）
-    const accessAuthData = vm.$store.state.accessAuthData
-    // 判断非所有权限时进行权限校验
-    if (accessAuthData !== '*') {
-      let {value, modifiers} = binding
-      // 判断是否为字符串或数组类型
-      if (!(_.isString(value)) || _.isArray(value)) {
-        remove(el)
-        return console.error('please set the value to a string or array.')
-      }
-
-      // 非数组时设置为数组
-      if (_.isString(value)) {
-        value = [value]
-      }
-
-      /**
-       * 判断条件
-       * -修饰符为every时 value数组只要有一个元素不存在accessAuthData权限集中，隐藏元素
-       * -修饰符为some或者没有时，value数组所有元素都不存在accessAuth权限集内，隐藏元素
-       */
-      if ((modifiers.every && (value.some(v => !accessAuthData.includes(v)))) ||
-        (!modifiers.every && (value.every(v => !accessAuthData.includes(v))))) {
-          remove(el)
+    const permissions = vm.$store.state.auth.permissions
+    if (_.isArray(permissions) && permissions.length) {
+      const {value, modifiers} = binding
+      
+      if (_.isString(value) || _.isArray(value)) {
+        const perms = _.isString(value) ? [value] : value
+        if (modifiers.every) {
+          perms.every(v => permissions.includes(v)) || remove(el)
+        } else {
+          perms.some(v => permissions.includes(v)) || remove(el)
         }
+      }
     }
   }
+}
+
+const install = Vue => {
+  Vue.directive('auth', auth)
+}
+
+export default {
+  install
 }
