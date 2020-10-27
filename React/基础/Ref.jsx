@@ -71,25 +71,33 @@ const FancyButton = React.forwardRef((props, ref) => {
   </button>
 })
 
+// 你可以直接获取DOM button的ref
+function demo() {
+  const ref = React.createRef()
+  return (
+    <FancyButton ref={ref}>Click me!</FancyButton>
+  )
+}
+
+
 // ref.current
 
 // todo 在高阶组件中转发refs
-function logProps(Component) {
+function logProps(WrappedComponent) {
   class LogProps extends React.Component {
-    componentDidMount(prevProps) {
-      console.log('old props:', prevProps)
-      console.log('new Props:', this.props)
+    componentDidUpdate(preProps) {
+      console.log('old props', prevProps)
+      console.log('new props', this.props)
     }
+
     render() {
-      const {forwardRef, ...rest} = this.props
-      // 将自定义的prop属性'forwardRef'定义为ref
-      return <Component ref={forwardRef} {...rest} />
+      const {forwardedRef, ...rest} = this.props
+      // 将自定义的prop属性“forwarded”定义为ref
+      return <WrappedComponent ref={forwardedRef} {...rest} />
     }
   }
-  // 注意React.forwardRef回调的第二个参数ref
-  // 我们可以将其作为常规prop属性传递给LogProps，例如forwardRef
-  // 然后它就可以被挂载到被LogProps包裹的子组件上
   return React.forwardRef((props, ref) => {
-    return <LogProps {...props} forwardRef={ref} />
+    return <LogProps {...props} forwardedRef={ref} />
   })
 }
+

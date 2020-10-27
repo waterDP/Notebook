@@ -47,7 +47,7 @@ class App extends React.Component {
 }
 
 // 中间的组件再也不必指明往下传递theme了
-function Toolbar(props) {
+function Toolbar() {
   return (
     <div>
       <ThemedButton />

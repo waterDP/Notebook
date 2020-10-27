@@ -1,0 +1,33 @@
+{
+  "name": "@nestjs/common",
+  "version": "7.4.4",
+  "description": "Nest - modern, fast, powerful node.js web framework (@common)",
+  "author": "Kamil Mysliwiec",
+  "homepage": "https://nestjs.com",
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/nest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nestjs/nest"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "axios": "0.20.0",
+    "cli-color": "2.0.0",
+    "iterare": "1.2.1",
+    "tslib": "2.0.1",
+    "uuid": "8.3.0"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.1.12",
+    "rxjs": "^6.0.0"
+  },
+  "__npminstall_done": "Mon Oct 26 2020 16:30:20 GMT+0800 (GMT+08:00)",
+  "_from": "@nestjs/common@7.4.4",
+  "_resolved": "https://registry.npm.taobao.org/@nestjs/common/download/@nestjs/common-7.4.4.tgz"
+}
