@@ -10,12 +10,18 @@ mongoose.connect('mongodb://127.0.0.1:27017/user', {useNewUrlParser: true}, err 
 const UserSchema = mongoose.Schema({
   name: {
     type: String,
-    trim: true  // ! 数据库保存值会去掉前后空格
+    trim: true,  // ! 数据库保存值会去掉前后空格
+    required: true // ! 此字段必须传入
   },
-  age: Number,
+  age: {
+    type: Number,
+    max: 150,
+    min: 0
+  },
   status: {
     type: Number,
-    default: 1
+    default: 1,
+    enum: [0, 1, 2, 3] // ! 值必须在这个范围内 枚举
   },
   param: {
     type: String,

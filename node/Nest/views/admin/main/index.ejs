@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<!--The content below is only a placeholder and can be replaced.-->
+
+<link rel="stylesheet" href="/bootstrap/css/bootstrap.css">
+
+<link rel="stylesheet" href="/css/basic.css">
+
+<script type="text/javascript" src="/bootstrap/js/jquery-1.10.1.js"></script>
+
+<script type="text/javascript" src="/js/base.js"></script>
+
+
+
+
+<nav class="navbar navbar-inverse" role="navigation">
+    <div class="container-fluid">
+        <div class="navbar-header">
+
+            <img src="images/node.jpg" height="44px;" />
+
+        </div>
+        <div class="collapse navbar-collapse" id="example-navbar-collapse">           
+            <ul class="nav navbar-nav navbar-right">
+                <li><a>欢迎您,admin</a>
+                </li>
+                <li><a href="#">安全退出</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-2">
+         	<ul class="aside">
+         		
+         		<li>
+         			<h4>管理员管理</h4>
+         			
+         			<ul>
+         				<li  class="list-group-item"> <a href="/"> 管理员列表</a></li>
+         				
+         				<li class="list-group-item"> <a href="/add">增加管理员</a></li>
+         			</ul>
+         		</li>
+         		<li>
+         			<h4>分类管理</h4>
+         			<ul>
+         				<li  class="list-group-item"> <a href="/"> 商品分类列表</a></li>
+         				
+         				<li class="list-group-item"> <a href="/add" >增加商品分类</a></li>
+         			</ul>
+         		</li>
+         		<li>
+         			<h4>商品管理</h4>
+         			
+         			<ul>
+         				<li  class="list-group-item"> <a href="/"> 商品列表</a></li>
+         				
+         				<li class="list-group-item"> <a href="/add">增加商品</a></li>
+         			</ul>
+         		</li>
+         		
+         		<li>
+         			<h4>轮播图管理</h4>
+         			
+         			<ul>
+         				<li  class="list-group-item"> <a href="/">轮播图列表</a></li>
+         				
+         				<li class="list-group-item"> <a href="/add">轮播图商品</a></li>
+         			</ul>
+         		</li>
+         		
+         	</ul>
+			
+          
+        </div>
+        <div class="col-sm-10">
+           
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    搜索
+                </div>
+                <div class="panel-body">
+                    <form role="form" class="form-inline">
+                        <div class="form-group">
+                            <label for="name">名称</label>
+                            <input type="text" class="form-control" id="name" placeholder="请输入名称">
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-default">开始搜索</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!--
+                列表展示
+            -->
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                    <tr class="th">
+                        <th>编号</th>
+                        <th>图标</th>
+                        <th>名称</th>
+                        <th>价格</th>
+                        <th>邮费</th>
+                       
+                        <th class="text-center">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    <tr>
+                        <td>1</td>
+                        <td>图标</td>
+                        <td>背包1111111</td>
+                        <td>20元</td>
+                        <td>10元</td>
+                      
+                        <td class="text-center">修改  删除</td>
+                    </tr>
+					   <tr>
+                        <td>2</td>
+                        <td>图标</td>
+                        <td>thinpad笔记本电脑</td>
+                        <td>20元</td>
+                        <td>10元</td>
+                      
+                        <td class="text-center">修改  删除</td>
+                    </tr>
+					   <tr>
+                        <td>3</td>
+                        <td>图标</td>
+                        <td>iphone7</td>
+                        <td>20元</td>
+                        <td>10元</td>
+                      
+                        <td class="text-center">修改  删除</td>
+                    </tr>
+
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

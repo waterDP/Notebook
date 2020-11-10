@@ -69,5 +69,3 @@ post 请示的参数获取和GET请求不同。Koa没有封装获取POST请求�
   ```
 
   koa-views / koa-static模块引擎
-
-
