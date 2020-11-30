@@ -1,3 +1,7 @@
+/**
+ * 有限状态机
+ */
+
 const LEFTERS = /[a-z0-9]/
 const tokens = []
 const {
