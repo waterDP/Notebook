@@ -1,8 +1,15 @@
 /**
  * 正则文法
  */
-let RegExpObject = /([0-9]+)|(\+)|(\*)/g
-let tokenNames = ['number', 'plus', 'multiply']
+let RegExpObject = /([0-9]+)|(\+)|(-)|(\*)|(\/)/g
+let tokenTypes = require('./tokenTypes')
+let tokenNames = [
+  tokenTypes.NUMBER,
+  tokenTypes.PLUS,
+  tokenTypes.MINUS,
+  tokenTypes.MULTIPLY,
+  tokenTypes.DIVIDE
+] 
 
 function* tokenizer(script) {
   while(true) {

@@ -9,5 +9,4 @@ function parse(script) {
   return ast
 }
 
-
 module.exports = parse

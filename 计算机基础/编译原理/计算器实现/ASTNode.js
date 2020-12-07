@@ -11,3 +11,5 @@ class ASTNode {
       this.children = [childNode]
   }
 }
+
+module.exports = ASTNode
