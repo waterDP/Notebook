@@ -1,14 +1,18 @@
 /**
  * 正则文法
  */
-let RegExpObject = /([0-9]+)|(\+)|(-)|(\*)|(\/)/g
+const TokenReader = require('./TokenReader')
+
+let RegExpObject = /([0-9]+)|(\+)|(-)|(\*)|(\/)|(\()|(\))/g
 let tokenTypes = require('./tokenTypes')
 let tokenNames = [
   tokenTypes.NUMBER,
   tokenTypes.PLUS,
   tokenTypes.MINUS,
   tokenTypes.MULTIPLY,
-  tokenTypes.DIVIDE
+  tokenTypes.DIVIDE,
+  tokenTypes.LEFT_PARA,
+  tokenTypes.RIGHT_PARA
 ] 
 
 function* tokenizer(script) {
@@ -30,30 +34,6 @@ function tokenize(script) {
     tokens.push(token)
   }
   return new TokenReader(tokens)
-}
-
-class TokenReader {
-  constructor(tokens) {
-    this.tokens = tokens
-    this.pos = 0
-  }
-  // 读取一个token,或者说消耗丢一个token
-  read(){
-    if (this.pos < this.tokens.length) {
-      return this.tokens[this.pos++] // 读完后pos会自增，相当于用掉了这个token
-    }
-    return null
-  }
-  peek() {
-    if (this.pos < this.tokens.length) {
-      return this.tokens[this.pos]
-    }
-    return null
-  }
-  // 倒退
-  unread() {
-    (this.pos > 0) && this.pos--
-  }
 }
 
 module.exports = tokenize

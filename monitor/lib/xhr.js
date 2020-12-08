@@ -8,6 +8,7 @@ export function injectXHR() {
 		if (!url.match(/logstores/) && !url.match(/sockjs/)) {
 			this.logData = { method, url, async }
 		}
+		// todo 这里可以处理自己的逻辑 比如数据上报
 		return oldOpen.apply(this, arguments)
 	}
 	//axios 背后有两种 如果 browser XMLHttpRequest  node http

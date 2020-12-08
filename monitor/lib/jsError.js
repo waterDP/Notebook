@@ -31,7 +31,7 @@ export function injectJsError() {
 			})
 		}
 	}, true)
-
+	
 	window.addEventListener('unhandledrejection', (event) => {
 		console.log(event)
 		let lastEvent = getLastEvent() //最后一个交互事件
