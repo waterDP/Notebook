@@ -72,7 +72,7 @@ function parse(tokens) {
         type: nodeTypes.JSXAttribute,
         name: {
           type: nodeTypes.JSXIdentifier,
-          value: token.value 
+          name: token.value 
         },
         value: {
           type: nodeTypes.Literal,

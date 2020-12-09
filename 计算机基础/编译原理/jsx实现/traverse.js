@@ -1,17 +1,30 @@
 const nodeTypes = require('./nodeTypes')
+function replace(parent, oldNode, newNode) {
+  if (parent) {
+    for (const key in parent) {
+      if (parent.hasOwnProperty(key)) {
+        if (parent[key] === oldNode) {
+          parent[key] = newNode
+        }
+      }
+    }
+  }
+}
+
 function traverse(ast, visitor) {
   function traverseArray(array, parent) {
     array.forEach(child => traverseNode(child, parent))
   }
   function traverseNode(node, parent) {
+    let replaceWith = replace.bind(null, parent, node)
     let method = visitor[node.type]
     // Babel
     // 当开始准备遍历子节点的时候执行进入方法
     if (method) {
       if (typeof method === 'function') {
-        method({node}, parent)
+        method({node, replaceWith}, parent)
       } else {
-        method.enter({node}, parent)
+        method.enter({node, replaceWith}, parent)
       }
     }
     switch(node.type) {
@@ -46,7 +59,7 @@ function traverse(ast, visitor) {
     }
     // 当遍历结束之后执行结束方法
     if (method && method.exit) {
-      method.exit({node}, parent)
+      method.exit({node, replaceWith}, parent)
     }
   }
   traverseNode(ast)
