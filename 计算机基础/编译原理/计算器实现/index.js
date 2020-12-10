@@ -6,11 +6,9 @@
 const parse = require('./parse')
 const evaluate = require('./evaluate')
 
-const sourceCode = '(3-2)*3*(2+2)'
+const sourceCode = '4/2/2'
 
 let ast = parse(sourceCode)
-
-console.log(ast)
 
 let result = evaluate(ast)
 

@@ -3,88 +3,64 @@ const ASTNode = require('./ASTNode')
 const tokenTypes = require('./tokenTypes')
 
 /**
- * additive -> minus|minus + additive 包括+
- * minus -> multiple|multiple - minus 包括-
- * multiple -> divide|divide - multiple 包括*
- * divide -> primary|primary / divide 包括/
+ * additive -> multiple|multiple [+ -] additive 包括 + -
+ * multiple -> primary|primary [* /] multiple 包括 * /
  * primary ->  NUMBER | (additive) 基础规则
+ */
+/**
+ * 我们用扩展的巴科斯范式来表示方法
+ * *正则表达式，表示0个或多个
+ * additive -> multiple (+ multiple)*
+ * multiple -> number (* number)*
  */
 function toAST(tokenReader) {
   let rootNode = new ASTNode(nodeTypes.Program)
 
   // 开始推导
   let child = additive(tokenReader)
-  child  && rootNode.appendChild(child)
+  child && rootNode.appendChild(child)
   return rootNode
 }
 
+// additive -> multiple (+ multiple)*
 function additive(tokenReader) {
-  let child1 = minus(tokenReader)
-  let node = child1
-  let token = tokenReader.peek() // 看看下一个符号是不是加号
-  if (child1 && token) {
-    if (token.type === tokenTypes.PLUS) { // 如果后面是加号的话
-      token = tokenReader.read()
-      let child2 = additive(tokenReader)
-      if (child2) {
-        node = new ASTNode(nodeTypes.Additive)
-        node.appendChild(child1)
-        node.appendChild(child2)
-      }
-    } 
-  }
-  return node
-}
-
-function minus(tokenReader) {
   let child1 = multiple(tokenReader)
   let node = child1
-  let token = tokenReader.peek() // 看看下一个符号是不是减号
-  if (child1 && token) {
-    if (token.type === tokenTypes.MINUS) { // 如果后面是减号的话
-      token = tokenReader.read()
-      let child2 = minus(tokenReader)
-      if (child2) {
-        node = new ASTNode(nodeTypes.Minus)
+  if (child1) {
+    while (true) {
+      let token = tokenReader.peek() // 看看下一个符号是不是加号或减号
+      if (token && 
+        (token.type === tokenTypes.PLUS || token.type === tokenTypes.MINUS)) { // 如果后面是加号或减号的话
+        token = tokenReader.read()
+        let child2 = multiple(tokenReader)
+        node = new ASTNode(token.type === tokenTypes.PLUS ? nodeTypes.Additive : nodeTypes.Minus)
         node.appendChild(child1)
         node.appendChild(child2)
+        child1 = node
+      } else {
+        break
       }
     }
   }
   return node
 }
-
 
 function multiple(tokenReader) {
-  let child1 = divide(tokenReader)
+  let child1 = primary(tokenReader)
   let node = child1
-  let token = tokenReader.peek()
-  if (child1 && token) {
-    if (token.type === tokenTypes.MULTIPLY) {
-      token = tokenReader.read()
-      let child2 = multiple(tokenReader)
-      if (child2) {
-        node = new ASTNode(nodeTypes.Multiplicative)
+  if (child1) {
+    while (true) {
+      let token = tokenReader.peek() // 看看下一个符号是不是乘号或除号
+      if (token && 
+        (token.type === tokenTypes.MULTIPLY || token.type === tokenTypes.DIVIDE)) { // 如果后面是乘号或除号的话
+        token = tokenReader.read()
+        let child2 = primary(tokenReader)
+        node = new ASTNode(token.type === tokenTypes.MULTIPLY ? nodeTypes.Multiplicative : nodeTypes.Divide)
         node.appendChild(child1)
         node.appendChild(child2)
-      }
-    }
-  }
-  return node
-}
-
-function divide(tokenReader) {
-  let child1 = primary (tokenReader)
-  let node = child1
-  let token = tokenReader.peek()
-  if (child1 && token) {
-    if (token.type === tokenTypes.DIVIDE) {
-      token = tokenReader.read()
-      let child2 = divide(tokenReader )
-      if (child2) {
-        node = new ASTNode(nodeTypes.Divide)
-        node.appendChild(child1)
-        node.appendChild(child2)
+        child1 = node
+      } else {
+        break
       }
     }
   }
