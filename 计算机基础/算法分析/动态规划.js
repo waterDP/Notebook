@@ -39,7 +39,7 @@ function rob(nums) {
  * 如果没有任何一种硬币组合能组成总金额，返回-1 
  */
 // dp[0] = 0 全额为零时不需要硬币
-// dp[n] = min(dp[n], dp[n-coin1]+1, dp[n - coin2], ...) 金额为n时，硬币数等于(n-coin)+1中所需硬币最少的组合
+// dp[n] = min(dp[n], dp[n-coin1]+1, dp[n - coin2] + 1, ...) 金额为n时，硬币数等于(n-coin)+1中所需硬币最少的组合
 function coinChange(coins, amount) {
   const dp = new Array(amount + 1).fill(Infinity)
   dp[0] = 0
