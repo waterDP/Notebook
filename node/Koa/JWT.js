@@ -105,6 +105,6 @@ app.listen(3000)
 
 // 前端
 axios.interceptors.request.use(config => {
-  config.headers.authorization = 'Bearer'// +token
+  config.headers.authorization = 'Bearer '// +token
   return config
 })
