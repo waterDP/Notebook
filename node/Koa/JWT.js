@@ -37,13 +37,13 @@ let jwt = {
     let r = crypto.createHmac('sha256', secret).update(content).digest('base64')
     return this.base64URLEscape(r)
   },
-  encode(username, secret) {
+  encode(payload, secret) {
     // 将head转化成 base64
     let header = this.toBase64({typ: 'JWT', alg: 'HS256'}) // 固定的head
     // 将payload转化成base64
-    let payload = this.toBase64(username)
+    let content = this.toBase64(payload)
     // 用head和payload放在一起组成一个签名
-    let sign = this.sign([header, payload].join('.'), secret)
+    let sign = this.sign([header, content].join('.'), secret)
     return [header, payload, sign].join('.')
   },
   decode(token) {

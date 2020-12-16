@@ -7,7 +7,6 @@
  */
 function fullPermutation(str) {
   let p = str.split('')
-  let pb = new Array(str.length).fill(false)
   const result = []
   const dfs = function(p, res) {
     if (res.length === p.length) {
@@ -31,3 +30,4 @@ function fullPermutation(str) {
 
 console.log(fullPermutation('abc'))
 
+// todo  BFS广度优先算法
