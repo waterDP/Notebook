@@ -85,7 +85,8 @@ const ConnectedCounter = connect(
 )(Counter);
 const ConnectedCounter2 = connect(
   state => state.counter2
-)(Counter2);
+)(Counter2)
+
 app.router(
   ({ app, history }) => (
     <Router history={history}>
@@ -95,5 +96,6 @@ app.router(
       </>
     </Router>
   )
-);
-app.start('#root');
+)
+
+app.start('#root')
