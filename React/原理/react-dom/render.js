@@ -1,4 +1,5 @@
 import { createDOM } from './createDOM'
+
 export function render(element, parent, componentInstance) {
   if (typeof element === 'string' || typeof element === 'number') {
     return parent.appendChild(document.createTextNode(element))

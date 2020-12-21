@@ -1,4 +1,12 @@
 import {render} from './render'
+import SyntheticEvent from './SyntheticEvent'
+
+// 合成事件
+let syntheticEvent = new SyntheticEvent
+
+document.addEventListener('click', event => syntheticEvent.trigger.bind('onclick', event))
+document.addEventListener('dblclick', event => syntheticEvent.trigger.bind('ondblclick', event))
+// ...
 
 export function createDOM(type, props, componentInstance) {
   let currentDOM = document.createElement(type)
@@ -15,7 +23,7 @@ export function createDOM(type, props, componentInstance) {
     } else if (propName === 'className') {
       currentDOM.className = props.className
     } else if (propName.slice(0, 2) === 'on') {
-      // todo 事件处理
+      syntheticEvent.on(propName.toLocaleLowerCase, currentDOM, props[[propName], componentInstance])
     } else {
       currentDOM.setAttribute(propName, props[propName])
     }
