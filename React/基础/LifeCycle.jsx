@@ -43,16 +43,17 @@ export class LifeCycle extends Component {
   componentWillUpdate() {
     console.log('6. 组件将要更新')
   }
-  componentDidUpdate() {
+  componentDidUpdate(prevProps, prevState, ...) {
     console.log('7. 组件更新完成')
   }
-  UNSAFE_componentWillReceiveProps(){}
-  componentWillReceiveProps() { // todo 属性发生改变
-    console.log('8. 属性将要更新')
-  }
-  componentWillUnmount() {
-    console.log('9. 组件即将卸载')
-  }
+  // UNSAFE_componentWillReceiveProps(){}
+  // componentWillReceiveProps() { // todo 属性发生改变
+  //   console.log('8. 属性将要更新')
+  // }
+  
+  // componentWillUnmount() {
+  //   console.log('9. 组件即将卸载')
+  // }
   add = () => {
     this.setState({ number: this.state.number + 1 })
   }
@@ -72,3 +73,15 @@ export class LifeCycle extends Component {
   }
 
 }
+
+
+/**
+ * ! 生命周期洋葱模型
+ *   parent.componentWillMount
+ *   parent.render
+ *     child.componentWillMount
+ *     child.render
+ *       ...
+ *     child.componentDidMount
+ *   parent.componentDidMount  
+ */

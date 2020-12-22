@@ -2,7 +2,11 @@
 class SyntheticEvent {
   constructor() {
     this.events = {}
-    this.syntheticEvent = {}
+    this.syntheticEvent = {} // 对原生事件的封装
+    this.isPersist = false
+  }
+  persist() {
+    this.isPersist = true
   }
   on = (type, dom, handler, componentInstance) => {
     let listeners = this.events
@@ -24,9 +28,8 @@ class SyntheticEvent {
 
         item.handler(this.syntheticEvent)
 
-
         // 在事件处理函数执行之后把isBatchingUpdate = false
-        this.syntheticEvent = {}
+        this.isPersist || (this.syntheticEvent = {})
         item.componentInstance && 
           (item.componentInstance.isBatchingUpdate = false, this.componentInstance.flushUpdateQueue())
       }

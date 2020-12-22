@@ -30,10 +30,16 @@ Component.prototype.flushUpdateQueue = () => {
 }
 
 function renderComponent(componentInstance) {
+  if (componentInstance.shouldComponentUpdate && !componentInstance.shouldComponentUpdate()) {
+    return  // 如果有shouldComponentUpdate函数并且返回值为 false的话，就什么都不做
+  }
+  // 将要更新
   let renderElement = componentInstance.render()
   // 得到新的DOM元素
-  let newDOM = createDOM(renderElement.type, renderElement.props, renderElement)
+  let newDOM = createDOM(renderElement)
   // 用新生成的DOM节点替换掉老的DOM节点
   componentInstance.dom.parentNode.replaceChild(newDOM, componentInstance.dom)
+  // ! 组件更新完成
+  componentInstance.componentDidUpdate && componentInstance.componentDidUpdate()
   componentInstance.dom = newDOM
 }
