@@ -15,7 +15,7 @@ export function render(element, parent, componentInstance) {
     props = element.props
   } else if (typeof type === 'function') {
     element = type(props)
-    type = element.type
+    type = element.type 
     props = element.props
   } 
   // 把React元素转换成真实的DOM元素
