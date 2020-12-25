@@ -6,8 +6,8 @@ export default function ({ dispatch, getState }) {
     return isPromise(action.payload) ? action.payload.then(result => {
       dispatch({ ...action, payload: result });
     }).catch((error) => {
-      dispatch({ ...action, payload: error, error: true });
-      return Promise.reject(error);
-    }) : next(action);
+      dispatch({ ...action, payload: error, error: true })
+      return Promise.reject(error)
+    }) : next(action)
   }
 }

@@ -9,4 +9,4 @@ function createThunkMiddleware(extraArgument) {
 }
 const thunk = createThunkMiddleware();
 thunk.withExtraArgument = createThunkMiddleware;
-export default thunk;
+export default thunk

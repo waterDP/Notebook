@@ -3,4 +3,4 @@ let logger = ({getState}) => next => action => {
   next(action)
   console.log('新状态', getState())
 }
-export default logger;
+export default logger
