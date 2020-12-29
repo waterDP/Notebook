@@ -18,8 +18,8 @@ export class Counter extends Component {
 
 // connect 负责连接仓库和组件
 export default connect(
-  state => state,
-  counter
+  state => state,  // mapStateToProps
+  counter   // mapDispatchToProps
 )(Counter);
 
 

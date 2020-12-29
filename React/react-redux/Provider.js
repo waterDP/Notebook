@@ -1,11 +1,11 @@
 import React, { Component } from 'react'
-import ReduxContext from './context';
-export default class Provider extends Component {
+import Context from './context'
+export default class extends Component {
   render() {
     return (
-      <ReduxContext.Provider value={{store: this.props.store}}>
+      <Context.Provider value={{ store: this.props.store }}>
         {this.props.children}
-      </ReduxContext.Provider>
+      </Context.Provider>
     )
   }
 }
