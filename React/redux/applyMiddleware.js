@@ -6,7 +6,7 @@ export default function applyMiddleware(...middlewareArr) { // [thunk,logger1]
 			let dispatch = () => { throw Error('现在还不能用!') }
 			let middlewareAPI = {
 				getState: store.getState,
-				dispatch: (...args) => dispatch(...args)
+				dispatch: action => dispatch(action)
 			}
 			const chain = middlewareArr.map(middleware => middleware(middlewareAPI))
 			//[thunk,logger1,store.dispatch]

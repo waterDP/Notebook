@@ -1,5 +1,5 @@
 // 通用的compose
-const compose = (...fns) => fns.reduce((f, g) => (...args) => f(g(...args)))
+// const compose = (...fns) => fns.reduce((f, g) => (...args) => f(g(...args)))
 
 function compose(...fns) {
   return fns.reduce(function(f, g) {
@@ -13,7 +13,7 @@ let toUpperCase = function(x) {
   return x.toUpperCase()
 }
 
-let exclaim = function(x)  {
+let exclaim = function(x) {
   return x + "!"
 }
 
