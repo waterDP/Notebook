@@ -1,12 +1,19 @@
 import isPlainObject from "./utils/isPlainObject";
 import ActionTypes from "./utils/actionTypes";
 
-export default function createStore(reducer, preloadedState) {
+export default function createStore(reducer, initialState, enhancer) {
 	if (typeof reducer !== 'function') {
 		throw new Error('reducer必须是一个函数')
 	}
+	if (typeof initialState === 'function' && typeof enhancer === 'undefined') {
+		enhancer = initialState
+		initialState = undefined
+	}
+	if (typeof enhancer !== 'undefined') {
+		return enhancer(createStore)(reducer, initialState)
+	}
 	let currentReducer = reducer // 当前的处理器
-	let currentState = preloadedState // 当前状态
+	let currentState = initialState // 当前状态
 	let currentListeners = [] // 定义一数组保存当前的监听函数
 	function getState() { // 返回当前状态
 		return currentState

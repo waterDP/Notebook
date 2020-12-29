@@ -20,3 +20,4 @@ export default function applyMiddleware(...middlewareArr) { // [thunk,logger1]
 } 
 
 // ! let store = applyMiddleware(middleware1, middleware2, ...)(createStore)(reducer) 
+// ? let store = createStore(reducer, applyMiddleware(middleware1, middleware2))
