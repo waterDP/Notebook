@@ -2,6 +2,8 @@ import React, { Component } from 'react'
 import { bindActionCreators } from 'redux'
 import Context from './context'
 
+// ! connect(mapStateToProps, mapDispatchToProps)(component)
+
 /**
  * @param {function} mapStateToProps
  * @param {function} mapDispatchToProps
@@ -17,7 +19,7 @@ export default function (mapStateToProps, mapDispatchToProps) {
       componentDidMount() {
         this.unsubcribe = this.context.store.subscribe(() => {
           this.setState(mapStateToProps(this.context.store.getState()))
-        });
+        })
       }
       componentWillUnmount() {
         this.unsubcribe()

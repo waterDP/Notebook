@@ -19,4 +19,4 @@ export default function applyMiddleware(...middlewareArr) { // [thunk,logger1]
 	}
 } 
 
-// let store = applyMiddleware(logger)(createStore)(reducer)
+// ! let store = applyMiddleware(logger)(createStore)(reducer) 
