@@ -14,7 +14,7 @@ export default function createSagaMiddleware() {
     }
     return { subscribe, publish }
   }
-  let channel = createChannel();
+  let channel = createChannel()
   function sagaMiddleware({ dispatch, getState }) {
     function run(generator, callback) {
       let it = typeof generator[Symbol.iterator] == 'function' ? generator : generator()
@@ -38,31 +38,31 @@ export default function createSagaMiddleware() {
                 next()
                 break
               case 'FORK':
-                let newTask = effect.task();
+                let newTask = effect.task()
                 run(newTask) // 如果是fork的话，就开启一个新的子进程去的执行
                 next(newTask) // 自己的saga会立刻继续执行而不会在此等待
                 break
               case 'CANCEL':
-                effect.task.return('任务直接结束');
+                effect.task.return('任务直接结束')
                 break
               case 'CALL':
-                effect.fn(...effect.args).then(next);
+                effect.fn(...effect.args).then(next)
                 break
               case 'CPS':
-                effect.fn(...effect.args, next);
+                effect.fn(...effect.args, next)
                 break
               case 'ALL':
                 function times(cb, length) {
-                  let count = 0;
+                  let count = 0
                   return function () {
                     if (++count === length) {
                       cb()
                     }
                   }
                 }
-                let fns = effect.fns;//2
-                let done = times(next, fns.length);
-                effect.fns.forEach(fn => run(fn, done));
+                let fns = effect.fns // 2
+                let done = times(next, fns.length)
+                effect.fns.forEach(fn => run(fn, done))
                 break
               default:
                 break
