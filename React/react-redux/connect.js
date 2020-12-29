@@ -33,7 +33,6 @@ export default function (mapStateToProps, mapDispatchToProps) {
         }
 
         return <WrappedComponent
-                dispatch={this.context.store.dispatch} 
                 {...this.state} 
                 {...actions} 
                 {...props}
