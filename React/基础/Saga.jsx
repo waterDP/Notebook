@@ -51,7 +51,6 @@ class Counter extends Component {
 
   render() {
     const {onIncrement, onDecrement, onIncrementAsync } = this.props
-    debugger
     return (
       <div>
         <button onClick={onIncrementAsync}>
@@ -101,11 +100,9 @@ const actions = {
     return {type: 'INCREMENT'}
   },
   decrement() {
-    debugger
     return {type: 'DECREMENT'}
   },
   incrementAsync() {
-    debugger
     return {type: 'INCREMENT_ASYNC'}
   }
 }
