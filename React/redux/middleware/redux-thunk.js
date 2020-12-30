@@ -11,6 +11,6 @@ function createThunkMiddleware(extraArgument) {
 		}
 	}
 }
-const thunk = createThunkMiddleware()
-thunk.withExtraArgument = createThunkMiddleware
+const thunk = createThunkMiddleware()  // thunk 这样使用是没有额外参数的版本
+thunk.withExtraArgument = createThunkMiddleware  // thunk.withExtraArgument(params) 这样是用额外参数的版本
 export default thunk
