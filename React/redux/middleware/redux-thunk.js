@@ -3,7 +3,8 @@ function createThunkMiddleware(extraArgument) {
 		return function (next) {
 			return function (action) {
 				if (typeof action === 'function') {
-					return action(dispatch, getState, extraArgument)
+					// todo 这里相当于外部不会再去调用store.dispatch方法，而、是把传入到action函数中，如果需要调用再去调用dispatch方法
+					return action(dispatch, getState, extraArgument) 
 				}
 
 				next(action)
