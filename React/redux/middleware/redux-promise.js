@@ -12,4 +12,4 @@ export default function ({ dispatch, getState }) {
       }) : next(action)
     }
   }
-}
+} 
