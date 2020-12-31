@@ -122,3 +122,10 @@ ReactDOM.render(
   />,
   document.getElementById('root')
 )
+
+/**
+ * ! effects
+ * takeEvery 监听每一个，即可并行处理多个相同action
+ * takeLatest 监听最后一个，并且前面的异步任务会被自动取消
+ * 
+ */
