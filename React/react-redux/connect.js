@@ -18,6 +18,7 @@ export default function (mapStateToProps, mapDispatchToProps) {
         this.state = mapStateToProps(context.store.getState())
       }
       componentDidMount() {
+        // todo 订阅状态变化 
         this.unsubcribe = this.context.store.subscribe(() => {
           this.setState(mapStateToProps(this.context.store.getState()))
         })
@@ -36,7 +37,7 @@ export default function (mapStateToProps, mapDispatchToProps) {
         return <WrappedComponent
                 {...this.state} 
                 {...actions} 
-                {...props}
+                {...this.props}
               />
       }
     }
