@@ -10,6 +10,8 @@
 - eventBus 可以任意组件中通信 只适合小规模的 通信  大规模会导致事件不好维护
 - slot 插槽的用法  slot-scope 数据插槽
 
+## vue中模块渲染的优先级为 el < template < render
+
 ## webpack 主要就是打包文件用的
 
 - 模块规范也是node中的语法 
