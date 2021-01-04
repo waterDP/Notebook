@@ -10,7 +10,8 @@ export function createContext(defaultValue) {
   }
 
   function Consumer(props) {
-    return props.children(contextValue)
+    const {child} = props
+    return child(contextValue)
   }
 
   return {
