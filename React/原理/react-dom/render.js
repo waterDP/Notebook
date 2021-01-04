@@ -1,10 +1,11 @@
 import { createDOM } from './createDOM'
 
+/** 
+ * 虚拟DOM转换成真实DOM，并插入到容器里
+ * @param {*} vdom 虚拟DOM
+ * @param {*} parent 插入的那个容器 
+ */
 export function render(element, parent, componentInstance) {
-  if (typeof element === 'string' || typeof element === 'number') {
-    return parent.appendChild(document.createTextNode(element))
-  }
-  
   let type = element.type, props = element.props
   let isReactComponent = !!type.prototype.isReactComponent  // 表示是否是React Class 组件
   if (isReactComponent) {

@@ -39,7 +39,7 @@ function renderComponent(componentInstance) {
   let newDOM = createDOM(renderElement)
   // 用新生成的DOM节点替换掉老的DOM节点
   componentInstance.dom.parentNode.replaceChild(newDOM, componentInstance.dom)
-  // ! 组件更新完成
+  // ! 组件更新完成 周期函数componentDidUpdate
   componentInstance.componentDidUpdate && componentInstance.componentDidUpdate()
   componentInstance.dom = newDOM
 }

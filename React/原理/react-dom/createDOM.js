@@ -46,7 +46,7 @@ function setProps(dom, props) {
 
 export function createDOM(element) {
   element = onlyOne(element)
-  let {$$typeof} = element
+  let {$$typeof, ref} = element
   let dom = null
   if (!$$typeof) {
     dom = document.createTextNode(element) 
@@ -54,7 +54,7 @@ export function createDOM(element) {
     dom = document.createTextNode(element.content)
   } else if ($$typeof === ELEMENT) {
     dom = createNativeDOM(element)
-  }
-  
+  } 
+  ref && (ref.current = dom)  // todo 处理ref属性
   return dom
 }

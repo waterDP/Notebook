@@ -4,7 +4,7 @@ import {ReactElement} from './vdom'
 export function createElement(type, config = {}, ...children) {
   let { key, ref, ...props } = config
   let $$typeof = null
-  if (typeof type === 'string') {
+  if (typeof type === 'string' || typeof type === 'number') {
     $$typeof = ELEMENT
   }
   props.children = children.map(item => {

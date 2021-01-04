@@ -10,7 +10,7 @@ function sagaMiddlewareFactory() {
       dispatch,
       getState
     })
-    return function(next) {
+    return function(next) {b 
       return function(action) {
         let result = next(action) // 以后调用dispatch的时候，除了调用老的store.dispatch之外， 
         channel.put(action)  // 还需要调用channel.put方法
