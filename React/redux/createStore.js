@@ -39,7 +39,7 @@ export default function createStore(reducer, initialState, enhancer) {
 			subscribed = false
 		}
 	}
-	dispatch({ type: ActionTypes.INIT })  // ? 这里是为什么了初始发射一次subscribe订阅的方法
+	dispatch({ type: ActionTypes.INIT })  // ? 这里是为了初始化状态
 	return {
 		getState,
 		dispatch,
