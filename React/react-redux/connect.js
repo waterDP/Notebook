@@ -7,6 +7,7 @@ import Context from './context'
 /**
  * @param {function} mapStateToProps
  * @param {function} mapDispatchToProps
+ * HOC
  */
 export default function (mapStateToProps, mapDispatchToProps) {
   return function (WrappedComponent) {

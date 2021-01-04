@@ -26,21 +26,20 @@ export default function createStore(reducer, initialState, enhancer) {
 		if (typeof action.type === 'undefined') {
 			throw new Error('action的type属性不能是 undefined')
 		}
-		currentState = currentReducer(currentState, action)
-		currentListeners.forEach(listener => listener())
+		currentState = currentReducer(currentState, action)  // todo 改变状态 
+		currentListeners.forEach(listener => listener())  // todo 触发监听
 		return action
 	}
 	function subscribe(listener) {
 		let subscribed = true
 		currentListeners.push(listener)
-		return function unsubscribe() {
+		return function unsubscribe() {  // todo 取消订阅
 			if (!subscribed) return
-			const index = currentListeners.indexOf(listener)
-			currentListeners.splice(index, 1)
+			currentListeners = currentListeners.filter(item => item !== listener)
 			subscribed = false
 		}
 	}
-	dispatch({ type: ActionTypes.INIT });
+	dispatch({ type: ActionTypes.INIT })  // ? 这里是为什么了初始发射一次subscribe订阅的方法
 	return {
 		getState,
 		dispatch,
