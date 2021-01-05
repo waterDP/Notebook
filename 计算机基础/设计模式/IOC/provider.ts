@@ -36,4 +36,3 @@ export function isValueProvider<T>(provider: BaseProvider<T>): provider is Value
 export function isFactorProvider<T>(provider: BaseProvider<T>): provider is FactoryProvider<T> {
   return (provider as any).useFactory !== undefined
 }
-
