@@ -9,7 +9,10 @@ import {
   isFactorProvider,
   InjectionToken
 } from './provider'
+import { Type } from './type'
+import {getInjectionToken} from './Inject'
 
+const DESIGN_PARAMTYPES = 'design:paramtypes'
 
 export class Container {
   public providers = new Map<Token<any>, Provider<any>>()
@@ -45,8 +48,20 @@ export class Container {
 
   injectClass<T>(provider: ClassProvider<T>): T {
     const target = provider.useClass
-    const params = []
+    const params = this.getInjectedParams(target)
     return Reflect.construct(target, params)
+  }
+
+  // 从类上获取要到注入的参数
+  getInjectedParams<T>(target: Type<T>) {
+    let argTypes = <Array<Type<any>>>Reflect.getMetadata(DESIGN_PARAMTYPES, target)
+    if (argTypes === undefined) return []
+    return argTypes.map((argType: Type<any>, index: number) => {
+      const overrideToken = getInjectionToken(target, index)
+      const actualToken = overrideToken === undefined ? argTypes : overrideToken
+      let provider = this.providers.get(actualToken)
+      return this.injectWithProvider(argType, provider)
+    })
   }
 
   injectValue<T>(provider: ValueProvider<T>): T {
