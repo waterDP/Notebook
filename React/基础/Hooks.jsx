@@ -91,3 +91,21 @@ function TextInputWithFocusButton() {
     </>
   )
 }
+
+/**
+ * useState 
+ * useRef
+ * useMemo
+ * useCallback
+ * useEffect
+ * 
+ */
+
+/**
+ * @description: 
+ * @param {function} reducer
+ * @param {any} initialState 初始状态
+ * @param {function} init 初始状态的方法
+ * @return {*}
+ */
+const [state, dispatch] = useReducer(reducer, initialState, init)
