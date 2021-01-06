@@ -22,6 +22,7 @@ export function useState(initialState) {
   hookStates[hookIndex] = hookStates[hookIndex] || initialState
   let currentIndex = hookIndex
   function setState(newState) {
+    // 如果是一个函数的话，就让它执行，传入老的状态返回一个新的状态
     hookStates[currentIndex] = 
       (typeof newState === 'function' ? newState(hookStates[currentIndex]) : newState)
     render()
@@ -77,4 +78,38 @@ export function useReducer(reducer, initialState, init) {
     hookStates[hookIndex++],
     dispatch
   ]
+}
+
+export function useContext(context) {
+  return context._currentValue
+}
+
+export function useEffect(callback, deps) {
+  if (hookStates[hookIndex]) {
+    let {destroy, lastDeps} = hookStates[hookIndex]
+    let same = deps.every((item, index) => item === lastDeps[index])
+    if (same) { // 本次的依赖数组和上次的依赖数组一样
+      hookIndex++
+    } else {
+      destroy && destroy()
+      let state = {lastDeps: deps}
+      hookStates[hookIndex++] = state
+      setTimeout(() => {
+        let destroy = callback
+        state.destroy = destroy
+      })
+    }
+  } else {
+    let state = {lastDeps: deps}
+    hookStates[hookIndex++] = state
+    setTimeout(() => {
+      let destroy = callback()
+      state.destroy = destroy
+    })
+  }
+}
+
+export function useRef(current) {
+  hookStates[hookIndex] = hookStates[hookStates] || {current}
+  return hookStates[hookIndex++]
 }

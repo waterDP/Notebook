@@ -91,13 +91,13 @@ function logProps(WrappedComponent) {
     }
 
     render() {
-      const {forwardedRef, ...rest} = this.props
+      const {forwardRef, ...rest} = this.props
       // 将自定义的prop属性“forwarded”定义为ref
       return <WrappedComponent ref={forwardedRef} {...rest} />
     }
   }
   return React.forwardRef((props, ref) => {
-    return <LogProps {...props} forwardedRef={ref} />
+    return <LogProps {...props} forwardRef={ref} />
   })
 }
 

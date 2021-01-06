@@ -224,3 +224,21 @@ export const fetchData = project => {
       })
   }
 }
+
+// todo useEffect中的异步竞态
+function Article({id}) {
+  let [article, setArticle] = React.useState({})
+  useEffect(() => {
+    let didCancel = false
+    let article = await API.fetch(id)
+    didCancel || setArticle(article)
+    return () => {
+      didCancel = true
+    }
+  }, [id])
+  return (
+    <div>
+      {article.title}
+    </div>
+  )
+}
