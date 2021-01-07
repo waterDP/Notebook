@@ -1,9 +1,8 @@
 export function token (rc) {
   let allRouters = {}
-
   let routerFileAndLen = 
     rc.keys().map(fileName => {
-      let realFileName = fileName.replace(/^\.\//, '').replace(/\.\w+$/)  // 掐掉开头与结尾
+      let realFileName = fileName.replace(/^\.\//, '').replace(/\.\w+$/, '')  // 掐掉开头与结尾
       return {
         fileName: realFileName,
         routerName: realFileName.replace(/\//g, '-').replace(/_/g, ''),
@@ -36,5 +35,5 @@ export function token (rc) {
       : allRouters[key] = [obj]
   })
 
-  return allRouters
+  return {maxLen, allRouters}
 }

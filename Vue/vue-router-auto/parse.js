@@ -1,11 +1,12 @@
 /**
  * @description: 编译生成路径
  * @param {array} allRouters
+ * @param {number} maxLen
  * @return {array}
  */ 
-export function parse(allRouters) {
+export function parse(allRouters, maxLen) {
   let result = []
-  result.push(allRouters.len1)
+  result.push(...allRouters.len1)
   for (let i = maxLen; i > 1; i--) {
     createRouter(i, null, null, result, allRouters)
   }
@@ -65,7 +66,7 @@ function createRouter(deep, noFindCount = 0, currentDeepCount = null, parent, al
         ? findObject.children.push(r)
         : findObject.children = [r]
     } else {
-      noFind(r)
+      noFind.push(r)
     }
   })
 
@@ -78,11 +79,10 @@ function substrName(name) {
 }
 
 function deleteName(arr) {
-  arr.forEach(r => {
+  arr.map(r => {
     delete r.fileName
     r.needDeleteName && (delete r.name)
     delete r.needDeleteName
     Array.isArray(r.children) && deleteName(r.children)
   })
 }
-
