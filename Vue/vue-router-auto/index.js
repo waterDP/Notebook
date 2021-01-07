@@ -11,8 +11,8 @@ export default function ({rc, redirect, rootFile='view'}) {
   if (!rc) {
     throw new Error('rc为必传参数')
   }
-  const allRouters = token(rc)
-  const result = parse(allRouters)
+  const {maxLen, allRouters} = token(rc)
+  const result = parse({maxLen, allRouters})
   redirect && result.unshift({path: '/', redirect})
   return result
 }

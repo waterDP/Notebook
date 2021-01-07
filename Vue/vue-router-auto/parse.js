@@ -1,10 +1,10 @@
 /**
  * @description: 编译生成路径
  * @param {array} allRouters
- * @param {number} maxLen
+ * @param {number} maxLen 最大深度
  * @return {array}
  */ 
-export function parse(allRouters, maxLen) {
+export function parse({maxLen, allRouters}) {
   let result = []
   result.push(...allRouters.len1)
   for (let i = maxLen; i > 1; i--) {
