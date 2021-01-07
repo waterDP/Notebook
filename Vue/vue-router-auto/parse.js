@@ -29,7 +29,7 @@ function createRouter(deep, noFindCount = 0, currentDeepCount = null, parent, al
   if (!previous) {
     current.forEach(r => {
       let path = '/' + r.fileName.replace('/index', '')
-      path.match('_') && (path = path.replace('/_', '/:'))  // 代参数的路由
+      path.match('_') && (path = path.replace('/_', '/:'))  // 带参数的路由
       r.path = path
       parent.push(r)
     })
