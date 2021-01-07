@@ -2,6 +2,18 @@
 import React, {useState} from "react"
 
 
+/**
+ * useState 
+ * useRef
+ * useMemo
+ * useCallback
+ * useEffect 会在每次挂载之后和每次更新之后执行里面的函数
+ * useReducer
+ * useContext
+ * useImperativeHandle
+ * useLayoutEffect
+ */
+
 // todo State Hook
 function Example() {
   // 声明一个新的叫做'count'的state变量
@@ -91,16 +103,6 @@ function TextInputWithFocusButton() {
     </>
   )
 }
-
-/**
- * useState 
- * useRef
- * useMemo
- * useCallback
- * useEffect 会在每次挂载之后和每次更新之后执行里面的函数
- * useReducer
- * useContext
- */
 
 useEffect(() => {}, []) // 空数组表示依赖项永远不变，所以回调函数只会执行一次
 

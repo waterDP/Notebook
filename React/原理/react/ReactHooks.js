@@ -83,7 +83,7 @@ export function useReducer(reducer, initialState, init) {
 export function useContext(context) {
   return context._currentValue
 }
-
+ 
 export function useEffect(callback, deps) {
   if (hookStates[hookIndex]) {
     let {destroy, lastDeps} = hookStates[hookIndex]
@@ -112,4 +112,22 @@ export function useEffect(callback, deps) {
 export function useRef(current) {
   hookStates[hookIndex] = hookStates[hookStates] || {current}
   return hookStates[hookIndex++]
+}
+
+/**
+ * function FunctionChild(props, ref) {
+ *   let inputRef = React.useRef()
+ *   useImperativeHandle(ref, () => (
+ *      {
+ *        focus() {
+ *          inputRef.current.focus()
+ *        }
+ *      }
+ *   ))
+ *   return <input ref={inputRef} />
+ * }
+ */
+
+export function useImperativeHandle(ref, factory) {
+  ref.current = factory()
 }
