@@ -1,20 +1,14 @@
-Vue.prototype.$broadcast = function(componentName, eventName) {
-  let children = this.$children
-  let arr = []
-  function findChildren(children) {
-    children.forEach(child => {
-      if (child.$options.name === componentName) {
-        if (eventName) {
-          child.$emit(eventName)
-        } else {
-          arr.push(child)
+  Vue.prototype.$broadcast = function(componentName, eventName, event) {
+    let children = this.$children
+    function findChildren(children) {
+      children.forEach(child => {
+        if (child.$options.name === componentName) {
+          eventName && child.$emit(eventName, event)
         }
         if (child.$children && child.$children.length) {
-          findChild(child.$children)
+          findChildren(child.$children)
         }
-      }
-    })
+      })
+    }
+    findChildren(children)
   }
-  findChildren(children)
-  return arr
-}
