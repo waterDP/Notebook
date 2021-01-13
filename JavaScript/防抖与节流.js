@@ -39,7 +39,7 @@ todo 防抖
 		}
 
 		// 接着用变量保存保存 debounce 返回的带有延时功能的函数
-		let handler = debounceFactory(callback, 500)
+		let handler = debounce(callback, 500)
 
 		// 添加事件监听
 		let input = document.getElementById('debounce');
