@@ -47,16 +47,16 @@ todo 防抖
 
 	//<立即执行版>
 	function debounce(cb, delay = 500, immediate = true) {
-		let timer; // 定时器
+		let timer  // 定时器
 		return (...args) => {
-			clearTimeout(timer);  // 不管是否立即执行，都要先删除定时器
+			clearTimeout(timer)  // 不管是否立即执行，都要先删除定时器
 			if (immediate) {  // 立即执行版本
 				if (!timer) {
-					cb(args);
+					cb(args)
 				}
-				timer = setTimeout(() => timer = null, delay);
+				timer = setTimeout(() => timer = null, delay)
 			} else{  // 非立即执行
-				timer = setTimeout(cb.bind(this, ...args), delay);
+				timer = setTimeout(cb.bind(this, ...args), delay)
 			}
 		}
 	}	
