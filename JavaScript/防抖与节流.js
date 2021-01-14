@@ -52,7 +52,7 @@ todo 防抖
 			clearTimeout(timer)  // 不管是否立即执行，都要先删除定时器
 			if (immediate) {  // 立即执行版本
 				if (!timer) {
-					cb(args)
+					cb.apply(this, args)
 				}
 				timer = setTimeout(() => timer = null, delay)
 			} else{  // 非立即执行
