@@ -76,7 +76,7 @@ export class LifeCycle extends Component {
 
 
 /**
- * ! 生命周期洋葱模型
+ * ! React 生命周期洋葱模型
  *   parent.componentWillMount
  *   parent.render
  *     child.componentWillMount
@@ -84,4 +84,25 @@ export class LifeCycle extends Component {
  *       ...
  *     child.componentDidMount
  *   parent.componentDidMount  
+ */
+
+/**
+ * ! Vue 生命周期洋葱模型
+ * todo 加载渲染过程 
+ * 父beforeCreate->父created->父beforeMount(父render)
+ *    子beforeCreate->子created->子beforeMount(子render)->子mounted
+ * 父mounted
+ * 
+ * todo 子组件更新过程
+ * 父beforeUpdate
+ *   子beforeUpdate->子updated
+ * 父updateUpdate
+ * 
+ * todo 父组件更新过程
+ * 父beforeUpdate-> 父update
+ * 
+ * todo 销毁过程
+ * 父beforeDestroy
+ *    子beforeDestroy -> 子destroyed
+ * 父destroyed
  */

@@ -1,5 +1,5 @@
 import { createElement } from './ReactElement'
-import { Component } from './ReactBaseClasses'
+import { Component, PureComponent } from './ReactBaseClasses'
 import { createRef } from './ReactCreateRef'
 import { createContext } from './ReactContext'
 import { forwardRef } from './ReactForwardRef'
@@ -18,5 +18,6 @@ export default {
   createRef,
   createContext,
   forwardRef,
-  Component
+  Component,
+  PureComponent
 }

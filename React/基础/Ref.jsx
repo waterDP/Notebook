@@ -64,7 +64,7 @@ class Sum3 extends React.Component {
   }
 }
 
-// 转换ref
+//! 转换ref
 const FancyButton = React.forwardRef((props, ref) => {
   <button ref={ref} className="FancyButtons">
     {props.children}
@@ -97,7 +97,7 @@ function logProps(WrappedComponent) {
     }
   }
   return React.forwardRef((props, ref) => {
-    return <LogProps {...props} forwardRef={ref} />
+    return <LogProps {... } forwardRef={ref} />
   })
 }
 

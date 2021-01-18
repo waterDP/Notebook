@@ -26,8 +26,8 @@
 vue3中的setup函数是在beforeCreate之前调用的
 setup函数只能是同步的，不能是异步的
 composition api
-ref
-reactive
+ref 基本数据的响应式
+reactive  复杂数据类型的响应式
 isRef
 isReactive
 shallowRef 非递归监听

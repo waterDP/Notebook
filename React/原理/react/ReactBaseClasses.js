@@ -1,6 +1,6 @@
 import {createDOM} from '../react-dom'
 
-export class Component {
+class Component {
   constructor(props) {
     this.props = props
     this.updateQueue = [] // 缓存更新队列
@@ -43,3 +43,7 @@ function renderComponent(componentInstance) {
   componentInstance.componentDidUpdate && componentInstance.componentDidUpdate()
   componentInstance.dom = newDOM
 }
+
+
+
+export {Component, PureComponent}
