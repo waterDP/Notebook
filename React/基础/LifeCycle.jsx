@@ -35,6 +35,7 @@ export class LifeCycle extends Component {
     console.log('4. 组件挂载完成')
   }
   // 调用些方法时会把新的属性对象和新的状态对象传入
+  // 此方法中不能调用setState，否则会造成死循环
   shouldComponentUpdate(nextProps, nextState) {
     console.log('5. 询问组件是否需要更新')
     return true
