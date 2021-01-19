@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {Component} from 'react'
 import ReactDOM from 'react-dom'
 import {HashRouter as Router, Route} from 'react-router-dom'
 // Router是路由容器
@@ -12,8 +12,6 @@ ReactDOM.render(
   </Router>,
   document.getElementById('rooter')
 )
-
-import React, { Component } from 'react';
 
 class Home extends Component {
   render() {

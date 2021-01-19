@@ -68,7 +68,7 @@ class ThemedButton extends React.Component {
 function Title(props) {
   return (
     <ThemeContext.Consumer>
-      {
+      {  // todo 使用consumer
         value => (
           <div style={{margin: '10px', border: `5px solid ${value.color}`, padding:  '5px'}}>Title</div>
         )

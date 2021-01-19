@@ -2,6 +2,18 @@
 import React, {useState} from "react"
 
 
+/**
+ * useState 
+ * useRef
+ * useMemo
+ * useCallback
+ * useEffect 会在每次挂载之后和每次更新之后执行里面的函数
+ * useReducer
+ * useContext
+ * useImperativeHandle
+ * useLayoutEffect
+ */
+
 // todo State Hook
 function Example() {
   // 声明一个新的叫做'count'的state变量
@@ -89,5 +101,40 @@ function TextInputWithFocusButton() {
       <input ref={inputEl} />
       <button onClick={onButtonClick}>Focus the input</button>
     </>
+  )
+}
+
+useEffect(() => {}, []) // 空数组表示依赖项永远不变，所以回调函数只会执行一次
+
+/**
+ * @description: 
+ * @param {function} reducer
+ * @param {any} initialState 初始状态
+ * @param {function} init 初始状态的方法
+ * @return {*}
+ */
+const [state, dispatch] = useReducer(reducer, initialState, init)
+
+
+// todo useReducer
+const CounterContext = React.createContext()
+
+function Counter() {
+  let {state, dispatch} = React.useContext()
+  return (
+    <div>
+      <p>number: {state.number}</p>
+      <button onClick={()=>dispatch({type: 'ADD'})}>number+</button>
+    </div>
+  )
+}
+
+function App() {
+  const [state, dispatch] = useReducer(reducer, initialState, init)
+  const value = {state, dispatch}
+  return (
+    <CounterContext.Provider value={value}>
+      <Counter />
+    </CounterContext.Provider>
   )
 }

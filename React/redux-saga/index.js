@@ -1,4 +1,4 @@
- 
 
 export {default} from './middleware'
-export {effect} from './effect'
+
+export {default as effects} from './effects'

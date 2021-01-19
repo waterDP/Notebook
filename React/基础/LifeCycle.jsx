@@ -35,6 +35,7 @@ export class LifeCycle extends Component {
     console.log('4. 组件挂载完成')
   }
   // 调用些方法时会把新的属性对象和新的状态对象传入
+  // 此方法中不能调用setState，否则会造成死循环
   shouldComponentUpdate(nextProps, nextState) {
     console.log('5. 询问组件是否需要更新')
     return true
@@ -76,7 +77,7 @@ export class LifeCycle extends Component {
 
 
 /**
- * ! 生命周期洋葱模型
+ * ! React 生命周期洋葱模型
  *   parent.componentWillMount
  *   parent.render
  *     child.componentWillMount
@@ -84,4 +85,25 @@ export class LifeCycle extends Component {
  *       ...
  *     child.componentDidMount
  *   parent.componentDidMount  
+ */
+
+/**
+ * ! Vue 生命周期洋葱模型
+ * todo 加载渲染过程 
+ * 父beforeCreate->父created->父beforeMount(父render)
+ *    子beforeCreate->子created->子beforeMount(子render)->子mounted
+ * 父mounted
+ * 
+ * todo 子组件更新过程
+ * 父beforeUpdate
+ *   子beforeUpdate->子updated
+ * 父updateUpdate
+ * 
+ * todo 父组件更新过程
+ * 父beforeUpdate-> 父update
+ * 
+ * todo 销毁过程
+ * 父beforeDestroy
+ *    子beforeDestroy -> 子destroyed
+ * 父destroyed
  */

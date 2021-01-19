@@ -39,7 +39,7 @@ todo 防抖
 		}
 
 		// 接着用变量保存保存 debounce 返回的带有延时功能的函数
-		let handler = debounceFactory(callback, 500)
+		let handler = debounce(callback, 500)
 
 		// 添加事件监听
 		let input = document.getElementById('debounce');
@@ -47,16 +47,16 @@ todo 防抖
 
 	//<立即执行版>
 	function debounce(cb, delay = 500, immediate = true) {
-		let timer; // 定时器
+		let timer  // 定时器
 		return (...args) => {
-			clearTimeout(timer);  // 不管是否立即执行，都要先删除定时器
+			clearTimeout(timer)  // 不管是否立即执行，都要先删除定时器
 			if (immediate) {  // 立即执行版本
 				if (!timer) {
-					cb(args);
+					cb.apply(this, args)
 				}
-				timer = setTimeout(() => timer = null, delay);
+				timer = setTimeout(() => timer = null, delay)
 			} else{  // 非立即执行
-				timer = setTimeout(cb.bind(this, ...args), delay);
+				timer = setTimeout(cb.bind(this, ...args), delay)
 			}
 		}
 	}	

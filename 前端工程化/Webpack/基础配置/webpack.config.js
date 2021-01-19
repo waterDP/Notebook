@@ -80,7 +80,7 @@ module.exports = smw.wrap({
         test: /\.(png|jpg|gif)$/,
         // 做一个限制，当我们的图片 小于多少的时候 用base64来转化
         use: {
-          loader: 'url-loader',
+          loader: 'url-loader', 
           options: {
             limit: 200 * 1024,
             name: '[name]',

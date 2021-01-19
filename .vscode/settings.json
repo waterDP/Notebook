@@ -4,6 +4,7 @@
     "abcdefghijklmnopqrstuvwxwz",
     "arraybuffer",
     "bodyparser",
+    "chunkhash",
     "csrf",
     "f",
     "fres",
