@@ -26,7 +26,7 @@ export default function createStore(reducer, initialState, enhancer) {
 		if (typeof action.type === 'undefined') {
 			throw new Error('action的type属性不能是 undefined')
 		}
-		currentState = currentReducer(currentState, action)  // todo 改变状态 
+		currentState = currentReducer( , action)  // todo 改变状态 
 		currentListeners.forEach(listener => listener())  // todo 触发监听
 		return action
 	}

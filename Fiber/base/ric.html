@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ric</title>
+</head>
+<body>
+  <script>
+    function sleep(duration) {
+      let start = Date.now()
+      while(start + duration > Date.now()) {
+
+      }
+    }
+    const works = [
+      () => {
+        console.log('A1开始')
+        sleep(10)
+        console.log('A1结束')
+      },
+      () => {
+        console.log('B1开始')
+        sleep(20)
+        console.log('B1结束')
+      },
+      () => {
+        console.log('C1开始')
+        sleep(20)
+        console.log('C1结束')
+      },
+      () => {
+        console.log('D1开始')
+        sleep(20)
+        console.log('D1结束')
+      }
+    ]
+
+    // todo mock requestIdleCallback
+    let activeFrameTime = 1000/60  // 16.6 每帧的时间
+    let frameDeadline  // 这一帧的截止时间
+    let pendingCallback
+    let channel = new MessageChannel()
+    let timeRemaining = () => frameDeadline - performance.now()
+    channel.port2.onmessage = () => {
+      let currentTime = performance.now()
+      // 如果帧的截止时间已经小于了当前时间，说明已经过期了
+      let didTimeout = (frameDeadline <= currentTime)
+      if (didTimeout || timeRemaining()) {
+        pendingCallback && pendingCallback({didTimeout, timeRemaining})
+      }
+    }
+    window.requestIdleCallback = (callback, options) => {
+      requestAnimationFrame(rafTime => {
+        frameDeadline = rafTime + activeFrameTime
+        pendingCallback = callback
+        // 发消息之后，相当于添加了一个宏任务
+        channel.port1.postMessage('hello')
+      })
+    }
+
+    requestIdleCallback(workLoop, {timeout: 1000})
+    // 循环执行工作
+    function workLoop(deadline) {
+      console.log('本帧的剩余时间', parseInt(deadline.timeRemaining()))
+
+      // 如果还有剩余时间并且还有没有完成的任务的话
+      while ((deadline.timeRemaining() || deadline.didTimeout) && works.length) {
+        performUnitOfWork()
+      }
+      if(works.length) {
+        console.log(`只剩下${deadline.timeRemaining()},时间片已经到期了，等待下次调度`)
+        requestIdleCallback(workLoop)
+      }
+    }
+
+    function performUnitOfWork() {
+      let work = works.shift()
+      work()
+    }
+  </script>
+</body>
+</html>
