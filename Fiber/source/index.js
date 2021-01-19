@@ -19,7 +19,7 @@ let nextUnitOfWork = workInProgressRoot
 
 function workLoop(deadline) {
   // 如果有下一个工作单元，就执行他，返回一个工作单元
-  if (nextUnitOfWork && deadline.timeRemainin g()) {
+  if (nextUnitOfWork && deadline.timeRemaining()) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
   }
   if (!nextUnitOfWork) {
