@@ -47,7 +47,7 @@
       // 如果帧的截止时间已经小于了当前时间，说明已经过期了
       let didTimeout = (frameDeadline <= currentTime)
       if (didTimeout || timeRemaining()) {
-        pendingCallback && pendingCallback({didTimeout, timeRemaining})
+        pendingCallback && pendingCallback({didTimeout, timeRemaining                                                                                                                                                                                                                                                                                                                                    })
       }
     }
     window.requestIdleCallback = (callback, options) => {
