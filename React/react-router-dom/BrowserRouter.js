@@ -11,7 +11,7 @@ import Context from './context'
 let pushState = window.history.pushState
 window.history.pushState = (state, title, url) => {
   pushState.call(window.history, state, title, url)
-    (typeof window.onpushstate === 'function') && window.onpushstate.call(this, state, url)
+  typeof window.onpushstate === 'function' && window.onpushstate.call(this, state, url)
 }
 
 export default class BrowserRouter extends React.Component {
