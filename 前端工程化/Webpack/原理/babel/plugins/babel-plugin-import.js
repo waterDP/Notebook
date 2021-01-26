@@ -1,6 +1,7 @@
 const babel = require('babel/core')
 const t = require('babel-types')
 
+// 访问者
 const visitor = {
   ImportDeclaration: {
     // path是捕获路径 state是状态对象 opts是你传给babel插件的选项 {"library": "lodash"}

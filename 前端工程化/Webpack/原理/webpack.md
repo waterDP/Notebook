@@ -22,3 +22,7 @@ chunkhash它根据不同的入口文件进行依赖文件解析、构建对应�
 
 3.contenthash
 contenthash主要是处理关联性，比如一个js文件中引入css，但是会生成一个js文件，一个css文件，但是因为入口是一个，导致他们的hash值也相同，所以当只有js修改时，关联输入的css、img等文件的hash值，这种情况下就需要contenthash了
+
+## webpack常用插件
+HtmlWebpackPlugin
+CleanWebpackPlugin 每次打包时，先清除dist目录
