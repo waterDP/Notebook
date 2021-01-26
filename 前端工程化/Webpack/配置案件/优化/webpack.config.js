@@ -42,7 +42,8 @@ module.exports = {
     }),
     new webpack.IgnorePlugin(/\.\/locale/, /moment/),   // 忽略这里面的文件   不打包
     new HtmlWebpackPlugin({
-      template: './public/index.html'
+      template: './public/index.html',
+      title: '手搭 Vue 开发环境' // index.html 模板内，通过 <%= htmlWebpackPlugin.options.title %> 拿到的变量
     }),
     new webpack.NamedModulesPlugin(),  // 打印更新的模块路径
     new webpack.HotModuleReplacementPlugin(), // 热更新插件

@@ -18,4 +18,15 @@ class Observable {
     }
   }
 
+  /**
+   * 创建一个新的Observable，以它为源，并传递操作符作为新的observable操作符
+   * @method lift
+   * @param {Operator} Operator定义了如何操作observable的操作符
+   * @return {Observable} 应用了操作符的新observable 
+   */
+  lift(operator) {
+    const observable = new Observable()
+    
+  }
+
 }
