@@ -8,7 +8,7 @@ const TerserWebpackPlugin = require('terser-webpack-plugin')
 const HtmlWebpackExternalPlugin = require('html-webpack-externals-plugin')
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin') // 错误日志友好输出
 const SpeedMeasureWebpackPlugin = require('speed-measure-webpack-plugin')  // 费时分析
-const {BundleAnalyzerPlugin} = require('bundle-analyzer-plugin')
+const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer')
 
 const smw = new SpeedMeasureWebpackPlugin()
 
