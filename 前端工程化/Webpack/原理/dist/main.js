@@ -50,6 +50,6 @@
  ({
   "./src/index.js":
   (function(module, exports) {
-    eval("console.log('clnos');\n\n//# sourceURL=webpack:///./src/index.js?");
+    eval("console.log('console')");
   })
  });

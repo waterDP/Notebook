@@ -1,3 +1,4 @@
+
 class OptimizePlugin {
   constructor(options) {
     this.options = options
