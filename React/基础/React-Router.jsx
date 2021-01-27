@@ -1,13 +1,21 @@
-import React, {Component} from 'react'
+import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
-import {HashRouter as Router, Route} from 'react-router-dom'
+import { HashRouter as Router, Route, Switch, Redirect, Link } from 'react-router-dom'
 // Router是路由容器
 ReactDOM.render(
   <Router>
     <>
-      <Route path="/" component={Home} exact />
-      <Route path="/user" component={User} />
-      <Route path="/profile" component={Profile} />
+      <div>
+        <Link to="/"></Link>
+        <Link to="/user"></Link>
+        <Link to="/profile"></Link>
+      </div>
+      <Switch>
+        <Route path="/" component={Home} exact />
+        <Route path="/user" component={User} />
+        <Route path="/profile" component={Profile} />
+        <Redirect to='/'></Redirect>
+      </Switch>
     </>
   </Router>,
   document.getElementById('rooter')
