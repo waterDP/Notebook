@@ -5,12 +5,14 @@ abstract class State {
   }
   public abstract handle1(): void
 }
+
 class ConcreteState1 extends State { 
   handle1() { 
     // ...
     console.log('ConcreteState1的handle1方法')
   }
 }
+
 class Context { 
   static STATE1: State = new ConcreteState1()
   currentState: State | undefined
