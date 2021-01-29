@@ -18,7 +18,8 @@ chunkhash 它根据不同的入口文件进行依赖文件解析、构建对应�
 3.contenthash
 contenthash 主要是处理关联性，比如一个 js 文件中引入 css，但是会生成一个 js 文件，一个 css 文件，但是因为入口是一个，导致他们的 hash 值也相同，所以当只有 js 修改时，关联输入的 css、img 等文件的 hash 值，这种情况下就需要 contenthash 了
 
-## webpack 常用loader
+## webpack 常用 loader
+
 source-map-loader
 
 ## webpack 常用插件
@@ -53,7 +54,7 @@ webpack.definePlugin 定义全局变量
 ```js
 new webpack.DefinePlugin({
   __VERSION__: JSON.stringify(appVersion),
-  __FLAG__: JSON.stringify(process.env.FLAG)
+  __FLAG__: JSON.stringify(process.env.FLAG),
 });
 ```
 
@@ -81,10 +82,27 @@ new HtmlWebpackExternalsPlugin({
 });
 ```
 
+AutoExternalPlugin 外链引入库(webpack-auto-external)
+
+```js
+new AutoExternalPlugin({
+  externals: {
+    lodash: {
+      url: "https://xxx.cdn.com/lodash.js",
+      varName: "_",
+    },
+    vant: {
+      url: "https://xxx.cdn.com/vant.js",
+      varName: "Vant",
+      css: "https://xxx.cdn.com/vant.css",
+    },
+  },
+});
+```
+
 BundleAnalyzerPlugin 分析代码块大小
 
 ```js
-const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer')
-new BundleAnalyzerPlugin()
+const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer");
+new BundleAnalyzerPlugin();
 ```
-
