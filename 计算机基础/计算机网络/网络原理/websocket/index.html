@@ -1,0 +1,34 @@
+<!--
+ * @Description: 
+ * @Date: 2021-01-29 09:49:11
+ * @Author: water.li
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <input type="text" id="text">
+  <button onclick="send()">发送</button>
+  <script>
+    let text = document.getElementById('text')
+    let socket = new WebSocket('ws://localhost:8888')
+    socket.onopen = function() {
+      socket.send('server')
+    }
+
+    socket.onmessage = function(event) {
+      console.log(event.data)
+    }
+
+    function send() {
+      let value = text.value
+      socket.send(value)
+      text.value = ''
+    }
+  </script>
+</body>
+</html>
