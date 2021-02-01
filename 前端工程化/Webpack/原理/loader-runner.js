@@ -5,6 +5,7 @@
  */
 const fs = require('fs')
 const path = require('path')
+const loader = require('./loaders/babel-loader')
 const readFile = fs.readFile.bind(fs)
 const PATH_QUERY_FRAGMENT_REGEXP = /^([^?#]*)(\?[^#]*)?(#.*)?$/
 
@@ -61,6 +62,41 @@ function iteratePitchingLoaders(options, loaderContext, callback) {
   let pitchFunction = currentLoaderObject.pitch
   if (!pitchFunction) {
     return iteratePitchingLoaders(options, loaderContext, callback)
+  }
+  runSyncOrAsync(
+    pitchFunction, // 要执行的pitch函数
+    loaderContext, // 上下文对象
+    [loaderContext.remainingRequest, loaderContext.previousRequest, loaderContext.data = {}],
+    function(err, args) {
+      if (args) { // 如果args有值，说明这个pitch有返回值
+        loaderContext.loaderIndex-- // 索引减1，开始回退了
+        // iterateNormalLoaders(options, loaderContext, args, callback)
+      } else { // 如果没有返回值，则执行下一loader的pitch函数
+        iteratePitchingLoaders(options, loaderContext, callback)
+      }
+    }
+  )
+}
+
+function runSyncOrAsync(fn, context, args, callback) {
+  let isSync = true // 默认是同步
+  let isDone = false // 是否已完成，是否执行过此函数了，默认为 false
+  // 调用context.async this.async 可以把同步变异步，表示这个loader里的代码是异步的
+  context.async = function() {
+    isSync = false
+    return innerCallback
+  }
+
+  const innerCallback = context.callback = function() {
+    isDone = true
+    isSync = false
+    callback.apply(null, arguments)
+  }
+
+  let result  = fn.apply(context, args)
+  if (isSync) {
+    isDone = true
+    return callback(null, result)
   }
 }
 
