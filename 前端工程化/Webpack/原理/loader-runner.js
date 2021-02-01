@@ -17,7 +17,13 @@ function parsePathQueryFragment(resource) {
     fragment: result[3]
   }
 }
- 
+function convertArgs(args, raw) {
+  if (raw && !Buffer.isBuffer(args[0])) {
+    args[0] = Buffer.from(args[0], 'utf8')
+  } else if (!raw && Buffer.isBuffer(args[0])) {
+    args[0] = args[0].toString('utf8')
+  }
+} 
 function createLoaderObject(loader) {
   let obj = {
     path: null,
@@ -52,7 +58,40 @@ function loadLoader(loaderObject) {
   loaderObject.raw = normal.raw
 }
 
+function processResource(options, loaderContext, callback) {
+  loaderContext.loaderIndex = loaderContext.loaders.length -1
+  let resourcePath = loaderContext.resourcePath
+  options.readResource(resourcePath, function(err, buffer) {
+    if (err) return callback(error)
+    options.resourceBuffer = buffer  // resourceBuffer放置的是资源的原始内容
+    iterateNormalLoaders(options, loaderContext, [buffer], callback)
+  })
+}
+
+function iterateNormalLoaders(options, loaderContext, args, callback) {
+  // 如果正常的normalLoader全部执行完了
+  if (loaderContext.loaderIndex < 0) {
+    callback(null, args)
+  }
+  let currentLoaderObject = loaderContext.loaders[loaderContext.loaderIndex]
+  if (currentLoaderObject.normalExecuted) {
+    loaderContext.loaderIndex--
+    return iterateNormalLoaders(optiond, loaderContext, args, callback)
+  }
+  let normalFn = currentLoaderObject.normal
+  currentLoaderObject.normalExecuted = true
+  convertArgs(args, currentLoaderObject.raw)
+  runSyncOrAsync(normalFn, loaderContext, args, function(err) {
+    if (err) callback(err)
+    let args = Array.prototype.slice.call(arguments, 1)
+    iterateNormalLoaders(options, loaderContext, args, callback)
+  })
+}
+
 function iteratePitchingLoaders(options, loaderContext, callback) {
+  if (loaderContext.loaderIndex >= loaderContext.loaders.length) {
+    return processResource(options, loaderContext, callback)
+  }
   let currentLoaderObject = loaderContext.loaders[loaderContext.loaderIndex]
   if (currentLoaderObject.pitchExecuted) {
     loaderContext.loaderIndex++
@@ -70,7 +109,7 @@ function iteratePitchingLoaders(options, loaderContext, callback) {
     function(err, args) {
       if (args) { // 如果args有值，说明这个pitch有返回值
         loaderContext.loaderIndex-- // 索引减1，开始回退了
-        // iterateNormalLoaders(options, loaderContext, args, callback)
+        iterateNormalLoaders(options, loaderContext, args, callback)
       } else { // 如果没有返回值，则执行下一loader的pitch函数
         iteratePitchingLoaders(options, loaderContext, callback)
       }
