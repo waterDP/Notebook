@@ -109,7 +109,7 @@ function iteratePitchingLoaders(options, loaderContext, callback) {
     function(err, args) {
       if (args) { // 如果args有值，说明这个pitch有返回值
         loaderContext.loaderIndex-- // 索引减1，开始回退了
-        iterateNormalLoaders(options, loaderContext, args, callback)
+        iterateNormalLoaders(options, loaderContext, [args], callback)
       } else { // 如果没有返回值，则执行下一loader的pitch函数
         iteratePitchingLoaders(options, loaderContext, callback)
       }
