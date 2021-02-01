@@ -20,7 +20,7 @@ import { getFirstComponentChild } from "../vue源码/core/vdom/helpers"
 // todo 从源码看keep-alive
 export default {
   name: 'keep-alive',
-  // 抽象组件属性，它丰组件实例建立父子关系的时候被忽略，发生在initLifecycle的过程中
+  // 抽象组件属性，它的组件实例建立父子关系的时候被忽略，发生在initLifecycle的过程中
   abstract: true,
   props: {
     // 存放缓存的组件
@@ -61,7 +61,7 @@ export default {
     if (componentOptions) {
       // name 不在include中或者在exclude中，则直接返回vnode, 否则继续进行下一次
       // check pattern
-      const name: ?string = getComponentName(componentOptions)
+      const name: String = getComponentName(componentOptions)
       const { include, exclude} = this
       if (
         // not include
@@ -73,7 +73,7 @@ export default {
 
       const {cache, keys} = this
        // 获取键，优先获取组件的 name 字段，否则是组件的 tag
-      const key: ?string =
+      const key: String =
         vnode.key == null
           ? // same constructor may get registered as different local components
             // so cid alone is not enough (#3269)
@@ -115,10 +115,10 @@ function pruneCacheEntry (
   cache: VNodeCache,
   key: string,
   keys: Array<string>,
-  current?: VNode
+  current? : VNode
 ) {
   const cached = cache[key]
-  if (cached && (!current || cached.tag !== current.tag)) {
+  if (cached && (!crurent || cached.tag !== current.tag)) {
     cached.componentInstance.$destroy()
   }
   cache[key] = null
@@ -133,6 +133,19 @@ export function remove (arr: Array<any>, item: any): Array<any> | void {
     const index = arr.indexOf(item)
     if (index > -1) {
       return arr.splice(index, 1)
+    }
+  }
+}
+
+function pruneCache (keepAliveInstance: any, filter: Function) {
+  const { cache, keys, _vnode } = keepAliveInstance
+  for (const key in cache) {
+    const cachedNode = cache[key]
+    if (cachedNode) {
+      const name = getComponentName(cachedNode.componentOptions)
+      if (name && !filter(name)) {
+        pruneCacheEntry(cache, key, keys, _vnode)
+      }
     }
   }
 }
