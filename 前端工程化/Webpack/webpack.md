@@ -18,6 +18,29 @@ chunkhash 它根据不同的入口文件进行依赖文件解析、构建对应�
 3.contenthash
 contenthash 主要是处理关联性，比如一个 js 文件中引入 css，但是会生成一个 js 文件，一个 css 文件，但是因为入口是一个，导致他们的 hash 值也相同，所以当只有 js 修改时，关联输入的 css、img 等文件的 hash 值，这种情况下就需要 contenthash 了
 
+## loader 基础
+
+### 分类 (enforce)
+
+- pre 在前面
+- normal
+- inline 内置的
+- post 在后面
+
+loader 的顺序 pre -> normal -> inline -> post
+
+-! noPreAutoLoader 不要前置和普通 loader
+! noAutoLoader 不要普通 loader
+!! noPerPostAutoLoader 什么都不要，只要行内 loader 来处理
+
+```javascript
+let str = require("-!inline-loader!./a.js");
+```
+
+### loader的组成
+
+loader 默认是由两个部分组成 pitch / normal
+
 ## webpack 常用 loader
 
 source-map-loader
