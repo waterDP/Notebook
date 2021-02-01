@@ -149,3 +149,7 @@ function pruneCache (keepAliveInstance: any, filter: Function) {
     }
   }
 }
+
+function getComponentName (opts: ?VNodeComponentOptions): ?string {
+  return opts && (opts.Ctor.options.name || opts.tag)
+}
