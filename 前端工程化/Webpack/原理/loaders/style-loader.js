@@ -1,10 +1,16 @@
-function loader(source) {
-  let script = (`
-    let style = document.createElement('style')
-    style.innerHTML = ${JSON.stringify(source)}
+let loaderUtils = require('loader-utils')
+
+function loader(source) {}
+
+loader.pitch = function(remainingRequest, previousRequest, data) {
+  let style = `
+    var style = document.createElement('style')
+    style.innerHTML = require(
+      ${loaderUtils.stringifyRequest(this, `!!` + remainingRequest)}
+    )
     document.head.appendChild(style)
-  `)
-  return script
+  `
+  return  style
 }
 
 module.exports = loader
