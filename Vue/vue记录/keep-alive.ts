@@ -88,19 +88,19 @@ export default {
       // --------------------------------------------------
       // 如果命中缓存，则从缓存中获取 vnode 的组件实例，并且调整 key 的顺序放入 keys 数组的末尾
       if (cache[key]) {
-        vnode.componentInstance = cache[key].componentInstance;
+        vnode.componentInstance = cache[key].componentInstance
         // make current key freshest
-        remove(keys, key);
-        keys.push(key);
+        remove(keys, key)
+        keys.push(key)
       }
       // 如果没有命中缓存,就把 vnode 放进缓存
       else {
         cache[key] = vnode
-        keys.push(key);
+        keys.push(key)
         // prune oldest entry
         // 如果配置了 max 并且缓存的长度超过了 this.max，还要从缓存中删除第一个
         if (this.max && keys.length > parseInt(this.max)) {
-          pruneCacheEntry(cache, keys[0], keys, this._vnode);
+          pruneCacheEntry(cache, keys[0], keys, this._vnode)
         }
       }
       
