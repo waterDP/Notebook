@@ -2,7 +2,7 @@
 
 // 获取2d环境 
 const theCanvas = document.getElementById('canvas')
-const context  = theCanvas.getContext('2d')
+const context = theCanvas.getContext('2d')
 
 /**
  * todo 全局属性
@@ -17,8 +17,8 @@ context.globalAlpha = alpha
 context.font = '20px Sans-Serif'
 // ! 字体的垂直对齐方式
 context.textBaseline = 'top'
-// ! 字体的垂直对齐方式
-context.textBaseline = 'top'
+// ! 字休的水平对齐方式
+context.textAlign = 'center' // center start end left right
 // ! 阴影相关
 context.shadowBlur
 context.shadowColor
@@ -27,6 +27,11 @@ context.shadowOffsetY
 
 // ! 线的粗细
 context.lineWidth = 10
+
+// todo 画面平移与旋转
+context.translate(x, y)
+context.rotate(Math.PI / 180 * degree)  // 弧度制
+
 
 
 // todo 当前状态的保存与恢复
@@ -54,6 +59,14 @@ img.onload = () => {
 }
 img.src = 'img.gif'
 
+context.drawImage(Image, sx, xy, sw, sh, dx, dy, dw, dh)
+
+
+
+// 设置字体
+context.font = 'italic bold 24px serif'
+
+
 
 /**
  * todo 绘制路径
@@ -73,8 +86,8 @@ context.arcTo(x1, y1, x2, y2, radius);
 // 简单直线路径
 function drawScreen() {
   context.strokeStyle = 'black'
-  context.lineWidth= 10
-  context.lineCap='square'
+  context.lineWidth = 10
+  context.lineCap = 'square'
   context.beginPath()
   context.moveTo(20, 0)
   context.lineTo(100, 0)
@@ -104,4 +117,30 @@ function drawScreen() {
   context.fillReact(0, 0, 100, 100)
 }
 
+/**
+ * @description: 用图案来填充形状
+ * @param {*} Image 对象实例
+ * @param {string} repetition [repeat|repeat-x|repeat-y|no-repeat]
+ */
+context.createPattern(Image, repetition);
+
+// 例
+function drawScreen() {
+  let fillImg = new Image()
+  fillImg.src = 'fill_20x20.gif'
+  fillImg.onload = function () {
+    let fillPattern = context.createPattern(fillImg, 'repeat')
+    context.fillStyle = fillPattern
+    context.fillRect(0, 0, 200, 200)
+  }
+}
+
+function setShadow(offsetX, offsetY, blur, color) {
+  context.shadowOffsetX = offsetX
+  context.shadowOffsetY = offsetY
+  context.shadowBlur = blur
+  context.shadowColor = color
+}
+
+context.isPointInPath(x, y) // 检验点是否在路径中
 
