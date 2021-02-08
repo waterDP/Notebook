@@ -16,6 +16,8 @@ let bufferA = Buffer.from([0xe7, 0x8f, 0xa0])
 
 // todo 实现前端下载html的功能
 let str = `<h1>hello world</h1>`
+
+
 const blob = new Blob([str], {
   type: 'text/html'
 })
