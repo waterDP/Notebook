@@ -52,6 +52,7 @@ function createSandbox(src, obj) {
   5.不能发送表单
   6.不能加载额外插件，比如flash
  */
+
 /**
  * @description 配置
  * @param [allow-forms] 允许进行表单提交
