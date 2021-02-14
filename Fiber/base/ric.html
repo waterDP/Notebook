@@ -9,7 +9,7 @@
   <script>
     function sleep(duration) {
       let start = Date.now()
-      while(start + duration > Date.now()) {
+      while(Date.now() - start < duration) {
 
       }
     }
