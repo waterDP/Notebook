@@ -22,7 +22,7 @@ var addTwoNumbers = function(l1, l2) {
   while (l1 || l2) {
       // 求和
       const sum = (l1 && l1.val || 0) + (l2 && l2.val || 0) + (p.val || 0)
-      // 取模
+      // 取整
       const exceed = parseInt(sum / 10)
 
       l1 = l1 && l1.next
@@ -32,7 +32,7 @@ var addTwoNumbers = function(l1, l2) {
       p.val = sum % 10
       // 判断是否需要进位（新增链表节点）（试试不带 if 条件跑一遍就明白了）
       if (l1 || l2 || exceed) {
-          p.next = { val: exceed }
+        p.next = { val: exceed }
       }
 
       p = p.next
