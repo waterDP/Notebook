@@ -14,7 +14,7 @@ var lengthOfLongestSubstring = function(s) {
   let res = 0 // 结果
   let map = new Map() // 存放字符和对应下标
   for (let r = 0; r < s.length; ++r) {
-    // 如果出现了重复字符，则把左指针移到重复字符的下一位，注意同时满足重复字符的索引大于左指名
+    // 如果出现了重复字符，则把左指针移到重复字符的下一位，注意同时满足重复字符的索引大于左指针
     if (map.has(s[r]) && map.get(s[r]) >= l) {
       l = map.get(s[r]) + 1
     }
