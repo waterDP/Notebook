@@ -3,28 +3,31 @@ import element from './element'
 const container = document.getElementById('root')
 
 // 应用的根
-let workInProgressRoot = {
-  stateNode: container,  // 此fiber对应的dom节点
-  props: {              // fiber的属性
-    children: [element]
-  },
-  /* child,
-  return,
-  sibling */
-}
-
+let workInProgressRoot = null
 
 // 下一个工作单元
-let nextUnitOfWork = workInProgressRoot
+let nextUnitOfWork = null
+
+function scheduleRoot(rootFiber) {
+  nextUnitOfWork = rootFiber
+  workInProgressRoot = rootFiber
+}
+
+export default scheduleRoot
 
 function workLoop(deadline) {
+  let shouldYield = false // 是否要让出时间片或者说是控制权
   // 如果有下一个工作单元，就执行他，返回一个工作单元
-  if (nextUnitOfWork && deadline.timeRemaining()) {
+  if (nextUnitOfWork && !shouldYield) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
+    shouldYield = deadline.timeRemaining() < 1
   }
   if (!nextUnitOfWork) {
+    // render阶段结束
     commitRoot()
-  }
+  } 
+  // 不管有没有任务，都请求再次调度
+  requestIdleCallback(workLoop, {timeout: 500})
 }
 
 function commitRoot() {
@@ -125,4 +128,4 @@ function completeUnitOfWork(workingInProgressFiber) {
 }
 
 // 告诉浏览器在空闲的时候执行workLoop
-requestIdleCallback(workLoop)
+requestIdleCallback(workLoop, {timeout: 500})
