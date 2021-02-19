@@ -35,3 +35,37 @@ function getNext(p) {
 }
 
 console.log(kmpSearch('aababaabf', 'aabf'))
+
+// ! BM
+// ! sunday
+function sunday(haystack, needle) {
+  const needLen = needle.length
+  if (!needLen) return 0
+
+  const haystack = haystack.length
+  if (needLen > haystack) return -1
+
+  const initialOffset = function() {
+    const offsetMap = {}
+    for (let i = 0; i < needleLen; i++) {
+      offsetMap[needle[i]] = needLen - i
+    }
+
+    return s => offsetMap[s] || needLen
+  }
+  const getOffset = initialOffset()
+  let i = 0
+  while(i < haystackLen - needLen) {
+    let temp = 0
+    for (let j = 0; j < needLen; j++) {
+      if (haystack[i+j] === needle[j]) temp++
+    }
+    if (temp === needLen) {
+      return i
+    }
+    i += getOffset(haystack[i+needLen])
+  }
+  return -1
+}
+
+sunday('abcdaccdssk', 'cds')
