@@ -21,11 +21,18 @@ let currentRoot = null  // 渲染成功已后的根fiber
 let deletions = []  // 删除的节点我们并不放在effect list里，所以需要单独记录并执行
 
 export function scheduleRoot(rootFiber) {
-  if (currentRoot) { // 至少已经渲染过一次了
+  if (currentRoot && currentRoot.alternate) { // 第二次及第二次以后的更新
+    workInProgressRoot = currentRoot.alternate
+    workInProgressRoot.props = rootFiber.props
+    workInProgressRoot.alternate = currentRoot
+  } else if (currentRoot) { // 第一次更新
     rootFiber.alternate = currentRoot
+    workInProgressRoot = rootFiber
+  } else { // 第一次渲染
+    workInProgressRoot = rootFiber
   }
+  workInProgressRoot.firstEffect = workInProgressRoot.lastEffect = workInProgressRoot.nextEffect = null
   nextUnitOfWork = rootFiber
-  workInProgressRoot = rootFiber
 }
 
 function workLoop(deadline) {
