@@ -165,3 +165,11 @@ function matches (pattern: string | RegExp | Array<string>, name: string): boole
   /* istanbul ignore next */
   return false
 }
+
+
+/* 
+ * <keep-alive>
+ *   <router-view v-if="$route.meta.keepAlive" />
+ * </keep-alive>
+ * <router-view v-if="!$route.meta.keepAlive" />
+ */
