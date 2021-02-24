@@ -44,7 +44,16 @@
  * @return {number[]}
  */
 var postorderTraversal = function(root) {
-  
+    const list = []
+  const stack = []
+  root && stack.push(root)
+  while(stack.length) {
+    const curNode = stack.pop()
+    list.unshift(curNode.val)
+    curNode.left && stack.push(curNode.left)
+    curNode.right && stack.push(curNode.right)
+  }
+  return list
 };
 // @lc code=end
 
