@@ -6,6 +6,7 @@
 
 // @lc code=start
 /**
+ * @description kmp
  * @param {string} haystack
  * @param {string} needle
  * @return {number}
