@@ -34,8 +34,8 @@ var solveNQueens = function(n) {
       if (!cols.has(col) && !diag1.has(row+col) && !diag2.has(row - col)) {
         board[row][col] = 'Q' // 放置皇后
         cols.add(col)         // 记录放了皇后的列
-        diag1.add(row + col)  // 记录放了皇后的正对角线
-        diag2.add(row - col)  // 记录放了皇后的负对角线
+        diag1.add(row - col)  // 记录放了皇后的正对角线
+        diag2.add(row + col)  // 记录放了皇后的负对角线
 
         helper(row+1)
         
