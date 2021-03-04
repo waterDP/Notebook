@@ -1,0 +1,13 @@
+{
+  "name": "vue-ssr",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "client:dev": "webpack-dev-server --config ./config/webpack.client.js",
+    "client:build": "webpack --config ./config/webpack.client.js",
+    "serer:build": "webpack --config ./config/webpack.server.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
