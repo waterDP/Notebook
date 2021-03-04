@@ -8,7 +8,9 @@ import Router from 'vue-router'
 
 import Bar from '../components/Bar'
 import Foo from '../components/Foo'
+import VueMeta from 'vue-meta'
 
+Vue.use(VueMeta)
 Vue.use(Router)
 
 export default function() {

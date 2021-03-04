@@ -17,6 +17,9 @@ export default {
   components: {
     Bar,
     Foo
+  }, 
+  metaInfo: {
+    title: 'DefaultTitle'
   }
 }
 </script>

@@ -13,10 +13,14 @@ const VueServerRender = require('vue-server-renderer')
 // 模板
 const template = fs.readFileSync('./dist/index.ssr.html', 'utf8')
 // 内容
-const serverBundle = fs.readFileSync('./dist/server.bundle.js', 'utf8')
+// const serverBundle = fs.readFileSync('./dist/server.bundle.js', 'utf8')
+let serverBundle = require('./dist/vue-ssr-server-bundle.json')
+
+let clientManifest = require('./dist/vue-ssr-client-manifest.json')
 
 const render = VueServerRender.createBundleRenderer(serverBundle, {
-  template
+  template,
+  clientManifest
 })
 
 app.get('/', (req, res) => {
