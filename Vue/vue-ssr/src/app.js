@@ -5,10 +5,13 @@
  */
 import Vue from 'vue'
 import App from './App'
+import createRouter from './router'
 
 export default function() {
+  let router = createRouter()
   let app = new Vue({
+    router,
     render: h => h(App)
   })
-  return {app}
+  return {app, router}
 }

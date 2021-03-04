@@ -20,12 +20,22 @@ const render = VueServerRender.createBundleRenderer(serverBundle, {
 })
 
 app.get('/', (req, res) => {
+  const context = {url: req.url}
   // 把渲染成功的字符串扔给客户端
-  render.renderToString((err, html) => {
+  render.renderToString(context, (err, html) => {
     res.send(html)
   })
 })
 // 顺序要保证，放在get后
 app.use(express.static(path.resolve(__dirname, 'dist')))
+
+// 如果访问的路径不存在，默认渲染index.ssr.html 并且把路由定向到当前请求的路径
+app.get('*', (req, res) => {
+  const context = {url: req.url}
+  // 把渲染成功的字符串扔给客户端
+  render.renderToString(context, (err, html) => {
+    res.send(html)
+  })
+})
 
 app.listen(3000)
