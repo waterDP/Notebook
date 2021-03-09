@@ -139,7 +139,7 @@ function test(ele) {
 
 // ! ES6模块与CommonJS模块的差异
 /** 
- * todo `CommonJs模块输出的是一个值的拷贝，ES6模块输出的是值的引用`
+ * todo CommonJs模块输出的是一个值的拷贝，ES6模块输出的是值的引用
  * CommonJS模块输出的是值的拷贝，也就是说，一旦输出一个值，模块内部的变化就影响不到这个值
  * ES6模块的运行机制与CommonJS不一样。JS引擎对脚本静态分析的时候，遇到模块加载命令import，就会生成一个只读引用
  * 换句话说，ES6的import有点像Unix系统的‘符号连接’，原始值变了，import加载的值也会跟着变。因此，ES6模块是动态引用的
@@ -151,3 +151,30 @@ function test(ele) {
  * 编译时加载：ES6模块不是对象，而是通过export命令显式指定输出的代码，import时采用静态命令的形式。即在import时可以指定加载某个输出值
  * 而不是加载整个模块，这种加载称为“编译时加载”
  */
+
+
+// ! UMD
+(function(root, factory) {
+  if (typeof module === 'object' && typeof module.exports === 'object') {
+    // 是commonjs模块规范, nodejs环境
+    let depModule = require('./umd-module-depended')
+    module.exports = depModule
+  } else if (typeof define === 'function' && define.amd) { 
+    // 是一个AMD模块规范，如require.js
+    define(['depModule'], factory)
+  } else if (typeof define === 'function' && define.cmd) {
+    // 是一个CMD模块规范，如sea.js
+    define(function(require, exports, module) {
+      let depModule = require('depModule')
+      module.exports = factory(depModule)
+    })
+  } else {
+    // 没有模块环境，直接挂载到全局对象上
+    root.umdModule = factory(root.depModule)
+  }
+})(this, function(depModule) {
+  console.log('我调用了依赖模块', depModule)
+  return {
+    name: '我自己是一个UMD模块'
+  }
+})
