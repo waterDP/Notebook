@@ -158,7 +158,7 @@ function test(ele) {
   if (typeof module === 'object' && typeof module.exports === 'object') {
     // 是commonjs模块规范, nodejs环境
     let depModule = require('./umd-module-depended')
-    module.exports = depModule
+    module.exports = factory(depModule)
   } else if (typeof define === 'function' && define.amd) { 
     // 是一个AMD模块规范，如require.js
     define(['depModule'], factory)
