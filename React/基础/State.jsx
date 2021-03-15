@@ -35,3 +35,8 @@ class Clock extends React.Component {
 }
 
 ReactDOM.render(<Clock />, document.getElementById('root')
+
+
+/**
+ * ! setState只在合成事件和钩子函数中是"异步"的，在原生事件和 setTimeout中都是同步的
+ */
