@@ -1,4 +1,4 @@
-// 实际上，jsx仅仅只是React.createElement(component, props, ...children)函数的语法糖。如下的jsx代码
+  // 实际上，jsx仅仅只是React.createElement(component, props, ...children)函数的语法糖。如下的jsx代码
 <MyComponent color="blue" shadowSize={2}>
   Click Me
 </MyComponent>
