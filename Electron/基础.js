@@ -19,3 +19,77 @@
  * 
  */
 
+/**
+ * 模块
+ * electron-windows-interactive-notifications
+ * electron-notification-state   检查是否允许发送通知
+ * 
+ */
+
+// todo 在渲染进程中显示通知
+const {Notification} = require('Electron')
+
+const myNotification = new Notification({
+  body: 'Notification from the Renderer process'
+})
+myNotification.onclick = () => {
+  console.log('Notification clicked')
+}
+
+// todo 在主进程中显示通知
+const {app, BrowserWindow, Notification} = require('electron')
+
+function createWindow () {
+  const win = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: true
+    }
+  })
+
+  win.loadFile('index.html')
+}
+
+function showNotification() {
+  const notification = {
+    title: 'Basic Notification',
+    body: 'Notification from the Main process'
+  }
+  new Notification(notification).show()
+}
+app.whenReady().then(createWindow).then(showNotification)
+
+// todo 将一个项目添加到最近文档
+const {app} = require('electron')
+
+app.addRecentDocument('/Users/USERNAME/work.type')
+
+// 清理
+app.clearRecentDocuments()
+
+// todo 本地快捷键
+// 应用快捷键仅在应用程序被聚焦时触发
+const {app, Menu, MenuItem} = require('electron')
+const menu = new Menu()
+menu.append(new MenuItem({
+  label: 'Electron',
+  submenu: {
+    role: 'help',
+    accelerator: process.platform === 'darwin' ? 'Alt+Cmd+I' : 'Alt+Shift+I',
+    click: () => {
+      console.log('Electron rocks')
+    }
+  }
+}))
+Menu.setApplicationMenu(menu)
+
+// todo 全局快捷键
+const {app, globalShortcut} = require('electron')
+
+app.whenReady().then(() => {
+  globalShortcut.register('Alt+CommandControl+I', () => {
+    console.log('Electron loves global shortcuts')
+  })
+}).then(createWindow)
+
