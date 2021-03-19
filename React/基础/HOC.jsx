@@ -578,3 +578,29 @@ class Index extends React.Component {
  * class声明的有状态组件才有实例，function声明的无状态组件不存在实例
  */
 // 属性代理-添加额外生命周期
+function HOC(Component) {
+  return class WrapComponent extends React.Component {
+    constructor() {
+      super()
+      this.node = null
+    }
+    UNSAFE_componentWillReceiveProps(nextprops) {
+      if (nextprops.number !== this.props.number) {
+        this.node.handlerNumberChange  &&  this.node.handlerNumberChange.call(this.node)
+      }
+    }
+    render() {
+      return <Component {...this.props} ref={node => this.node = node} />
+    }
+  }
+}
+
+@HOC
+class Index extends React.Component {
+  handlerNumberChange() {
+    /*  监听number的改变 */
+  }
+  return() {
+    return <div>hello world</div>
+  }
+}
