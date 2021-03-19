@@ -112,7 +112,7 @@ function withSubscription(WrappedComponent, selectData) {
         data: selectData(DataSource, props)
       }
     }
-    componentWilDidMount(){
+    componentWilDidMount() {
       // 负责订阅相关的操作
       DataSource.addChangeListener(this.handleChange)
     }
@@ -135,7 +135,7 @@ function withSubscription(WrappedComponent, selectData) {
 import hoistNonReactStatic from "hoist-non-react-statics"
 // 自动拷贝所有非React静态方法 
 function enhance(WrappedComponent) {
-  class Enhance extends React.Component{/* ... */}
+  class Enhance extends React.Component {/* ... */ }
   hoistNonReactStatic(Enhance, WrappedComponent);
   return Enhance;
 }
@@ -168,7 +168,7 @@ function hocTmp(WrappedComponent) {
   return class extends React.Component {
     render() {
       // 过滤掉非此HOC额外的props,且不要进行透传
-      const {extraProps, ...passThroughProps} = this.props
+      const { extraProps, ...passThroughProps } = this.props
 
       // 将props注入到被包装的组件中
       // 通常为state的值或者实例方法
@@ -176,7 +176,7 @@ function hocTmp(WrappedComponent) {
 
       // 将props传递给被包裹的组件
       return (
-        <WrappedComponent 
+        <WrappedComponent
           injectedProps={injectedProps}
           {...passThroughProps}
         />
@@ -199,16 +199,16 @@ const ConnectedComment = connect(commentSelector, commentActions)(CommentList)
 // 1. 不要在render方法中使用HOC
 // 2. 务必复制静态方法
 function enhance(WrappedComponent) {
-  class Enhance extends React.Component {/*  */}
+  class Enhance extends React.Component {/*  */ }
   // 必须准确知道拷贝哪些方法
   Enhance.staticMethod = WrappedComponent.staticMethod
-  return 
+  return
 }
 
 // 但要这样做，你需要知道哪些方法应该被拷贝。你可以使用hoist-non-react-statics自动拷贝所有非React静态方法
 import hoistNonReactStatic from 'hoist-non-react-statics'
 function enhance(WrappedComponent) {
-  class Enhance extends React.Component {/*  */}
+  class Enhance extends React.Component {/*  */ }
   hoistNonReactStatic(Enhance, WrappedComponent)
   return Enhance
 }
@@ -218,8 +218,304 @@ MyComponent.someFunction = someFunction
 export default MyComponent
 
 // ...单独导出该方法...
-export {someFunction}
+export { someFunction }
 
 // ...并在要使用的组件中，import它们
-import MyComponent, {someFunction} from './MyComponent.js'
+import MyComponent, { someFunction } from './MyComponent.js'
 
+
+
+// ! 二、强化props
+// 1.混入props
+function funHoc(WrapComponent) {
+  return function Index(props) {
+    const [state, setState] = useState({ name: 'alien' })
+    return <WrapComponent {...props} {...state} />
+  }
+}
+
+// 2抽离state控制更新
+function classHoc(WrapComponent) {
+  return class Index extends React.Component {
+    constructor() {
+      super()
+      this.state = {
+        name: 'alien'
+      }
+    }
+    changeName(name) {
+      this.setState({ name })
+    }
+    render() {
+      return <WrapComponent {...this.props} {...this.state} changeName={this.changeName.bind(this)} />
+    }
+  }
+}
+function Index(props) {
+  const [value, setValue] = useState(null)
+  const { name, changeName } = props
+  return (
+    <div>
+      <div>hello world, my name is {name}</div>
+      <input onChange={e => setValue(e.target.value)} />
+      <button onClick={() => changeName(value)}>确定</button>
+    </div>
+  )
+}
+
+// ! 二、控制渲染
+
+// 基础：动态渲染
+// 实现一个动态挂载的HOC
+function renderHOC(WrapComponent) {
+  return class Index extends React.Component {
+    constructor(props) {
+      super(props)
+      this.state = { visible: true }
+    }
+    setVisible() {
+      this.setState({ visible: !this.state.visible })
+    }
+    render() {
+      return (
+        <div className='box'>
+          <button onClick={this.setVisible.bind(this)}>挂载组件</button>
+          {
+            visible
+              ? <WrapComponent {...this.props} setVisible={this.setVisible.bind(this)}></WrapComponent>
+              : (
+                <div className="icon">
+                  <SyncOutlined spin className="theicon"></SyncOutlined>
+                </div>
+              )
+          }
+        </div>
+      )
+    }
+  }
+}
+
+class Index extends React.Component {
+  render() {
+    const { setVisible } = this.props
+    return (
+      <div className="box">
+        <p>Hello, my name is alien</p>
+        <img src="someUrl" />
+        <button onClick={() => setVisible()}>卸载当前组件</button>
+      </div>
+    )
+  }
+}
+export default renderHOC(Index)
+
+// 分片渲染
+const renderQueue = []
+const isFirstRender = false
+
+const tryRender = () => {
+  const render = renderQueue.shift()
+  if (!render) return
+  setTimeout(() => {
+    render()
+  }, 300)
+}
+
+function renderHOC(WrapComponent) {
+  return function Index(props) {
+    const [isRender, setRender] = useState()
+    useEffect(() => {
+      renderQueue.push(() => {
+        setRender(true)
+      })
+      if (!isFirstRender) {
+        tryRender()
+        isFirstRender = true
+      }
+    }, [])
+
+    return (
+      isRender
+        ? <WrapComponent tryRender={tryRender} {...props} />
+        : (
+          <div className='box' >
+            <div className="icon" >
+              <SyncOutlined spin />
+            </div>
+          </div>
+        )
+    )
+  }
+}
+
+class Index extends React.Component {
+  componentDidMount() {
+    const { name, tryRender } = this.props
+    /* 上一部分渲染完毕，进行下一次渲染 */
+    tryRender()
+  }
+  render() {
+    return (
+      <div>
+        <img src="url" alt="" />
+      </div>
+    )
+  }
+}
+
+const Item = renderHOC(index)
+
+export default () => {
+  return (
+    <>
+      <Item name='组件一'></Item>
+      <Item name='组件二'></Item>
+      <Item name='组件三'></Item>
+    </>
+  )
+}
+
+// todo 反向继承：渲染劫持
+// HOC反向继承模式，可以实现颗粒化的渲染劫持，也就是可以控制基类组件的render函数，还可以篡改props，或者是children
+const HOC = WrapComponent => {
+  return class Index extends WrapComponent {
+    render() {
+      if (this.props.visible) {
+        return super.render()
+      } else {
+        return <div>数据暂无</div>
+      }
+    }
+  }
+}
+
+// todo 反向继承：修改渲染树
+class Index extends React.Component {
+  render() {
+    return (
+      <div>
+        <ul>
+          <li>react</li>
+          <li>vue</li>
+          <li>angular</li>
+        </ul>
+      </div>
+    )
+  }
+}
+
+function HOC(WrapComponent) {
+  return class Advance extends WrapComponent {
+    render() {
+      const element = super.render()
+      const otherProps = {
+        name: 'alien'
+      }
+      // 替换Angular节点
+      const appendElement = React.createElement('li', {}, `hello world, myName is ${otherProps.name}`)
+      const newChildren = React.children.map(element.props.children.props.children, (child, index) => {
+        if (index === 2) return appendElement
+        return child
+      })
+      return React.cloneElement(element, element.props, newChildren)
+    }
+  }
+}
+export default HOC(Index)
+
+// todo 节流渲染
+function HOC(Component) {
+  return function renderWrapComponent(props) {
+    const { num } = props
+    const RenderElement = useMemo(() => <Component {...props} />, [num])
+    return RenderElement
+  }
+}
+
+class Index extends React.Component {
+  render() {
+    return <div>hello world</div>
+  }
+}
+const IndexHoc = HOC(Index)
+
+export default () => {
+  const [num, setNumber] = useState(0)
+  const [num1, setNumber1] = useState(0)
+  const [num2, setNumber2] = useState(0)
+
+  return (
+    <div>
+      <IndexHoc num={num} num1={num1} num2={num2} />
+      <button onClick={() => setNumber(num + 1)} >num++</button>
+      <button onClick={() => setNumber1(num1 + 1)} >num1++</button>
+      <button onClick={() => setNumber2(num2 + 1)} >num2++</button>
+    </div>
+  )
+}
+
+// todo 定制化渲染流
+function HOC(rule) {
+  return function (Component) {
+    return function renderWrapComponent(props) {
+      const dep = rule(props)
+      const RenderElement = useMemo(() => <Component {...props} />, [dep])
+      return RenderElement
+    }
+  }
+}
+
+/* 只有props中num变化，渲染组件 */
+@HOC((props) => props['num'])
+class IndexHoc extends React.Component {
+  render() {
+    return <div>组件一</div>
+  }
+}
+
+/* 只有props中num1变化，渲染组件 */
+@HOC((props) => props['num1'])
+class IndexHoc1 extends React.Component {
+  render() {
+    return <div>组件二</div>
+  }
+}
+
+export default () => {
+  const [num, setNumber] = useState(0)
+  const [num1, setNumber1] = useState(0)
+  const [num2, setNumber2] = useState(0)
+  return <div>
+    <IndexHoc num={num} num1={num1} num2={num2} />
+    <IndexHoc1 num={num} num1={num1} num2={num2} />
+    <button onClick={() => setNumber(num + 1)} >num++</button>
+    <button onClick={() => setNumber1(num1 + 1)} >num1++</button>
+    <button onClick={() => setNumber2(num2 + 1)} >num2++</button>
+  </div>
+}
+
+// ! 三、赋能组件
+// 属性代理实现
+function HOC(Component) {
+  const proDidMount = Component.prototype.componentDidMount
+  Component.prototype.componentDidMount = function() {
+    // ! AOP
+    console.log('劫持生命周期：componentDidMount')
+    proDidMount.call(this)
+  }
+  return class WrapComponent extends React.Component {
+    render() {
+      return <Component {...this.props} />
+    }
+  }
+}
+
+@HOC
+class Index extends React.Component {
+  componentDidMount() {
+    console.log('==didMounted==')
+  }
+  render() {
+    return <div>hello, world</div>
+  }
+}

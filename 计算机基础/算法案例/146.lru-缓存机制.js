@@ -22,6 +22,8 @@ LRUCache.prototype.get = function(key) {
   let index = this.keys.indexOf(key)
   if (index > -1) {
     this.keys.splice(index, 1)
+    
+    // 取出value后删除，然后把value放前端去 
     let temp = this.values[index]
     this.values.splice(index, 1)
     this.keys.unshift(key)
