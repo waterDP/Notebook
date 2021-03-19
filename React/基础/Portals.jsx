@@ -24,7 +24,7 @@ class MyComponent extends React.Component {
 }
 
 // 然而，有时候将子元素插入到DOM节点中的不同位置也是有好处的
-class Protals extends React.Component {
+class Portals extends React.Component {
   render() {
     // React并没有创建一个新的div,它只是把子元素渲染到domNode中
     // domNode是一个可以在任何位置有效的DOM节点|

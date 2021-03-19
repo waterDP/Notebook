@@ -1,9 +1,9 @@
-import React from 'react';
-import dva, { connect } from 'dva';
-import keymaster from 'keymaster';
-import { Router, Route } from 'dva/router';
+import React from 'react'
+import dva, { connect } from 'dva'
+import keymaster from 'keymaster'
+import { Router, Route } from 'dva/router'
 //dva react react-dom redux redux-saga react-router react-router-dom history 
-const app = dva();
+const app = dva()
 //redux combineReducers reducer都有自己的状态 
 //combineReducers({counter:counterReducer})
 //总的状态树 state={counter:0,counter2:0}
@@ -36,18 +36,18 @@ app.model({
     keyboard({ dispatch }) {
       keymaster('space', () => {
         dispatch({ type: 'add' });
-      });
+      })
     },
     changeTitle({ history }) {
       setTimeout(function () {
         history.listen(({ pathname }) => {
           document.title = pathname;
-        });
-      }, 1000);
-
+        })
+      }, 1000)
     }
   }
-});
+})
+
 app.model({
   namespace: 'counter2',
   state: { number: 0 },
@@ -59,7 +59,8 @@ app.model({
       return { number: state.number - 1 };
     }
   }
-});
+})
+
 const Counter = (props) => {
   return (
     <div>
