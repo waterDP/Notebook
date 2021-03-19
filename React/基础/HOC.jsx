@@ -519,3 +519,62 @@ class Index extends React.Component {
     return <div>hello, world</div>
   }
 }
+
+// 反向继承实现
+function HOC(Component) {
+  const didMount = Component.prototype.componentDidMount
+  return class wrapComponent extends Component {
+    componentDidMount() {
+      // 支持生命周期
+      if (didMount) {
+        didMount.apply(this)
+      }
+    }
+    render() {
+      return super.render()
+    }
+  }
+}
+
+@HOC
+class Index extends React.Component {
+  componentDidMount() {
+
+  }
+  render() {
+    return <div>hello world</div>
+  }
+}
+
+
+/* 事件监控 */
+// ! 1、组件内的事件监控
+function ClickHOC(Component) {
+  return function Wrap(props) {
+    const dom = useRef(null)
+    useEffect(() => {
+      const handleClick = () => {console.log('发生的点击事件')}
+      dom.current.addEventListener('click', handleClick)
+      return () => dom.current.removeEventListener('click', handleClick)
+    }, [])
+    return <div ref={dom}><Component {...props} /></div>
+  }
+}
+
+@ClickHOC
+class Index extends React.Component {
+  render() {
+    return <div className="index">
+      <p>hello world</p>
+      <button>组件内部点击</button>
+    </div>
+  }
+}
+
+/**
+ * todo ref 助力操控组件实例
+ * 对于属性代理我们虽然不能直接获取组件内部的状态，但是我们可以通过ref获取组件实例，获取到组件实例，就可以获取组件的一些状态
+ * 或者手动触发一些事件，进一步强化组件，但是注意的是：
+ * class声明的有状态组件才有实例，function声明的无状态组件不存在实例
+ */
+// 属性代理-添加额外生命周期
