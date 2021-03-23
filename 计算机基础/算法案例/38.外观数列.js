@@ -10,12 +10,12 @@
  * @return {string}
  */
 var countAndSay = function(n) {
-  const dp = n => {
+  const find = n => {
     if (n === 1) {
       return '1'
     }
     let cache = {}
-    let temp = dp(n - 1).split('')
+    let temp = find(n - 1).split('')
     let res = ''
     for (let idx = 0; idx < temp.length; idx++) {
       cache[temp[idx]] = 
@@ -27,7 +27,7 @@ var countAndSay = function(n) {
     }
     return res
   }
-  return dp(n)
+  return find(n)
 };
 // @lc code=end
 
