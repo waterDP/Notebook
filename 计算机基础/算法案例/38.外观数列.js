@@ -28,6 +28,6 @@ var countAndSay = function(n) {
     return res
   }
   return dp(n)
-}
+};
 // @lc code=end
 
