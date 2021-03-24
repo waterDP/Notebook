@@ -10,17 +10,17 @@
  * @return {boolean}
  */
 var find132pattern = function (nums) {
-  let minIdx = 0, len = nums.length, stack = []
-  while (minIdx < len) {
-    stack = [];
-    for (let i = minIdx; i < len; i++) {
-      if (!stack.length) stack[0] = nums[i]
-      if (nums[i] > stack[0] && stack.length === 1) stack[1] = nums[i]
-      if (nums[i] > stack[1] && stack.length === 2 && i !== len - 1) stack[1] = nums[i]
-      if (nums[i] > stack[0] && nums[i] < stack[1]) return true
-      if (minIdx === len - 2) return false
+  let n = nums.length
+  if (n < 3) return false
+  let stack = [nums[n - 1]]
+  let last = -Infinity
+  for (let i = n - 2; i >= 0; i--) {
+    let cur = nums[i]
+    if (cur < last) return true
+    while (stack.length && cur > stack[stack.length - 1]) {
+      last = stack.pop()
     }
-    minIdx++
+    if (cur > last) stack.push(cur)
   }
   return false
 }
