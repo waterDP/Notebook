@@ -35,9 +35,9 @@ module.exports = {
         test: /\.vue$/,
         loader: 'vue-loader'
       }
-    ],
-    plugins: [
-      new VueLoaderPlugin()
     ]
-  }
+  },
+  plugins: [
+    new VueLoaderPlugin()
+  ]
 }
