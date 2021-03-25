@@ -41,23 +41,22 @@
  * @return {ListNode}
  */
 var deleteDuplicates = function(head) {
-  let node = new ListNode('head')
-  let resNode = new ListNode('reshead')
-  node.next = head
-  resNode.next = node
-  while(node.next) {
-    if (!node.next.next) break
-    if (node.next.val === node.next.next.val) {
-      let temp = node.next
-      while(temp && temp.val === node.next.val) {
-        temp = temp.next
+  if (!head) return head
+
+  const dummy = new ListNode(0, head)
+
+  let cur = dummy
+  while(cur.next && cur.next.next) {
+    if (cur.next.val === cur.next.next.val) {
+      let x = cur.next.val
+      while(cur.next && cur.next.val === x) {
+        cur.next = cur.next.next
       }
-      node.next = temp
     } else {
-      node = node.next
+      cur = cur.next
     }
   }
-  return resNode.next.next
+  return dummy.next
 };
 // @lc code=end
 
