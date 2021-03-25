@@ -22,18 +22,14 @@ var rotateRight = function(head, k) {
     return head
   }
   
-  let len = computeCount()
-  function computeCount() {
-    let item = head
-    let res = 0
-    while(item !== null) {
-      res++
-      item = item.next
-    }
-    return res
+  let len = 0
+  let item = head
+  while(item) {
+    len++
+    item = item.next
   }
-
   k = k % len
+  
   let fast = head
   let slow = head
   for (let i = 0; i < k; i++) {
