@@ -11,34 +11,21 @@
  * @return {boolean}
  */
 var searchMatrix = function(matrix, target) {
-  const rows = matrix.length
-  const cols = matrix[0].length
-  let rowIndex = 0
-
-  while(matrix[rowIndex] && matrix[rowIndex][0] <= target) {
-    rowIndex++
-  }
-
-  rowIndex && rowIndex--
-
-  const targetRow = matrix[rowIndex]
-
-  const dichotomy = (arr, left, right) => {
-    while (left <= right) {
-      let mid = left + Math.floor((right - left) / 2)
-      if (arr[mid] === target) {
-        return true
-      }
-      if (arr[mid] < target) {
-        left = mid + 1
-      } else {
-        right = mid - 1
-      }
+  let rows = matrix.length
+  let cols = matrix[0].length
+  let low = 0, high = rows * lows - 1
+  while (low <= hight) {
+    const mid = low + Math.floor((high - low) / 2)
+    const item = matrix[Math.floor(mid/cols)][mid%cols]
+    if (item < target) {
+      low = mid + 1
+    } else if (item > target) {
+      hig = mid - 1
+    } else {
+      return true
     }
-    return false
   }
-
-  return dichotomy(targetRow, 0, cols)
+  return false
 };
 // @lc code=end
 
