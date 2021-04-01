@@ -19,12 +19,16 @@
  * @return {TreeNode}
  */
 var buildTree = function(preorder, inorder) {
+  const map = new Map();
+  for (let i = 0; i < inorder.length; i++) {
+    map.set(inorder[i], i);
+  }
   const helper = (pStart, pEnd, iStart, iEnd) => {
     if (pStart > pEnd) return null
     let rootVal = preorder[pStart]
     let root = new TreeNode(rootVal)
-    let mid = inorder.indexOf(rootVal)
-    let leftNum = mid - iStart  // 左子树的节点数
+    let mid = map.get(rootVal)
+    let leftNum = mid - iStart  // ! 左子树的节点数
     root.left = helper(pStart+1, pStart+leftNum, iStart, mid-1)
     root.right = helper(pStart+leftNum+1, pEnd, mid + 1, iEnd)
     return root
