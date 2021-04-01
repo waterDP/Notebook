@@ -13,14 +13,14 @@
 var searchMatrix = function(matrix, target) {
   let rows = matrix.length
   let cols = matrix[0].length
-  let low = 0, high = rows * lows - 1
-  while (low <= hight) {
+  let low = 0, high = rows * cols - 1
+  while (low <= high) {
     const mid = low + Math.floor((high - low) / 2)
     const item = matrix[Math.floor(mid/cols)][mid%cols]
     if (item < target) {
       low = mid + 1
     } else if (item > target) {
-      hig = mid - 1
+      high = mid - 1
     } else {
       return true
     }
