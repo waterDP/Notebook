@@ -60,6 +60,5 @@ var subsets = function(nums) {
   }
   return res
 };
-subsets([1,2,3])
 // @lc code=end
 

@@ -67,7 +67,5 @@ var grayCode = function(n) {
   }
   return res
 };
-
-grayCode(2)
 // @lc code=end
 

@@ -77,7 +77,5 @@ var judgeSquareSum = function (c) {
   }
   return false
 };
-
-judgeSquareSum(2)
 // @lc code=end
 
