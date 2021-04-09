@@ -12,6 +12,7 @@
  *     this.next = (next===undefined ? null : next)
  * }
  */
+
 /**
  * todo 方法一 迭代
  * @param {ListNode} head
@@ -43,6 +44,26 @@ var reverseList = function(head) {
   head.next.next = head
   head.next = null
   return newHead
+}
+
+/**
+ * todo 方法三 头插法
+ * @param {ListNode} head
+ * @return {ListNode}
+ */
+var reverseList = function(head) {
+  if (head == null || head.next == null) {
+    return head
+  }
+  let newHead = new ListNode(null) 
+  let curr = head
+  while (curr) {
+    const next = curr.next
+    curr.next = newHead.next
+    newHead.next = curr
+    curr = next
+  }
+  return newHead.next
 }
 // @lc code=end
 
