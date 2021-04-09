@@ -91,16 +91,17 @@
 
 /**
  * todo 图
+ * @Leetcode 207 课程表 [kahn算法(卡恩算法)]
  */
 
 /**
  * todo 贪心算法
- * @Leetcode 402 移掉K位数字
+ * @Leetcode 402  移掉K位数字
  */
 
 /** 
  * todo 并查集
- * @LeetCode 547 省份数量
+ * @LeetCode 547  省份数量
  */
 
 /**
@@ -125,6 +126,10 @@
 
 /**
  * todo 哈希表
+ * @Leetcode 1   两数之和
+ * @Leetcode 3   无重复字符的最长子串
+ * @Leetcode 76  最小覆盖子串
+ * @Leetcode 136 只出现一次的数字
  */
 
 /**
@@ -133,10 +138,18 @@
 
 /** 
  * todo 栈
+ * @Leetcode 20  有效的括号
+ * @Leetcode 102 移掉K位数字
+ * @Leetcode 132 模式
+ * @Leetcode 150 逆波兰表达式求值
+ * @Leetcode 735 行星碰撞
  */
 
 /**
  * todo 二分查找
+ * @Leetcode 35  搜索插入位置
+ * @Leetcode 50  Pow(x, n)
+ * @Leetcode 69  `
  */
 
 /**
@@ -149,12 +162,19 @@
 
 /**
  * todo 递归
+ * @Leetcode 17   电话号码的字母组合
+ * @Leetcode 104  二叉树的最大深度
+ * @Leetcode 124  二叉权地最大路径和
  */
 
 /**
  * todo 二叉树
- * @LeetCode 100 相同的树
- * @LeetCode 124 二叉树的最大路径和
+ * @LeetCode 100  相同的树
+ * @LeetCode 124  二叉树的最大路径和
+ * @Leetcode 103  二叉树的锯齿形层序遍历
+ * @Leetcode 104  二叉树的前序遍历
+ * @Leetcode 105  二叉树的后序遍历
+ * @Leetcode 173  二叉树搜索迭代器
  */
 
 /**
