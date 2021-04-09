@@ -57,7 +57,12 @@
 
 /**
  * todo 位运算
- * @Leetcode 461 汉明距离
+ * @Leetcode 78   子集
+ * @Leetcode 136  只出现一次的数字
+ * @Leetcode 190  颠倒二进制位
+ * @Leetcode 191  位1的个数
+ * @Leetcode 389  找不同
+ * @Leetcode 461  汉明距离
  * 
  * @Theory
  *  1.任何数和0做异或运算，结果仍然是原来的数，即 a⊕0=a。
@@ -67,7 +72,14 @@
 
 /**
  * todo 双指针
- * @Leetcode 167  两个数之和
+ * @Leetcode 3    无重复字符的最长子串
+ * @Leetcode 26   删除有序数组中的重复项
+ * @Leetcode 27   移除元素
+ * @Leetcode 76   最小覆盖子串
+ * @Leetcode 86   分隔链表
+ * @Leetcode 88   合并两个有序数组
+ * @Leetcode 167  两数之和 II - 输入有序数组
+ * @Leetcode 349  两个数组的交集
  * @Leetcode 633  平方数之和
  */
 
@@ -93,6 +105,7 @@
 
 /**
  * todo 字符串
+ * @Leetcode 28   实现strStr() [kmp]
  */
 
 /**
@@ -107,7 +120,7 @@
 
 /**
  * todo 拓扑排序
- * @Leetcode 207 课程表 kahn算法(卡恩算法)
+ * @Leetcode 207 课程表 [kahn算法(卡恩算法)]
  */
 
 /**
