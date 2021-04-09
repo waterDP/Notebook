@@ -51,6 +51,7 @@
  * @Leetcode 478  在圆内随机生成点
  * @Leetcode 1006 笨阶乘
  * @Leetcode 1716 计算力扣银行的钱
+ * @Leetcode 1232 缀点成线
  */
 
 /**
