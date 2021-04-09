@@ -1,5 +1,6 @@
 /** 
  * todo 动态规划
+ * @Leetcode 53   最大子序和
  * @Leetcode 70   爬楼梯
  * @Leetcode 198  打家劫舍
  * @Leetcode 264  丑数二
@@ -46,6 +47,7 @@
  * @Leetcode 263  丑数一
  * @Leetcode 264  丑数二
  * @Leetcode 342  整数拆分
+ * @Leetcode 367  有效完全平方数
  * @Leetcode 478  在圆内随机生成点
  * @Leetcode 1006 笨阶乘
  * @Leetcode 1716 计算力扣银行的钱
@@ -97,6 +99,7 @@
 /**
  * todo 贪心算法
  * @Leetcode 402  移掉K位数字
+ * @Leetcode 870  优势洗牌
  */
 
 /** 
@@ -111,8 +114,15 @@
 
 /**
  * todo 数组
- * @Leetcode 200 岛屿数量
- * @Leetcode 733 图像渲染 （同200）
+ * @Leetcode 73   矩阵置零
+ * @Leetcode 74   搜索二维矩阵
+ * @Leetcode 81   搜索旋转排序数组二
+ * @Leetcode 88   合并两个有序数组
+ * @Leetcode 153  寻找旋转排序数组中的最小值
+ * @Leetcode 167  两数之和-输入有序数组
+ * @Leetcode 200  岛屿数量
+ * @Leetcode 733  图像渲染 （同200）
+ *
  */
 
 /** 
@@ -134,6 +144,9 @@
 
 /**
  * todo 设计
+ * @Leetcode 146 LRU缓存机制
+ * @Leetcode 173 二叉树迭代器
+ * @Leetcode 341 扁平化嵌套列表迭代器
  */
 
 /** 
@@ -157,6 +170,11 @@
  */
 
 /**
+ * todo 极小化极大 （找出失败的最大可能性中的最小值）
+ * @Leetcode 292  Nim游戏
+ */
+
+/**
  * todo 队列
  */
 
@@ -177,7 +195,8 @@
  * @LeetCode 124  二叉树的最大路径和
  * @Leetcode 103  二叉树的锯齿形层序遍历
  * @Leetcode 104  二叉树的前序遍历
- * @Leetcode 105  二叉树的后序遍历
+ * @Leetcode 105  从前序和中序遍历构造二叉树
+ * @Leetcode 106  从中序和后序遍历构造二叉树
  * @Leetcode 173  二叉树搜索迭代器
  */
 
