@@ -2,22 +2,39 @@
  * @Description: 动态规划
  * @Leetcode 70   爬楼梯
  * @Leetcode 198  打家劫舍
+ * @Leetcode 264  丑数二
+ * @Leetcode 300  最长的递增子序列
  * @Leetcode 322  零钱兑换
  * @Leetcode 343  整数拆分
+ * @Leetcode 1143 最长公共子序列
  * @Leetcode 1706 球会落何处
  */
 
 /*
  * @Description: 深度优先搜索
+ * @Leetcode 17   电话号码的字母组合
+ * @Leetcode 100  相同的树
+ * @Leetcode 200  岛屿数量
+ * @Leetcode 733  图像渲染 （同200）
  */
 
 /*
- * @Description: 回溯
- * @Leetcode 51 n皇后问题  
+ * @Description: 回溯算法
+ * @Leetcode 51   n皇后问题  
  */
 
 /*
  * @Description: 链表
+ * @Leetcode 2    两数据相加
+ * @Leetcode 21   合并两个有序链表
+ * @Leetcode 61   旋转链表
+ * @Leetcode 82   删除排序排序链表中的重复元素二
+ * @Leetcode 83   删除排序排序链表中的重复元素
+ * @Leetcode 86   分隔链表
+ * @Leetcode 92   反转链表二
+ * @Leetcode 206  反转链表
+ * @Leetcode 237  删除链表中的节点
+ * @Leetcode 328  奇偶链表
  */
 
 /*
@@ -46,6 +63,8 @@
 
 /*
  * @Description:  多叉树
+ * @Leetcode 105 从前序与中序遍历序列构造二叉树
+ * @Leetcode 106 从中序与后序遍历序列构造二叉树
  */
 
 /*
@@ -67,11 +86,18 @@
  */
 
 /*
+ * @Description: 数组
+ * @Leetcode 200 岛屿数量
+ * @Leetcode 733 图像渲染 （同200）
+ */
+
+/*
  * @Description: 滑动窗口
  */
 
 /*
  * @Description: 拓扑排序
+ * @Leetcode 207 课程表 kahn算法(卡恩算法)
  */
 
 /*
@@ -100,6 +126,8 @@
 
 /*
  * @Description: 二叉树
+ * @LeetCode 100 相同的树
+ * @LeetCode 124 二叉树的最大路径和
  */
 
 /*
@@ -116,4 +144,8 @@
 
 /*
  * @Description: 堆
+ */
+
+/*
+ * @Description: 设计
  */
