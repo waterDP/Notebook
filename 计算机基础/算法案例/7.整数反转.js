@@ -9,10 +9,12 @@
  * @param {number} x
  * @return {number}
  */
-var reverse = function(x) {
-  let sign = Math.sign(x)
-  let res = (Math.abs(x) + '').split('').reverse().join('') * sign
-  if (res > Math.pow(2, 31) - 1 || res < Math.pow(2, 31) * -1) res = 0
-  return res
+var reverse = function (x) {
+  let result = 0
+  while (x !== 0) {
+    result = result * 10 + x % 10
+    x = (x / 10) | 0
+  }
+  return (result | 0) === result ? result : 0
 };
 // @lc code=end
