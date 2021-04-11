@@ -14,6 +14,7 @@
 /**
  * todo 深度优先搜索
  * @Leetcode 17   电话号码的字母组合
+ * @Leetcode 39   组合总和
  * @Leetcode 100  相同的树
  * @Leetcode 200  岛屿数量
  * @Leetcode 733  图像渲染 （同200）
@@ -21,7 +22,12 @@
 
 /**
  * todo 回溯算法
- * @Leetcode 51   n皇后问题  
+ * @Leetcode 40   组合总和二
+ * @Leetcode 46   全排列
+ * @Leetcode 47   全排列二
+ * @Leetcode 51   n皇后问题
+ * @Leetcode 77   组合 
+ * @Leetcode 526  优美的排列
  */
 
 /** 
