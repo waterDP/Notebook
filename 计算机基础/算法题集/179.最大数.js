@@ -18,7 +18,7 @@ var largestNumber = function(nums) {
     while(sy <= y) {
       sy *= 10
     }
-    return (sx * y + x).toString() - (sy * x + y).toString()
+    return (sx * y + x) - (sy * x + y)
   })
   if (nums[0] === 0) return '0'
   return nums.join('')
