@@ -225,7 +225,7 @@ import MyComponent, { someFunction } from './MyComponent.js'
 
 
 
-// ! 二、强化props
+// ! 一、强化props
 // 1.混入props
 function funHoc(WrapComponent) {
   return function Index(props) {
