@@ -311,7 +311,7 @@ export default renderHOC(Index)
 
 // 分片渲染
 const renderQueue = []
-const isFirstRender = false
+let isFirstRender = false
 
 const tryRender = () => {
   const render = renderQueue.shift()
