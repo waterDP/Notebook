@@ -411,7 +411,7 @@ function HOC(WrapComponent) {
       const otherProps = {
         name: 'alien'
       }
-      // 替换Angular节点
+      //  
       const appendElement = React.createElement('li', {}, `hello world, myName is ${otherProps.name}`)
       const newChildren = React.children.map(element.props.children.props.children, (child, index) => {
         if (index === 2) return appendElement
