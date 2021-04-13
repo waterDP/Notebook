@@ -30,7 +30,7 @@ var inorderTraversal = function (root) {
       }
 
       if (!predecessor.right) {
-        predecessor.right = root;
+        predecessor.right = root
         root = root.left
       } else {
         res.push(root.val)
