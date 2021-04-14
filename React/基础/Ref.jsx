@@ -97,7 +97,6 @@ function logProps(WrappedComponent) {
     }
   }
   return React.forwardRef((props, ref) => {
-    return <LogProps {... } forwardRef={ref} />
+    return <LogProps {...props} forwardRef={ref} />
   })
 }
-
