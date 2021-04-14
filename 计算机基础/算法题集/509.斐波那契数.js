@@ -38,8 +38,9 @@ const pow = (a, n) => {
   return ret
 }
 
+// 矩阵乘法
 const multiply = (a, b) => {
-  const c = new Array(2).fill(0).map(() => new Array(2).fill(0));
+  const c = new Array(2).fill(0).map(() => new Array(2).fill(0))
   for (let i = 0; i < 2; i++) {
     for (let j = 0; j < 2; j++) {
       c[i][j] = a[i][0] * b[0][j] + a[i][1] * b[1][j]
