@@ -65,3 +65,25 @@ function WelcomeDialog() {
     />
   )
 }
+
+// todo cloneElement
+function FatherComponent({children}) {
+  const newChildren = React.cloneElement(children)
+  return <div>{newChildren}</div>
+}
+
+function SonComponent(props) {
+  return <div>hello word</div>
+}
+
+class Index extends React.Component {
+  render() {
+    return (
+      <div className="box">
+        <FatherComponent>
+          <SonComponent name="alien" />
+        </FatherComponent>
+      </div>
+    )
+  }
+}
