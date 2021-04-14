@@ -1,10 +1,12 @@
+import {memo} from 'react'
+
 function TextMemo(props) {
   console.log('子组件渲染')
   if (props)
     return <div>hello,world</div>
 }
 
-const controlIsRender = (pre, next) => {
+const controlIsRender = (pre, next) => { // props
   if (pre.number === next.number) { // number 不改变 ，不渲染组件
     return true
   } else if (pre.number !== next.number && next.number > 5) { // number 改变 ，但值大于5 ， 不渲染组件
