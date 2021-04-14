@@ -58,7 +58,8 @@
  * 1 
  * text1 和 text2 仅由小写英文字符组成。
  * 
- * 
+ * dp[i][j] = dp[i-1][j-1]+1  if s1[i] = s2[j]
+ * dp[i][j] = max{dp[i-1][j], dp[i][j-1]} if s1[i] != s2[j]
  */
 
 // @lc code=start
