@@ -117,28 +117,28 @@ const [state, dispatch] = useReducer(reducer, initialState, init)
 
 
 // todo useReducer
-const CounterContext = React.createContext()
-
-function Counter() {
-  let {state, dispatch} = React.useContext()
-  return (
-    <div>
-      <p>number: {state.number}</p>
-      <button onClick={()=>dispatch({type: 'ADD'})}>number+</button>
-    </div>
-  )
+function DemoUseReducer() {
+  const [number, dispatch] = useReducer((state, action) => {
+    const {name, payload} = action
+    switch(name) {
+      case 'add': 
+        return state+1
+      case 'sub':
+        return state-1
+      case 'reset': 
+        return payload
+      default: 
+        return state
+    }
+  }, 0)
+  return <div>
+    当前值：{number}
+    <button onClick={() => dispatch({name: 'add'})}>增加</button>
+    <button onClick={() => dispatch({name: 'sub'})}>减少</button>
+    <button onClick={() => dispatch({name: 'reset', payload: 666})}>赋值</button>
+    <MyChildren dispatch={dispatch} state={{number}}></MyChildren>
+  </div>
 }
-
-function App() {
-  const [state, dispatch] = useReducer(reducer, initialState, init)
-  const value = {state, dispatch}
-  return (
-    <CounterContext.Provider value={value}>
-      <Counter />
-    </CounterContext.Provider>
-  )
-}
-
 
 /**
  * todo useMemo
@@ -172,4 +172,26 @@ const number = useMemo(() => {
 const goodListChild = useMemo(() => {
   <GoodList list={props.list} />
 }, [props.list])
+
+/** 
+ * todo useLayoutEffect
+ * useEffect执行顺序：组件更新挂载完成-》浏览器dom绘制完成-》执行useEffect回调
+ * useLayoutEffect执行顺序：组件更新挂载完成-》执行userLayoutEffect回调-》浏览器dom绘制完成
+ * 所以说useLayoutEffect代码可能会阻塞浏览器的绘制。我们写effect和useLayoutEffect，react在底层会被分别打上
+ * PassiveEffect,HookLayout，在commit阶段区分出，在什么时机执行
+ */
+function DemoLayoutEffect() {
+  const target = useRef()
+  useLayoutEffect(() => {
+    /* 我们需要在dom绘制之前，移动dom到指定位置 */
+    const {x, y} = getPosition()
+    animate(target.current, {x, y})
+  }, [])
+  return (
+    <div>
+      <span ref={target} className='animate'></span>
+    </div>
+  )
+}
+
 
