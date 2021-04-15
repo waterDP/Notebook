@@ -1,5 +1,5 @@
 // todo 简介
-import React, {useState} from "react"
+import React, { useState } from "react"
 
 
 /**
@@ -14,7 +14,7 @@ import React, {useState} from "react"
  * useLayoutEffect
  */
 
-// todo State Hook
+// todo useState
 function Example() {
   // 声明一个新的叫做'count'的state变量
   // useState的参数可以是一个函数，此函数会在初次渲染的时候执行，而且只会执行一次
@@ -22,14 +22,14 @@ function Example() {
   return (
     <div>
       <p>You Clicked {count} times</p>
-      <button onClick={() => setCount(count+1)}></button>
+      <button onClick={() => setCount(count + 1)}></button>
     </div>
   )
 }
 
 
-// todo Effect Hook
-import React, {useState, useEffect} from "react"
+// todo useEffect
+import React, { useState, useEffect } from "react"
 function Example1() {
   const [count, setCount] = useState(0)
   // 相当于componentDidMount 和 componentDidUpdate
@@ -41,7 +41,7 @@ function Example1() {
     })
     // 副作用函数可以通过返回一个函数来清除副作用
     // 清除函数会在组件卸载的时候执行，另外如果组件多次渲染，则在执行下一个effect之前执行上一个清除函数
-    return function() {  // componentWillUnmount
+    return function () {  // componentWillUnmount
       clearTimeout(timer)
     }
   })
@@ -49,47 +49,18 @@ function Example1() {
   return (
     <>
       <div>You clicked {count} times</div>
-      <button onClick={() => setCount(count+1)}>
+      <button onClick={() => setCount(count + 1)}>
         Click me
       </button>
     </>
   )
 }
 
-// todo 需要清除的effect
-// class
-class FriendStatus extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = {isOnline: null}
-  }
-  componentDidMount() {
-    ChatAPI.subscribeToFriendStatus(
-      this.props.friend.id,
-      this.handleStatusChange
-    )
-  }
-  componentWillUnmount() {
-    ChatAPI.unsubscribeFromFriendStatus(
-      this.props.friend.id,
-      this.handleStatusChange
-    )
-  }
-  handleStatusChange(status) {
-    this.setState({
-      inOnline: status.isOnline
-    })
-  }
-  render() {
-    if (this.state.isOnline === null) {
-      return 'Loading...'
-    }
-    return this.state.isOnline ? 'Online' : 'Offline'
-  }
-}
+useEffect(() => { }, []) //! 空数组表示依赖项永远不变，所以回调函数只会执行一次
+
 
 // todo useRef
-import {useRef} from 'react'
+import { useRef } from 'react'
 function TextInputWithFocusButton() {
   const inputEl = useRef(null)
   const onButtonClick = () => {
@@ -104,39 +75,27 @@ function TextInputWithFocusButton() {
   )
 }
 
-useEffect(() => {}, []) // 空数组表示依赖项永远不变，所以回调函数只会执行一次
-
-/**
- * @description: 
- * @param {function} reducer
- * @param {any} initialState 初始状态
- * @param {function} init 初始状态的方法
- * @return {*}
- */
-const [state, dispatch] = useReducer(reducer, initialState, init)
-
-
 // todo useReducer
 function DemoUseReducer() {
   const [number, dispatch] = useReducer((state, action) => {
-    const {name, payload} = action
-    switch(name) {
-      case 'add': 
-        return state+1
+    const { name, payload } = action
+    switch (name) {
+      case 'add':
+        return state + 1
       case 'sub':
-        return state-1
-      case 'reset': 
+        return state - 1
+      case 'reset':
         return payload
-      default: 
+      default:
         return state
     }
   }, 0)
   return <div>
     当前值：{number}
-    <button onClick={() => dispatch({name: 'add'})}>增加</button>
-    <button onClick={() => dispatch({name: 'sub'})}>减少</button>
-    <button onClick={() => dispatch({name: 'reset', payload: 666})}>赋值</button>
-    <MyChildren dispatch={dispatch} state={{number}}></MyChildren>
+    <button onClick={() => dispatch({ name: 'add' })}>增加</button>
+    <button onClick={() => dispatch({ name: 'sub' })}>减少</button>
+    <button onClick={() => dispatch({ name: 'reset', payload: 666 })}>赋值</button>
+    <MyChildren dispatch={dispatch} state={{ number }}></MyChildren>
   </div>
 }
 
@@ -184,8 +143,8 @@ function DemoLayoutEffect() {
   const target = useRef()
   useLayoutEffect(() => {
     /* 我们需要在dom绘制之前，移动dom到指定位置 */
-    const {x, y} = getPosition()
-    animate(target.current, {x, y})
+    const { x, y } = getPosition()
+    animate(target.current, { x, y })
   }, [])
   return (
     <div>
@@ -194,4 +153,69 @@ function DemoLayoutEffect() {
   )
 }
 
+/**
+ * todo useContext
+ */
+function DemoUseContext() {
+  const value = useContext()
+  return <div>my name is {value.name}</div>
+}
 
+/**
+ * todo useImperativeHandle
+ * useImperativeHandle可以配合forwardRef自定义暴露给父组件的实例值。这个很有用，我们知道，对于子组件，如果是class类组件，
+ * 我们可能通过ref获取类组件的实例，但是在子组件是函数组件的情况，如果我们不能直接能ref的，那么此时userImperativeHandle
+ * 和forwardRef配置就能达到效果
+ * useImperativeHandle接受三个参数
+ * 第一个参数：ref 接受forwardRef传递过来的ref
+ * 第二个参数: createHandle 处理函数，返回值作为暴露给父组件的ref对象
+ * 第三个参数: deps,依赖项更改形成新的ref对象
+ */
+function Son(props, ref) {
+  const inputRef = useRef()
+  const [inputValue, setInputValue] = useState('')
+
+  useImperativeHandle(
+    ref,
+    () => {
+      const handleRefs = {
+        onfocus() {
+          inputRef.current.focus()
+        },
+        onChangeValue(value) {
+          setInputValue(value)
+        }
+      }
+      return handleRefs
+    },
+    [],
+  )
+
+  return (
+    <div>
+      <input
+        placeholder='请输入内容'
+        ref={inputRef}
+        value={inputValue}
+      />
+    </div>
+  )
+}
+const ForwardSon = React.forwardRef(Son)
+
+class Index extends React.Component {
+  current = null
+  handleClick() {
+    const {onFocus, onChangeValue} = this.current
+    onfocus()
+    onChangeValue('let us learn React!')
+  }
+  render() {
+    return (
+      <div style={{marginTop: '50px'}}>
+        <ForwardSon ref={current => this.current = current} />
+        <button onClick={this.handleClick.bind(this)}>操控子组件</button>
+      </div>
+    )
+  }
+}
