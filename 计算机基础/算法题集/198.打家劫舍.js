@@ -18,7 +18,7 @@ var rob = function(nums) {
   for (let i = 3; i < nums.length; i++) {
     dp[i] = Math.max(dp[i-1], dp[i-2]+nums[i])
   }
-  return Math.max(dp[nums.length-1], dp[nums.length-2])
+  return dp[nums.length-1]
 };
 // @lc code=end
 
