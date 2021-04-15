@@ -138,3 +138,38 @@ function App() {
     </CounterContext.Provider>
   )
 }
+
+
+/**
+ * todo useMemo
+ * useMemo 接受两个参数，条一个参数是一个函数，返回值用于生产保存值。
+ * 第二个参数，作为dep依赖项，数组里面的依赖项发生变化，重新执行第一个函数，产生新的值
+ */
+// ! 缓存一些值，避免重新执行上下文
+const number = useMemo(() => {
+  return number
+}, [props.number])  // 只有props.number改变的时候，重新计算number的值
+
+// ! 减少不必要的dom循环
+{
+  useMemo(() => {
+    <div>
+      {
+        selectList.map((item, value) => {
+          <span
+            className={styleMedia.listSpan}
+            key={value}
+          >
+            {item.patentName}
+          </span>
+        })
+      }
+    </div>
+  }, [selectList])
+}
+
+// ! 减少子组件渲染
+const goodListChild = useMemo(() => {
+  <GoodList list={props.list} />
+}, [props.list])
+
