@@ -65,6 +65,7 @@ class ThemedButton extends React.Component {
   }
 }
 
+// todo function component
 function Title(props) {
   return (
     <ThemeContext.Consumer>
