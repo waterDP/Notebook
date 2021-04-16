@@ -226,7 +226,7 @@ function isPromise(x) {
 Promise.all = function(promises) {
   return new Promise((resolve, reject) => {
     let arr = []
-    let idx = 0;
+    let idx = 0
     let processData = (value, index) => {
       arr[index] = value; // 赋值
       if (++idx === promises.length) {
