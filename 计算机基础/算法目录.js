@@ -107,7 +107,7 @@
 
 /**
  * todo 图
- * @Leetcode 1334 阈值距离内邻居最少的城市 [bellmanford spfa Dijstra floyd]
+ * @Leetcode 1334 阈值距离内邻居最少的城市 [bellman-ford spfa Dijkstra floyd]
  */
 
 /**
