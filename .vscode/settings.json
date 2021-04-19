@@ -6,6 +6,7 @@
     "bodyparser",
     "chunkhash",
     "csrf",
+    "dijsktra",
     "f",
     "fres",
     "inorder",
