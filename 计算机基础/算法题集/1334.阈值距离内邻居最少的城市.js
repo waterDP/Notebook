@@ -64,5 +64,7 @@ var findTheCity = function(n, edges, distanceThreshold) {
   }
   return ans
 };
+
+findTheCity(4, [[0,1,3],[1,2,1],[1,3,4],[2,3,1]], 4)
 // @lc code=end
 
