@@ -76,6 +76,7 @@
  * @Leetcode 191  位1的个数
  * @Leetcode 389  找不同
  * @Leetcode 461  汉明距离
+ * @Leetcode 476  数字的补数
  * 
  * @Theory
  *  1.任何数和0做异或运算，结果仍然是原来的数，即 a⊕0=a。
