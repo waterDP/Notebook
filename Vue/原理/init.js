@@ -4,7 +4,7 @@ import {mountComponent, callHook} from './lifecycle'
 import {mergeOptions} from './util/index'
 
 export function initMixin(Vue) {
-  // 初始化流程
+  // 初始化流程  负责Vue的初始化过程
   Vue.prototype._init = function(options) {
     // 数据的劫持
     const vm = this
