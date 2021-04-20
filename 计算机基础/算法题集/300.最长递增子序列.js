@@ -11,8 +11,7 @@
  */
 var lengthOfLIS = function(nums) {
   const length = nums.length
-  const dp = new Array(length)
-  dp.fill(1)
+  const dp = new Array(length).fill(1)
   let result = 0
   for (let i = 0; i < length; i++) {
     for (let j = 0; j < i; j++) {
@@ -24,5 +23,6 @@ var lengthOfLIS = function(nums) {
 
   return result
 };
+lengthOfLIS([10,9,2,5,3,7,101,18])
 // @lc code=end
 
