@@ -8,7 +8,7 @@
  * @Leetcode 300  最长的递增子序列
  * @Leetcode 322  零钱兑换
  * @Leetcode 343  整数拆分
- * @Leetcode 1143 最长公共子序列
+ * @Leetcode 1143 最长公共子序列[LCS]
  * @Leetcode 1706 球会落何处
  */
 
