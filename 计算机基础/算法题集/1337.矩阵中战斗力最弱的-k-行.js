@@ -6,7 +6,7 @@
 
 // @lc code=start
 /**
- * @param {number[][]} mat
+ * @param {number[][]} matgit 
  * @param {number} k
  * @return {number[]}
  */
