@@ -187,11 +187,12 @@
 
 /** 
  * todo 栈
- * @Leetcode 20  有效的括号
- * @Leetcode 102 移掉K位数字
- * @Leetcode 132 模式
- * @Leetcode 150 逆波兰表达式求值
- * @Leetcode 735 行星碰撞
+ * @Leetcode 20   有效的括号
+ * @Leetcode 102  移掉K位数字
+ * @Leetcode 132  模式
+ * @Leetcode 150  逆波兰表达式求值
+ * @Leetcode 735  行星碰撞
+ * @Leetcode 1673 找出最具竞争力的子序列
  */
 
 /**
