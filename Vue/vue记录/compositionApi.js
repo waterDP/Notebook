@@ -159,3 +159,132 @@ export default {
     }
   }
 }
+
+
+/**
+ * ! shallowReactive
+ * 只处理对象最外层属性的响应式（也就是浅响应式），所以最外层属性发生改变，更新视图
+ * 其它属性改变，视频不会更新
+ * 如果一个对象的数据结构比较深，但变化只是最外层属性
+ */
+import {shallowReactive} from 'vue'
+
+export default {
+  setup() {
+    const obj = {
+      a: 1,
+      first: {
+        b: 2,
+        second: {
+          c: 3
+        }
+      }
+    }
+
+    const state = shallowReactive(obj)
+
+    function change1() {
+      state.a = 7
+    }
+    function change2() {
+      state.first.b = 8
+      state.first.second.c = 9
+      console.log(state)
+    }
+
+    return {
+      state
+    }
+  }
+}
+
+/**
+ * ! customRef
+ * 创建一个自定义的ref,并对其依赖和更新触发显式控制
+ * 场景：使用customRef 实例输入框防抖
+ */
+import {customRef} from 'vue'
+
+export default {
+  setup() {
+    const keyword = useDebouncedRef('', 500)
+    return {
+      keyword
+    }
+  }
+}
+
+function useDebouncedRef(value, delay= 200) {
+  let timeout
+  return customRef((track, trigger) => {
+    return  {
+      get() {
+        // 告诉vue追踪数据
+        track()
+        return value
+      },
+      set(newVal) {
+        clearTimeout(timeout)
+        timeout = setTimeout(() => {
+          value =  newVal
+          // 告诉vue去触发界面更新
+          trigger()
+        }, delay)
+      }
+    }
+  })
+}
+
+// todo 自定义 Hook 函数 
+import {ref, onMounted, onUnmounted} from 'vue'
+
+export default function  useMousePosition() {
+  const x = ref(-1)
+  const y = ref(-1)
+
+  const updatePosition = e => {
+    x.value = e.pageX
+    y.value = e.pageY
+  }
+
+  onMounted(() => {
+    document.addEventListener('click', updatePosition)
+  })
+
+  onUnmounted(() => {
+    document.removeEventListener('click', updatePosition)
+  })
+
+  return {x, y}
+}
+
+// 使用
+<template>
+  <div>
+    <p>{{x}}</p>
+    <p>{{y}}</p>
+  </div>
+</template>
+
+export default {
+  setup() {
+    const {x, y} = useMousePosition()
+    return {x, y}
+  }
+}
+
+/** 
+ * todo getCurrentInstance
+ * 可以获取当前组件的实例，然后通过ctx属性获取当前上下文，这样我们就可以在setup中使用router和vuex了 
+ */
+ import {getCurrentInstance} from 'vue'
+ export default {
+   setup() {
+     const {ctx} = getCurrentInstance()
+     ctx.$parent
+     ctx.$nextTick
+     ctx.$store vuex
+     ctx.$route
+     ctx.$router
+   }
+ }
