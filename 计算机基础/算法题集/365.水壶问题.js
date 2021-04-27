@@ -19,4 +19,3 @@ var canMeasureWater = function(jug1, jug2, target) {
   return target % gcd(jug1, jug2) == 0
 };
 // @lc code=end
-
