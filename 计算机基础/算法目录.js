@@ -60,6 +60,7 @@
  * @Leetcode 263  丑数一
  * @Leetcode 264  丑数二
  * @Leetcode 342  整数拆分
+ * @Leetcode 365  水壶问题 (贝祖定理)
  * @Leetcode 367  有效完全平方数
  * @Leetcode 509  斐波拉契数
  * @Leetcode 1006 笨阶乘
