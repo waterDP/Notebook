@@ -15,7 +15,7 @@ var minSteps = function(n) {
   while (n > 1) {
     while (n % d === 0) {
       ret += d
-      n  /= d
+      n /= d
     }
     d++
   }
