@@ -65,6 +65,7 @@
  * @Leetcode 367  有效完全平方数
  * @Leetcode 509  斐波拉契数
  * @Leetcode 633  平方数之和
+ * @Leetcode 650  只有两个键的键盘
  * @Leetcode 1006 笨阶乘
  * @Leetcode 1716 计算力扣银行的钱
  * @Leetcode 1266 访问所有点的最小时间
@@ -124,6 +125,7 @@
  * @Leetcode 134  加油站
  * @Leetcode 402  移掉K位数字
  * @Leetcode 435  无重叠区间
+ * @Leetcode 611  有效三角形的个数
  * @Leetcode 850  柠檬水找零
  * @Leetcode 870  优势洗牌
  * @Leetcode 1334 阈值距离内邻居最少的城市 【迪杰斯特拉算法】
@@ -234,6 +236,7 @@
  * @Leetcode 75   颜色分类（荷兰国旗问题）
  * @Leetcode 179  最大数
  * @Leetcode 215  数组中的第K个最大元素 [快排]
+ * @Leetcode 611  有效三角形的个数
  * @Leetcode 628  三个数的最大乘积
  * @Leetcode 1337 矩阵中战斗力最弱的K行
  * @Leetcode 1636 按照频率将数组升序排序
