@@ -106,6 +106,7 @@
  * @Leetcode 160  相交链表
  * @Leetcode 167  两数之和 II - 输入有序数组
  * @Leetcode 349  两个数组的交集
+ * @Leetcode 392  判断子序列
  * @Leetcode 633  平方数之和
  */
 
@@ -152,6 +153,8 @@
 /**
  * todo 字符串
  * @Leetcode 28   实现strStr() [kmp]
+ * @Leetcode 392  判断子序列
+ * @Leetcode 1143 最长公共子序列[LCS]
  */
 
 /**
@@ -170,31 +173,32 @@
 
 /** 
  * todo 滑动窗口
- * @Leetcode 3   无重复字符的最长子串
- * @Leetcode 76  最小覆盖子串
- * @Leetcode 567 字符串的排列
+ * @Leetcode 3    无重复字符的最长子串
+ * @Leetcode 76   最小覆盖子串
+ * @Leetcode 567  字符串的排列
  */
 
 /**
  * todo 拓扑排序
- * @Leetcode 207 课程表 [kahn算法(卡恩算法)]
+ * @Leetcode 207  课程表 [kahn算法(卡恩算法)]
  */
 
 /**
  * todo 哈希表
- * @Leetcode 1   两数之和
- * @Leetcode 3   无重复字符的最长子串
- * @Leetcode 76  最小覆盖子串
- * @Leetcode 136 只出现一次的数字
+ * @Leetcode 1    两数之和
+ * @Leetcode 3    无重复字符的最长子串
+ * @Leetcode 76   最小覆盖子串
+ * @Leetcode 136  只出现一次的数字
+ * @Leetcode 137  只出现一次的数字 II
  */
 
 /**
  * todo 设计
- * @Leetcode 146 LRU缓存机制
- * @Leetcode 173 二叉树迭代器
- * @Leetcode 303 区域和检索 - 数组不可变 [前缀和]
- * @Leetcode 341 扁平化嵌套列表迭代器
- * @Leetcode 460 LFU缓存
+ * @Leetcode 146   LRU缓存机制
+ * @Leetcode 173   二叉树迭代器
+ * @Leetcode 303   区域和检索 - 数组不可变 [前缀和]
+ * @Leetcode 341   扁平化嵌套列表迭代器
+ * @Leetcode 460   LFU缓存
  */
 
 /** 
