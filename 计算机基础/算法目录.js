@@ -268,6 +268,11 @@
  * @Leetcode 106  从中序和后序遍历构造二叉树
  * @Leetcode 173  二叉树搜索迭代器
  * @Leetcode 222  完全二叉树的节点个数
+ *
+ * @Theory
+ * 满二叉树
+ * left  = node*2 + 1
+ * right = node*2 + 2
  */
 
 /**
