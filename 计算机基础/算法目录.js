@@ -270,7 +270,7 @@
  * @Leetcode 222  完全二叉树的节点个数
  *
  * @Theory
- * 满二叉树
+ * 满二叉树序号
  * left  = node*2 + 1
  * right = node*2 + 2
  */
