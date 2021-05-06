@@ -94,13 +94,13 @@
 
 /**
  * todo 位运算
- * @Leetcode 78   子集
  * @Leetcode 136  只出现一次的数字
  * @Leetcode 190  颠倒二进制位
  * @Leetcode 191  位1的个数
  * @Leetcode 389  找不同
  * @Leetcode 461  汉明距离
  * @Leetcode 476  数字的补数
+ * @Leetcode 1720 解码异或后的数组
  * 
  * @Theory
  *  1.任何数和0做异或运算，结果仍然是原来的数，即 a⊕0=a。
