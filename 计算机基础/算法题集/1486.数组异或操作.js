@@ -21,20 +21,20 @@ var xorOperation = function(n, start) {
 // @lc code=end
 
 var xorOperation = function(n, start) {
-  let s = start >> 1, e = n & start & 1;
-  let ret = sumXor(s - 1) ^ sumXor(s + n - 1);
-  return ret << 1 | e;
-};
+  let s = start >> 1, e = n & start & 1
+  let ret = sumXor(s - 1) ^ sumXor(s + n - 1)
+  return ret << 1 | e
+}
 
 const sumXor = (x) => {
   if (x % 4 === 0) {
-      return x;
+      return x
   }
   if (x % 4 === 1) {
-      return 1;
+      return 1
   }
   if (x % 4 === 2) {
-      return x + 1;
+      return x + 1
   }
-  return 0;
+  return 0
 }
