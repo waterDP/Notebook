@@ -287,6 +287,7 @@
  * @Leetcode 106  从中序和后序遍历构造二叉树
  * @Leetcode 173  二叉树搜索迭代器
  * @Leetcode 222  完全二叉树的节点个数
+ * @Leetcode 872  叶子相似的树
  *
  * @Theory
  * 满二叉树序号
