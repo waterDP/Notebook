@@ -102,6 +102,7 @@
  * @Leetcode 476  数字的补数
  * @Leetcode 1486 数组的异或操作
  * @Leetcode 1720 解码异或后的数组
+ * @Leetcode 1734 解码异或后的排列
  * 
  * @Theory
  *  1. a⊕ 0=a。
