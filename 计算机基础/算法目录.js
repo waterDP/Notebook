@@ -13,6 +13,7 @@
  * @Leetcode 403  青蛙过河
  * @Leetcode 518  零线兑换二
  * @Leetcode 740  删除并获得点数
+ * @Leetcode 931  下降路径最小和
  * @Leetcode 1143 最长公共子序列[LCS]
  * @Leetcode 1706 球会落何处
  */
@@ -194,6 +195,7 @@
  * @Leetcode 661  图片平滑器
  * @Leetcode 674  最长连续递增子序列
  * @Leetcode 733  图像渲染 （同200）
+ * @Leetcode 931  下降路径最小和
  */
 
 /** 
