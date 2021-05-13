@@ -15,6 +15,7 @@
  * @Leetcode 740  删除并获得点数
  * @Leetcode 931  下降路径最小和
  * @Leetcode 1143 最长公共子序列[LCS]
+ * @Leetcode 1269 停在原地的方案数
  * @Leetcode 1706 球会落何处
  */
 
@@ -75,16 +76,17 @@
 
 /**
  * todo 组合
- * @Leetcode 39  组合总和
- * @Leetcode 40  组合总和二
- * @Leetcode 46  全排列
- * @Leetcode 47  全排列二
- * @Leetcode 75  颜色分类（荷兰国旗问题）
- * @Leetcode 77  组合
- * @Leetcode 78  子集
- * @Leetcode 90  子集二
- * @Leetcode 118 杨辉三角
- * @Leetcode 119 杨辉三角二
+ * @Leetcode 39   组合总和
+ * @Leetcode 40   组合总和二
+ * @Leetcode 46   全排列
+ * @Leetcode 47   全排列二
+ * @Leetcode 75   颜色分类（荷兰国旗问题）
+ * @Leetcode 77   组合
+ * @Leetcode 78   子集
+ * @Leetcode 90   子集二
+ * @Leetcode 118  杨辉三角
+ * @Leetcode 119  杨辉三角二
+ * @Leetcode 1269 停在原地的方案数
  */
 
 /**
