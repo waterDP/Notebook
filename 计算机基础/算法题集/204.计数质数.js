@@ -15,7 +15,7 @@ var countPrimes = function(n) {
   for (let i = 2; i <= n; i++) {
     if (isPrime[i]) {
       ans += 1
-      for (let j = i + i; j < n; j += i) {
+      for (let j = i * i; j < n; j += i) {
         isPrime[j] = 0
       }
     }
