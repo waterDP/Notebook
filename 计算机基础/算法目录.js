@@ -72,7 +72,7 @@
  * @Leetcode 633  平方数之和
  * @Leetcode 650  只有两个键的键盘 (素因子分解)
  * @Leetcode 1006 笨阶乘
- * @Leetcode 1716 计算力扣银行的钱
+ * @Leetcode 1716 计算力扣银行的钱 
  * @Leetcode 1266 访问所有点的最小时间
  */
 
