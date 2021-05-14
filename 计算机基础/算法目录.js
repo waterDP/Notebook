@@ -1,4 +1,4 @@
-/** 
+/**
  * todo 动态规划
  * @Leetcode 53   最大子序和
  * @Leetcode 70   爬楼梯
@@ -34,11 +34,11 @@
  * @Leetcode 46   全排列
  * @Leetcode 47   全排列二
  * @Leetcode 51   n皇后问题
- * @Leetcode 77   组合 
+ * @Leetcode 77   组合
  * @Leetcode 526  优美的排列
  */
 
-/** 
+/**
  * todo 链表
  * @Leetcode 21   合并两个有序链表
  * @Leetcode 61   旋转链表
@@ -53,7 +53,7 @@
  * @Leetcode 328  奇偶链表
  */
 
-/** 
+/**
  * todo 数学
  * @Leetcode 2    两数据相加
  * @Leetcode 7    整数反转
@@ -108,7 +108,7 @@
  * @Leetcode 1486 数组的异或操作
  * @Leetcode 1720 解码异或后的数组
  * @Leetcode 1734 解码异或后的排列
- * 
+ *
  * @Theory
  *  1. a⊕ 0=a。
  *  2. a⊕ a=0。
@@ -161,7 +161,7 @@
  * @Leetcode 1673 找出最具竞争力的子序列
  */
 
-/** 
+/**
  * todo 并查集
  * @LeetCode 547  省份数量
  */
@@ -210,7 +210,7 @@
  * @Leetcode 931  下降路径最小和
  */
 
-/** 
+/**
  * todo 滑动窗口
  * @Leetcode 3    无重复字符的最长子串
  * @Leetcode 76   最小覆盖子串
@@ -239,10 +239,11 @@
  * @Leetcode 303   区域和检索 - 数组不可变 [前缀和]
  * @Leetcode 341   扁平化嵌套列表迭代器
  * @Leetcode 460   LFU缓存
+ * @Leetcode 641  设计循环双端队列
  * @Leetcode 933   最近的请求次数
  */
 
-/** 
+/**
  * todo 栈
  * @Leetcode 20   有效的括号
  * @Leetcode 102  移掉K位数字
@@ -274,6 +275,7 @@
 /**
  * todo 队列
  * @Leetcode 933  最近的请求次数
+ * @Leetcode 641  设计循环双端队列
  */
 
 /**
@@ -315,14 +317,14 @@
 
 /**
  * todo 二叉搜索树
- * @Leetcode 530    二叉搜索树的最小绝对差  
+ * @Leetcode 530    二叉搜索树的最小绝对差
  * @Leetcode 669    修剪二叉搜索树
  * @Leetcode 897    递增顺序搜索树
  * @Leetcode 938    二叉搜索树的范围和
  */
 
-/** 
- * todo 线段树 
+/**
+ * todo 线段树
  * @Leetcode 307   区域和检索 - 数组可修改
  */
 
