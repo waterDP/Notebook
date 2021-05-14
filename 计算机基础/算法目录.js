@@ -168,13 +168,14 @@
 
 /**
  * todo 随机化
+ * @Leetcode 470  用 Rand7() 实现 Rand10()
  * @Leetcode 478  在圆内随机生成点
  */
 
 /**
  * todo 计算几何
- * @Leetcode 478  在圆内随机生成点
  * @Leetcode 1232 缀点成线
+ * @Leetcode 1266 访问的所有点的最小时间
  */
 
 
