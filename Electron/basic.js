@@ -92,8 +92,3 @@ app.whenReady().then(() => {
     console.log('Electron loves global shortcuts')
   })
 }).then(createWindow)
-
-
-const reg = new RegExp("==title:(.*?)==")
-const s = '==title:xnissss==ivdbhuderbgiu r==title:edijnhiw=='
-console.log(reg.exec(s))
