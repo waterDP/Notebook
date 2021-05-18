@@ -53,6 +53,7 @@
 
 // @lc code=start
 /**
+ * 快速幂 
  * @param {number} x
  * @param {number} n
  * @return {number}
@@ -71,3 +72,7 @@ var myPow = function(x, n) {
 };
 // @lc code=end
 
+
+// @after-stub-for-debug-begin
+module.exports = myPow;
+// @after-stub-for-debug-end
