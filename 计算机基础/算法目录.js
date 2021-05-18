@@ -56,7 +56,7 @@
 
 /**
  * todo 数学
- * @Leetcode 2    两数据相加
+ * @Leetcode 2    两数相加
  * @Leetcode 7    整数反转
  * @Leetcode 9    回文数
  * @Leetcode 50   Pow(x, n)
