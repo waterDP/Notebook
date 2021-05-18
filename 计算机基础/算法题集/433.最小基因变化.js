@@ -21,7 +21,8 @@ var minMutation = function(start, end, bank) {
     if (node === end) return count
     for (let i = 0; i < node.length; i++) {
       for (let j = 0; j < dna.length; j++) {
-        let d = node.slice(0, i) + dna[j] + node.slice(i+1)  // 变化一个位
+        // ? 变化一个位  或一位都不变，一位都不变是不可能下到出口的，不用处理
+        let d = node.slice(0, i) + dna[j] + node.slice(i+1)  
         if (bankSet.has(d)) {
           queue.push([d, count+1])
           // 剪枝，避免重复
