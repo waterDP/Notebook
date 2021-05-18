@@ -16,6 +16,8 @@ var hIndex = function(citations) {
     papers[Math.min(c, n)]++
   }
   let k = n
+  // 一开始是最大，即所有论文都满足
+  // 如果不满足就减少K, 然后加上现在新的满足k的论文数量，再进行比较
   for (let s = papers[n]; k > s; s += papers[k]) {
     k--
   }
