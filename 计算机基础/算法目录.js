@@ -103,6 +103,7 @@
  * @Leetcode 136  只出现一次的数字
  * @Leetcode 190  颠倒二进制位
  * @Leetcode 191  位1的个数
+ * @Leetcode 231  2的幂
  * @Leetcode 389  找不同
  * @Leetcode 461  汉明距离
  * @Leetcode 476  数字的补数
