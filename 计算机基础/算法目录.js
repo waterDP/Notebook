@@ -114,6 +114,7 @@
  * @Leetcode 1486 数组的异或操作
  * @Leetcode 1720 解码异或后的数组
  * @Leetcode 1734 解码异或后的排列
+ * @Leetcode 1738 找出第 K 大的异或坐标值(前缀和)
  *
  * @Theory
  *  1. a⊕ 0=a。
