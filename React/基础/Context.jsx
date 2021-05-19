@@ -7,7 +7,7 @@ import React from "react"
 class App extends React.Component {
   render() {
     return (
-      <Toolbar theme="dark" /> 
+      <Toolbar theme="dark" />
     )
   }
 }
@@ -70,10 +70,59 @@ function Title(props) {
   return (
     <ThemeContext.Consumer>
       {  // todo 使用consumer
-        value => (
-          <div style={{margin: '10px', border: `5px solid ${value.color}`, padding:  '5px'}}>Title</div>
+        color => (
+          <div style={{ margin: '10px', border: `5px solid ${color}`, padding: '5px' }}>Title</div>
         )
       }
     </ThemeContext.Consumer>
+  )
+}
+
+// todo 消费多个Context
+const ThemeContext = React.createContext('light')
+
+const UserContext = React.createContext({
+  name: 'Guest'
+})
+
+class App extends React.Component {
+  render() {
+    const { signedInUser, theme } = this.props
+
+    return (
+      <ThemeContext.Provider value={theme}>
+        <UserContext.Provider value={signedInUser}>
+          <Layout />
+        </UserContext.Provider>
+      </ThemeContext.Provider>
+    )
+  }
+}
+
+function Layout() {
+  return (
+    <div>
+      <Sidebar />
+      <Content />
+    </div>
+  )
+}
+
+// 一个组件可能消费多个Context
+function Content() {
+  return (
+    <Theme.Consumer>
+      {
+        theme => {
+          <UserContext.Consumer>
+            {
+              user => {
+                <ProfilePage user={user} theme={theme} />
+              }
+            }
+          </UserContext.Consumer>
+        }
+      }
+    </Theme.Consumer>
   )
 }
