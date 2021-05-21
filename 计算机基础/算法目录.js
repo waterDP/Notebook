@@ -188,6 +188,7 @@
 
 /**
  * todo 计算几何
+ * @Leetcode 587  安装栅栏
  * @Leetcode 1232 缀点成线
  * @Leetcode 1266 访问的所有点的最小时间
  */
