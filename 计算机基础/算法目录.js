@@ -130,47 +130,47 @@
 
 /**
  * todo 双指针
- * @Leetcode 3    无重复字符的最长子串
- * @Leetcode 26   删除有序数组中的重复项
- * @Leetcode 27   移除元素
- * @Leetcode 75   双指针（荷兰国旗问题）
- * @Leetcode 76   最小覆盖子串
- * @Leetcode 86   分隔链表
- * @Leetcode 88   合并两个有序数组
- * @Leetcode 141  环形链表
- * @Leetcode 160  相交链表
- * @Leetcode 167  两数之和 II - 输入有序数组
- * @Leetcode 349  两个数组的交集
- * @Leetcode 392  判断子序列
- * @Leetcode 633  平方数之和
+ * @Leetcode 3     无重复字符的最长子串
+ * @Leetcode 26    删除有序数组中的重复项
+ * @Leetcode 27    移除元素
+ * @Leetcode 75    双指针（荷兰国旗问题）
+ * @Leetcode 76    最小覆盖子串
+ * @Leetcode 86    分隔链表
+ * @Leetcode 88    合并两个有序数组
+ * @Leetcode 141   环形链表
+ * @Leetcode 160   相交链表
+ * @Leetcode 167   两数之和 II - 输入有序数组
+ * @Leetcode 349   两个数组的交集
+ * @Leetcode 392   判断子序列
+ * @Leetcode 633   平方数之和
  */
 
 /**
  * todo 多叉树
- * @Leetcode 105  从前序与中序遍历序列构造二叉树
- * @Leetcode 106  从中序与后序遍历序列构造二叉树
- * @Leetcode 690  员工的重要性
+ * @Leetcode 105   从前序与中序遍历序列构造二叉树
+ * @Leetcode 106   从中序与后序遍历序列构造二叉树
+ * @Leetcode 690   员工的重要性
  */
 
 /**
  * todo 图
- * @Leetcode 1334 阈值距离内邻居最少的城市 [bellman-ford spfa Dijkstra floyd]
+ * @Leetcode 1334  阈值距离内邻居最少的城市 [bellman-ford spfa Dijkstra floyd]
  */
 
 /**
  * todo 贪心算法
- * @Leetcode 12   整数转罗马数字
- * @Leetcode 134  加油站
- * @Leetcode 402  移掉K位数字
- * @Leetcode 435  无重叠区间
- * @Leetcode 455  分发饼干
- * @Leetcode 495  提莫攻击人
- * @Leetcode 520  检测大写字母
- * @Leetcode 611  有效三角形的个数
- * @Leetcode 850  柠檬水找零
- * @Leetcode 870  优势洗牌
- * @Leetcode 1334 阈值距离内邻居最少的城市 【迪杰斯特拉算法】
- * @Leetcode 1673 找出最具竞争力的子序列
+ * @Leetcode 12    整数转罗马数字
+ * @Leetcode 134   加油站
+ * @Leetcode 402   移掉K位数字
+ * @Leetcode 435   无重叠区间
+ * @Leetcode 455   分发饼干
+ * @Leetcode 495   提莫攻击人
+ * @Leetcode 520   检测大写字母
+ * @Leetcode 611   有效三角形的个数
+ * @Leetcode 850   柠檬水找零
+ * @Leetcode 870   优势洗牌
+ * @Leetcode 1334  阈值距离内邻居最少的城市 【迪杰斯特拉算法】
+ * @Leetcode 1673  找出最具竞争力的子序列
  */
 
 /**
@@ -193,17 +193,18 @@
 
 /**
  * todo 字符串
- * @Leetcode 3    无重复字符的最长子串
- * @Leetcode 5    最长回文子串
- * @Leetcode 14   最长公共前缀
- * @Leetcode 17   有效号码的字母组合
- * @Leetcode 20   有效的括号
- * @Leetcode 28   实现strStr() [kmp]
- * @Leetcode 38   外观数列
- * @Leetcode 76   最小覆盖子串
- * @Leetcode 91   解码方法
- * @Leetcode 392  判断子序列
- * @Leetcode 1143 最长公共子序列[LCS]
+ * @Leetcode 3     无重复字符的最长子串
+ * @Leetcode 5     最长回文子串
+ * @Leetcode 14    最长公共前缀
+ * @Leetcode 17    有效号码的字母组合
+ * @Leetcode 20    有效的括号
+ * @Leetcode 28    实现strStr() [kmp]
+ * @Leetcode 38    外观数列
+ * @Leetcode 76    最小覆盖子串
+ * @Leetcode 91    解码方法
+ * @Leetcode 392   判断子序列
+ * @Leetcode 1143  最长公共子序列[LCS]
+ * @Leetcode 1839  所有元音按顺序排布的最长子字符串[状态机]
  */
 
 /**
