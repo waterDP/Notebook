@@ -255,7 +255,7 @@
  * @Leetcode 303   区域和检索 - 数组不可变 [前缀和]
  * @Leetcode 341   扁平化嵌套列表迭代器
  * @Leetcode 460   LFU缓存
- * @Leetcode 641  设计循环双端队列
+ * @Leetcode 641   设计循环双端队列
  * @Leetcode 933   最近的请求次数
  */
 
