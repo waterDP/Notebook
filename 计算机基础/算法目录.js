@@ -84,7 +84,7 @@
  */
 
 /**
- * todo 组合
+ * todo 组合计数
  * @Leetcode 39   组合总和
  * @Leetcode 40   组合总和二
  * @Leetcode 46   全排列
@@ -95,6 +95,7 @@
  * @Leetcode 90   子集二
  * @Leetcode 118  杨辉三角
  * @Leetcode 119  杨辉三角二
+ * @Leetcode 169  多数元素[Boyer-Moor投票算法]
  * @Leetcode 1269 停在原地的方案数
  */
 
