@@ -11,7 +11,7 @@
  */
 var getMaximumConsecutive = function(coins) {
   coins.sort((a, b) => a - b)
-  debugger
+
   let x = 0
   for (let coin of coins) {
     if (coin > x+1) {
