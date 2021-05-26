@@ -273,6 +273,7 @@
  * @Leetcode 132  模式
  * @Leetcode 150  逆波兰表达式求值
  * @Leetcode 735  行星碰撞
+ * @Leetcode 1190 反转每对括号间的子串
  * @Leetcode 1673 找出最具竞争力的子序列
  */
 
