@@ -25,34 +25,34 @@
  * 如果 value 为对象，则可以明确指定 enter 或者 exit 时的处理函数。
  */
 visitor: {
-  Identifier (path, state) {},
+  Identifier(path, state) { },
   StringLiteral: {
-    enter(path, state) {},
-    exit(path, state) {}
+    enter(path, state) { },
+    exit(path, state) { }
   }
 }
 
 // 进入 FunctionDeclaration 节点时调用
 traverse(ast, {
   FunctionDeclaration: {
-      enter(path, state) {}
+    enter(path, state) { }
   }
 })
 
 // 默认是进入节点时调用，和上面等价
 traverse(ast, {
-  FunctionDeclaration(path, state) {}
+  FunctionDeclaration(path, state) { }
 })
 
 // 进入 FunctionDeclaration 和 VariableDeclaration 节点时调用
 traverse(ast, {
-  'FunctionDeclaration|VariableDeclaration'(path, state) {}
+  'FunctionDeclaration|VariableDeclaration'(path, state) { }
 })
 
 // 通过别名指定离开各种 Declaration 节点时调用
 traverse(ast, {
   Declaration: {
-      exit(path, state) {}
+    exit(path, state) { }
   }
 })
 
