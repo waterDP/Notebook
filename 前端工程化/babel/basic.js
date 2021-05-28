@@ -56,3 +56,26 @@ traverse(ast, {
   }
 })
 
+/*
+  ! path 是遍历过程中的路径，会保留上下文信息，有很多属性和方法，比如:
+
+  path.node 指向当前 AST 节点
+  path.get、path.set 获取和设置当前节点属性的 path
+  path.parent 指向父级 AST 节点
+  path.getSibling、path.getNextSibling、path.getPrevSibling 获取兄弟节点
+  path.scope获取当前节点的作用域信息
+
+  path.isXxx 判断当前节点是不是Xxx类型
+  path.assetXxx 判断当前节点是不是Xxx类型，不是则抛出异常
+
+  path.insertBefore path.insertAfter插入节点
+  path.replaceWith path.replaceWithMultiple path.replaceWithSourceString 替换节点
+  path.remove 删除节点
+
+  path.skip跳过当前节点的子节点遍历
+  path.shop结束后续遍历
+
+  !state 
+  则是遍历过程中在不同节点之间传递数据的机制，插件会通过state传递options和file信息，
+  我们也可以通过state存储一点些遍历过程中的共享数据
+ */
