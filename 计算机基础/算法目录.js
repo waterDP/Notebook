@@ -210,6 +210,7 @@
  * @Leetcode 91    解码方法
  * @Leetcode 392   判断子序列
  * @Leetcode 1143  最长公共子序列[LCS]
+ * @Leetcode 1678  设计Goal解析器
  * @Leetcode 1839  所有元音按顺序排布的最长子字符串[状态机]
  * @Leetcode 1859  将句子排序
  */
