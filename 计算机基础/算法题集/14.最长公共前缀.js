@@ -10,14 +10,19 @@
  * @return {string}
  */
 var longestCommonPrefix = function(strs) {
-  if (!strs.length) return ''
-  let result = ''
-  const [first, ...others] = strs
-  for (let i = 0; i < first.length; i++) {
-    let flag = others.every(item => item[i] === first[i])
-    if (flag) result += first[i]
-    else break
+  if (strs === null || strs.length === 0) {
+    return ''
   }
-  return result
+  let length = strs[0].length
+  let count = strs.length
+  for (let i = 0; i < length; i++) {
+    let c = strs[0][i]
+    for (let j = 1; j < count; j++) {
+      if (i === strs[j].length || strs[j][i] !== c) {
+        return strs[0].substring(0, i)
+      }
+    }
+  }
+  return strs[0]
 }
 // @lc code=end
