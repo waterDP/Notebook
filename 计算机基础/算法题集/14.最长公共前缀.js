@@ -6,6 +6,7 @@
 
 // @lc code=start
 /**
+ * 纵向扫描
  * @param {string[]} strs
  * @return {string}
  */
