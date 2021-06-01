@@ -34,7 +34,7 @@ var minWindow = function(s, t) {
         minLen = r - l + 1
         start = l               // 更新最小窗口的起点
       }
-      let leftChar = s[l];         // 左指针要右移，左指针指向的字符要被丢弃
+      let leftChar = s[l]         // 左指针要右移，左指针指向的字符要被丢弃
       if (map[leftChar] !== undefined) map[leftChar]++ // 被舍弃的是目标字符，缺失个数+1
       if (map[leftChar] > 0) missingType++      // 如果缺失个数新变为>0，缺失的种类+1
       l++                         // 左指针要右移 收缩窗口
