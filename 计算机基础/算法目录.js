@@ -203,7 +203,6 @@
  * @Leetcode 5     最长回文子串
  * @Leetcode 14    最长公共前缀
  * @Leetcode 17    有效号码的字母组合
- * @Leetcode 20    有效的括号
  * @Leetcode 28    实现strStr() [kmp]
  * @Leetcode 38    外观数列
  * @Leetcode 76    最小覆盖子串

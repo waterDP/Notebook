@@ -10,16 +10,16 @@
  * @return {boolean}
  */
 var isValid = function(s) {
-  let arr = []
+  let stack = []
   let len = s.length
   if (len%2) return false
   let lefts = '{[('
   for (let i = 0; i < len; i++) {
     const item = s[i]
     if (lefts.includes(item)) {
-      arr.push(item)
+      stack.push(item)
     } else {
-      const top = arr.pop()
+      const top = stack.pop()
       switch(item) {
         case ')': 
           if (top !== '(') return false
@@ -35,7 +35,7 @@ var isValid = function(s) {
       }
     }
   }
-  return !arr.length
+  return !stack.length
 }
 // @lc code=end
 
