@@ -236,6 +236,11 @@
  */
 
 /**
+ * todo 前缀和
+ * @Leetcode 303   区域和检索 - 数组不可变
+ */
+
+/**
  * todo 滑动窗口
  * @Leetcode 3     无重复字符的最长子串
  * @Leetcode 76    最小覆盖子串
@@ -265,11 +270,6 @@
  * @Leetcode 460   LFU缓存
  * @Leetcode 641   设计循环双端队列
  * @Leetcode 933   最近的请求次数
- */
-
-/**
- * todo 前缀和
- * @Leetcode 303   区域和检索 - 数组不可变
  */
 
 /**
