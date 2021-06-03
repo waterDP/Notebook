@@ -210,7 +210,6 @@
  * @Leetcode 392   判断子序列
  * @Leetcode 1143  最长公共子序列[LCS]
  * @Leetcode 1678  设计Go\al解析器
- * @Leetcode 1839  所有元音按顺序排布的最长子字符串[状态机]
  * @Leetcode 1859  将句子排序
  */
 
@@ -259,11 +258,15 @@
  * todo 设计
  * @Leetcode 146   LRU缓存机制
  * @Leetcode 173   二叉树迭代器
- * @Leetcode 303   区域和检索 - 数组不可变 [前缀和]
  * @Leetcode 341   扁平化嵌套列表迭代器
  * @Leetcode 460   LFU缓存
  * @Leetcode 641   设计循环双端队列
  * @Leetcode 933   最近的请求次数
+ */
+
+/**
+ * todo 前缀和
+ * @Leetcode 303   区域和检索 - 数组不可变
  */
 
 /**
@@ -366,6 +369,11 @@
  * todo 分治算法
  * @Leetcode 215   数组中的第K个最大元素 [快排]
  * @Leetcode 241   为表达式设计估计优先级
+ */
+
+/**
+ * todo 状态机
+ * @Leetcode 1839  所有元音按顺序排布的最长子字符串
  */
 
 /**
