@@ -73,7 +73,7 @@ var combinationSum = function(candidates, target) {
       res.push(combine)
       return
     }
-    dfs(target, combine, idx+1)
+    dfs(target, combine, idx+1) // 跳过当前元素
     if (target - candidates[idx] >= 0) {
       dfs(target-candidates[idx], [...combine, candidates[idx]], idx)
     }
@@ -81,5 +81,5 @@ var combinationSum = function(candidates, target) {
   dfs(target, [], 0)
   return res
 };
-// @lc code=end
+// @lc code=end290
 
