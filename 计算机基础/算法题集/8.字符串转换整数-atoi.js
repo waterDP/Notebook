@@ -46,7 +46,7 @@ var myAtoi = function(s) {
         this.answer = 
           this.sign === 1 
           ? Math.min(this.answer, Math.pow(2, 31) - 1)
-          : Math.min(this.answer, -Math.pow(-2, 31))
+          : Math.min(this.answer, -·Math.pow(-2, 31))
       } else if (this.state === 'signed') {
         this.sign = char === '+' ? 1 : -1
       }
