@@ -58,7 +58,7 @@ export function timing() {
 				domContentLoadedEventStart,
 				domContentLoadedEventEnd,
 				loadEventStart
-			} = performance.timing
+			} = performances.timing
 			tracker.send({
 				kind: 'experience', // 用户体验指标
 				type: 'timing', // 统计每个阶段的时间
@@ -72,8 +72,8 @@ export function timing() {
 			})
 
 
-			let FP = performance.getEntriesByName('first-paint')[0]
-			let FCP = performance.getEntriesByName('first-contentful-paint')[0]
+			let FP = performances.getEntriesByName('first-paint')[0]
+			let FCP = performances.getEntriesByName('first-contentful-paint')[0]
 			//开始发送性能指标
 			console.log('FP', FP)
 			console.log('FCP', FCP)
