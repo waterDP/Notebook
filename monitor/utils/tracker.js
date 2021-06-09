@@ -13,7 +13,7 @@ function getExtraData() {
 		//用户ID
 	}
 }
-//gif图片做上传 图片速度 快没有跨域 问题，
+//gif图片做上传  图片速度快  没有跨域问题
 class SendTracker {
 	constructor() {
 		this.url = `http://${project}.${host}/logstores/${logStore}/track`//上报的路径
