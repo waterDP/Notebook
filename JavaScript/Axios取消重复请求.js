@@ -45,7 +45,7 @@ function removePendingRequest(config) {
   const requestKey = generateReqKey(config)
   if (pendingRequest.has(requestKey)) {
     const cancelToken = pendingRequest.get(requestKey)
-    cancelToken(requestKey)
+    cancelToken()
     pendingRequest.delete(requestKey)
   }
 }
