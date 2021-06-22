@@ -174,6 +174,7 @@
  * @Leetcode 850   柠檬水找零
  * @Leetcode 870   优势洗牌
  * @Leetcode 1673  找出最具竞争力的子序列
+ * @Leetcode 1800  最大升序子数组
  * @Leetcode 1833  雪糕的最大数量
  * @Leetcode 1860  增长的内在泄露
  */
