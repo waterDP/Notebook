@@ -85,3 +85,210 @@ vm.runInNewContext('this.constructor.constructor("return process")().exit()', ct
 
 
 
+// todo 快照沙箱
+function iter(obj, cb) {
+  for (const prop in obj) {
+    if (obj.hasOwnProperty(prop)) {
+      cb(prop)
+    }
+  }
+}
+/**
+ *  基于diff方式实现的沙箱，用于不支持Proxy的低版本浏览器
+ */
+class SnapshotSandbox {
+  constructor(name) {
+    this.name = name
+    this.proxy = window
+    this.type = 'Snapshot'
+    this.sandboxRunning = true
+    this.windowSnapshot = {}
+    this.modifyPropsMap = {}
+    this.active()
+  }
+  // 激活
+  active() {
+    // 记录当前快照
+    this.windowSnapshot = {}
+    iter(window, prop => {
+      this.windowSnapshot[prop] = window[prop]
+    })
+
+    // 恢复之前的变更
+    Object.keys(this.modifyPropsMap).forEach(p => {
+      window[p] = this.modifyPropMap[p]
+    })
+
+    this.sandboxRunning = true
+  }
+  // 还原
+  inactive() {
+    this.modifyPropsMap = {}
+    iter(window, prop => {
+      if (window[prop] !== this.windowSnapshot[prop]) {
+        // 记录变更，恢复环境
+        this.modifyPropsMap[prop] = window[prop]
+        window[prop] = this.windowSnapshot[prop]
+      }
+      this.sandboxRunning = false
+    })
+  }
+}
+const sandbox = new SnapshotSandbox()
+
+// test
+((window) => {
+  window.name = '张三'
+  window.age = 18
+  console.log(window.name, window.age) // 张三， 18
+  sandbox.inactive()  // 还原
+  console.log(window.name, window.age) // undefined, undefined
+  sandbox.active()
+  console.log(window.name, window.age) // 张三， 18 
+})(sandbox.proxy)
+
+// todo legacy Sandbox
+const callableFnCacheMap = new WeakMap()
+
+function isCallable(fn) {
+  if (callableFnCacheMap.has(fn)) {
+    return true
+  }
+  const naughtySafari = typeof document.all == 'function' && typeof document.add === 'undefined'
+  const callable = naughtySafari 
+    ? typeof fn == 'function' && typeof fn !== 'undefined' 
+    : typeof fn == 'function'
+
+  if (callable) {
+    callableFnCacheMap.set(fn, callable)
+  }
+  return callable
+}
+
+function setWindowProp(prop, value, toDelete) {
+  if (value === undefined && toDelete) {
+    delete window[prop]
+  } else if (isPropConfigurable(window, prop) && typeof prop !== 'symbol') {
+    Object.defineProperty(window, prop, {
+      writable: true,
+      configurable: true
+    })
+    window[prop] = value
+  }
+}
+
+function getTargetValue(target, value) {
+  if (isCallable(value) && !isBoundedFunction(value) && !isConstructable(value)) {
+    const boundValue = Function.prototype.bind.call(value, target)
+    for (let key in value) {
+      boundValue[key] = value[key]
+    }
+    if (value.hasOwnProperty('prototype') && !boundValue.hasOwnProperty('prototype')) {
+      Object.defineProperty(boundValue, 'prototype', {
+        value: value.prototype,
+        enumerable: false,
+        writable: true
+      })
+    }
+
+    return boundValue
+  }
+}
+
+// 基于Proxy实现沙箱
+class SingularProxySandbox {
+  /** 沙箱期间新增的全局变量 **/
+  addedPropsMapInSandbox = new Map()
+  /** 沙箱期间更新的全局变量 **/
+  modifiedPropsOriginalValueInSandbox = new Map()
+  /** 持续记录更新的(新增和修改的)全局变量的map，用于在任意时刻做snapshot **/
+  currentUpdatedPropsValueMap = new Map()
+
+  name
+  proxy
+  type = 'LegacyProxy'
+  sandboxRunning = true
+  latestSetProp = null
+
+  active() {
+    if (!this.sandboxRunning) {
+      this.currentUpdatedPropsValueMap.forEach((v, p) => setWindowProp(p, v));
+    }
+
+    this.sandboxRunning = true;
+  }
+
+  inactive() {
+    // console.log(' this.modifiedPropsOriginalValueMapInSandbox', this.modifiedPropsOriginalValueMapInSandbox)
+    // console.log(' this.addedPropsMapInSandbox', this.addedPropsMapInSandbox)
+    //删除添加的属性，修改已有的属性
+    this.modifiedPropsOriginalValueMapInSandbox.forEach((v, p) => setWindowProp(p, v));
+    this.addedPropsMapInSandbox.forEach((_, p) => setWindowProp(p, undefined, true));
+
+    this.sandboxRunning = false;
+  }
+
+  constructor(name) {
+    this.name = name;
+    const {
+      addedPropsMapInSandbox,
+      modifiedPropsOriginalValueMapInSandbox,
+      currentUpdatedPropsValueMap
+    } = this
+
+    const rawWindow = window;
+    //Object.create(null)的方式，传入一个不含有原型链的对象
+    const fakeWindow = Object.create(null)
+
+    const proxy = new Proxy(fakeWindow, {
+      set: (_, p, value) => {
+        if (this.sandboxRunning) {
+          if (!rawWindow.hasOwnProperty(p)) {
+            addedPropsMapInSandbox.set(p, value)
+          } else if (!modifiedPropsOriginalValueMapInSandbox.has(p)) {
+            // 如果当前 window 对象存在该属性，且 record map 中未记录过，则记录该属性初始值
+            const originalValue = rawWindow[p]
+            modifiedPropsOriginalValueMapInSandbox.set(p, originalValue)
+          }
+
+          currentUpdatedPropsValueMap.set(p, value)
+          // 必须重新设置 window 对象保证下次 get 时能拿到已更新的数据
+          rawWindow[p] = value
+
+          this.latestSetProp = p
+
+          return true
+        }
+
+        // 在 strict-mode 下，Proxy 的 handler.set 返回 false 会抛出 TypeError，在沙箱卸载的情况下应该忽略错误
+        return true
+      },
+
+      get(_, p) {
+        //避免使用 window.window 或者 window.self 逃离沙箱环境，触发到真实环境
+        if (p === 'top' || p === 'parent' || p === 'window' || p === 'self') {
+          return proxy
+        }
+        const value = rawWindow[p]
+        return getTargetValue(rawWindow, value)
+      },
+
+      has(_, p) { //返回boolean
+        return p in rawWindow
+      },
+
+      getOwnPropertyDescriptor(_, p) {
+        const descriptor = Object.getOwnPropertyDescriptor(rawWindow, p);
+        // 如果属性不作为目标对象的自身属性存在，则不能将其设置为不可配置
+        if (descriptor && !descriptor.configurable) {
+          descriptor.configurable = true;
+        }
+        return descriptor
+      }
+    })
+
+    this.proxy = proxy
+  }
+}
+
+let sandbox = new SingularProxySandbox()
