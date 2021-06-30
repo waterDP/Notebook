@@ -46,7 +46,7 @@ export default {
 /**
  * ! reactive
  * reactive 是用来创建一个响应式对象 
- * 造价于2.x是Vue.observable
+ * 等价于2.x是Vue.observable
  */
 import {reactive} from 'vue'
 export default {
