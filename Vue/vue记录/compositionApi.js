@@ -50,7 +50,7 @@ export default {
  */
 import {reactive} from 'vue'
 export default {
-  setup() {
+  setup(props, context) {
     const state = reactive({  // 创建响应式数据
       count: 0,
       addCount: 0
