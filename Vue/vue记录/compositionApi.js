@@ -48,7 +48,7 @@ export default {
  * reactive 是用来创建一个响应式对象 
  * 等价于2.x是Vue.observable
  */
-import {reactive} from 'vue'
+import { reactive } from 'vue'
 export default {
   setup(props, context) {
     const state = reactive({  // 创建响应式数据
@@ -70,8 +70,8 @@ export default {
  * ! ref
  * ref()函数用来给特定的值创建一个响应式的数据对象.ref()的返回值是一个对象，这个对象上只包含一个.value属性，下面是基本数据类型步骤
  */
-import {ref, defineComponent} from 'vue'
-export default defineComponent ({
+import { ref, defineComponent } from 'vue'
+export default defineComponent({
   setup() {
     const valueNumber = ref(0)
     const valueString = ref('hello world')
@@ -90,14 +90,14 @@ export default defineComponent ({
 })
 
 // ! 只读的计算属性
-import {ref, computed} from 'vue'
+import { ref, computed } from 'vue'
 export default {
   setup() {
     const count = ref(0)
     const double = computed(() => count.value + 1)
 
     return {
-      count, 
+      count,
       double
     }
   }
@@ -108,11 +108,11 @@ const count = ref(1)
 
 const plusOne = computed({
   get: () => count.value + 1,
-  set: val => count.value = val -1
+  set: val => count.value = val - 1
 })
 
 // ! watch
-import {ref, watch} from 'vue'
+import { ref, watch } from 'vue'
 export default {
   setup() {
     const count = ref(1)
@@ -148,11 +148,11 @@ export default {
  * watchEffect会在组件初始化的时候执行一次，与computed同理，而收集到依赖变化后，这个回调才会执行
  * 而watch不需要，除非设置了指定参数
  */
-import {watchEffect, ref} from 'vue'
+import { watchEffect, ref } from 'vue'
 export default {
   setup() {
     const userID = ref(0)
-    watchEffect(() => {})
+    watchEffect(() => { })
 
     return {
       userID
@@ -167,7 +167,7 @@ export default {
  * 其它属性改变，视频不会更新
  * 如果一个对象的数据结构比较深，但变化只是最外层属性
  */
-import {shallowReactive} from 'vue'
+import { shallowReactive } from 'vue'
 
 export default {
   setup() {
@@ -203,7 +203,7 @@ export default {
  * 创建一个自定义的ref,并对其依赖和更新触发显式控制
  * 场景：使用customRef 实例输入框防抖
  */
-import {customRef} from 'vue'
+import { customRef } from 'vue'
 
 export default {
   setup() {
@@ -214,10 +214,10 @@ export default {
   }
 }
 
-function useDebouncedRef(value, delay= 200) {
+function useDebouncedRef(value, delay = 200) {
   let timeout
   return customRef((track, trigger) => {
-    return  {
+    return {
       get() {
         // 告诉vue追踪数据
         track()
@@ -226,7 +226,7 @@ function useDebouncedRef(value, delay= 200) {
       set(newVal) {
         clearTimeout(timeout)
         timeout = setTimeout(() => {
-          value =  newVal
+          value = newVal
           // 告诉vue去触发界面更新
           trigger()
         }, delay)
@@ -236,9 +236,9 @@ function useDebouncedRef(value, delay= 200) {
 }
 
 // todo 自定义 Hook 函数 
-import {ref, onMounted, onUnmounted} from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
-export default function  useMousePosition() {
+export default function useMousePosition() {
   const x = ref(-1)
   const y = ref(-1)
 
@@ -255,36 +255,31 @@ export default function  useMousePosition() {
     document.removeEventListener('click', updatePosition)
   })
 
-  return {x, y}
+  return { x, y }
 }
 
 // 使用
 <template>
   <div>
-    <p>{{x}}</p>
-    <p>{{y}}</p>
+    <p>{{ x }}</p>
+    <p>{{ y }}</p>
   </div>
 </template>
 
 export default {
   setup() {
-    const {x, y} = useMousePosition()
-    return {x, y}
+    const { x, y } = useMousePosition()
+    return { x, y }
   }
 }
 
 /** 
- * todo getCurrentInstance
- * 可以获取当前组件的实例，然后通过ctx属性获取当前上下文，这样我们就可以在setup中使用router和vuex了 
+ * todo context 
  */
- import {getCurrentInstance} from 'vue'
- export default {
-   setup() {
-     const {ctx} = getCurrentInstance()
-     ctx.$parent
-     ctx.$nextTick
-     ctx.$store vuex
-     ctx.$route
-     ctx.$router
-   }
- }
+import {toRefs} from 'vue'
+export default {
+  setup(props, context) {
+    const {name, age} = toRefs(props)
+    const {attrs, slots, emit} = context
+  }
+}
