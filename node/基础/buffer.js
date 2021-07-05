@@ -1,4 +1,4 @@
-/**
+ /**
  * 0x 表示十六进制
  * 0b 表示二进进制
  * 0 表示八进制
@@ -60,7 +60,7 @@ request('/download').then(arrayBuffer => {
   Document.body.appendChild(a)
   a.click()
   a.remove()
-  URL.revokeObjectURL()
+  URL.revokeObjectURL(a.href)
 })
 
 
