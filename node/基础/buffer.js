@@ -57,7 +57,7 @@ request('/download').then(arrayBuffer => {
   let blobUrl = URL.createObjectURL(b)
   let a = document.createElement('a')
   a.href = blobUrl
-  Document.body.appendChild(a)
+  document.body.appendChild(a)
   a.click()
   a.remove()
   URL.revokeObjectURL(a.href)
