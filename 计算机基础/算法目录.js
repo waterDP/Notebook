@@ -80,6 +80,7 @@
  * @Leetcode 1716 计算力扣银行的钱 
  * @Leetcode 1732 找出最高海拔
  * @Leetcode 1812 判断国际象棋棋盘中一个格子的颜色
+ * @Leetcode 1818 绝对差值和
  * @Leetcode 1822 数组元素积的符号
  */
 
