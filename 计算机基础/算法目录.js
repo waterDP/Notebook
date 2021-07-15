@@ -72,6 +72,7 @@
  * @Leetcode 342  整数拆分
  * @Leetcode 365  水壶问题 (贝祖定理)
  * @Leetcode 367  有效完全平方数
+ * @Leetcode 396  旋转函数
  * @Leetcode 509  斐波拉契数
  * @Leetcode 633  平方数之和
  * @Leetcode 650  只有两个键的键盘 (素因子分解)
