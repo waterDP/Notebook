@@ -23,7 +23,7 @@ var generateParenthesis = function(n) {
       helper(left, right+1, current+')')
     }
   }
-  helper(1, 0, '(')
+  helper(0, 0, '')
   return ret
 };
 
