@@ -243,6 +243,7 @@
  * @Leetcode 661   图片平滑器
  * @Leetcode 674   最长连续递增子序列
  * @Leetcode 733   图像渲染 （同200）
+ * @Leetcode 905   按奇偶排序数组
  * @Leetcode 915   分割数组
  * @Leetcode 931   下降路径最小和
  */
@@ -323,7 +324,7 @@
 
 /**
  * todo 队列
- * @Leetcode 641  设计循环双端队列
+ * @Leetcod出界的路径数e 641  设计循环双端队列
  * @Leetcode 933  最近的请求次数
  * @Leetcode 1705 吃苹果的最大数目 [优先队列] 
  */
