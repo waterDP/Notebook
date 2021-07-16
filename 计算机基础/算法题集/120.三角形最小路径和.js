@@ -11,7 +11,7 @@
  */
 var minimumTotal = function(triangle) {
   const m = triangle.length
-  const dp = new Array(m).fill(0).map(() => new Array(m))
+  const dp = new Array(m).fill(0).map(() => new Array())
   dp[0][0] = triangle[0][0]
   for (let i = 1; i < m; i++) {
     dp[i][0] = dp[i-1][0] + triangle[i][0]
