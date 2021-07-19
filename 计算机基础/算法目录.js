@@ -3,7 +3,7 @@
  * @Leetcode 53   最大子序和
  * @Leetcode 70   爬楼梯
  * @Leetcode 91   解码方法
- * @Leetcode 120  三角形的最小路径和
+ * @Leetcode 120  三角形的最小路径
  * @Leetcode 198  打家劫舍
  * @Leetcode 213  打家劫舍二
  * @Leetcode 221  最大正方形
@@ -138,6 +138,7 @@
 /**
  * todo 双指针
  * @Leetcode 3     无重复字符的最长子串
+ * @Leetcode 15    最小路径和
  * @Leetcode 26    删除有序数组中的重复项
  * @Leetcode 27    移除元素
  * @Leetcode 75    双指针（荷兰国旗问题）
