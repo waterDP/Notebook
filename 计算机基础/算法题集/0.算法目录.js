@@ -327,7 +327,7 @@
 
 /**
  * todo 队列
- * @Leetcod出界的路径数e 641  设计循环双端队列
+ * @Leetcode 641  设计循环双端队列
  * @Leetcode 933  最近的请求次数
  * @Leetcode 1705 吃苹果的最大数目 [优先队列] 
  */
@@ -354,7 +354,8 @@
 
 /**
  * todo 二叉树
- * @LeetCode 100  相同的树
+ * @Leetcode 100  相同的树
+ * @Leetcode 116  填充每个节点的下一个右侧节点指针
  * @LeetCode 124  二叉树的最大路径和
  * @Leetcode 103  二叉树的锯齿形层序遍历
  * @Leetcode 104  二叉树的前序遍历
