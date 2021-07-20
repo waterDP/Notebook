@@ -28,6 +28,17 @@ Vue.component('book', {
   }
 })
 </script>
+
+
+// todo render components
+<script>
+export default {
+  functional: true,
+  render: (h, ctx) => {
+    return ctx.props.render(h, ctx.props)
+  }
+}
+</script>
   
 // todo createElement的第二个参数
 {
@@ -93,6 +104,3 @@ Vue.component('book', {
   // 那么 `$refs.myRef` 会变成一个数组。
   refInFor: true
 }
-
-
-
