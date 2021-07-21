@@ -2,6 +2,7 @@
  * @lc app=leetcode.cn id=460 lang=javascript
  *
  * [460] LFU 缓存
+ * Least Frequently Used 最近不经常使用
  */
 
 /**

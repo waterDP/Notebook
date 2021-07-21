@@ -2,6 +2,7 @@
  * @lc app=leetcode.cn id=146 lang=javascript
  *
  * [146] LRU 缓存机制
+ * Least Recently Used 最近最少使用
  */
 
 // @lc code=start
@@ -26,6 +27,8 @@ LRUCache.prototype.get = function(key) {
     // 取出value后删除，然后把value放前端去 
     let temp = this.values[index]
     this.values.splice(index, 1)
+
+    // 添加
     this.keys.unshift(key)
     this.values.unshift(temp)
   }
@@ -45,6 +48,9 @@ LRUCache.prototype.put = function(key, value) {
   }
   this.keys.unshift(key)
   this.values.unshift(value)
+
+  // 如果溢出就删除多余的部分
+
   if (this.keys.length > this.max) {
     this.keys.pop()
     this.values.pop()
