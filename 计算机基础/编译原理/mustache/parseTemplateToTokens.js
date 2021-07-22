@@ -9,7 +9,7 @@ import nestTokens from './nestTokens'
 /**
  * 将模板字符串转成tokens
  */
-export default function parseTemplateToTokens(templateStr) {
+export default parseTemplateToTokens(templateStr) {
   const tokens = []
   const scanner = new Scanner(templateStr)
   let words

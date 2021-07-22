@@ -6,7 +6,7 @@
 /**
  * 将#和/之间的tokens能够整合起来
  */
-export default function nestTokens(tokens) {
+export default nestTokens(tokens) {
   const nestedTokens = []
   const sections = []
   let collector = nestedTokens
@@ -22,7 +22,7 @@ export default function nestTokens(tokens) {
         break
       case '/': 
         // 出栈
-        let section_pop = sections.pop()
+        sections.pop()
         // 改变收集器为栈结构队尾 栈顶
         collector = 
           sections.length ? sections[sections.length - 1][2] : nestedTokens
