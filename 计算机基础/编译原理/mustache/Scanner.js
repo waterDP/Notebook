@@ -18,7 +18,7 @@ export default class Scanner {
     }
   }
   // 让指针进行扫描，直到遇见指定内容结束，并且能够返回结束之前路过的文字
-  scanUtil(stopTag) { 
+  scanUntil(stopTag) { 
     // 记录执行本方法地时候pos的值
     const pos_backup = this.pos
     while (!this.eos() && this.tail.indexOf(stopTag) !== 0) {

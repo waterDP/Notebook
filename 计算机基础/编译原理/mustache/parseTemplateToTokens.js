@@ -15,11 +15,11 @@ export default parseTemplateToTokens(templateStr) {
   let words
   while (!scanner.eos()) {
     // 收集开始标记之前的所有文字
-    words = scanner.scanUtil("{{")
+    words = scanner.scanUntil("{{")
     words && tokens.push(['text', words])
     scanner.scan('{{')
 
-    words = scanner.scanUtil('}}') 
+    words = scanner.scanUntil('}}') 
     if (words !== '') {
       // 这个words就是{{}}中间的东西，判断一下首字符
       if (words[0]=='#') {
