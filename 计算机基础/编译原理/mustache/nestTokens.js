@@ -10,7 +10,7 @@ export default nestTokens(tokens) {
   const nestedTokens = []
   const sections = []  // 栈
 
-  // collector 代表的是当前收集器
+  // collector 指向的是当前收集器
   let collector = nestedTokens
 
   for (let i = 0; i < tokens.length; i++) {
