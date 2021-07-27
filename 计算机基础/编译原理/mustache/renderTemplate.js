@@ -4,7 +4,6 @@
  * @Author: water.li
  */
 import lookup from './lookup'
-import renderTemplate from './renderTemplate';
 
 // tokens数组变为dom字符串
 export default renderTemplate(tokens, data) {
