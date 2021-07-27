@@ -8,7 +8,7 @@
  */
 export default nestTokens(tokens) {
   const nestedTokens = []
-  const sections = []
+  const sections = []  // 栈
   let collector = nestedTokens
 
   for (let i = 0; i < tokens.length; i++) {
