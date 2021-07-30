@@ -15,7 +15,7 @@
 function smartRepeat(tempStr) {
   let p = 0
   const stack1 = [], stack2 = []
-  while (p < tempStr.length) {  
+  while (p < tempStr.length - 1) {  
     const rest = tempStr.slice(p)
     if (/^\d+\[/.test(rest)) {
       let times = Number(rest.match(/^(\d+)\[/)[1])
@@ -29,7 +29,7 @@ function smartRepeat(tempStr) {
     } else if (rest[0] === ']') {
       let times = stack1.pop()
       let word = stack2.pop()
-      stack2[stack2.length] = word.repeat(times)
+      stack2[stack2.length-1] += word.repeat(times)
       p++
     }
   }
