@@ -26,8 +26,8 @@ var minMutation = function(start, end, bank) {
         if (bankSet.has(d)) {
           queue.push([d, count+1])
           // 剪枝，避免重复
-          bankSet.delte(d)
-        }e
+          bankSet.delete(d)
+        }
       }
     }
   }
