@@ -105,3 +105,39 @@ let time = '2019-08-13'
 // 变为 "2019年08月13"
 let reg = /^(\d{4})-(\d{1,2})-(\d{2})$/g
 time = time.replace(reg, `$1年$2月$3日`)
+
+time.replace(reg, (big, $1, $2, $3)=> {
+  return `${$1}年${$2}月${$3}日` 
+})
+
+// 单词首字母大写
+let str = 'good good study, day day up!'
+let reg = /\b([a-zA-Z])[a-zA-Z]*\b/g
+str = str.replace(reg, (...arg) => {
+  const [content, $1] = arg
+  return $1.toUpperCase() + content.substring(1)
+})
+console.log(str)
+
+// 验证一个字符串中那个这字母出现的次数最多，多少次
+
+// 方法一
+let str = 'zhididishiwcniasiidhidfv'
+let max = 0, maxChar = ''
+let map = {}
+Array.prototype.forEach.call(str, char => {
+  if (map.hasOwnProperty(char)) {
+    map[char]++
+  } else {
+    map[char] = 1
+  }
+  if (map[char] > max) {
+    max = map[char]
+    maxChar = char
+  }
+})
+
+// 方法二
+str = str.split('').sort((a, b) => a.localeCompare(b)).join('')
+let reg = /[a-zA-Z]\1+/g
+let arr = str.match(reg).sort((a, b) => b.length - a.length)
