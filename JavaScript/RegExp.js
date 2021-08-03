@@ -56,3 +56,52 @@
  * 2.汉字
  * /^[\u4E00-\u9FA5]$/
  */
+
+/*
+ * 正则的捕获
+ * reg.lastIndex: 当前正则下一次匹配的起始索引位置
+ * 懒惰性捕获的原因：默认情况下lastIndex的值不会实修改，每一次都是从字符串开始位置开始查找，所以记录只是第一个
+ * 
+ * 实现正则捕获的方法
+ * 1.正则RegExp.prototype上的方法
+ * exec
+ * test
+ * 2.字符串String.prototype上支持正则表达式处理的方法
+ * replace
+ * match
+ * split
+ * ...
+ */
+// 多次匹配的情况下，match只能把大正则匹配的内容获取到，小分组匹配的信息无法获取
+let str = '{0}年{1}月{2}日'
+let reg = /\{\d+\}/g
+let aryBig = [], argSmall = [], res = reg.exec(str)
+while (res) {
+  let [big, small] = res
+  aryBig.push(big)
+  argSmall.push(small)
+  res = reg.exec(str)
+}
+
+// 分组引用
+let str = 'book'
+let reg = /^[a-zA-Z]([a-zA-Z])\1[a-zA-Z]$/
+// 分组引用就是通过"\数字"让其代表和对应分组出现一模一样的内容
+
+
+// 正则捕获的贪婪性，默许情况下，正则捕获的时候，是按照当前正则所匹配的最长结果来获取的
+const reg= /\d+?/ // ? 在量词元字符后面设置？，取消捕获时候贪婪性（按照正则匹配的最短的结果来获取）
+
+/**
+ * todo 问号在正则中的五大作用 
+ * 问号左边是非量词元字符：本身代表量词元字符，出现零到一次
+ * 问号左边是量词元字符：取消捕获时候的贪婪性
+ * (?:)只匹配不捕获
+ * (?=)正向预查
+ * (?!)负向预查 
+ */
+
+let time = '2019-08-13'
+// 变为 "2019年08月13"
+let reg = /^(\d{4})-(\d{1,2})-(\d{2})$/g
+time = time.replace(reg, `$1年$2月$3日`)
