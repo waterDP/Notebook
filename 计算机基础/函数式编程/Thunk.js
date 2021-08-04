@@ -3,8 +3,11 @@
  * todo 传名调用：即直接将表达式x+5传入函数体，只有用到时它的时候求值  
  */
 
- // 正常版本的readFile(多参数版本)
- fs.readFile(filename, callback);
+
+// ! 在js中，Thunk函数替换的不是表达式，而是多参数函数，将其规制成单参数的版本，且只接受回调函数作为参数
+
+// 正常版本的readFile(多参数版本)
+fs.readFile(filename, callback)
 
 
 // Thunk版本的readFile(单参数版本)
