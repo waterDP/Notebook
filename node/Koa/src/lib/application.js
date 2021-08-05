@@ -91,7 +91,7 @@ class Application extends EventEmitter {
     })
   }
   listen(...args) {
-    const server = http.createServer(this.handleRequest.bind(this))
+    const server = http.createServer(this.handleRequest)
     server.listen(...args)
   }
 }
