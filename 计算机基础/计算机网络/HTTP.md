@@ -276,7 +276,7 @@ Accept:             指定客户端能够接收内容类型
 Accept-Charset:     浏览器可以接受的字符编码集
 Accept-Encoding:    指定浏览器可以支持的Web服务器返回内容压缩编码类型
 Accept-Language:    浏览器中接受的语言
-Accept-Rangea:      可以请求网页实体的一个或多个子范围字段
+Accept-Range:       可以请求网页实体的一个或多个子范围字段
 Authorization:      HTTP授权的授权证书（jwt）
 Cache-Control:      指定请求和响应遵循的缓存机制
 Connection:         表示是否需要持久连接
@@ -292,3 +292,15 @@ If-Modified-Since:  如果请求部分在指定时间之后被修改则请求成
 If-None-Match:      如果内容未改变返回304,参数为服务器先前发送ETag，与服务器回应的Etag
 Range:              只请求实体的一部分，指定范围
 Referer：           先前网页的地址，当前请求网页紧随其后，即来路
+
+## 默认端口号
+ftp    21   文件传输协议
+ssh    22   SSH服务协议(安全登录)，可以通过ssh来访问Linux系统
+Pop3  110  它是因特网电子邮件的第一个离线协议标准
+Smtp  25   简单邮件传输协议
+http   80   超文本传输协议
+https  443  即HTTP下加入SSL层，简单讲是HTTP的安全版。
+Telnet 23 远程登录
+Oracle  默认端口号1521
+Mysql数据库 默认端口号 3306
+Sqlserver数据库  默认端口1433
