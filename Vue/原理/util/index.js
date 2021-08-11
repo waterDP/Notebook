@@ -21,17 +21,17 @@ export function def(data, key, value) {
 
 /**
  * 代理
- * @param {object} vm
+ * @param {object} obj
  * @param {string} source
  * @param {string} key
  */
-export function proxy(vm, source, key) {
-  Object.defineProperty(vm, key, {
+export function proxy(obj, source, key) {
+  Object.defineProperty(obj, key, {
     get() {
-      return vm[source][key]
+      return obj[source][key]
     },
     set(newValue) {
-      vm[source][key] = newValue
+      obj[source][key] = newValue
     }
   })
 }
