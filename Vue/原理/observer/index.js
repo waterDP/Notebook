@@ -8,12 +8,12 @@ class Observer {
     def(value, '__ob__', this) // 给数组用的 这个值不能枚举
     if (Array.isArray(value)) {
       value.__proto__ = arrayMethods
-      this.observerArray(value)
+      this.observeArray(value)
     } else {
       this.walk(value)
     }
   }
-  observerArray(value) {
+  observeArray(value) {
     for (let i = 0; i < value.length; i++) {
       observe(value[i])
     }
