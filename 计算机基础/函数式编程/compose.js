@@ -2,9 +2,9 @@
 // const compose = (...fns) => fns.reduce((pre, curr) => (...args) => pre(cur(...args)))
 
 function compose(...fns) {
-  return fns.reduce(function(pre, curr) {
-    return function(...args) {
-      return pre(curr(...args))
+  return fns.reduce((pre, cur) => {
+    return (...args) => {
+      return pre(cur(...args))
     }
   })
 }
