@@ -323,6 +323,7 @@
  * @Leetcode 167  两数之和二-输入有序数组
  * @Leetcode 278  第一个错误版本
  * @Leetcode 373  猜数字字大小
+ * @Leetcode 687  最长同值路径
  * @Leetcode 852  山脉数组的峰顶索引
  * @Leetcode 1011 在D天内送达包裹的能力
  * @Leetcode 1760 袋子里最少数目的球
