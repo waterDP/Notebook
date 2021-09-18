@@ -26,7 +26,7 @@ encodeURI() 转义地址
 ```
 ## XSS 防范
 1.CSP （内容安全策略）Content Security Policy
-Content-Security-Policy: defaul-src 'self' // 只允许加载本站资源
+Content-Security-Policy: default-src 'self' // 只允许加载本站资源
 Content-Security-Policy: img-src https:// 只允许加载https协议图片
 Content-Security-Policy: child-src 'none' //不允许加载任何来源要框架
 
