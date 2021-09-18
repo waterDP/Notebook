@@ -9,7 +9,7 @@ Box：css布局的基本单位
 
 Box 是 CSS 布局的对象和基本单位， 直观点来说，就是一个页面是由很多个 Box 组成的。元素的类型和 display 属性，决定了这个 Box 的类型。 不同类型的 Box， 会参与不同的 Formatting Context（一个决定如何渲染文档的容器），因此Box内的元素会以不同的方式渲染。让我们看看有哪些盒子：
 
-block-level box:display 属性为 block, list-item, table 的元素，会生成 block-level box。并且参与 block fomatting context；
+block-level box:display 属性为 block, list-item, table 的元素，会生成 block-level box。并且参与 block formatting context；
 inline-level box:display 属性为 inline, inline-block, inline-table 的元素，会生成 inline-level box。并且参与 inline formatting context；
 run-in box: css3 中才有， 这儿先不讲了。
 Formatting Context

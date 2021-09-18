@@ -11,6 +11,7 @@ interface Animal {
 interface AnimalFarm { 
   newAnimal(): AnimalFarm
 }
+
 class DogFarm implements AnimalFarm { 
   newAnimal() { 
     console.log('new Dog degerate')
@@ -23,6 +24,7 @@ class CatFarm implements AnimalFarm {
     return new CatFarm()
   }
 }
+
 class Dog extends DogFarm implements Animal { 
   show() { }
 }

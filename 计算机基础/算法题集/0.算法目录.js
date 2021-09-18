@@ -13,6 +13,7 @@
  * @Leetcode 343  整数拆分
  * @Leetcode 368  最大整除子集
  * @Leetcode 403  青蛙过河
+ * @Leetcode 474  一和零
  * @Leetcode 518  零线兑换二
  * @Leetcode 664  奇怪的打印机
  * @Leetcode 740  删除并获得点数
@@ -109,10 +110,12 @@
 /**
  * todo 广度优先搜索
  * @Leetcode 433  最小基因变化
+ * @Leetcode 529  扫雷游戏
  * @Leetcode 938  二叉搜索树的范围和
  * @Leetcode 993  二叉树的堂兄弟节点
  * @Leetcode 1091 二进制矩阵中的最短路径
  * @Leetcode 1765 地图中的最高点
+ * @Leetcode 1905 统计子岛屿
  */
 
 /**
@@ -166,7 +169,7 @@
  */
 
 /**
- * todo 图
+ * todo 图论
  * @Leetcode 332   重新安排行程 [欧拉回路  ]
  * @Leetcode 1293  网络中的最贵路径
  * @Leetcode 1334  阈值距离内邻居最少的城市 [bellman-ford spfa Dijkstra floyd]
@@ -323,6 +326,7 @@
  * @Leetcode 167  两数之和二-输入有序数组
  * @Leetcode 278  第一个错误版本
  * @Leetcode 373  猜数字字大小
+ * @Leetcode 687  最长同值路径
  * @Leetcode 852  山脉数组的峰顶索引
  * @Leetcode 1011 在D天内送达包裹的能力
  * @Leetcode 1760 袋子里最少数目的球
