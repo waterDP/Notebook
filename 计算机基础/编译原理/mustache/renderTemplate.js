@@ -6,7 +6,7 @@
 import lookup from './lookup'
 
 // tokens数组变为dom字符串
-export default renderTemplate(tokens, data) {
+export default function renderTemplate(tokens, data) {
   let resultStr = ''
   for (let i = 0;  i < tokens.length; i++) {
     const token  = tokens[i] 
