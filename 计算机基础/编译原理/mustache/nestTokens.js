@@ -6,7 +6,7 @@
 /**
  * 将#和/之间的tokens能够整合起来
  */
-export default nestTokens(tokens) {
+export default function nestTokens(tokens) {
   const nestedTokens = []
   const sections = []  // 栈
 

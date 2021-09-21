@@ -3,7 +3,7 @@
  * @Date: 2021-07-22 15:19:12
  * @Author: water.li
  */
-export default lookup(data, keyName) {
+export default function lookup(data, keyName) {
   if (keyName.indexOf('.') != -1 && keyName !== '.') {
     const keys = keyName.split('.')
     let temp = data
