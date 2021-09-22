@@ -33,6 +33,5 @@ export default function nestTokens(tokens) {
         collector.push(token)
     }
   }
-
   return nestTokens
 }
