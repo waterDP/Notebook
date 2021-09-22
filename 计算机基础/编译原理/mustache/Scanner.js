@@ -11,7 +11,7 @@ export default class Scanner {
   } 
   // 就是走过指定内容，没有返回值
   scan(tag) {
-    while (this.tail.indexOf(tag) === 0) {
+    if (this.tail.indexOf(tag) === 0) {
       // tag有多长，比如{{的长度是2，就让指针后移多少位
       this.pos += tag.length
       this.tail = this.templateStr.slice(this.pos)
