@@ -101,15 +101,17 @@ class Store {
       this.vm.$watch(() => {
         return this.vm.state
       }, function() {
-        console.log(this._committing, '不能异步调用')
+        if (this.__commit) {
+          console.error('mutations中不能执行异步操作！')
+        }
       }, {deep: true, sync: true}) // 深度监控 同步调用 
     }
   }
   _withCommit(fn) {
     const committing = this._committing
     this._committing = true;
-    fn();
-    this._committing = committing;
+    fn()
+    this._committing = committing
   }
   replaceState(newState) {
     this._withCommit(() => {
