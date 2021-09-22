@@ -14,7 +14,7 @@ export default class Scanner {
     while (this.tail.indexOf(tag) === 0) {
       // tag有多长，比如{{的长度是2，就让指针后移多少位
       this.pos += tag.length
-      this.tail = this.templateStr.substring(this.pos)
+      this.tail = this.templateStr.slice(this.pos)
     }
   }
   // 让指针进行扫描，直到遇见指定内容结束，并且能够返回结束之前路过的文字
