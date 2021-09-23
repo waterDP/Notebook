@@ -109,7 +109,7 @@ class Store {
   }
   _withCommit(fn) {
     const committing = this._committing
-    this._committing = true;
+    this._committing = true
     fn()
     this._committing = committing
   }
