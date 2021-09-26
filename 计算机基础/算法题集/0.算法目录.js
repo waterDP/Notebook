@@ -254,6 +254,7 @@
  * @Leetcode 240   搜索二维矩阵二
  * @Leetcode 363   矩形区域不超过K的最大数值和
  * @Leetcode 463   岛屿的周长
+ * @Leetcode 594   最长和谐子序列
  * @Leetcode 661   图片平滑器
  * @Leetcode 674   最长连续递增子序列
  * @Leetcode 733   图像渲染 （同200）
