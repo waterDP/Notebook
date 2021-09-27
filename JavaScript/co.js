@@ -5,7 +5,7 @@ module.exports = co['default'] = co.co = co
 // todo 简单版本
 function easyCO(generator) {
   let it = generator()
-  function next(arg) {
+  function next() {
     let result = it.next()
     result.done || next(result.value)
   }
