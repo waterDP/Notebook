@@ -191,6 +191,7 @@
  * @Leetcode 870   优势洗牌
  * @Leetcode 948   令牌放置
  * @Leetcode 984   不含AAA或BBB的字符串
+ * @Leetcode 1578  避免重复字母的最小删除成本
  * @Leetcode 1673  找出最具竞争力的子序列
  * @Leetcode 1800  最大升序子数组
  * @Leetcode 1833  雪糕的最大数量
