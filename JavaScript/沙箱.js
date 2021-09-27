@@ -9,7 +9,7 @@
  * 2. 执行第三方Js，当你有必要执行第三方 js的时候，而这份js又不一定可信的时候
  * 3. 在线代码编辑器，创建一个沙箱，防止对页面本身造成影响
  * 4. vue的服务端渲染 vue的服务端渲染实现中，通过创建沙箱执行前端的bundle文件；在调用createBundleRender
- *    方法的时候，允许配置runInNexContext为true或false的时候，判断是否传入一个新创建的sandbox对像以供vm使用
+ *    方法的时候，允许配置runInNewContext为true或false的时候，判断是否传入一个新创建的sandbox对像以供vm使用
  * 5. vue模块中的表达式计算 vue模板中表达式的计算放在沙箱中，只能访问全局变量的一个白名单，如Math和Date
  *    你不能够在模板表达式中试图访问用户定义的全局变量
  */
