@@ -8,7 +8,7 @@ import {bindActionCreators} from "redux"
 
 
 const App = () => {
-  const count = useSelector(state => state.count.number)
+  const count = useSelector(state => state.count.number) // vuex mapState
   const dispatch = useDispatch()
 
   const {
