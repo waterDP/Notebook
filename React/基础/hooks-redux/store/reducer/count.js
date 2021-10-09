@@ -7,7 +7,7 @@ const init = {
   number: 0
 }
 
-export default (state = init, action) => {
+function count (state = init, action) => {
   switch(action.type) {
     case 'addCount':
       return {...state, number: action.count+1}
@@ -17,3 +17,5 @@ export default (state = init, action) => {
       return state
   }
 }
+
+export default count
