@@ -19,8 +19,8 @@ const App = () => {
   return (
     <>
       <span>{count}</span>
-      <button onClick={() => reduce(count)}>reduce</button>
-      <button onClick={() => add(count)}>add</button>
+      <button onClick={reduce(count)}>reduce</button>
+      <button onClick={add(count)}>add</button>
     </>
   )
 }
