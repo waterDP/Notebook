@@ -2,12 +2,8 @@ import React from 'react'
 import ReactDOM from "react-dom"
 
 class Clock extends React.Component {
-  constructor(props) {
-    super(props)
-    // 在构造函数中，是唯一可以给this.state赋初始值的地方 
-    this.state = {
-      date: new Date().toLocaleTimeString()
-    }
+  state = {
+    date: new Date().toLocaleTimeString()
   }
   // 给类的实例增加一个add属性，而这个属性里的this绑死为组件的实例\\
   // 这个方法是直接赋给实例，而不是放在原型上的 
