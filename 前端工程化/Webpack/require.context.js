@@ -21,17 +21,21 @@ const install = Vue => {
 export default install
 
 // todo vuex 模块收集
-const files = require.context('.', true, /^\.\.\/[^/]+(\/.+)\/index\.js$/)
+const files = require.context('./modules/', true, /index.js/)
 
-const modules = files.keys().reduce((all, url) => {
-  let module = files(url).default
-  let fields = url.split('/')
-  fields.shift()
-  fields.pop()
-  let temp = {}
-  _.set(temp, fields.join('.modules.'), module)
-  _.merge(all, temp)
-  return all
-}, {})
+function collectModules(files, rootModules) {
+  rootModules = _.cloneDeep(rootModules)
+  files.keys().forEach(key => {
+    const store = files(key).default
+    const moduleName = key.replace(/^\.\//, '').replace(/\index.js$/, '')
+    const modules = rootModules.modules || {}
+    modules[moduleName] = store
+    modules[moduleName].mutations = {...modules[moduleName], ...mutations}
+    modules[moduleName].namespaced = true
+    rootModules.modules = modules
+  })
+  rootModules.mutations = {...rootModules.mutations, ...mutations}
+  return rootModules
+}
 
-export default modules
+export default new Vuex.Store(collectModules(files, rootModules))
