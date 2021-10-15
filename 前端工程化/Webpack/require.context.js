@@ -10,12 +10,14 @@
 require.context('path', false, /\.js$/)
 
 // todo vue公共组件引入
+const path = require('path')
 const files = require.context('.', true, /\.vue$/)
 const install = Vue => {
   files.keys().forEach(url => {
-    const componentConfig = files(url)
+    const componentConfig = files(key)
     const component = componentConfig.default || componentConfig
-    Vue.component(component.name, component)
+    const componentName = component.name || path.basename(key, '.vue')
+    Vue.component(componentName, component)
   })
 }
 export default install
@@ -30,7 +32,7 @@ function collectModules(files, rootModules) {
     const moduleName = key.replace(/^\.\//, '').replace(/\index.js$/, '')
     const modules = rootModules.modules || {}
     modules[moduleName] = store
-    modules[moduleName].mutations = {...modules[moduleName], ...mutations}
+    modules[moduleName].mutations = {...modules[moduleName].mutations, ...mutations}
     modules[moduleName].namespaced = true
     rootModules.modules = modules
   })
