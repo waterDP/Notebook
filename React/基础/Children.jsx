@@ -21,13 +21,13 @@ function WelcomeDialog() {
 
 
 // 具名
-function SplitPane(props) {
+function SplitPanel(props) {
   return (
-    <div className="SplitPane">
-      <div className="SplitPane-left">
+    <div className="SplitPanel">
+      <div className="SplitPanel-left">
         {props.left}
       </div>
-      <div className="SplitPane-right">
+      <div className="SplitPanel-right">
         {props.right}
       </div>
     </div>
@@ -36,7 +36,7 @@ function SplitPane(props) {
 
 function App() {
   return (
-    <SplitPane 
+    <SplitPanel 
       left={<Contacts />}
       right={<Chart />}
     />
