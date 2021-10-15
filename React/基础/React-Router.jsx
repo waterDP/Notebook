@@ -4,21 +4,19 @@ import { HashRouter as Router, Route, Switch, Redirect, Link } from 'react-route
 // Router是路由容器
 ReactDOM.render(
   <Router>
-    <>
-      <div>
-        <Link to="/"></Link>
-        <Link to="/user"></Link>
-        <Link to="/profile"></Link>
-      </div>
-      <Switch>
-        <Route path="/" component={Home} exact />
-        <Route path="/user" component={User} />
-        <Route path="/profile" component={Profile} />
-        <Redirect to='/'></Redirect>
-      </Switch>
-    </>
+    <div>
+      <Link to="/"></Link>
+      <Link to="/user"></Link>
+      <Link to="/profile"></Link>
+    </div>
+    <Switch>
+      <Route path="/" component={Home} exact />
+      <Route path="/user" component={User} />
+      <Route path="/profile" component={Profile} />
+      <Redirect to='/'></Redirect>
+    </Switch>
   </Router>,
-  document.getElementById('rooter')
+  document.getElementById('root')
 )
 
 class Home extends Component {
