@@ -28,7 +28,7 @@ function BlueDatePicker() {
   return <MyComponents.DatePicker color="blue" />
 }
 
-// todo 在运行时选择类型
+// todo 在运行时选择类型 vue中的component
 import React from 'react'
 import {PhotoStory, VideoStory} from './stories'
 
