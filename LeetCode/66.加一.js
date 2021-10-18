@@ -22,5 +22,7 @@ var plusOne = function(digits) {
   digits[0] = 1
   return digits
 };
+
+plusOne([9,9])
 // @lc code=end
 
