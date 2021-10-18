@@ -1,32 +1,45 @@
-import React from 'react'
-import ReactDOM from 'react-dom'
 import {observable, action} from 'mobx'
-import {observer} from 'mobx-react'
+import React, {Component} from 'react'
+import ReactDOM from 'react-dom'
+import PropTypes from 'prop-types'
+import {observer, PropTypes as ObservablePropTypes} from 'mobx-react'
 
-// create state object
-let appState = observable({timer: 0})
+class Store {
+  @observable cache = {
+    queue: []
+  }
+  @action.bound refresh() {
+    this.cache.queue.push(1)
+  }
+}
 
-// define action 
-setInterval(
-  action(() => {
-    appState.timer += 1
-  }),
-  1000
-)
+const store = new Store()
 
-appState.resetTimer = action(()=>{
-  appState.timer = 0
-})
+@observer
+class Bar extends Component {
+  static propTypes = {
+    queue: ObservablePropTypes.observableArray
+  }
+  render() {
+    const {queue} = this.props
+    return <span>{queue.length}</span>
+  }
+}
 
-// create abserver
-let App = observer(({appState}) => {
-  return (
-    <div className="App">
-      <h1>Time passed: {appState.timer}</h1>
-      <button onClick={appState.resetTimer}>reset timer</button>
-    </div>
-  )
-})
+class Foo extends Component {
+  static propTypes = {
+    cache: ObservablePropTypes.observableObject,
 
-const root = document.getElementById('root')
-ReactDOM.render(<App appState={appState} />, root)
+  }
+  render() {
+    const {cache} = this.props
+    return (
+      <div>
+        <button onClick={this.props.refresh}>Refresh</button>
+        <Bar queue={cache.queue}/>
+      </div>
+    )
+  }
+}
+
+ReactDOM.render(<Foo cache={store.cache} refresh={store.refresh} />, document.querySelector('#root'))
