@@ -22,7 +22,7 @@ class Bar extends Component {
   }
   render() {
     const {queue} = this.props
-  return <span>{queue.length}</span>
+    return <span>{queue.length}</span>
   }
 }
 
