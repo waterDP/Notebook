@@ -67,6 +67,7 @@
  * @Leetcode 7    整数反转
  * @Leetcode 9    回文数
  * @Leetcode 50   Pow(x, n)
+ * @Leetcode 66   加一
  * @Leetcode 69   x的平方根
  * @Leetcode 168  gitExcel表列名称
  * @Leetcode 171  excel-表列序号
@@ -292,6 +293,7 @@
  * @Leetcode 76    最小覆盖子串
  * @Leetcode 136   只出现一次的数字
  * @Leetcode 137   只出现一次的数字 II 
+ * @Leetcode 217   存在重复元素
  * @Leetcode 554   砖墙
  * @Leetcode 1408  点菜展示表
  */
