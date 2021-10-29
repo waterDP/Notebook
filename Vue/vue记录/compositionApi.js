@@ -7,13 +7,14 @@
 /**
  * todo 生命周期 
  * beforeCreate >> use setup()
- * create >> use setup
+ * created >> use setup()
  * beforeMount >> onBeforeMount
  * mounted >> onMounted
  * beforeUpdate >> onBeforeUpdate
  * updated >> onUpdated
  * beforeDestroy >> onBeforeUnmount
  * destroyed >> onUnmounted
+ * onErrorCaptured  异常行为的捕获
  */
 
 /**
