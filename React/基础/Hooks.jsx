@@ -78,8 +78,8 @@ function TextInputWithFocusButton() {
 // todo useReducer
 function DemoUseReducer() {
   const [number, dispatch] = useReducer((state, action) => {
-    const { name, payload } = action
-    switch (name) {
+    const { type, payload } = action
+    switch (type) {
       case 'add':
         return state + 1
       case 'sub':
