@@ -92,9 +92,9 @@ function DemoUseReducer() {
   }, 0)
   return <div>
     当前值：{number}
-    <button onClick={() => dispatch({ name: 'add' })}>增加</button>
-    <button onClick={() => dispatch({ name: 'sub' })}>减少</button>
-    <button onClick={() => dispatch({ name: 'reset', payload: 666 })}>赋值</button>
+    <button onClick={() => dispatch({ type: 'add' })}>增加</button>
+    <button onClick={() => dispatch({ type: 'sub' })}>减少</button>
+    <button onClick={() => dispatch({ type: 'reset', payload: 666 })}>赋值</button>
     <MyChildren dispatch={dispatch} state={{ number }}></MyChildren>
   </div>
 }
