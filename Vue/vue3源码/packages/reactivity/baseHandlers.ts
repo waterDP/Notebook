@@ -1,7 +1,8 @@
+import { isArray } from './../shared/index';
 /*
  * @Author: your name
  * @Date: 2021-10-31 20:40:05
- * @LastEditTime: 2021-11-01 10:41:15
+ * @LastEditTime: 2021-11-01 11:57:14
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings Edit
  * @FilePath: \notebook\Vue\vue3源码\packages\reactivity\baseHandlers.js
@@ -38,7 +39,8 @@ const shallowReadonlyGet = createGetter(true, true)
 function createSetter(shallow = false) {
   return function set(target, key, value, receivers) {
     const result = Reflect.set(target, key, value, receivers)
-
+    const oldValue = target[key]
+    // todo 触发更新依赖
     return result
   }
 }
