@@ -1,7 +1,7 @@
 /*
  * @Author: your name
  * @Date: 2021-11-01 10:16:56
- * @LastEditTime: 2021-11-01 11:06:29
+ * @LastEditTime: 2021-11-01 11:36:28
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings Edit
  * @FilePath: \notebook\Vue\vue3源码\packages\reactivity\effect.ts
@@ -42,7 +42,23 @@ function createReactiveEffect(fn, options) {
   return effect
 }
 
-
+let targetMap = new WeakMap()
 export function track(target, type, key) {
-
+  // key 和 effect 一一对应  map
+  if (activeEffect === undefined) {  // 没有在effect中使用
+    return 
+  }
+  
+  let depMap = targetMap.get(target)
+  if (!depMap) {
+    targetMap.set(target, (depMap = new Map))
+  } 
+  
+  let dep = depMap.get(key)
+  if (!dep) {
+    depMap.set(key, (dep = new Set))
+  }
+  if (!dep.has(activeEffect)) {
+    dep.add(activeEffect)
+  }
 }
