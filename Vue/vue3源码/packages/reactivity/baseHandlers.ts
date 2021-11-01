@@ -1,20 +1,23 @@
 /*
  * @Author: your name
  * @Date: 2021-10-31 20:40:05
- * @LastEditTime: 2021-10-31 21:28:24
+ * @LastEditTime: 2021-11-01 10:41:15
  * @LastEditors: Please set LastEditors
  * @Description: In User Settings Edit
  * @FilePath: \notebook\Vue\vue3源码\packages\reactivity\baseHandlers.js
  */
 
-import { isObject } from "../shared"
+import { extend, isObject } from "../shared"
+import { track } from "./effect"
+import { TrackOpTypes } from "./operations"
 import { reactive, readonly } from "./reactive"
 
 function createGetter(isReadonly = false, shallow = false) {
   return function get(target, key, receiver) {
     const res = Reflect.get(target, key, receiver)
     if (!isReadonly) {  // 不是只读的
-      // 收集依赖
+      // 收集依赖  收集effect
+      track(target, TrackOpTypes.GET, key)
     }
     if (shallow) {  // 浅的
       return res
@@ -51,10 +54,16 @@ export const shallowReactiveHandlers = {
   set: shallowSet
 }
 
+let readonlyObj = {
+  set(target, key) {
+    console.warn(`set ${target} on key ${key} field`)
+  }
+}
+
 // readonly 没有set
-export const readonlyHandlers = {
+export const readonlyHandlers = extend({
   get: readonlyGet
-}
-export const shallowReadonlyHandler = {
+}, readonlyObj)
+export const shallowReadonlyHandler = extend({
   get: shallowReadonlyGet
-}
+}, readonlyObj)
