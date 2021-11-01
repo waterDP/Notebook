@@ -277,6 +277,7 @@
  * @Leetcode 3     无重复字符的最长子串
  * @Leetcode 76    最小覆盖子串
  * @Leetcode 567   字符串的排列
+ * @Leetcode 718   最长的重复子数组
  */
 
 /**
