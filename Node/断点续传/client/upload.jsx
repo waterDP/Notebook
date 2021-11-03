@@ -85,7 +85,7 @@ function handleChange(event) {
  * ! 分片
  */
 function createChunks() {
-	let current = 9
+	let current = 0
 	let partList = []
 	while (current < currentFile.size) {
 		let chunk = currentFile.slice(current, current + CHUNK_SIZE)
