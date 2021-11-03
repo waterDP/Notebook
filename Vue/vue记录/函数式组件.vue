@@ -29,7 +29,6 @@ Vue.component('book', {
 })
 </script>
 
-
 // todo render components
 <script>
 export default {
