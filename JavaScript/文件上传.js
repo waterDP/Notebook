@@ -170,7 +170,7 @@ function unhighlight(e) {
 }
 
 // ! 3.处理图片预览
-dropAreaEle.addEventListener(drop, handleDrop, false)
+dropAreaEle.addEventListener('drop', handleDrop, false)
 
 function handleDrop(e) {
   const dt = e.dataTransfer
