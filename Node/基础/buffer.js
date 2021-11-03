@@ -97,4 +97,12 @@ Buffer.prototype.split = function (sep) {
   return arr  
 }
 
-
+// todo ArrayBuffer to hash(MD5)
+let fileReader = new FileReader()
+fileReader.readAsArrayBuffer(file)
+fileReader.onload = ev => {
+  let buffer = ev.target.result
+  let spark = new SparkMD5.ArrayBuffer()
+  spark.append(buffer)
+  let HASH = spark.end()  // result
+}
