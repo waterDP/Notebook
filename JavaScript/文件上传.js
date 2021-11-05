@@ -143,7 +143,7 @@ const IMAGE_MIME_REGEX = /^image\/(jpe?g|gif|png)$/i
 
 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
   dropAreaEle.addEventListener(eventName, preventDefaults, false)
-  document.body.addEventListener(eventName, preventDefaults, false)
+  document.body.ad  dEventListener(eventName, preventDefaults, false)
 })
 
 function preventDefaults(e) {
