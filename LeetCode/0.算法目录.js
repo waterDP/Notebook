@@ -75,6 +75,7 @@
  * @Leetcode 223  矩形面积
  * @Leetcode 263  丑数一
  * @Leetcode 264  丑数二
+ * @Leetcode 268  丢失的数字
  * @Leetcode 342  整数拆分
  * @Leetcode 365  水壶问题 (贝祖定理)
  * @Leetcode 367  有效完全平方数
