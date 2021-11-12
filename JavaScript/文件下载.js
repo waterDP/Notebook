@@ -390,7 +390,7 @@ function getBinaryContent(url, start, end, responseType="arrayBuffer") {
 const Koa = require('koa')
 const cors = require('@koa/cors')
 const serve = require('koa-static')
-const range = require('koa-range')s
+const range = require('koa-range')
 
 const PORT = 3000
 const app = new Koa()
