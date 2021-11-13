@@ -18,7 +18,7 @@ compiler.watch({
   // 处理错误
 })
 
-// 我是把webpack打包到内存中
+// 把webpack打包到内存中
 const MemoryFS = require('memory-fs')
 const mfs = new MemoryFS()
 compiler.outputFileSystem = mfs
