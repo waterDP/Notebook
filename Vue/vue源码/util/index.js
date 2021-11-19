@@ -1,4 +1,4 @@
-import {ASSETS_TYPE} from '../global-api/constant'
+import { ASSETS_TYPE } from '../global-api/constant'
 /**
  * 当前数据是不是对象
  * @return {boolean}
@@ -8,7 +8,7 @@ export function isObject(data) {
 }
 
 export function noop() {
-  
+
 }
 
 export function def(data, key, value) {
