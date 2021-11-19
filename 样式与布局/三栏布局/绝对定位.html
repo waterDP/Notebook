@@ -1,0 +1,45 @@
+<!--
+ * @Author: water.li
+ * @Date: 2021-11-19 21:09:16
+ * @Description: 绝对定位
+ * @FilePath: \notebook\样式与布局\三栏布局\绝对定位.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>绝对定位</title>
+  <style>
+    body, html {
+      padding: 0px;
+      margin: 0px;
+      height: 100%;
+    }
+    .left, .right {
+      position: absolute;
+      top: 0;
+      background-color: red;
+      height: 100%;
+    }
+    .main {
+      height: 100%;
+      background-color: green;
+    }
+    .left {
+      left: 0;
+      width: 200px;
+    }
+    .right {
+      right: 0;
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+  <div class='left'>Left</div>
+  <div class='main'>main</div>
+  <div class='right'>right</div>
+</body>
+</html>

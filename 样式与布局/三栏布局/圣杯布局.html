@@ -1,0 +1,65 @@
+<!--
+ * @Author: water.li
+ * @Date: 2021-11-19 20:29:37
+ * @Description: 圣杯布局
+ * @FilePath: \notebook\样式与布局\圣杯布局.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>圣杯布局</title>
+	<style>
+		body, html {
+			margin: 0;
+			padding: 0;
+			height: 100%;
+		}
+
+		body {
+			padding-left: 200px;
+			padding-right: 200px;
+		}
+
+		.left {
+			background-color: red;
+			width: 200px;
+			height: 100%;
+			float: left;
+      margin-left: -100%;			
+			position: relative;
+			left: -200px;
+ 		}
+
+    .main {
+			background-color: blue;
+			width: 100%;
+			height: 100%;
+			float: left;
+		}
+
+    .right {
+			background-color: green;
+			width: 200px;
+			height: 100%;
+			float: right;
+			margin-right: -200px;
+		}
+		</style>
+</head>
+
+<body>
+  <div class="main" style="color: white">
+    (1)中间部分需要根据浏览器宽度的变化而变化，所以要用100%，这里设左中右向左浮动，因为中间100%，左层和右层根本没有位置上去<br>
+    (2)把左层margin负100后，发现left上去了，因为负到出窗口没位置了，只能往上挪<br>
+    (3)按第二步这个方法，可以得出它只要挪动窗口宽度那么宽就能到最左边了，利用负边距，把左右栏定位 <br>
+    (4)但由于左右栏遮挡住了中间部分，于是采用相对定位方法，各自相对于自己把自己挪出去，得到最终结果 <br>
+	</div>
+	<div class="left"></div>
+	<div class="right"></div>
+</body>
+
+</html>

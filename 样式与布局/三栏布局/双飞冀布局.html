@@ -1,0 +1,59 @@
+<!--
+ * @Author: water.li
+ * @Date: 2021-11-19 20:55:20
+ * @Description: 双飞冀布局
+ * @FilePath: \notebook\样式与布局\双飞冀布局.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>双飞冀布局</title>
+  <style>
+    body, html {
+			margin: 0;
+			padding: 0;
+			height: 100%;
+		}
+
+    .left{
+      background: red;
+      width: 200px;
+      float: left;
+      margin-left: -100%;
+      height: 100%;
+    }
+
+    .right{
+      background: red;
+      width: 200px;
+      float: left;
+      margin-left: -200px;
+      height: 100%;
+    }
+
+    .main{
+      background: blue;
+      width: 100%;
+      float: left;
+      height: 100%;
+    }
+
+    .inner {
+      margin-left: 200px;
+      margin-right: 200px;
+    }
+  </style>
+</head>
+<body>
+  <div class='main'>
+    <div class='inner'>
+      Main
+    </div>
+  </div>
+  <div class='left'>left</div>
+  <div class='right'>right</div>
+</body>
+</html>
