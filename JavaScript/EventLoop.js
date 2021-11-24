@@ -22,7 +22,7 @@
 		  4.setTimeout/Promise等我们称之为任务源。而进入任务队列的是他们指定的具体执行任务。
 		  5.来自不同的任务源的任务会进入到不同的任务队列。其中setTimeout与setInterval是同源的。
 		  5.事件循环顺序，决定了JavaScript代码的执行顺序。它从script开始第一次循环。之后全局上下文进入函数调用栈。直到调用栈清空(只剩全局)，然后执行所有的micro-task。当所有的micro-task执行完毕之后。循环再次从macro-task开始，找到其中的一个任务执行完毕，然后再执行所有的micro-task,这样一直循环下去。
-		  6.其中每一个任务的执行，无论是macro-task还是micro-task，都是借助函数借用栈来完成。
+		  6.其中每一个任务的执行，无论是macro-task还是micro-task，都是借助函数调用栈来完成。
 */
 
 /**
