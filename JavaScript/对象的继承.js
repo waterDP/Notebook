@@ -1,8 +1,14 @@
+/*
+ * @Author: water.li
+ * @Date: 2020-02-26 13:23:50
+ * @Description: ~
+ * @FilePath: \notebook\JavaScript\对象的继承.js
+ */
 // todo 1.原型链
 /** 
  * 缺点
- * 1. 引用类型的属性被实例共享了
- * 2. 创建子类的时候，不能向父类传参 
+ * ! 1. 引用类型的属性被实例共享了
+ * ! 2. 创建子类的时候，不能向父类传参 
  */
 function Parent() {}
 function Child() {}
@@ -25,15 +31,15 @@ alert(SuperType.prototype.isPrototypeOf(instance))   // true
 alert(SubType.prototype.isPrototypeOf(instance))    // true
 
 // todo 2.借用构造函数(经典继承)
-// 优点：相对于原型链而言，借用构造函数有一个很大的优势，即可以在子类型构造函数中向超类型构造函数传递参数。
-// 缺点：方法都在构造函数中定义，每次创建实例都会创建一遍方法 无法继承父类原型中的属性和方法
+// ! 优点：相对于原型链而言，借用构造函数有一个很大的优势，即可以在子类型构造函数中向超类型构造函数传递参数。
+// ! 缺点：方法都在构造函数中定义，每次创建实例都会创建一遍方法 无法继承父类原型中的属性和方法
 function Parent(name) {}
 function Child(name) {
 	Parent.call(this, name)
 }
 
 // todo 3.组合继承
-// 缺点：调用用了两次父类的构造函数
+// ! 缺点：调用用了两次父类的构造函数
 function Parent() {}
 function Child() {
 	Parent.call(this)
@@ -42,7 +48,7 @@ Children.prototype = new Parent()
 Children.prototype.constructor = Child
 
 // todo 4.原型式继承(Object.create())
-// 缺点：包含引用类型的属性值始终都会共享相应的值，这点跟原型链继承一样
+// ! 缺点：包含引用类型的属性值始终都会共享相应的值，这点跟原型链继承一样
 function createObject(o) {
 	function F() {}
 	F.prototype = o
@@ -50,7 +56,7 @@ function createObject(o) {
 }
 
 // todo 5.寄生式继承
-// 缺点：跟借用构造函数模式一样，每次创建对象都会创建一遍方法
+// ! 缺点：跟借用构造函数模式一样，每次创建对象都会创建一遍方法
 function createObject(o) {
 	let clone = Object.create(o)
 	clone.sayName = function() {}
@@ -58,7 +64,7 @@ function createObject(o) {
 }
 
 // todo 6.寄生组合继承 (最理想)
-// 优点：1.高效率，只调用一次父类构造函数 2.原型链不变
+// ! 优点：1.高效率，只调用一次父类构造函数 2.原型链不变
 function Parent() {}
 function Child() {
 	Parent.call(this)
