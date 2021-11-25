@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2020-03-12 20:33:47
+ * @Description: call的实现
+ * @FilePath: \notebook\JavaScript\call.js
+ */
 /* 
 	call 的原理
 */

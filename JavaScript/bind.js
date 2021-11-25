@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2021-11-17 10:16:10
+ * @Descriptiion: bind
+ * @FilePath: \notebook\JavaScript\bind.js
+ */
 /**
  * 1.bind方法可以绑定this指向
  * 2.bind方法返回一个绑定后的函数（高阶函数）
