@@ -1,7 +1,7 @@
 /*
  * @Author: water.li
  * @Date: 2021-11-28 21:57:22
- * @Description: 
+ * @Description: flexible 自适应适配方案
  * @FilePath: \notebook\JavaScript\flexible.js
  */
 // 首先是一个立即执行函数，执行时传入的参数是window和document
