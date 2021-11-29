@@ -22,7 +22,6 @@ class Ball {
     this.color = '#' + parseInt(Math.random()*0xffffff).toString(16)
     this.xSpeed = r(10) + 4
     this.ySpeed = r(10) + 1
-    this.show()
   }
   show() {
     ctx.beginPath()
@@ -39,8 +38,7 @@ class Ball {
       this.ySpeed = -this.ySpeed
     }
     this.x += this.xSpeed
-    this.y += this.ySpeed
-    this.show()
+    this.y += this.ySpeed 
   }
 }
 
@@ -48,11 +46,13 @@ const barArr = []
 for (let i = 0; i < 5; i++) {
   const ball = new Ball()
   barArr.push(ball)
+  ball.show()
 }
 
 setInterval(() => {
   ctx.clearRect(0, 0, ctxW, ctxH)
   for (let ball of barArr) { 
     ball.run()
+    ball.show()
   }
 }, 50);
