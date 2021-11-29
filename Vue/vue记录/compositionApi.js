@@ -32,14 +32,9 @@ export default {
     }
   },
   setup(props, context) {
-    console.log(props)
-
     context.attrs
     context.slots
-    context.parent
-    context.root
     context.emit
-    context.refs
   }
 }
 
