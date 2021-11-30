@@ -1,3 +1,9 @@
+<!--
+ * @Author: water.li
+ * @Date: 2021-01-19 22:35:28
+ * @Description: ## vue3中diff的优化
+ * @FilePath: \notebook\Vue\note.md
+-->
 ## 组件通信
 
 - props + emit / 同步数据 v-model/.sync
@@ -39,3 +45,9 @@ toRef
 toRefs
 customRef
 readonly
+
+## vue3中diff的优化
+  1. 事件优化：将事件缓存，可以理解为变成静态的了
+  2. 添加静态标记：vue2是全量Diff，vue3是静态标记+非全量Diff
+  3. 静态提升：创建静态节点时保存，后续直接复用
+  4. 使用最长增长子序列优化了对比流程
