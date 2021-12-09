@@ -13,11 +13,3 @@ function _instanceof(obj, Con) {
     obj = obj.__proto__
   }
 }
-
-class ValidateStr {
-  static [symbol.hasInstanceOf](x) {
-    return typeof x === 'string'
-  }
-}
-
-console.log('hello' instanceof ValidateStr)
