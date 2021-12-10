@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2021-09-29 22:34:31
+ * @Description: 
+ * @FilePath: \notebook\函数式编程\after.js
+ */
 const fs = require('fs')
 
 function after(times, cb) {
