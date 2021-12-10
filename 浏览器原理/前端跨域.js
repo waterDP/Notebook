@@ -25,7 +25,7 @@ res.setHeader('Access-Control-Expose-Headers', 'name')
 // todo postMessage
 `<iframe src='http://localhost:3000/b.html' onload='load()'></iframe>`
 // window.a
-function load() 
+function load() {
   const b = document.getElementById('b')
   b.contentWindow.postMessage('data', 'http://localhosit:3000')
 }
