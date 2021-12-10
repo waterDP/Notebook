@@ -22,11 +22,11 @@ function simpleCopy(obj) {
 }
 
 // todo Object.assign方法
-let obj = {a: 1, b: 2}
+let obj = { a: 1, b: 2 }
 let ret = Object.assign(obj)
 
 // todo 直接用=赋值
-let a = [1,2,3]
+let a = [1, 2, 3]
 let ret = a
 
 // ! 深拷贝
@@ -48,7 +48,7 @@ obj.address.x = 200
  * 1. undefined,任意的函数、正则表达式以及Symbol值，在序列过程中会被忽略
  * 2. 它会抛弃对象的constructor。也就是深拷贝之后，不管这个对象原来的构造函数是什么，在深拷贝之后都会变成Object
  * 3. 如果对象中存在循环引用的情况，无法正确处理
- */ 
+ */
 
 // todo 结构化克隆算法
 /* 
@@ -56,16 +56,16 @@ obj.address.x = 200
 * 这种方法的优点就是能解决循环引用的问题，还支持大量的内置数据类型。
 * 缺点就是这个方法是异步的
 */
- 
+
 function structoralClone(obj) {
   return new Promise(resolve => {
-    const {port1, port2} = new MessageChannel()
+    const { port1, port2 } = new MessageChannel()
     port2.onmessage = ev => resolve(ev.data)
     port1.postMessage(obj)
   })
 }
 
-const obj = {a: 1, b: 2}
+const obj = { a: 1, b: 2 }
 
 structoralClone(obj).then(res => {
   res.a = 4
@@ -102,18 +102,18 @@ deepClone(obj)
  * 判断是否是基本数据类型
  * @param value 
  */
-function isPrimitive(value){
-  return (typeof value === 'string' || 
-  typeof value === 'number' || 
-  typeof value === 'symbol' ||
-  typeof value === 'boolean')
+function isPrimitive(value) {
+  return (typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'symbol' ||
+    typeof value === 'boolean')
 }
 
 /*
  * 判断是否是一个js对象
  * @param value 
  */
-function isObject(value){
+function isObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]"
 }
 
@@ -121,29 +121,29 @@ function isObject(value){
  * 深拷贝一个值
  * @param value 
  */
-function cloneDeep(value){
+function cloneDeep(value) {
   // 记录被拷贝的值，避免循环引用的出现
   let memo = {}
 
-  function baseClone(value){
+  function baseClone(value) {
     let res
     // 如果是基本数据类型，则直接返回
-    if(isPrimitive(value)){
+    if (isPrimitive(value)) {
       return value
-    // 如果是引用数据类型，我们浅拷贝一个新值来代替原来的值
-    }else if(Array.isArray(value)){
+      // 如果是引用数据类型，我们浅拷贝一个新值来代替原来的值
+    } else if (Array.isArray(value)) {
       res = [...value]
-    }else if(isObject(value)){
-      res = {...value}
+    } else if (isObject(value)) {
+      res = { ...value }
     }
 
     // 检测我们浅拷贝的这个对象的属性值有没有是引用数据类型。如果是，则递归拷贝
     Reflect.ownKeys(res).forEach(key => {
-      if(typeof res[key] === "object" && res[key]!== null){
+      if (typeof res[key] === "object" && res[key] !== null) {
         //此处我们用memo来记录已经被拷贝过的引用地址。以此来解决循环引用的问题
-        if(memo[res[key]]){
+        if (memo[res[key]]) {
           res[key] = memo[res[key]]
-        }else{
+        } else {
           memo[res[key]] = res[key]
           res[key] = baseClone(res[key])
         }
