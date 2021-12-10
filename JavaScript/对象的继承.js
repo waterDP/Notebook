@@ -54,7 +54,7 @@ function createObject(o) {
 	F.prototype = o
 	return new F()
 }
-
+	
 // todo 5.寄生式继承
 // ! 缺点：跟借用构造函数模式一样，每次创建对象都会创建一遍方法
 function createObject(o) {
