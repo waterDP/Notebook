@@ -109,6 +109,12 @@ const number = useMemo(() => {
   return number
 }, [props.number])  // 只有props.number改变的时候，重新计算number的值
 
+const [age, setAge] = useState(10)
+const jud = useMemo(() => {
+  // 当age大于19后，这个函数会执行
+  return age <= 18 ? '未成年' : '成年'
+}, [age <= 18])
+
 // ! 减少不必要的dom循环
 {
   useMemo(() => {
