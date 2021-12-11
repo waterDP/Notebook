@@ -115,6 +115,8 @@ const jud = useMemo(() => {
   return age <= 18 ? '未成年' : '成年'
 }, [age <= 18])
 
+
+// useCallback返回的是一个函数，useMemo返回的是一个值
 const jday2 = useCallback(() => age <= 18 ? '未成年' : '成年', [age <= 18])
 
 // ! 减少不必要的dom循环
