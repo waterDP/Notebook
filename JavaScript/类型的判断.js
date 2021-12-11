@@ -15,6 +15,7 @@ console.log(toString.call(null)) // [object Null]
 console.log(toString.call({})) // [object Object]
 console.log(toString.call(() => {})) // [object Function]
 console.log(toString.call(class A {})) // [object Function]
+console.log(toString.call(/$abi^/))  // [object RegExp]
 
 let myExports = {}
 Object.defineProperty(myExports, Symbol.toStringTag, {value: 'Module'})
