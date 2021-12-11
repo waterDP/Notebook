@@ -1,5 +1,5 @@
 // todo 简介
-import React, { useState } from "react"
+import React, { useCallback, useState } from "react"
 
 
 /**
@@ -115,6 +115,8 @@ const jud = useMemo(() => {
   return age <= 18 ? '未成年' : '成年'
 }, [age <= 18])
 
+const jday2 = useCallback(() => age <= 18 ? '未成年' : '成年', [age <= 18])
+
 // ! 减少不必要的dom循环
 {
   useMemo(() => {
@@ -137,6 +139,8 @@ const jud = useMemo(() => {
 const goodListChild = useMemo(() => {
   <GoodList list={props.list} />
 }, [props.list])
+
+
 
 /** 
  * todo useLayoutEffect
