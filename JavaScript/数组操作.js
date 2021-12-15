@@ -193,3 +193,6 @@ function flat(arr) {
   }
   return arr
 }
+
+// todo json.parse 与replace 
+JSON.parse('[' + JSON.stringify(arr).replace(/\[|\]/g, '') + ']')
