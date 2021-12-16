@@ -235,13 +235,13 @@ Promise.all = function(promises) {
     }
 
     for (let i = 0; i < promises.length; i++) {
-      let currentValue = promises[i]
-      if (isPromise(promise[i])) {
+      let currentValue = promises[i]()
+      if (isPromise(currentValue)) {
         currentValue.then(data => {
-          processData(data, resolve);
+          processData(data, i)
         }, reject)
       } else {
-        processData(currentValue, reject)
+        processData(currentValue, i)
       }
     }
   })
@@ -577,7 +577,7 @@ Promise.all = function(promises) {
     }
 
     for (let i = 0, l = promises.length; i < l; i++) {
-      let result = promises[i]
+      let result = promises[i]()
       if (isPromise(result)) {
         result.then(data => {
           processData(i, data)
