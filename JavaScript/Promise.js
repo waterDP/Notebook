@@ -549,7 +549,7 @@ Promise.race = function(promises) {
 
   return new Promise((resolve, reject) => {
     for (let i = 0; i < promises.length; i++) {
-      let result = promises[i]
+      let result = promises[i]()
       if (isPromise(result)) {
         result.then(resolve, reject)
       } else {
