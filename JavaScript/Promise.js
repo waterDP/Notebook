@@ -235,7 +235,7 @@ Promise.all = function(promises) {
     }
 
     for (let i = 0; i < promises.length; i++) {
-      let currentValue = promises[i]()
+      let currentValue = promises[i]
       if (isPromise(currentValue)) {
         currentValue.then(data => {
           processData(data, i)
@@ -549,7 +549,7 @@ Promise.race = function(promises) {
 
   return new Promise((resolve, reject) => {
     for (let i = 0; i < promises.length; i++) {
-      let result = promises[i]()
+      let result = promises[i]
       if (isPromise(result)) {
         result.then(resolve, reject)
       } else {
