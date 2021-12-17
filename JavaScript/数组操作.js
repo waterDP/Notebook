@@ -162,8 +162,9 @@ const zeros = Array(length).fill(0)
 // [0, 0, 0]
 
 
-//==================== todo 数组扁平化==================================================
-
+/* 
+ *==================== todo 数组扁平化==================================================
+ */
 // todo 递归实现 
 function flat (arr, result = []) {
   arr.forEach(value => {
@@ -196,3 +197,36 @@ function flat(arr) {
 
 // todo json.parse 与replace 
 JSON.parse('[' + JSON.stringify(arr).replace(/\[|\]/g, '') + ']')
+
+/*
+ * ===========数组去重============
+ */
+// todo set 
+Array.from(new Set(arr));
+[...new Set(arr)]
+
+// todo map
+let map = {}
+let arr = [1,2,3,4,2,2,3,1]
+arr.forEach(item => map[item] = true)
+arr = Object.keys(map).map(item => ~~item)
+console.log(arr)
+
+// todo filter indexOf
+arr = arr.filter((item, index) => arr.indexOf(item) === index)
+
+// todo reduce 递归
+arr = arr.reduce((pre, current) => {
+  pre.indexOf(current) === -1 ? [...pre, current] : pre
+}, [])
+
+// todo sort() + 相邻判断
+let arr = [1,2,3,4,2,2,3,1]
+arr.sort()
+let ret = []
+arr.forEach((item, index) => {
+  if (item !== arr[index + 1]) {
+    ret.push(item)
+  }
+})
+console.log(ret)
