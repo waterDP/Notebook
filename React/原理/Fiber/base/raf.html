@@ -1,3 +1,9 @@
+<!--
+ * @Author: water.li
+ * @Date: 2021-04-02 21:49:37
+ * @Description: 
+ * @FilePath: \notebook\React\原理\Fiber\base\raf.html
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +20,7 @@
      * 回调函数会在绘制之前执行
      * *requestAnimationFrame(callback)会在浏览器每次重绘前执行callback回调，每次callback执行的时机都是浏览器刷新下一帧渲染周期的起点上
      * *requestAnimationFrame(callback)的回调callback回调参数timestamp是回调被调用的时间，也就是当前帧的起始时间
-     * *rAfTime performance.timing.navigationStart + performance.now() 约等于Date.now()
+     * *rafTime performance.timing.navigationStart + performance.now() 约等于Date.now()
      */
     let div = document.querySelector('div')
     let button = document.querySelector('button')
