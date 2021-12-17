@@ -77,7 +77,7 @@ const con = [...arr1, ...arr2]
 const names = ["小智", "前端小智", "老王", "小三"]
 
 const heroes = names.slice(0, 2)
-const villains = names.splice(2)
+const villains = names.slice(2)
 
 // heroes => ["小智", "前端小智"]
 // villains => ["老王", "小三"]
