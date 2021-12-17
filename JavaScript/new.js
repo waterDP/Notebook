@@ -1,7 +1,7 @@
 /*
  * @Author: water.li
  * @Date: 2021-11-18 13:35:14
- * @Description: newr的实现原理
+ * @Description: new的实现原理
  * @FilePath: \notebook\JavaScript\new.js
  */
 /**
