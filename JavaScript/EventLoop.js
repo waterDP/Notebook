@@ -33,7 +33,7 @@
  * 执行，再从微任务队列Other Microtask Queue中依次取出所有的任务放入调用栈中执行。然后开始宏任务的6个阶段，每个阶段都将该宏任务
  * 队列中所有的任务执行（注意，这里和浏览器不一样，浏览器只取一个），每个宏任务阶段执行完毕后，开始执行微任务，再开始执行下一个阶段的
  * 宏任务
- * 4.MacroTask包括：setTimeout / setInterval / setImmediate(Node) / requireAnimation(浏览器) / IO / UI rendering
+ * 4.MacroTask包括：setTimeout / setInterval / setImmediate(Node) / requireAnimationFrame(浏览器) / IO / UI rendering
  * 5.Microtask包括：process.nextTick(Node) / Promise.then / Object.observe / MutationObserver
  */
 
