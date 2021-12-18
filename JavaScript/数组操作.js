@@ -14,6 +14,7 @@ for (const color of colors) {
  */
 const colors = ['blue', 'green', 'white']
 for (let index = 0; index < colors.length; index++) {
+  const color = colors[index]
   console.log(color)
 }
 
