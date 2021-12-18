@@ -36,32 +36,3 @@
  * 4.MacroTask包括：setTimeout / setInterval / setImmediate(Node) / requireAnimationFrame(浏览器) / IO / UI rendering
  * 5.Microtask包括：process.nextTick(Node) / Promise.then / Object.observe / MutationObserver
  */
-
-// 例
-console.log(1)
-console.log(2)
-setTimeout(function () {
-	console.log('setTimeout1')
-	Promise.resolve().then(function () {
-		console.log('promise')
-	})
-})
-setTimeout(function() {
-	console.log('setTime2')
-})
-
-/**
- * 打印结果
- * 1
- * 2
- * setTimeout1
- * promise
- * setTimeout2
- */
-
- // process.nextTick node中的事件环，node实现的微任务，他的优先级比promise还要高
-
-// 微任务 promise.then / mutationObserver / process.nextTick
-// 宏任务 script标签 ui渲染 messageChannel(浏览器) ajax click setTimeout setImmediate requestFrameAnimation
-// 浏览器	是一个宏任务队列  node 的话是多个宏任务任队列
-// 执行顺序是一样的 
