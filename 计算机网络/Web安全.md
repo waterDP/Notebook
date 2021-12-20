@@ -1,3 +1,9 @@
+<!--
+ * @Author: water.li
+ * @Date: 2021-09-29 22:34:31
+ * @Description: 
+ * @FilePath: \notebook\计算机网络\Web安全.md
+-->
 # 1. XSS（跨站脚本攻击）Cross-Site Scripting
 
 ## xss 分类
@@ -77,6 +83,6 @@ CSRF攻击都依赖下面的假定
   X-FRAME-OPTIONS是一个http响应头，在现代浏览器有一个很好的支持。这个HTTP响应头就是为了防御有iframe嵌套的点击支持攻击
     该响应头有三个值可选，分别是
     DENY，表示页面不允许通过iframe的方式展示
-    SAMEOGIGIN, 表示页面可以在指定的相同域名下通过iframe的方法展示
+    SAMEORIGIN, 表示页面可以在指定的相同域名下通过iframe的方法展示
     ALLOW-FROM, 表示页面可以在指定来源的iframe中展示
 
