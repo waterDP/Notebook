@@ -34,7 +34,8 @@ encodeURI() 转义地址
 1.CSP （内容安全策略）Content Security Policy
 Content-Security-Policy: default-src 'self' // 只允许加载本站资源
 Content-Security-Policy: img-src https:// 只允许加载https协议图片
-Content-Security-Policy: child-src 'none' //不允许加载任何来源的框架
+Content-Security-Policy: child-src 'none' //不允许加载任何来源的
+框架
 
 ctx.set("Content-Security-Policy", "default-src 'self'")
 
