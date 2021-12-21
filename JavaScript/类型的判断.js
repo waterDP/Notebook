@@ -31,5 +31,6 @@ console.log(typeof function() {}) // function
 console.log(typeof class A {}) // function
 console.log(typeof []) // object
 console.log(typeof {})  // object
+console.log(typeof NaN)  // number
 
 // todo instanceof a instanceof A 查找a的原型链上是否有A这个类
