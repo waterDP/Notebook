@@ -17,6 +17,7 @@ console.log(toString.call(() => {})) // [object Function]
 console.log(toString.call(class A {})) // [object Function]
 console.log(toString.call(/$abi^/))  // [object RegExp]
 console.log(toString.call(NaN))  // [object Number]
+console.log(toString.call(new Date())) // [object Date]
 
 let myExports = {}
 Object.defineProperty(myExports, Symbol.toStringTag, {value: 'Module'})
@@ -30,8 +31,10 @@ console.log(typeof undefined) // undefined
 console.log(typeof null) // object
 console.log(typeof function() {}) // function
 console.log(typeof class A {}) // function
+console.log(typeof /$abi^/) // object
 console.log(typeof []) // object
 console.log(typeof {})  // object
 console.log(typeof NaN)  // number
+console.log(typeof new Date()) // object
 
 // todo instanceof a instanceof A 查找a的原型链上是否有A这个类
