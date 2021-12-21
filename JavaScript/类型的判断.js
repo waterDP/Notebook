@@ -16,6 +16,7 @@ console.log(toString.call({})) // [object Object]
 console.log(toString.call(() => {})) // [object Function]
 console.log(toString.call(class A {})) // [object Function]
 console.log(toString.call(/$abi^/))  // [object RegExp]
+console.log(toString.call(NaN))  // [object Number]
 
 let myExports = {}
 Object.defineProperty(myExports, Symbol.toStringTag, {value: 'Module'})
