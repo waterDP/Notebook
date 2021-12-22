@@ -1,4 +1,10 @@
 /*
+ * @Author: water.li
+ * @Date: 2021-09-29 22:34:31
+ * @Description: 
+ * @FilePath: \notebook\LeetCode\206.反转链表.js
+ */
+/*
  * @lc app=leetcode.cn id=206 lang=javascript
  *
  * [206] 反转链表
@@ -30,12 +36,11 @@ var reverseList = function(head) {
   return prev
 };
 
-
 /**
  * todo 方法二 递归
  * @param {ListNode} head
  * @return {ListNode}
- */
+ */ 
 var reverseList = function(head) {
   if (head == null || head.next == null) {
     return head
