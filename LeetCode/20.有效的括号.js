@@ -1,4 +1,10 @@
 /*
+ * @Author: water.li
+ * @Date: 2021-09-29 22:34:31
+ * @Description: 
+ * @FilePath: \notebook\LeetCode\20.有效的括号.js
+ */
+/*
  * @lc app=leetcode.cn id=20 lang=javascript
  *
  * [20] 有效的括号
@@ -23,13 +29,10 @@ var isValid = function(s) {
       switch(item) {
         case ')': 
           if (top !== '(') return false
-          break
         case ']':
           if (top !== '[') return false
-          break
         case  '}':
-          if (top !== '{') return false 
-          break
+          if (top !== '{') return false
         default: 
           return false
       }

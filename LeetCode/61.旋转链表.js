@@ -1,4 +1,4 @@
-/*
+ /*
  * @lc app=leetcode.cn id=61 lang=javascript
  *
  * [61] 旋转链表
