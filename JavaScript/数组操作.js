@@ -181,7 +181,7 @@ function flat (arr, result = []) {
 // todo reduce实现
 function flat(arr) {
   return arr.reduce((prev, curr) => {
-    return prev.concat(Array.isArray(curr) ? flat(curr) : cur)
+    return prev.concat(Array.isArray(curr) ? flat(curr) : curr)
   }, [])
 }
 
