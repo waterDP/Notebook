@@ -24,7 +24,7 @@ var generateParenthesis = function(n) {
     }
   }
   helper(0, 0, '')
-  return ret
+  return ret 
 };
 
 generateParenthesis(3)
