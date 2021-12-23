@@ -577,7 +577,7 @@ Promise.all = function(promises) {
     }
 
     for (let i = 0, l = promises.length; i < l; i++) {
-      let result = promises[i]()
+      let result = promises[i]
       if (isPromise(result)) {
         result.then(data => {
           processData(i, data)
