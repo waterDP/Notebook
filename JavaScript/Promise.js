@@ -471,9 +471,6 @@ class Promise {
     })
     return promise2
   }
-  let (fn) {
-    return this.then(null, fn)
-  }
   finally(callback) {
     return this.then(value => {
       return Promise.resolve(callback()).then(() => value)
