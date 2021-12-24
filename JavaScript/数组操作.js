@@ -167,7 +167,8 @@ const zeros = Array(length).fill(0)
  *==================== todo 数组扁平化==================================================
  */
 // todo 递归实现 
-function flat (arr, result = []) {
+function flat (arr) {
+  const result = []
   arr.forEach(value => {
     if (value instanceof Array) {
       result = result.concat(flat(value)) 
