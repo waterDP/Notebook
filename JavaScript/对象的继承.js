@@ -68,7 +68,7 @@ function createObject(o) {
 function Parent() {}
 function Child() {
 	Parent.call(this)
-}
+} 
 let F = function() {}
 F.prototype = Parent.prototype
 Child.prototype = new F()
