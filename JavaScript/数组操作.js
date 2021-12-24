@@ -170,7 +170,7 @@ const zeros = Array(length).fill(0)
 function flat (arr, result = []) {
   arr.forEach(value => {
     if (value instanceof Array) {
-      result = result.concat(flat(value, result)) 
+      result = result.concat(flat(value)) 
     } else {
       result.push(value)
     }
