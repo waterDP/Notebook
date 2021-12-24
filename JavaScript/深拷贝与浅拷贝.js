@@ -140,9 +140,11 @@ function cloneDeep(value) {
       res = [...value]
     } else if (isObject(value)) {
       res = { ...value }
+    } else {
+      res = value
     }
 
-    Reflect.ownKeys(res).forEach(key => {
+    res && Reflect.ownKeys(res).forEach(key => {
       if (typeof res[key] === "object" && res[key] !== null) {
         if (memo[res[key]]) {
           res[key] = memo[res[key]]
