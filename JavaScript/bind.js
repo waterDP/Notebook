@@ -11,7 +11,7 @@
  * 4.new 出来的结果可以找到原有类的结果  
  */
 Function.prototype.bind = function(context) {
-  let that = this;
+  let that = this
   let bindArgs = Array.prototype.slice.call(arguments, 1)
   function fBound () {
     let args = Array.prototype.slice.call(arguments, 1)
