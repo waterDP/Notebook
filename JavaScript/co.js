@@ -5,9 +5,16 @@ module.exports = co['default'] = co.co = co
 // todo 简单版本
 function easyCO(generator) {
   let it = generator()
-  function next() {
-    let result = it.next()
-    result.done || next(result.value)
+  function next(data) {
+    let result = it.next(data)
+    if (result.done) {
+      return result.value
+    }
+    if (result.value instanceof Promise) {
+      result.value.then(data => next(data))
+    } else {
+      throw new TypeError('after yield params must be a instanceof Promise')
+    }
   }
   next()
 }
