@@ -7,7 +7,7 @@
 // ! 在js中，Thunk函数替换的不是表达式，而是多参数函数，将其规制成单参数的版本，且只接受回调函数作为参数
 
 // 正常版本的readFile(多参数版本)
-fs.readFile(filename, callback)
+fs.readFile(filenam e, callback)
 
 
 // Thunk版本的readFile(单参数版本)
