@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2021-09-29 22:34:31
+ * @Description: 
+ * @FilePath: \notebook\Monitor\lib\timing.js
+ */
 import tracker from '../utils/tracker'
 import onload from '../utils/onload'
 import getLastEvent from '../utils/getLastEvent'
@@ -50,7 +56,7 @@ export function timing() {
 				fetchStart,
 				connectStart,
 				connectEnd,
-				requestStart,
+				navigationStart,
 				responseStart,
 				responseEnd,
 				domLoading,
@@ -62,13 +68,14 @@ export function timing() {
 			tracker.send({
 				kind: 'experience', // 用户体验指标
 				type: 'timing', // 统计每个阶段的时间
-				connectTime: connectEnd - connectStart, // 连接时间
-				ttfbTime: responseStart - requestStart, // 首字节到达时间
 				responseTime: responseEnd - responseStart, // 响应的读取时间
 				parseDOMTime: loadEventStart - domLoading, // DOM解析的时间
 				domContentLoadedTime: domContentLoadedEventEnd - domContentLoadedEventStart,
 				timeToInteractive: domInteractive - fetchStart, // 首次可交互时间
-				loadTIme: loadEventStart - fetchStart // 完整的加载时间
+				loadTIme: loadEventStart - fetchStart, // 完整的加载时间
+				blankTime: (domInteractive || domLoading) - fetchStart, // ! 白屏时间
+				connectTime: connectEnd - connectStart, // ! tcp连接时间
+				ttfbTime: responseStart - navigationStart, // ! 首字节到达时间 ttfb
 			})
 
 
