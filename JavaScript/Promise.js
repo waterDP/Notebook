@@ -212,7 +212,7 @@ Promise.all = function(promises) {
   })
 }
 
-Promise.defer = Promise.deferred = function() {
+Promise.deferred = Promise.deferred = function() {
   let dfd = {}
   dfd.promise = new Promise((resolve, reject) => {
     dfd.resolve = resolve
