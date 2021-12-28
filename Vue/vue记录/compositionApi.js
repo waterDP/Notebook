@@ -148,7 +148,10 @@ import { watchEffect, ref } from 'vue'
 export default {
   setup() {
     const userID = ref(0)
-    watchEffect(() => { })
+    const userPlus = ref(1)
+    watchEffect(() => { 
+      userPlus.value = userID.value + 1
+    })
 
     return {
       userID
