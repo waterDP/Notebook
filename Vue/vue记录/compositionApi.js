@@ -137,19 +137,19 @@ export default {
 }
 
 /**
- * todo watchEffect
- * watchEffect不需要指定监听属性，可以自动收集依赖，只要我们回调中引用了响应式属性，那么这些属性的变更的时候，
+ * todo effect
+ * effect不需要指定监听属性，可以自动收集依赖，只要我们回调中引用了响应式属性，那么这些属性的变更的时候，
  * 这个回调都会执行，而watch只能监听指定的属性而做出变更
- * watch可以获取得新值和旧值，而watchEffect获取不到
- * watchEffect会在组件初始化的时候执行一次，与computed同理，而收集到依赖变化后，这个回调才会执行
+ * watch可以获取得新值和旧值，而effect获取不到
+ * effect会在组件初始化的时候执行一次，与computed同理，而收集到依赖变化后，这个回调才会执行
  * 而watch不需要，除非设置了指定参数
  */
-import { watchEffect, ref } from 'vue'
+import { effect, ref } from 'vue'
 export default {
   setup() {
     const userID = ref(0)
     const userPlus = ref(1)
-    watchEffect(() => { 
+    effect(() => { 
       userPlus.value = userID.value + 1
     })
 
