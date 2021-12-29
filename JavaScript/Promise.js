@@ -101,40 +101,29 @@ class Promise {
  * @param {[type]} reject promise2的reject方法 
  */
 function resolvePromise(promise2, x, resolve, reject) {
-  // 循环引用报错
   if (x === promise2) {
     return reject(new TypeError('Chaining cycle detected for promise'))
   }
-  // 防止多次调用
   let called
-  // x不是null， 且x是对象或者函数
   if (x !== null && (typeof x === 'object' || typeof x === 'function')) {
     try {
-      // A+规定，声明then=x的then方法
       let then = x.then
-      // 如果then是函数，就默认是promise了
       if (typeof then === 'function') {
-        // 就让then执行第一个参数是this, 后面是成功的回调和失败的回调
         then.call(x, y => {
-          // 成功和失败只能调用一个
           if (called) return
           called = true
-          // resolve的结果依旧是promise那就继续解析
           resolvePromise(promise2, y, resolve, reject)
         }, err => {
-          // 成功和失败只能调用一个
           if (called) return
           called = true
-          reject(err) // 失败了就失败了
+          reject(err)
         })
       } else {
-        resolve(x) // 直接成功即可
+        resolve(x)
       }
     } catch(err) {
-      // 也属于失败
       if (called) return 
       called = true
-      // 取then出错了那就不要在继续执行了
       reject(err)
     }
   } else {
