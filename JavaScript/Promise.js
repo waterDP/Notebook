@@ -43,7 +43,7 @@ class Promise {
           } catch (err) {
             reject(err)
           }
-        }, 0)
+        })
       }
       if (this.state === 'rejected') {
         setTimeout(() => {
@@ -53,7 +53,7 @@ class Promise {
           } catch  (err) {
             reject(err)
           }
-        }, 0)
+        })
       }
       if (this.state === 'pending') {
         this.onResolvedCallbacks.push(() => {
@@ -64,7 +64,7 @@ class Promise {
             } catch  (err) {
               reject(err)
             }
-          }, 0)
+          } )
         })
         this.onRejectedCallbacks.push(() => {
           setTimeout(() => {
@@ -74,7 +74,7 @@ class Promise {
             } catch (err) {
               reject(err)
             }
-          }, 0)
+          })
         })
       }
     }) 
