@@ -17,8 +17,8 @@ Function.prototype.bind = function(context) {
     let args = Array.prototype.slice.call(arguments, 1)
     that.apply(this instanceof fBound ? this : context, bindArgs.concat(args))
   }
-  function Fn() {}
-  Fn.prototype = this.prototype
-  fBound.prototype = new Fn()
+  function F() {}
+  F.prototype = this.prototype
+  fBound.prototype = new F()
   return fBound
 }
