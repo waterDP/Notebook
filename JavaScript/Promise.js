@@ -38,7 +38,7 @@ class Promise {
       if (this.state === 'fulfilled') {
         setTimeout(() => {  // 定时器的目的是为了拿到promise2
           try {
-            let x = onFulfilled(this.value);
+            let x = onFulfilled(this.value)
             resolvePromise(promise2, x, resolve, reject)
           } catch (err) {
             reject(err)
