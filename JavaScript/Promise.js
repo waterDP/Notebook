@@ -109,14 +109,14 @@ function resolvePromise(promise2, x, resolve, reject) {
     try {
       let then = x.then
       if (typeof then === 'function') {
-        then.call(x, y => {
+        then.call(y => {
           if (called) return
           called = true
           resolvePromise(promise2, y, resolve, reject)
-        }, err => {
+        }, r => {
           if (called) return
           called = true
-          reject(err)
+          reject(r)
         })
       } else {
         resolve(x)
