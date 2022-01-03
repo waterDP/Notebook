@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2021-05-14 20:03:10
+ * @Description: 
+ * @FilePath: \notebook\JavaScript\Ajax.js
+ */
 class HttpRest {
   // todo ajax请求的5个readyState状态
   // 状态0 Uninitialized 初始化状态。XMLHttpRequest对象创建或已被 abort()方法重置。
@@ -77,6 +83,7 @@ class HttpRest {
     Object.keys(data).forEach(key => {
       query.push(`${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`)
     })
+    url = url + "?" + query.join('&')
     return new Promise((resolve, reject) => {
       this._send(url, 'GET', null, resolve, reject, async)
     })
