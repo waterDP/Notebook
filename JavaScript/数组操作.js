@@ -210,8 +210,8 @@ Array.from(new Set(arr));
 // todo map
 let map = {}
 let arr = [1,2,3,4,2,2,3,1]
-arr.forEach(item => map[item] = true)
-arr = Object.keys(map).map(item => ~~item)
+arr.forEach(item => map[item] = item)
+arr = Object.values(map) 
 console.log(arr)
 
 // todo filter indexOf
