@@ -9,7 +9,8 @@
 
 const timeChunk = (arr, fn, count = 10) => {
   let start = function() {
-    for (let i = 0; i < Math.min(count, arr.length); i++) {
+    const min = Math.min(count, arr.length)
+    for (let i = 0; i < min; i++) {
       let obj = arr.shift()
       fn(obj)
     }
