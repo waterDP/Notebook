@@ -102,7 +102,7 @@ class Promise {
  */
 function resolvePromise(promise2, x, resolve, reject) {
   if (x === promise2) {
-    return reject(new TypeError('Chaining cycle detected for promise'))
+    return reject(new TypeError('Chaining cycle detected for promise #<Promise>'))
   }
   let called
   if (x !== null && (typeof x === 'object' || typeof x === 'function')) {
