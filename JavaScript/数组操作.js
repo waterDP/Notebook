@@ -197,7 +197,7 @@ function flat(arr) {
   return arr
 }
 
-// todo json.parse 
+// todo JSON.parse 
 JSON.parse('[' + arr.toString() + ']')
 
 /*
