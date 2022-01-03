@@ -7,7 +7,7 @@
 // todo 分时函数
 // 分时函数的原理是让创建节点的工作分批进行，比如把1s创建1000个节点，改为第200ms创建8个节点
 
-const timeChunk = (arr, fn, count = 1) => {
+const timeChunk = (arr, fn, count = 10) => {
   let obj, t
   let start = function() {
     for (let i = 0; i < Math.min(count, arr.length); i++) {
