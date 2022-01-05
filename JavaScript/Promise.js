@@ -10,13 +10,13 @@ class Promise {
     this.state = 'pending'
     this.value = undefined
     this.reason = undefined
-    this.onResolvedCallbacks = []
+    this.onFulfilledCallbacks = []
     this.onRejectedCallbacks = []
     let resolve = value => {
       if (this.state === 'pending') {
         this.state = 'fulfilled'
         this.value = value
-        this.onRejectedCallbacks.forEach(fn => fn())
+        this.onFulfilledCallbacks.forEach(fn => fn())
       }
     }
     let reject = reason => {
@@ -56,7 +56,7 @@ class Promise {
         })
       }
       if (this.state === 'pending') {
-        this.onResolvedCallbacks.push(() => {
+        this.onFulfilledCallbacks.push(() => {
           setTimeout(() => {
             try {
               let x = onFulfilled(this.value)
