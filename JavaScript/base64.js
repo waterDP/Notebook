@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2020-07-19 15:57:18
+ * @Description: 
+ * @FilePath: \notebook\JavaScript\base64.js
+ */
 // todo 转换base64
 let base64Basic = 'ABCDEFGHIJKLMNOPQRSTUVWXWZ'
 base64Basic += base64Basic.toLowerCase()
@@ -5,7 +11,7 @@ base64Basic += '0123456789+/'
 
 function base64Encoding(target) {
   // 首先把目标通过buffer转成16进制 
-  let buffer = Buffer.from('target')
+  let buffer = Buffer.from(target)
   // 把16进制转换成2进制
   let sec = ''
   buffer.map(item => {
