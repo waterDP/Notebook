@@ -2,13 +2,13 @@
  * @Author: water.li
  * @Date: 2021-01-19 22:35:28
  * @Description: ## vue3中diff的优化
- * @FilePath: \notebook\Vue\note.md
+ * @FilePath: \notebook\Vue\vue记录\note.md
 -->
 ## 组件通信
 
 - props + emit / 同步数据 v-model/.sync
-- provide, inject 会造成单向数据流混乱 自己实现工具类的话 需要采用这个方式
-- (尽量不要直接更改父组件数据)
+- provide, inject inject的数据会丢失响应，可以用Vue.computed进行封装 会造成单向数据流混乱 自己实现工具类的话 需要采用这个方式
+- (尽量不要直接更改父组件数据) 
 - $parent $children 可以直接触发儿子的事件或者父亲的事件 （尽量不要使用）
 - $broadcast $dispatch
 - $attr $listener 表示所有属性和方法的合集 (inheritAttrs: false) 可以使用v-bind 或者 v-on传递
@@ -51,3 +51,7 @@ readonly
   2. 添加静态标记：vue2是全量Diff，vue3是静态标记+非全量Diff
   3. 静态提升：创建静态节点时保存，后续直接复用
   4. 使用最长增长子序列优化了对比流程
+
+## vue 自定义指令
+
+## vue-router中的拦截器与拦截器的执行顺序

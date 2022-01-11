@@ -29,6 +29,11 @@ export class LifeCycle extends Component {
       </div>
     );
   }
+  static getDerivedStatePromProps(props, state) {
+    return {
+      fatherText: props.state
+    }
+  }
   // 一般是在component中执行副作用的操作
   // 永远只会执行一次
   componentDidMount() {

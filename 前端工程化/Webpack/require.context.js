@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2021-10-18 22:55:01
+ * @Description: 
+ * @FilePath: \notebook\前端工程化\Webpack\require.context.js
+ */
 /**
  * @param directory 要搜索的文件夹目录，不能是变量，否则在编译阶段无法定位目录
  * @param useSubdirectories 是否搜索子目录
@@ -13,7 +19,7 @@ require.context('path', false, /\.js$/)
 const path = require('path')
 const files = require.context('.', true, /\.vue$/)
 const install = Vue => {
-  files.keys().forEach(url => {
+  files.keys().forEach(key => {
     const componentConfig = files(key)
     const component = componentConfig.default || componentConfig
     const componentName = component.name || path.basename(key, '.vue')

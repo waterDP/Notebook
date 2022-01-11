@@ -33,6 +33,8 @@ class Promise {
     }
   }
   then(onFulfilled, onRejected) {
+    onFulfilled = typeof onFulfilled === 'function'? onFulfilled : v => v
+    onRejected = typeof onRejected === 'function' ? onRejected : err => {throw err}
     // 声明返回的promise2
     let promise2 = new Promise((resolve, reject) => {
       if (this.state === 'fulfilled') {
@@ -234,4 +236,4 @@ Promise.promisify = function(fn) {
       })
     })
   }
-}
+} 

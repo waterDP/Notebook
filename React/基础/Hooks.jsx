@@ -200,7 +200,7 @@ function Son(props, ref) {
       }
       return handleRefs
     },
-    [],
+    []
   )
 
   return (
@@ -215,19 +215,17 @@ function Son(props, ref) {
 }
 const ForwardSon = React.forwardRef(Son)
 
-class Index extends React.Component {
-  current = null
-  handleClick() {
-    const {onFocus, onChangeValue} = this.current
-    onfocus()
+function Farther() {
+  let son = useRef(null)
+  const handleClick = () => {
+    const {onFocus, onChangeValue} = son.current
+    onFocus()
     onChangeValue('let us learn React!')
   }
-  render() {
-    return (
-      <div style={{marginTop: '50px'}}>
-        <ForwardSon ref={current => this.current = current} />
-        <button onClick={this.handleClick.bind(this)}>操控子组件</button>
-      </div>
-    )
-  }
+  return (
+    <div style={{marginTop: '50px'}}>
+      <ForwardSon ref={son} />
+      <button onClick={handleClick}>操控子组件</button>
+    </div>
+  )
 }
