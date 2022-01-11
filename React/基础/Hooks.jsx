@@ -215,7 +215,7 @@ function Son(props, ref) {
 }
 const ForwardSon = React.forwardRef(Son)
 
-function Farther() {
+function Father() {
   let son = useRef(null)
   const handleClick = () => {
     const {onFocus, onChangeValue} = son.current
