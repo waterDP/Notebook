@@ -17,3 +17,8 @@
 ## setState是同步的还是异步的
 1. 在React钩子函数及合成事件中，它表现为异步
 2. 在setTimeout, setInterval等函数中，包括在DOM原生事件中，它都表现为同步
+
+## fiber的两个阶段
+1. 初始化阶段
+2. render阶段，可中断可恢复
+3. commit阶段，不可中断 
