@@ -22,9 +22,9 @@ function create(Con, ...args) {
 	// 设置空对象的原型(链接对象的原型)
 	obj.__proto__ = Con.prototype
 	// 绑定this并执行构造函数（为对象设置属性）
-	let result = Con.apply(obj, args)
+	let r = Con.apply(obj, args)
 	// 如果result没有其他选择的对象，就返回obj对象
-	return result instanceof Object ? result : obj
+	return r instanceof Object ? r : obj
 }
 
 // 构造函数
