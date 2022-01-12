@@ -213,7 +213,6 @@ function Son(props, ref) {
     </div>
   )
 }
-const ForwardSon = React.forwardRef(Son)
 
 function Father() {
   let son = useRef(null)
@@ -224,7 +223,7 @@ function Father() {
   }
   return (
     <div style={{marginTop: '50px'}}>
-      <ForwardSon ref={son} />
+      <Son ref={son} />
       <button onClick={handleClick}>操控子组件</button>
     </div>
   )
