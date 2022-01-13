@@ -5,7 +5,7 @@ import { HashRouter as Router, Route, Switch, Redirect, Link } from 'react-route
 ReactDOM.render(
   <Router>
     <div>
-      <Link to="/"></Link>
+      <Link exact to="/"></Link>
       <Link to="/user"></Link>
       <Link to="/profile"></Link>
     </div>
