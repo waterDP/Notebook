@@ -29,4 +29,4 @@ module.exports = DistToTarPlugin
     target: path.resolve(__dirname, 'dist'),
     toFilePath: path.resolve(__dirname, 'dist/dist.tar')
   })
- */
+*/
