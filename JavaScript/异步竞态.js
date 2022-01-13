@@ -3,17 +3,17 @@ function getFile(file) {
   let resp  // 这个值可能是回调函数，也可能是回调函数中的要传入的参数
 
   ajax(file, text => {
-    if (resp) {
+    if (resp) {  // 这里如果存在的，resp是回调函数
       resp(text)
-    } else {
+    } else {  // 不存在，就是请求的数据给resp
       resp = text
     }
   })
 
   return function thunk(cb) {
-    if (resp) {
+    if (resp) { // 这里如果resp存在，说明ajax已经完成resp是参数
       cb(resp)
-    } else {
+    } else { // resp不存在，就把回调函数赋给resp
       resp = cb
     }
   }
