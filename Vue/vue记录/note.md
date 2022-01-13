@@ -54,4 +54,26 @@ readonly
 
 ## vue 自定义指令
 
-## vue-router中的拦截器与拦截器的执行顺序
+## vue-router 守卫
+一、全局守卫
+  router.beforeEach
+  router.beforeResolve
+  router.afterEach
+二、路由独享守卫
+  {
+    path: '',
+    component: '',
+    beforeEnter: (to, from, next) => {}
+  }
+三、组件内的守卫
+  {
+    beforeRouteEnter(to, from, next) {
+      
+    },
+    beforeRouteUpdate (to, from, next) {
+      
+    },
+    beforeRouteLeave (to, from, next) {
+       
+    }
+  }
