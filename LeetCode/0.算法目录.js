@@ -233,6 +233,7 @@
  * @Leetcode 76    最小覆盖子串
  * @Leetcode 91    解码方法
  * @Leetcode 392   判断子序列
+ * @Leetcode 804   唯一摩尔斯密码词 
  * @Leetcode 1143  最长公共子序列[LCS]
  * @Leetcode 1309  解码字母到整数的映射
  * @Leetcode 1678  设计Go\al解析器
@@ -322,6 +323,7 @@
  * @Leetcode 132  模式
  * @Leetcode 150  逆波兰表达式求值
  * @Leetcode 735  行星碰撞
+ * @Leetcode 856  括号的分数
  * @Leetcode 1190 反转每对括号间的子串
  * @Leetcode 1673 找出最具竞争力的子序列
  */
