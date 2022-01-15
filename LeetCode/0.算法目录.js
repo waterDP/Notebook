@@ -1,5 +1,5 @@
+//todo 动态规划
 /**
- * todo 动态规划
  * @Leetcode 53   最大子序和
  * @Leetcode 64   最小路径和
  * @Leetcode 70   爬楼梯
@@ -25,8 +25,8 @@
  * @Leetcode 1706 球会落何处
  */
 
+//todo 深度优先搜索
 /**
- * todo 深度优先搜索
  * @Leetcode 17   电话号码的字母组合
  * @Leetcode 39   组合总和
  * @Leetcode 100  相同的树
@@ -35,8 +35,8 @@
  * @Leetcode 1306 跳跃游戏-III
  */
 
+// todo 回溯算法
 /**
- * todo 回溯算法
  * @Leetcode 40   组合总和二
  * @Leetcode 46   全排列
  * @Leetcode 47   全排列二
@@ -46,8 +46,8 @@
  * @Leetcode 526  优美的排列
  */
 
+// todo 链表
 /**
- * todo 链表
  * @Leetcode 21   合并两个有序链表
  * @Leetcode 24   两两交换链表中的节点
  * @Leetcode 61   旋转链表
@@ -62,8 +62,8 @@
  * @Leetcode 328  奇偶链表
  */
 
+// todo 数学
 /**
- * todo 数学
  * @Leetcode 2    两数相加
  * @Leetcode 7    整数反转
  * @Leetcode 9    回文数
@@ -95,8 +95,8 @@
  * @Leetcode 2089 找出数组排序后的目标下标
  */
 
+// todo 组合计数
 /**
- * todo 组合计数
  * @Leetcode 39   组合总和
  * @Leetcode 40   组合总和二
  * @Leetcode 46   全排列
@@ -112,8 +112,8 @@
  * @Leetcode 1798 你能构造出连续值的最大数目
  */
 
+// todo 广度优先搜索
 /**
- * todo 广度优先搜索
  * @Leetcode 433  最小基因变化
  * @Leetcode 529  扫雷游戏
  * @Leetcode 938  二叉搜索树的范围和
@@ -123,8 +123,8 @@
  * @Leetcode 1905 统计子岛屿
  */
 
+// todo 位运算
 /**
- * todo 位运算
  * @Leetcode 136  只出现一次的数字
  * @Leetcode 190  颠倒二进制位
  * @Leetcode 191  位1的个数
@@ -147,8 +147,8 @@
  *  6. ∀i∈Z，有 4i⊕ (4i+1)⊕ (4i+2)⊕ (4i+3) = 0
  */
 
+// todo 双指针
 /**
- * todo 双指针
  * @Leetcode 3     无重复字符的最长子串
  * @Leetcode 15    最小路径和
  * @Leetcode 26    删除有序数组中的重复项
@@ -166,22 +166,22 @@
  * @Leetcode 633   平方数之和
  */
 
+// todo 多叉树
 /**
- * todo 多叉树
  * @Leetcode 105   从前序与中序遍历序列构造二叉树
  * @Leetcode 106   从中序与后序遍历序列构造二叉树
  * @Leetcode 690   员工的重要性
  */
 
+// todo 图论
 /**
- * todo 图论
  * @Leetcode 332   重新安排行程 [欧拉回路  ]
  * @Leetcode 1293  网络中的最贵路径
  * @Leetcode 1334  阈值距离内邻居最少的城市 [bellman-ford spfa Dijkstra floyd]
  */
 
+// todo 贪心算法
 /**
- * todo 贪心算法
  * @Leetcode 12    整数转罗马数字
  * @Leetcode 134   加油站
  * @Leetcode 402   移掉K位数字
@@ -191,6 +191,7 @@
  * @Leetcode 495   提莫攻击人
  * @Leetcode 520   检测大写字母
  * @Leetcode 611   有效三角形的个数
+ * @Leetcode 794   有效的井字游戏
  * @Leetcode 860   柠檬水找零
  * @Leetcode 870   优势洗牌
  * @Leetcode 948   令牌放置
@@ -203,27 +204,27 @@
  * @Leetcode 2125  银行中的激光束数量
  */
 
+// todo 并查集
 /**
- * todo 并查集
  * @LeetCode 547  省份数量
  */
 
+// todo 随机化
 /**
- * todo 随机化
  * @Leetcode 470  用 Rand7() 实现 Rand10()
  * @Leetcode 478  在圆内随机生成点
  */
 
+// todo 计算几何
 /**
- * todo 计算几何
  * @Leetcode 587   安装栅栏
  * @Leetcode 1232  缀点成线
  * @Leetcode 1266  访问的所有点的最小时间
  * @Leetcode 1828  统计一个圆中点的数目
  */
 
+// todo 字符串
 /**
- * todo 字符串
  * @Leetcode 3     无重复字符的最长子串
  * @Leetcode 5     最长回文子串
  * @Leetcode 14    最长公共前缀
@@ -240,16 +241,16 @@
  * @Leetcode 1859  将句子排序
  */
 
+// todo 自动机
 /**
- * todo 自动机
  * @Leetcode 8     字符串转转换整数-atoi
  * @Leetcode 65    有效的数字
  * @Leetcode 1023  驼峰式匹配
  * @Leetcode 1839  所有元音按顺序排布的最长子字符串
  */
 
+// todo 数组 矩阵
 /**
- * todo 数组 矩阵
  * @Leetcode 48    旋转图像
  * @Leetcode 54    螺旋矩阵
  * @Leetcode 73    矩阵置零
@@ -272,27 +273,27 @@
  * @Leetcode 931   下降路径最小和
  */
 
+// todo 前缀后缀和
 /**
- * todo 前缀后缀和
  * @Leetcode 303   区域和检索 - 数组不可变
  * @Leetcode 2121  相同元素的间隔之和
  */
 
+// todo 滑动窗口
 /**
- * todo 滑动窗口
  * @Leetcode 3     无重复字符的最长子串
  * @Leetcode 76    最小覆盖子串
  * @Leetcode 567   字符串的排列
  * @Leetcode 718   最长的重复子数组
  */
 
+// todo 拓扑排序
 /**
- * todo 拓扑排序
  * @Leetcode 207   课程表 [kahn算法(卡恩算法)]
  */
 
+// todo 哈希表
 /**
- * todo 哈希表
  * @Leetcode 1     两数之和
  * @Leetcode 3     无重复字符的最长子串
  * @Leetcode 36    有效的数独
@@ -305,8 +306,8 @@
  * @Leetcode 1408  点菜展示表
  */
 
+// todo 设计
 /**
- * todo 设计
  * @Leetcode 146   LRU缓存机制
  * @Leetcode 155   最小栈
  * @Leetcode 173   二叉树迭代器
@@ -316,8 +317,8 @@
  * @Leetcode 933   最近的请求次数
  */
 
+// todo 栈
 /**
- * todo 栈
  * @Leetcode 20   有效的括号
  * @Leetcode 102  移掉K位数字
  * @Leetcode 132  模式
@@ -328,8 +329,8 @@
  * @Leetcode 1673 找出最具竞争力的子序列
  */
 
+// todo 二分查找
 /**
- * todo 二分查找
  * @Leetcode 35   搜索插入位置
  * @Leetcode 50   Pow(x, n)
  * @Leetcode 69   x的平方根
@@ -346,20 +347,20 @@
  * @Leetcode 1760 袋子里最少数目的球
  */
 
+// todo 博弈问题
 /**
- * todo 博弈问题
  * @Leetcode 292  Nim游戏
  */
 
+// todo 队列
 /**
- * todo 队列
  * @Leetcode 641  设计循环双端队列
  * @Leetcode 933  最近的请求次数
  * @Leetcode 1705 吃苹果的最大数目 [优先队列] 
  */
 
+// todo 排序
 /**
- * todo 排序
  * @Leetcode 56   合并区间
  * @Leetcode 179  最大数
  * @Leetcode 215  数组中的第K个最大元素 [快排]
@@ -370,16 +371,16 @@
  * @Leetcode 1636 按照频率将数组升序排序
  */
 
+// todo 递归
 /**
- * todo 递归
  * @Leetcode 17   电话号码的字母组合
  * @Leetcode 22   括号生成
  * @Leetcode 104  二叉树的最大深度
  * @Leetcode 124  二叉树的最大路径和
  */
 
+// todo 二叉树
 /**
- * todo 二叉树
  * @Leetcode 100  相同的树
  * @Leetcode 116  填充每个节点的下一个右侧节点指针
  * @LeetCode 124  二叉树的最大路径和
@@ -398,8 +399,8 @@
  * right = node*2 + 2
  */
 
+// todo 二叉搜索树
 /**
- * todo 二叉搜索树
  * @Leetcode 98     验证二叉搜索树
  * @Leetcode 530    二叉搜索树的最小绝对差
  * @Leetcode 669    修剪二叉搜索树
@@ -410,29 +411,29 @@
  * ^ 二叉搜索树的中序遍历是升序的
  */
 
+// todo 线段树
 /**
- * todo 线段树
  * @Leetcode 307   区域和检索 - 数组可修改
  */
 
+// todo 字典树
 /**
- * todo 字典树
  * @Leetcode 208   实现Trie(前缀树)
  */
 
+// todo 分治算法
 /**
- * todo 分治算法
  * @Leetcode 215   数组中的第K个最大元素 [快排]
  * @Leetcode 241   为表达式设计估计优先级
  */
 
+// todo 堆
 /**
- * todo 堆
  * @Leetcode 313   超级丑数
  * @Leetcode 1845  座位预约管理系统
  */
 
+// todo 记忆化搜索
 /**
- * todo 记忆化搜索
  * @Leetcode 576  出界的路径数
  */
