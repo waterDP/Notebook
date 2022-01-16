@@ -19,7 +19,7 @@ function quickSort(arr, left, right) {
 function partition(arr, left, right) {
   const swap = (i, j) => [arr[i], arr[j]] = [arr[j], arr[i]]
 
-  let pivot = left, index = left + 1
+  let pivot = left, index = pivot + 1
   for (let i = index; i <= right; i++) {
     if (arr[i] < arr[pivot]) {
       swap(index, i)
