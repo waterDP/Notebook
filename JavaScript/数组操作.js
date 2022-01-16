@@ -187,7 +187,9 @@ function flat(arr) {
 }
 
 // todo flat 参数为层数（默认一层）
-arr.flat(Infinity)
+function flat(arr) {
+  return arr.flat(Infinity)
+}
 
 // todo 扩展运算符
 function flat(arr) {
@@ -198,7 +200,9 @@ function flat(arr) {
 }
 
 // todo JSON.parse 
-JSON.parse('[' + arr.toString() + ']')
+function flat(arr) {
+  return JSON.parse('[' + arr.toString() + ']')
+}
 
 /*
  * ===========数组去重============
@@ -214,7 +218,7 @@ arr.forEach(item => map[item] = item)
 arr = Object.values(map) 
 console.log(arr)
 
-// todo filter indexOf
+// todo filter + indexOf
 arr = arr.filter((item, index) => arr.indexOf(item) === index)
 
 // todo reduce 递归
