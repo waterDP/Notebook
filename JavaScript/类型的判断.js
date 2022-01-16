@@ -38,3 +38,12 @@ console.log(typeof NaN)  // number
 console.log(typeof new Date()) // object
 
 // todo instanceof a instanceof A 查找a的原型链上是否有A这个类
+function _instanceof(obj, Con) {
+  Con = Con.prototype
+  obj = obj.__proto__
+  while (true) {
+    if (obj === null) return false
+    if (obj === Con) return true
+    obj = obj.__proto__
+  }
+}
