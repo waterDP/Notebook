@@ -3,13 +3,13 @@
  * @Date: 2021-04-25 16:37:16
  * @Author: water.li
  */
-async function asyncPool(poolLimit, array, iteratorFn) {
+async function asyncPool(poolLimit, arr, iteratorFn) {
   const ret = []
   const executing = []
-  for (const item of array) {
-    const p = Promise.resolve().then(() => iteratorFn(item, array))
+  for (const item of arr) {
+    const p = Promise.resolve().then(() => iteratorFn(item, arr))
     ret.push(p)
-    if (poolLimit <= array.length) {
+    if (poolLimit <= arr.length) {
       const e = p.then(() => executing.splice(executing.indexOf(e), 1))
       executing.push(e)
       if (executing.length >= poolLimit) {
