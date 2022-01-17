@@ -53,6 +53,30 @@ readonly
   4. 使用最长增长子序列优化了对比流程
 
 ## vue 自定义指令
+一个指令的定义可以提供如下几个钩子函数
+  .bind 只调用一次，指令第一次绑定到元素调用。在这里可以进行一次初始化设置
+  .inserted 被绑定元素插入父节点时调（仅保证父节点存在，但不一定已被插入到文档中）
+  .update 所有组件的VNode更新时调用，但可能发生在其子Vnode更新之前。指令的值可能发生改变，也可能没有  
+  .componentUpdated 指令所在组件的vnode及其子vnode全部更新后调用
+  .unbind 只调用一次，指令与元素解绑时调用
+```js 
+  Vue.directive('demo', {
+    bind(el, bind, vnode, oldVnode) {
+      /**
+       * el 指令所绑定的元素，可以用来直接操作DOM
+       * bind 一个对象，包含以下property
+       *   name 指令名，不包括v-部分
+       *   value 指令的绑定值，例如v-my-directive="1+1",绑定值为2
+       *   oldValue 指令绑定的前一个值，只在update和componentUpdated钩子中可用
+       *   express 字符串形式的指令表达式。使用v-my-directive="1+1"中，表达式为'1+1'
+       *   arg 传给指令的参数，可选。例如v-my-directive:foo中，参数为'foo'
+       *   modifiers 一个包含修饰符的对象。例如：v-my-directive.foo.bar中，修饰对象为{foo: true,  bar: true}
+       * vnode Vue编译生成虚拟节点。
+       * oldVnode 上一个虚拟节点，仅在update和componentUpdated钩子中可用。
+       */
+    }
+  })
+```
 
 ## vue-router 守卫
 一、全局守卫
