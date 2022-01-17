@@ -73,9 +73,9 @@ CSRF攻击都依赖下面的假定
 ### 防范
 
 1.添加验证码
-2.判断来源 referer 可以通过node请求来伪造(可以被篡改)
-3.cookie值进行hash
-4.One-Time Tokens(一次性令牌)
+2.判断来源referer可以通过node请求来伪造(可以被篡改)
+3.充分利⽤好Cookie的SameSite属性
+4.CSRF Token 表单域隐藏信息
 
 ## 3. 点击劫持 Click Jacking
   点击劫持是一种视觉欺骗的攻击手段。攻击者将需要攻击的网站通过iframe嵌套的方式嵌入自己的页面中，并将iframe设置为透明，在页面中透出一个按钮言为诱导用户点击
