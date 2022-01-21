@@ -93,8 +93,7 @@ var restoreIpAddresses = function(s) {
       helper(i+1, [...path, s[i]], count+1) 
     } else {
       helper(i+1, [...path, s[i]], count + 1)
-      if (parseInt(path[path.length-1]) <= 255 &&
-          parseInt(path[path.length-1]+s[i]) <= 255) {
+      if (parseInt(path[path.length-1]+s[i]) <= 255) {
         let pre = path.slice(0, path.length-1)
         helper(i+1, [...pre, path[path.length-1]+s[i]], count+1)
       }
