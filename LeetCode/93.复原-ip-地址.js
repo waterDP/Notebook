@@ -84,18 +84,19 @@
  */
 var restoreIpAddresses = function(s) {
   const res = []
-  helper = (i = 0, path = [], count = 0) => {
-    if (count === s.length) {
+  helper = (idx = 0, path = [],) => {
+    if (idx === s.length) {
       path.length === 4 && res.push(path.join('.'))
       return 
     }
+    const curr = s[idx]
     if (path[path.length - 1] === '0') {
-      helper(i+1, [...path, s[i]], count+1) 
+      helper(idx+1, [...path, curr]) 
     } else {
-      helper(i+1, [...path, s[i]], count + 1)
-      if (parseInt(path[path.length-1]+s[i]) <= 255) {
+      helper(idx+1, [...path, curr])
+      if (parseInt(path[path.length-1]+curr) <= 255) {
         let pre = path.slice(0, path.length-1)
-        helper(i+1, [...pre, path[path.length-1]+s[i]], count+1)
+        helper(idx+1, [...pre, path[path.length-1]+curr])
       }
     }
   }
