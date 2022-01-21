@@ -90,14 +90,13 @@ var restoreIpAddresses = function(s) {
       return 
     }
     const curr = s[idx]
-    if (path[path.length - 1] === '0') {
-      helper(idx+1, [...path, curr]) 
-    } else {
-      helper(idx+1, [...path, curr])
-      if (parseInt(path[path.length-1]+curr) <= 255) {
-        let pre = path.slice(0, path.length-1)
-        helper(idx+1, [...pre, path[path.length-1]+curr])
-      }
+
+    helper(idx+1, [...path, curr])
+    if (path[path.length - 1] !== '0' && 
+      parseInt(path[path.length-1]+curr) <= 255) {
+
+      let pre = path.slice(0, path.length-1)
+      helper(idx+1, [...pre, path[path.length-1]+curr])
     }
   }
   helper()
