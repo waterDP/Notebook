@@ -71,6 +71,7 @@
  */
 var search = (heaters, house) => {
   let [left, right] = [0, heaters.length-1]
+  // 最小的供暖器都在目标房屋的右边
   if (heaters[left] > house) return -1
   while (left < right) {
     const mid = ((right-left+1)>>1) + left
