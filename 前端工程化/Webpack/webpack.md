@@ -133,3 +133,5 @@ BundleAnalyzerPlugin 分析代码块大小
 const { BundleAnalyzerPlugin } = require("webpack-bundle-analyzer");
 new BundleAnalyzerPlugin();
 ```
+
+SpeedMeasureWebpackPlugin 分析打包速度的插件

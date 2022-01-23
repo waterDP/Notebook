@@ -81,7 +81,7 @@ readonly
 ## vue-router 守卫
 一、全局守卫
   router.beforeEach
-  router.beforeResolve
+  router.beforeResolve  在导航被确认之前，同时在所有组件内守卫和异步路由组件被解析之后，解析守卫被调用
   router.afterEach
 二、路由独享守卫
   {

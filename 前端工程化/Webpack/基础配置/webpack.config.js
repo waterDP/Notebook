@@ -1,6 +1,7 @@
 const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const PurgecssWebpackPlugin = require('purgecss-webpack-plugin')
 const OptimizeCssAssetsWebpackPlugin = require('optimize-css-assets-webpack-plugin')
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
 const webpack = require('webpack')
@@ -8,9 +9,11 @@ const TerserWebpackPlugin = require('terser-webpack-plugin')
 const HtmlWebpackExternalPlugin = require('html-webpack-externals-plugin')
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin') // 错误日志友好输出
 const SpeedMeasureWebpackPlugin = require('speed-measure-webpack-plugin')  // 费时分析
-const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer')
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer')
 
 const smw = new SpeedMeasureWebpackPlugin()
+
+const glob = require('glob')
 
 module.exports = smw.wrap({
   mode: 'development', // 模式 默认有两种 production development
@@ -33,6 +36,7 @@ module.exports = smw.wrap({
   },
   stats: 'minimal', // 日志的输出配置
   optimization: {  // 优化项
+    minimize: true, // 开启优化 
     minimizer: [  // 压缩代码
       // new UglifyJsPlugin({
       //   cache: true,
@@ -42,7 +46,7 @@ module.exports = smw.wrap({
       new TerserWebpackPlugin({
         parallel: true,
         sourceMap: true,
-        cache: true 
+        cache: true
       }),
       new OptimizeCssAssetsWebpackPlugin()  // 压缩css
     ],
@@ -65,7 +69,25 @@ module.exports = smw.wrap({
   },
   module: {  // loader  
     noParse: /jquery|lodash/, // 配置哪些模块不需要读取并且转成语法树进行解析依赖
+    // ^ 使用noParse进行忽略的模块中不能使用import require等语法
     rules: [
+      {
+        test: /\.js$/,
+        include: path.resolve(__dirname, 'src'),
+        exclude: /node_modules/, // 不解析node_modules
+        use: [
+          {
+            loader: 'thread-loader',
+            options: { workers: 3 }
+          },
+          {
+            loader: 'babel-loader',
+            options: {
+              cacheDirectory: true // 启动babel缓存
+            }
+          }
+        ]
+      },
       {
         test: /\.html$/,
         use: 'html-withimg-loader'
@@ -79,21 +101,26 @@ module.exports = smw.wrap({
       {
         test: /\.(png|jpg|gif)$/,
         // 做一个限制，当我们的图片 小于多少的时候 用base64来转化
-        use: {
-          loader: 'url-loader', 
-          options: {
-            limit: 200 * 1024,
-            name: '[name]',
-            // 要把图片拷贝到images目录下
-            outputPath: 'images',
-            publicPath: '/images'
+        use: [
+          {
+            loader: 'image-webpack-loader '
+          },
+          {
+            loader: 'url-loader',
+            options: {
+              limit: 200 * 1024,
+              name: '[name]',
+              // 要把图片拷贝到images目录下
+              outputPath: 'images',
+              publicPath: '/images'
+            }
           }
-        }
+        ]
       },
       {
         test: /\.js$/,
         use: {
-          loader: 'eslint-loader', 
+          loader: 'eslint-loader',
           options: {
             enforce: "pre" // previous 这个loader会比下一个loader先执行 
           }
@@ -119,6 +146,7 @@ module.exports = smw.wrap({
       {
         test: /\.css$/,
         use: [
+          'cache-loader', // 缓存插件
           {
             loader: 'style-loader',  // MiniCssExtractPlugin.loader
             options: {
@@ -131,12 +159,12 @@ module.exports = smw.wrap({
 
       /* 需要 less 和less-loader 两个组件 */
       {
-        test: /\.less$/, 
+        test: /\.less$/,
         use: [
           MiniCssExtractPlugin.loader, // 抽离css文件
           'css-loader',
           'postcss-loader',  // css加前缀 -webkit-
-          'less-loader'   
+          'less-loader'
         ]
       },
       // 字体文件
@@ -164,7 +192,7 @@ module.exports = smw.wrap({
       path.resolve(__dirname, './loaders')
     ],
     alias: {
-      
+
     }
   },
   plugins: [ // 插件
@@ -174,6 +202,8 @@ module.exports = smw.wrap({
       minify: {
         removeAttributeQuotes: true, // 删除html中的双引号
         collapseInlineTagWhitespace: true, // 折叠空行，即把html变成一行
+        removeComments: true, // 删除注释
+        collapseWhitespace: true, // 删除空格
       },
       hash: true
     }),
@@ -189,6 +219,10 @@ module.exports = smw.wrap({
       _: 'lodash',
       $: 'jquery'
     }),
+    // 去掉不用的css
+    new PurgecssWebpackPlugin({
+      paths: glob.sync(`${PATH.src}/**/*`, {nodir: true})
+    }),
     new HtmlWebpackExternalsPlugin({
       externals: [
         {
@@ -199,7 +233,12 @@ module.exports = smw.wrap({
       ]
     }),
     new FriendlyErrorsWebpackPlugin(),
-    new BundleAnalyzerPlugin()
+    new BundleAnalyzerPlugin(),
+    // ! 以下资源不打包
+    new webpack.IgnorePlugin({
+      resource: /^\.\/locale$/, // 资源正则
+      contextRegExp: /moment$/ // 这个是目录正则
+    })
   ],
   externals: {
     'lodash': '_',   // ! 文件不会被打包
