@@ -29,10 +29,7 @@
  * todo 浏览器端和Node端有什么不同
  * 1.浏览器的Event Loop和Node.js的Event Loop是不同的，实现机制也不一样，不要混为一谈
  * 2.Node.js可以理解成有4个宏任务队列和2个微任务队列，但是执行的宏任务时有6个阶段
- * 3.Node.js中，先执行全局Script代码，执行完同步代码调用栈清空后，先从微任务队列Next Tick Queue中依次取出所有的任务放入调用栈中
- * 执行，再从微任务队列Other Microtask Queue中依次取出所有的任务放入调用栈中执行。然后开始宏任务的6个阶段，每个阶段都将该宏任务
- * 队列中所有的任务执行（注意，这里和浏览器不一样，浏览器只取一个），每个宏任务阶段执行完毕后，开始执行微任务，再开始执行下一个阶段的
- * 宏任务
+ * 3.Node.js中，先执行全局Script代码，执行完同步代码调用栈清空后，先从微任务队列Next Tick Queue中依次取出所有的任务放入调用栈中执行，再从微任务队列Other Microtask Queue中依次取出所有的任务放入调用栈中执行。然后开始宏任务的6个阶段，每个阶段都将该宏任务队列中所有的任务执行（注意，这里和浏览器不一样，浏览器只取一个），每个宏任务阶段执行完毕后，开始执行微任务，再开始执行下一个阶段的宏任务
  * 4.MacroTask包括：setTimeout / setInterval / setImmediate(Node) / requireAnimationFrame(浏览器) / IO / UI rendering
  * 5.Microtask包括：process.nextTick(Node) / Promise.then / Object.observe / MutationObserver
  */
