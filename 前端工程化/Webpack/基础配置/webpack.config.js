@@ -36,7 +36,10 @@ module.exports = smw.wrap({
   },
   stats: 'minimal', // 日志的输出配置
   optimization: {  // 优化项
+    usedExports: true, // tree shaking 只打包已经被使用了的成员
     minimize: true, // 开启优化 
+    concatenateModules: true, // 尽可能合并每一个模块到一个函数中
+    sideEffects: true,
     minimizer: [  // 压缩代码
       // new UglifyJsPlugin({
       //   cache: true,
@@ -53,7 +56,7 @@ module.exports = smw.wrap({
     splitChunks: {  // 分割代码块  
       cacheGroups: { // 缓存组
         common: {  //  公共的模块
-          chunks: 'initial',
+          chunks: 'initial', // 'all' 全部模块提取
           minSize: 0,
           minChunks: 2
         },
@@ -95,7 +98,7 @@ module.exports = smw.wrap({
       {
         test: /\.(png|jpg|gif)$/,
         use: {
-          loader: 'file-loader',
+          loader: 'file-loaconcatenateder',
         }
       },
       {
@@ -103,7 +106,7 @@ module.exports = smw.wrap({
         // 做一个限制，当我们的图片 小于多少的时候 用base64来转化
         use: [
           {
-            loader: 'image-webpack-loader '
+            loader: 'image-webpack-loader'
           },
           {
             loader: 'url-loader',
