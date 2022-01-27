@@ -400,6 +400,14 @@
  * ^ 满二叉树序号
  * left  = node*2 + 1
  * right = node*2 + 2
+ * 
+ * ~ morris遍历
+ * 当current  
+ * 1.current没有左树，current向右current=current.right
+ * 2.current有左树，左树最右的节点为mostRight
+ *   1.mostRight，右指针指向空，mostRight.right = current, current = current.left
+ *   2.mostRight，右指针指向current, mostRight.right = null, current = current.right
+ * 3.current为空，则退出
  */
 
 // todo 二叉搜索树
