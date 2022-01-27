@@ -394,6 +394,7 @@
  * @Leetcode 129  求根节点到叶节点数字之和
  * @Leetcode 173  二叉树搜索迭代器
  * @Leetcode 222  完全二叉树的节点个数
+ * @Leetcode 257  二叉树的所有路径
  * @Leetcode 872  叶子相似的树
  *
  * @Theory
@@ -401,7 +402,7 @@
  * left  = node*2 + 1
  * right = node*2 + 2
  * 
- * ~ morris遍历
+ * ^ morris遍历
  * 当current  
  * 1.current没有左树，current向右current=current.right
  * 2.current有左树，左树最右的节点为mostRight
