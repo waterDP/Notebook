@@ -1,4 +1,10 @@
-// 通用的函数柯里化
+/*
+ * @Author: water.li
+ * @Date: 2021-09-29 22:34:31
+ * @Description: 通用柯里化函数
+ * @FilePath: \notebook\函数式编程\curring.js
+ */
+
 const curring = (fn, arr = []) => {
   let len = fn.length // 长度指代的是函数的参数个数
   return (...args) => { // 保存用户传入的参数
