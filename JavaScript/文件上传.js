@@ -187,7 +187,7 @@ function previewImage(file, container) {
       img.src = e.target.result
       container.append(img)
     }
-    reader.readerAsDataURL(file)
+    reader.readAsDataURL(file)
   }
 }
 
