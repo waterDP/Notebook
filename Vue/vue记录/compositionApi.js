@@ -163,7 +163,7 @@ export default {
 /**
  * ! shallowReactive
  * 只处理对象最外层属性的响应式（也就是浅响应式），所以最外层属性发生改变，更新视图
- * 其它属性改变，视频不会更新
+ * 其它属性改变，视图不会更新
  * 如果一个对象的数据结构比较深，但变化只是最外层属性
  */
 import { shallowReactive } from 'vue'
