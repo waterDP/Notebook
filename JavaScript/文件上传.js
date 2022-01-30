@@ -187,7 +187,7 @@ function previewImage(file, container) {
       img.src = e.target.result
       container.append(img)
     }
-    reader.readAsDataURL(file)
+    reader.readAsDataURL(file)  // 文件流转base64
   }
 }
 
