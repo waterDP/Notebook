@@ -1,0 +1,164 @@
+<!--
+ * @Author: water.li
+ * @Date: 2022-02-01 21:05:32
+ * @Description: 
+ * @FilePath: \notebook\样式与布局\轮播图.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    .box {
+      width: 1880px;
+      height: 600px;
+      margin: 0 auto;
+      background-color: rgb(143, 143, 143);
+      overflow: hidden;
+    }
+    .box_img {
+      width: 200px;
+      height: 600px;
+      overflow: hidden;
+      float: left;
+    }
+    .box_img--1 {
+      animation: a1 10s linear infinite;
+    }
+
+    @keyframes a1 {
+      0% {
+        width: 1080px
+      }
+      10% {
+        width: 1080px
+      }
+      20% {
+        width: 200px;
+      }
+      90% {
+        width: 200px;
+      }
+      100% {
+        width: 1080px;
+      }
+    }
+    .box_img--2 {
+      animation: a2 10s linear infinite
+    }
+    @keyframes a2 {
+      0% {
+        width: 200px;
+      }
+      10% {
+        width: 200px;
+      }
+      20% {
+        width: 1080px;
+      }
+      30% {
+        width: 1080px;
+      }
+      40% {
+        width: 200px;
+      }
+      90% {
+        width: 200px;
+      }
+    }
+    .box_img--3 {
+      animation: a3 10s linear infinite
+    }
+    @keyframes a3 {
+      0% {
+        width: 200px;
+      }
+      30% {
+        width: 200px;
+      }
+      40% {
+        width: 1080px;
+      }
+      50% {
+        width: 1080px;
+      }
+      60% {
+        width: 200px;
+      }
+      90% {
+        width: 200px;
+      }
+    }
+
+    .box_img--4 {
+      animation: a4 10s linear infinite
+    }
+    @keyframes a4 {
+      0% {
+        width: 200px;
+      }
+      50% {
+        width: 200px;
+      }
+      60% {
+        width: 1080px;
+      }
+      70% {
+        width: 1080px;
+      }
+      80% {
+        width: 200px;
+      }
+      90% {
+        width: 200px;
+      }
+    }
+    .box_img--5 {
+      animation: a5 10s linear infinite
+    }
+    @keyframes a5 {
+      0% {
+        width: 200px;
+      }
+      70% {
+        width: 200px;
+      }
+      80% {
+        width: 1080px;
+      }
+      90% {
+        width: 1080px;
+      }
+      100% {
+        wdith: 1080px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="box_img box_img--1">
+      <div style="width: 1080px; height: 600px; background: rgb(255, 52, 52);"></div>
+    </div>
+    <div class="box_img box_img--2">
+      <div style="width: 1080px; height: 600px; background: rgb(53, 30, 255);"></div>
+    </div>
+    <div class="box_img box_img--3">
+      <div style="width: 1080px; height: 600px; background: rgb(251, 159, 159);"></div>
+    </div>
+    <div class="box_img box_img--4">
+      <div style="width: 1080px; height: 600px; background: rgb(77, 226, 50);"></div>
+    </div>
+    <div class="box_img box_img--5">
+      <div style="width: 1080px; height: 600px; background: rgb(197, 73, 255);"></div>
+    </div>
+  </div>
+</body>
+</html>
