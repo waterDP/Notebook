@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2020-12-30 23:04:53
+ * @Description: 
+ * @FilePath: \notebook\React\基础\React-Redux.jsx
+ */
 import React, { Component } from 'react'
 import ReactDOM from 'react-dom'
 import {Provider, connect} from "react-redux"
@@ -8,7 +14,7 @@ export class Counter extends Component {
   render() {
     return (
       <>
-        <p>{this.props.number}</p>
+        <p>{this.props.counter}</p>
         <button onClick={this.props.increment}>+</button>
         <button onClick={this.props.decrement}>-</button>
       </>
