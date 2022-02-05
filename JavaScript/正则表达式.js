@@ -141,3 +141,7 @@ Array.prototype.forEach.call(str, char => {
 str = str.split('').sort((a, b) => a.localeCompare(b)).join('')
 let reg = /[a-zA-Z]\1+/g
 let arr = str.match(reg).sort((a, b) => b.length - a.length)
+
+// 数字格式化
+let f = '9999999999'.replace(/\d{1,3}(?=(\d{3})+$)/g, '$&,')
+console.log(f) // '9,999,999,999'
