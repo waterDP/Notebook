@@ -113,8 +113,7 @@ time.replace(reg, (big, $1, $2, $3)=> {
 // 单词首字母大写
 let str = 'good good study, day day up!'
 let reg = /\b([a-zA-Z])[a-zA-Z]*\b/g
-str = str.replace(reg, (...arg) => {
-  const [content, $1] = arg
+str = str.replace(reg, (content, $1) => {
   return $1.toUpperCase() + content.substring(1)
 })
 console.log(str)
