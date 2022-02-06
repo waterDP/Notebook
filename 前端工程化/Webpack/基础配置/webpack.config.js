@@ -54,6 +54,7 @@ module.exports = smw.wrap({
       new OptimizeCssAssetsWebpackPlugin()  // 压缩css
     ],
     splitChunks: {  // 分割代码块  
+      runtimeChunk: 'single', // 浏览器在进行模块加载解析的时候所需要的代码单独提取出来
       cacheGroups: { // 缓存组
         common: {  //  公共的模块
           chunks: 'initial', // 'all' 全部模块提取
