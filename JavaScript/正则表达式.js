@@ -160,9 +160,11 @@ Array.prototype.forEach.call(str, char => {
 })
 
 // 方法二
+let str = 'zhididishiwcniasiidhidfv'
 str = str.split('').sort((a, b) => a.localeCompare(b)).join('')
-let reg = /[a-zA-Z]\1+/g
+let reg = /([a-zA-Z])\1+/g
 let arr = str.match(reg).sort((a, b) => b.length - a.length)
+console.log(arr)
 
 // ^数字格式化 正向预查
 let f = '9999999999'.replace(/\d{1,3}(?=(\d{3})+$)/g, '$&,')
