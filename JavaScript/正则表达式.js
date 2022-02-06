@@ -68,22 +68,45 @@
  * test
  * 2.字符串String.prototype上支持正则表达式处理的方法
  * replace
- * match
+ * match  可以循环捕获
  * split
  * ...
  */
 // 多次匹配的情况下，match只能把大正则匹配的内容获取到，小分组匹配的信息无法获取
+// reg.lastIndex 当前正则下一次匹配的起始索引位置
+/*
+ * 懒惰性捕获的原因：默认情况下lastIndex的值是不会改变，每一次都是从字符串的开始位置查找，所以找到的永远只有第一个
+ */
 let str = '{0}年{1}月{2}日'
-let reg = /\{\d+\}/g
+let reg = /\{\d+\}/g  // ! g 是取消懒惰性捕获的必要条件
 let aryBig = [], argSmall = [], res = reg.exec(str)
+~function() {
+  function execAll(str = '') {
+    // 进入后的第一件事，是验证当前正则是否设置了G, 不设置则不能进行循环捕获了，否则会导致死循环
+    if (!this.global) {
+      return this.exec(str)
+    }
+    let ret = [], res = this.exec(str)
+    while (res) {
+      ret.push(res[0])  // 把每一次捕获的内容res[0]放入结果中
+      res = this.exec(str)
+    }
+    return ret
+  }
+  RegExp.prototype.execAll = execAll
+}()
+console.log(reg.execAll(str))
+
+// ^ 同时捕获大正则与小分组
+let aryBig = [], arySmall =[], res = reg.exec(str)
 while (res) {
-  let [big, small] = res
+  const [big, small] = res
   aryBig.push(big)
-  argSmall.push(small)
+  arySmall.push(small)
   res = reg.exec(str)
 }
 
-// 分组引用
+// ^ 分组引用
 let str = 'book'
 let reg = /^[a-zA-Z]([a-zA-Z])\1[a-zA-Z]$/
 // 分组引用就是通过"\数字"让其代表和对应分组出现一模一样的内容
@@ -194,4 +217,4 @@ let reg = /^\w((-\w+)|(\.\w+))*@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z0-9]+$
  *   倒数第二位 偶数是女，奇数是男
  *   其余的是经过算法算出来的
  */
-let reg = /^(\d{6})(\d{4})(\d{2})(\d{2})\d{2}(\d)(\d|X)$/
+let reg = /^(\d{6})(\d{4})(\d{2})(\d{2})\d{2}(\d)(?:\d|X)$/
