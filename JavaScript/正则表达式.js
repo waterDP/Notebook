@@ -148,7 +148,7 @@ let str = 'zhididishiwcniasiidhidfv'
 let max = 0, maxChar = ''
 let map = {}
 Array.prototype.forEach.call(str, char => {
-  if (map.hasOwnProperty(char)) {
+  if (map[char]) {
     map[char]++
   } else {
     map[char] = 1
