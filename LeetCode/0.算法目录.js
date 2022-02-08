@@ -321,6 +321,7 @@
 // todo 栈
 /**
  * @Leetcode 20   有效的括号
+ * @lettcode 32   最长的有效括号
  * @Leetcode 71   简化路径
  * @Leetcode 102  移掉K位数字
  * @Leetcode 132  模式
