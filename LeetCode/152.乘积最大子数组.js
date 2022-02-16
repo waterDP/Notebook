@@ -62,9 +62,9 @@
 var maxProduct = function(nums) {
   let maxF = minF = ans = nums[0]
   for (let i = 1; i < nums.length; i++) {
-    let mx = maxF, mn = minF
-    maxF = Math.max(mx*nums[i], mn*nums[i], nums[i])
-    minF = Math.min(mn*nums[i], nums[i], mx*nums[i])
+    let max = maxF, min = minF
+    maxF = Math.max(max*nums[i], min*nums[i], nums[i])
+    minF = Math.min(min*nums[i], nums[i], max*nums[i])
     ans = Math.max(maxF, ans)
   }
   return ans
