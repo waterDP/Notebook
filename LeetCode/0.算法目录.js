@@ -11,6 +11,7 @@
  * @Leetcode 221  最大正方形
  * @Leetcode 264  丑数二
  * @Leetcode 300  最长的递增子序列
+ * @Leetcode 313   超级丑数
  * @Leetcode 322  零钱兑换
  * @Leetcode 343  整数拆分
  * @Leetcode 368  最大整除子集
@@ -372,6 +373,7 @@
  * @Leetcode 274  h-指数(计数)
  * @Leetcode 611  有效三角形的个数
  * @Leetcode 628  三个数的最大乘积
+ * @Leetcode 912  排序数组（快排）
  * @Leetcode 1337 矩阵中战斗力最弱的K行
  * @Leetcode 1636 按照频率将数组升序排序
  */
@@ -443,7 +445,6 @@
 
 // todo 堆
 /**
- * @Leetcode 313   超级丑数
  * @Leetcode 1845  座位预约管理系统
  */
 
