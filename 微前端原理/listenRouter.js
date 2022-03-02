@@ -15,18 +15,18 @@ import handleRouter from "./handleRouter"
 */
 
 let prevRoute = ''  // 上一个路由
-let nextRoute = window.location.pathname // 下一个路由
+let currRoute = window.location.pathname // 下一个路由
 
 export const getPrevRoute = () => prevRoute
 
-export const getNextRoute = () => nextRoute
+export const getCurrRoute = () => currRoute
 
 export default function() {
   handleRouter() // 初始化的时间也处理一下handleRouter
 
   window.addEventListener('popstate', () => {
-    prevRoute = nextRoute
-    nextRoute = window.location.pathname
+    prevRoute = currRoute
+    currRoute = window.location.pathname
     handleRouter()
   })
 
@@ -36,7 +36,7 @@ export default function() {
     prevRoute = window.location.pathname
     rawPushState.apply(window.history, args)
     // 导航后
-    nextRoute = window.location.pathname
+    currRoute = window.location.pathname
     handleRouter()
   } 
 
@@ -46,7 +46,7 @@ export default function() {
     prevRoute = window.location.pathname
     rawReplaceState.apply(window.history, args)
     // 导航后
-    nextRoute = window.location.pathname
+    currRoute = window.location.pathname
     handleRouter()
   }
 }

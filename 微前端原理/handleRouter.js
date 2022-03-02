@@ -6,7 +6,7 @@
  */
 import { importHTML } from "./importHTML";
 import { getApps } from "./index";
-import { getNextRoute, getPrevRoute } from "./listenRouter";
+import { getCurrRoute, getPrevRoute } from "./listenRouter";
 export default async function() {
   const apps = getApps()
 
@@ -14,32 +14,32 @@ export default async function() {
   const prevApp = apps.find(item => getPrevRoute().startsWith(item.activeRule))
 
   // 获取下一个路由应用
-  const nextApp = apps.find(item => getNextRoute().startsWith(item.activeRule))
+  const currApp = apps.find(item => getCurrRoute().startsWith(item.activeRule))
 
   // 如果有上一个应用 就先销毁上一个应用
   prevApp && unmount(prevApp)
 
-  if (!nextApp) return
+  if (!currApp) return
   
-  const {template, execScripts} = importHTML(nextApp.entry)
-  const container = document.querySelector(nextApp.container)
+  const {template, execScripts} = importHTML(currApp.entry)
+  const container = document.querySelector(currApp.container)
   container.appendChild(template)
 
   // 配置全局环境变量
   window.__POWERED_BY_QIANKUN__ = true
 
-  window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = nextApp.entry + '/'
+  window.__INJECTED_PUBLIC_PATH_BY_QIANKUN__ = currApp.entry + '/'
   
   // 解析文档中的script标签 并执行
   const appExport = execScripts()
 
-  nextApp.bootstrap = appExport.bootstrap
-  nextApp.mount = appExport.mount
-  nextApp.unmount = appExport.unmount
+  currApp.bootstrap = appExport.bootstrap
+  currApp.mount = appExport.mount
+  currApp.unmount = appExport.unmount
 
-  await bootstrap(nextApp)
+  await bootstrap(currApp)
 
-  await mount(nextApp)
+  await mount(currApp)
 }
 
 
