@@ -5,5 +5,5 @@
  * @FilePath: \notebook\微前端原理\fetchResource.js
  */
 export default function(url) {
-  return fectch(url).then(res => res.text())
+  return fetch(url).then(res => res.text())
 }
