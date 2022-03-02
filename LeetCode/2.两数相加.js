@@ -1,4 +1,10 @@
 /*
+ * @Author: water.li
+ * @Date: 2021-09-29 22:34:31
+ * @Description: 
+ * @FilePath: \notebook\LeetCode\2.两数相加.js
+ */
+/*
  * @lc app=leetcode.cn id=2 lang=javascript
  *
  * [2] 两数相加
@@ -17,25 +23,25 @@
  * @param {ListNode} l2
  * @return {ListNode}
  */
-var addTwoNumbers = function(l1, l2) {
+var addTwoNumbers = function (l1, l2) {
   const result = p = {}
   while (l1 || l2) {
-      // 求和
-      const sum = (l1 && l1.val || 0) + (l2 && l2.val || 0) + (p.val || 0)
-      // 取整
-      const exceed = parseInt(sum / 10)
+    // 求和
+    const sum = (l1 && l1.val || 0) + (l2 && l2.val || 0) + (p.val || 0)
+    // 取整
+    const exceed = parseInt(sum / 10)
 
-      l1 = l1 && l1.next
-      l2 = l2 && l2.next
+    l1 = l1 && l1.next
+    l2 = l2 && l2.next
 
-      // 取余
-      p.val = sum % 10
-      // 判断是否需要进位（新增链表节点）（试试不带 if 条件跑一遍就明白了）
-      if (l1 || l2 || exceed) {
-        p.next = { val: exceed }
-      }
+    // 取余
+    p.val = sum % 10
+    // 判断是否需要进位（新增链表节点）（试试不带 if 条件跑一遍就明白了）
+    if (l1 || l2 || exceed) {
+      p.next = { val: exceed }
+    }
 
-      p = p.next
+    p = p.next
   }
   return result
 };
