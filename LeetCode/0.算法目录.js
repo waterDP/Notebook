@@ -417,6 +417,7 @@
 
 // todo 二叉搜索树
 /**
+ * @Leetcode 96     不同的两叉搜索树
  * @Leetcode 98     验证二叉搜索树
  * @Leetcode 530    二叉搜索树的最小绝对差
  * @Leetcode 669    修剪二叉搜索树
