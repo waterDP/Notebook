@@ -20,7 +20,7 @@ module.exports = smw.wrap({
   context: process.cwd(), // 上下文目录
   entry: './src/index.js', // 入口
   output: { // 文件出口
-    filename: 'bundle.[hash:8].js',  // 打包后的文件名  8位hash
+    filename: 'bundle.[hash:8].js',  // 打包后的文件名  8位hash 
     path: path.resolve(__dirname, 'build'), // 路径必须是一个绝对路径
     publicPath: 'cdnPath',
 
@@ -173,7 +173,7 @@ module.exports = smw.wrap({
       },
       // 字体文件
       {
-        test: /.(ttf|svg|eot|woff|woff2|otf)$/,
+        test: /\.(ttf|svg|eot|woff|woff2|otf)$/,
         use: {
           loader: 'url-loader'
         }
