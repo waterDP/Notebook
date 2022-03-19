@@ -1,4 +1,10 @@
 /*
+ * @Author: water.li
+ * @Date: 2021-09-29 22:34:31
+ * @Description: 
+ * @FilePath: \notebook\LeetCode\145.二叉树的后序遍历.js
+ */
+/*
  * @lc app=leetcode.cn id=145 lang=javascript
  *
  * [145] 二叉树的后序遍历
@@ -44,7 +50,7 @@
  * @return {number[]}
  */
 var postorderTraversal = function(root) {
-    const list = []
+  const list = []
   const stack = []
   root && stack.push(root)
   while(stack.length) {
