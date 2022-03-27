@@ -69,7 +69,6 @@
 
 // todo 数学
 /**
- * @Leetcode 2    两数相加
  * @Leetcode 7    整数反转
  * @Leetcode 9    回文数
  * @Leetcode 29   两数相除
@@ -185,6 +184,12 @@
  * @Leetcode 332   重新安排行程 [欧拉回路  ]
  * @Leetcode 1293  网络中的最贵路径
  * @Leetcode 1334  阈值距离内邻居最少的城市 [bellman-ford spfa Dijkstra floyd]
+ */
+
+// todo 模拟
+/**
+ * @Leetcode 2    两数相加
+ * @Leetcode 551  学生出勤记录
  */
 
 // todo 贪心算法
@@ -360,11 +365,6 @@
 // todo 博弈问题
 /**
  * @Leetcode 292  Nim游戏
- */
-
-// todo 模拟
-/**
- * @Leetcode 551  学生出勤记录
  */
 
 // todo 队列
