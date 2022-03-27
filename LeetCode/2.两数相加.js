@@ -24,26 +24,26 @@
  * @return {ListNode}
  */
 var addTwoNumbers = function (l1, l2) {
-  const result = p = {}
+  let head = null, tail = null
+  let carry = 0
   while (l1 || l2) {
-    // 求和
-    const sum = (l1 && l1.val || 0) + (l2 && l2.val || 0) + (p.val || 0)
-    // 取整
-    const exceed = parseInt(sum / 10)
-
-    l1 = l1 && l1.next
-    l2 = l2 && l2.next
-
-    // 取余
-    p.val = sum % 10
-    // 判断是否需要进位（新增链表节点）（试试不带 if 条件跑一遍就明白了）
-    if (l1 || l2 || exceed) {
-      p.next = { val: exceed }
+    const n1 = l1 ? l1.val : 0
+    const n2 = l2 ? l2.val : 0
+    const sum = n1 + n2 + carry
+    if (!head) {
+      head = tail = new ListNode(sum % 10)
+    } else {
+      tail.next = new ListNode(sum % 10)
+      tail = tail.next
     }
-
-    p = p.next
+    carry = Math.floor(sum / 10)
+    l1 && (l1 = l1.next)
+    l2 && (l2 = l2.next)
   }
-  return result
+  if (carry > 0) {
+    tail.next = new ListNode(carry)
+  }
+  return head
 };
 // @lc code=end
 
