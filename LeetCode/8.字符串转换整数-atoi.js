@@ -1,4 +1,10 @@
 /*
+ * @Author: water.li
+ * @Date: 2022-03-24 23:01:07
+ * @Description: 
+ * @FilePath: \notebook\LeetCode\8.字符串转换整数-atoi.js
+ */
+/*
  * @lc app=leetcode.cn id=8 lang=javascript
  *
  * [8] 字符串转换整数 (atoi)
@@ -46,7 +52,7 @@ var myAtoi = function(s) {
         this.answer = 
           this.sign === 1 
           ? Math.min(this.answer, Math.pow(2, 31) - 1)
-          : Math.min(this.answer, -·Math.pow(-2, 31))
+          : Math.min(this.answer, -Math.pow(-2, 31))
       } else if (this.state === 'signed') {
         this.sign = char === '+' ? 1 : -1
       }
