@@ -454,7 +454,7 @@
  * @Leetcode 208   实现Trie(前缀树)
  */
 
-// todo 分治算法
+// todo 分治
 /**
  * @Leetcode 215   数组中的第K个最大元素 [快排]
  * @Leetcode 241   为表达式设计估计优先级
