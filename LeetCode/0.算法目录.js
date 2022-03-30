@@ -53,6 +53,7 @@
 
 // todo 链表
 /**
+ * @Leetcode 19   删除链表的倒数第n个结点
  * @Leetcode 21   合并两个有序链表
  * @Leetcode 24   两两交换链表中的节点
  * @Leetcode 61   旋转链表
@@ -89,7 +90,6 @@
  * @Leetcode 509  斐波拉契数
  * @Leetcode 633  平方数之和
  * @Leetcode 650  只有两个键的键盘 (素因子分解)
- * @Leetcode 1006 笨阶乘
  * @Leetcode 1266 访问所有点的最小时间
  * @Leetcode 1716 计算力扣银行的钱 
  * @Leetcode 1732 找出最高海拔
@@ -131,6 +131,7 @@
 
 // todo 位运算
 /**
+ * @Leetcode 89   格雷编码
  * @Leetcode 136  只出现一次的数字
  * @Leetcode 190  颠倒二进制位
  * @Leetcode 191  位1的个数
@@ -192,7 +193,11 @@
 // todo 模拟
 /**
  * @Leetcode 2    两数相加
+ * @Leetcode 54   螺旋矩阵
+ * @Leetcode 412  Fizz Buzz
  * @Leetcode 551  学生出勤记录
+ * @Leetcode 1006 笨阶乘
+ * @Leetcode 1860  增长的内存泄露
  */
 
 // todo 贪心算法
@@ -215,7 +220,6 @@
  * @Leetcode 1673  找出最具竞争力的子序列
  * @Leetcode 1800  最大升序子数组
  * @Leetcode 1833  雪糕的最大数量
- * @Leetcode 1860  增长的内存泄露
  * @Leetcode 2125  银行中的激光束数量
  */
 
@@ -267,7 +271,6 @@
 // todo 数组 矩阵
 /**
  * @Leetcode 48    旋转图像
- * @Leetcode 54    螺旋矩阵
  * @Leetcode 73    矩阵置零
  * @Leetcode 74    搜索二维矩阵
  * @Leetcode 81    搜索旋转排序数组二
