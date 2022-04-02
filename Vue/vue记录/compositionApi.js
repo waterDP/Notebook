@@ -28,7 +28,7 @@
  * 
  * setup()的第二个参数是一个上下文对象，这个上下文对象大致包含了这些属性
  */
-export default {
+defineComponent({
   props: {
     msg: {
       type: String,
@@ -40,7 +40,7 @@ export default {
     context.slots
     context.emit
   }
-}
+})
 
 
 /**
@@ -49,7 +49,7 @@ export default {
  * 等价于2.x是Vue.observable
  */
 import { reactive } from 'vue'
-export default {
+defineComponent({
   setup(props, context) {
     const state = reactive({  // 创建响应式数据
       count: 0,
@@ -64,14 +64,14 @@ export default {
       increment
     }
   }
-}
+})
 
 /**
  * ! ref
  * ref()函数用来给特定的值创建一个响应式的数据对象.ref()的返回值是一个对象，这个对象上只包含一个.value属性，下面是基本数据类型步骤
  */
 import { ref, defineComponent } from 'vue'
-export default defineComponent({
+defineComponent({
   setup() {
     const valueNumber = ref(0)
     const valueString = ref('hello world')
@@ -91,7 +91,7 @@ export default defineComponent({
 
 // ! 只读的计算属性
 import { ref, computed } from 'vue'
-export default {
+defineComponent({
   setup() {
     const count = ref(0)
     const double = computed(() => count.value + 1)
@@ -101,7 +101,7 @@ export default {
       double
     }
   }
-}
+})
 
 // ! 可读写的计算属性
 const count = ref(1)
@@ -113,7 +113,7 @@ const plusOne = computed({
 
 // ! watch
 import { ref, watch } from 'vue'
-export default {
+defineComponent({
   setup() {
     const count = ref(1)
 
@@ -125,11 +125,11 @@ export default {
       count
     }
   }
-}
+})
 
 
 // 监听reactive的数据变化
-export default {
+defineComponent({
   setup() {
     const state = reactive({
       count: 0
@@ -138,7 +138,7 @@ export default {
 
     })
   }
-}
+})
 
 /**
  * todo effect
@@ -149,7 +149,7 @@ export default {
  * 而watch不需要，除非设置了指定参数
  */
 import { effect, ref } from 'vue'
-export default {
+defineComponent({
   setup() {
     const userID = ref(0)
     const userPlus = ref(1)
@@ -161,7 +161,7 @@ export default {
       userID
     }
   }
-}
+})
 
 
 /**
@@ -172,7 +172,7 @@ export default {
  */
 import { shallowReactive } from 'vue'
 
-export default {
+defineComponent({
   setup() {
     const obj = {
       a: 1,
@@ -199,7 +199,7 @@ export default {
       state
     }
   }
-}
+})
 
 /**
  * ! customRef
@@ -208,14 +208,14 @@ export default {
  */
 import { customRef } from 'vue'
 
-export default {
+defineComponent({
   setup() {
     const keyword = useDebouncedRef('', 500)
     return {
       keyword
     }
   }
-}
+})
 
 function useDebouncedRef(value, delay = 200) {
   let timeout
@@ -241,7 +241,7 @@ function useDebouncedRef(value, delay = 200) {
 // todo 自定义 Hook 函数 
 import { ref, onMounted, onUnmounted } from 'vue'
 
-export default function useMousePosition() {
+export function useMousePosition() {
   const x = ref(-1)
   const y = ref(-1)
 
@@ -269,12 +269,12 @@ export default function useMousePosition() {
   </div>
 </template>
 
-export default {
+defineComponent({
   setup() {
     const { x, y } = useMousePosition()
     return { x, y }
   }
-}
+})
 
 /** 
  * todo context 

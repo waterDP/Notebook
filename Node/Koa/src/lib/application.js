@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-03-24 23:01:07
+ * @Description: 
+ * @FilePath: \notebook\Node\Koa\src\lib\application.js
+ */
 const http = require('http')
 const request = require('./request')
 const response = require('./response')
@@ -59,7 +65,7 @@ class Application extends EventEmitter {
   handleRequest(req, res) {
     // 请示到来时，需要调用use方法
     // 通过请求+响应+自己封装的request和response组成一个当前请求的上下文
-    let ctx = this.createContext(req, rest)
+    let ctx = this.createContext(req, res)
     res.statusCode = 404
     //组合多个函数
     this.compose(ctx).then(() => {
