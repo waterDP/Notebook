@@ -4,4 +4,6 @@
  * @Description: 
  * @FilePath: \notebook\Vue\vue-next\packages\reactivity\src\index.ts
  */
-import { isObject } from "@vue/shared";
+
+export { effect } from "./effect"
+export { reactive } from "./reactive"

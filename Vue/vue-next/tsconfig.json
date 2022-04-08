@@ -5,7 +5,7 @@
     "target": "es2016",
     "module": "esnext",
     "moduleResolution": "node",
-    "strict": true,
+    "strict": false,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "jsx": "preserve",
