@@ -15,10 +15,10 @@ function cleanupEffect(effect: ReactiveEffect) {
   }
 }
 
-class ReactiveEffect { 
+export class ReactiveEffect { 
   active = true
   deps = []
-  constructor(public fn: Function) { // 让effect记录他依赖了哪些属性，同时要记录当前属性依赖了哪个effect
+  constructor(public fn: Function, public scheduler?) { // 让effect记录他依赖了哪些属性，同时要记录当前属性依赖了哪个effect
 
   }
   run() {
@@ -58,7 +58,10 @@ export function track(target, key) {
 
   let dep = depsMap.get(key)
   dep || depsMap.set(key, (dep = new Set()))
+  trackEffects(dep)
+}
 
+export function trackEffects(dep) {
   if (!dep.has(activeEffect)) {
     dep.add(activeEffect)
     activeEffect.deps.push(dep)
@@ -76,9 +79,17 @@ export function trigger(target, key) {
   for (const dep of deps) {
     effects.push(...dep)
   }
-  for (const effect of effects) { // 如果当前effect执行和要执行的effect是同一个，不要执行了 防止循环
+  triggerEffects(effects)
+}
+
+export function triggerEffects(dep) {
+  for (const effect of dep) { // 如果当前effect执行和要执行的effect是同一个，不要执行了 防止循环
     if (effect !== activeEffect) {
-      effect.run()
+      if (effect.scheduler) {
+        effect.scheduler()
+      } else {
+        effect.run()
+      }  
     }
   }
 }
