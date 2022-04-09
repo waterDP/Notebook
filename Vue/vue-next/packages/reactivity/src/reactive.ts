@@ -63,6 +63,10 @@ export function reactive(target: object) {
   return createReactiveObject(target, false)
 }
 
+export function toReactive(value) {
+  return isObject(value) ? reactive(value) : value
+}
+
 export function readonly(target: object) {
   // ...
 }

@@ -5,6 +5,10 @@
  * @FilePath: \notebook\Vue\vue-next\packages\shared\src\index.ts
  */
 
+export function isString(value) {
+  return typeof value === 'string'
+}
+
 export function isObject(value: unknown): value is Record<any, any> {
   return typeof value === 'object' && value !== null
 }

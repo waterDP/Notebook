@@ -9,7 +9,7 @@ const execa = require("execa")
 
 const args = minimist(process.argv.slice(2))
 
-const target = args._.length ? args._[0] : 'reactivity'
+const target = args._.length ? args._[0] : 'runtime-dom'
 const formats = args.f || 'global'
 const sourcemap = args.s || false
 
