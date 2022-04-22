@@ -22,15 +22,15 @@ console.log(name)
 
 const outputConfig = {
   "esm-bundler": {
-    file: resolve(`dist/${name}.esm-bundle`),
+    file: resolve(`dist/${name}.esm-bundle,js`),
     format: 'es'
   },
   "cjs": {
-    file: resolve(`dist/${name}.cjs-bundle`),
+    file: resolve(`dist/${name}.cjs.js`),
     format: 'cjs'
   },
   "global": {
-    file: resolve(`dist/${name}.global-bundle`),
+    file: resolve(`dist/${name}.global.js`),
     format: 'iife'
   }
 }
