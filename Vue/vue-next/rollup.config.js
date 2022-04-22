@@ -4,7 +4,11 @@
  * @Description: 
  * @FilePath: \notebook\Vue\vue-next\rollup.config.js
  */
-const path = require('path')
+import path from 'path'
+import ts from 'rollup-plugin-typescript2'
+import json from '@rollup/plugin-json'
+import {nodeResolve} from '@rollup/plugin-node-resolve'
+import commonjs from '@rollup/plugin-commonjs'
 
 const packageFormats = process.env.FORMATS && process.env.FORMATS.split(',')
 const sourcemap = process.env.SOURCE_MAP
@@ -36,11 +40,6 @@ const outputConfig = {
 }
 
 const packageConfigs = packageFormats || pkg.buildOptions.formats
-
-import ts from 'rollup-plugin-typescript2'
-import json from '@rollup/plugin-json'
-import {nodeResolve} from '@rollup/plugin-node-resolve'
-import commonjs from '@rollup/plugin-commonjs'
 
 function createConfig(format, output) {
   output.sourcemap = sourcemap // 添加sourcemap
