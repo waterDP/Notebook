@@ -63,7 +63,7 @@ export function track(target, key) {
 export function trackEffects(dep) {
   if (!dep.has(activeEffect)) {
     dep.add(activeEffect)
-    activeEffect.deps.push(dep)
+    activeEffect.deps.push(dep)  // dep是一个Set集合
   }
 }
 
