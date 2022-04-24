@@ -47,9 +47,8 @@ export function isTracking(): boolean {
   return activeEffect !== undefined
 }
 
-const targetMap = new WeakMap()
-
 // {对象：{属性: [effect1, effect2]}}
+const targetMap = new WeakMap()
 export function track(target, key) {
   if (!isTracking()) return // 如果这个属性，不依赖于effect直接跳出即可
 
