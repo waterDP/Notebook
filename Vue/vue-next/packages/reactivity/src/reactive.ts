@@ -55,7 +55,7 @@ function createReactiveObject(target: object, isReadonly: boolean) {
   }
 
   const proxy = new Proxy(target, mutableHandlers)
-  reactiveMap.set(target, proxy) // 将原对象和生成的代理对，做一个映射表 
+  reactiveMap.set(target, proxy) // 将原对象和生成的代理对象，做一个映射表 防止重复代理
   return proxy
 }
 
@@ -63,7 +63,7 @@ export function reactive(target: object) {
   return createReactiveObject(target, false)
 }
 
-export function toReactive(value) {
+export function toReactive(value) { 
   return isObject(value) ? reactive(value) : value
 }
 
