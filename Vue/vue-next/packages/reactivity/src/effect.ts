@@ -69,7 +69,7 @@ export function trackEffects(dep) {
 
 export function trigger(target, key) {
   let depsMap = targetMap.get(target)
-  if (!depsMap) return
+  if (!depsMap) return // 修改的属性根本没有依赖任何effect
   let deps = []
   if (key !== undefined) {
     deps.push(depsMap.get(key))
