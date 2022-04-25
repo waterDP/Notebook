@@ -25,7 +25,7 @@ class ComputedRefImpl {
     
   }
   get value() { // 取值时
-    if (isTracking()) {
+    if (isTracking()) {  // 是否是在effect执行的
       trackEffects(this.dep || (this.dep = new Set()))
     }
     if (this._dirty) {
