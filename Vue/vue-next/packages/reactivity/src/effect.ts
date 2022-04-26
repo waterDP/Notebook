@@ -57,11 +57,11 @@ export function track(target, key) {
   depsMap || targetMap.set(target, (depsMap = new Map()))
 
   let dep = depsMap.get(key)
-  dep || depsMap.set(key, (dep = new Set()))
+  dep || depsMap.set(key, (dep = new Set<ReactiveEffect>()))
   trackEffects(dep)
 }
 
-export function trackEffects(dep) {
+export function trackEffects(dep: Set<ReactiveEffect>) {
   if (!dep.has(activeEffect)) {
     dep.add(activeEffect)
     activeEffect.deps.push(dep)  // dep是一个Set集合
