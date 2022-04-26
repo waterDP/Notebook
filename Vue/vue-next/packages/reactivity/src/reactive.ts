@@ -9,7 +9,7 @@ import { isObject } from "@vue/shared"
 import { track, trigger } from "./effect"
 
 const enum ReactiveFlags {
-  IS_REACTIVE= '__v_isReactive'
+  IS_REACTIVE = '__v_isReactive'
 }
 
 const mutableHandlers: ProxyHandler<Record<any, any>> = {
