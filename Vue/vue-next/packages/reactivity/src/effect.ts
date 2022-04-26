@@ -18,7 +18,7 @@ function cleanupEffect(effect: ReactiveEffect) {
 export class ReactiveEffect { 
   active = true
   deps = []
-  constructor(public fn: Function, public scheduler?) { // 让effect记录他依赖了哪些属性，同时要记录当前属性依赖了哪个effect
+  constructor(public fn: Function, public scheduler?: Function) { // 让effect记录他依赖了哪些属性，同时要记录当前属性依赖了哪个effect
 
   }
   run() {
