@@ -5,7 +5,7 @@
  * @FilePath: \notebook\Vue\vue-next\packages\reactivity\src\effect.ts
  */
 
-let effectStack = []
+let effectStack = [] // 栈结构
 let activeEffect
 
 function cleanupEffect(effect: ReactiveEffect) {
