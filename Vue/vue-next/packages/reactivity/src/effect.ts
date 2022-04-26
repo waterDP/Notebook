@@ -30,6 +30,7 @@ export class ReactiveEffect {
         effectStack.push(activeEffect = this)
         return this.fn() // 执行函数 effect new Proxy会执行get方法
       } finally {
+        // 弹栈 
         effectStack.pop()
         activeEffect = effectStack[effectStack.length - 1]
       }
