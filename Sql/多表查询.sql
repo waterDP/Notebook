@@ -66,4 +66,3 @@ WHERE NOT EXISTS (
   FROM employees e
   WHERE e.department_id = d.department_id
 );
-
