@@ -144,8 +144,48 @@ having avg(salary) = (
 select department_id
 from employees
 group by department_id
-having avg(salaray) < all (
-  select avg(salaray)
+having avg(salary) < all (
+  select avg(salary)
   from employees
-  group by dempartment_id
+  group by department_id
 )
+
+# 相关子查询
+# 案例 查询员工中工资大于本部门平均工资的员工的last_name, salary和其department_id
+# 方式一 相关子查询
+select last_name, salary, department_id
+from employees outer
+where salary > (
+  select avg(salary)
+  from employees
+  where department_id = outer.department_id
+)
+#方式二 在from声明子查询
+select e.last_name, e.salary, e.department_id
+from employees e, (
+  select department_id, avg(salary) avg_sal
+  from employees
+  group by department_id
+) t_dept_avg_sal
+where e.department_id = t_dept_avg_sal.department_id
+and e.salaray > t_dept_avg_sal.avg_sal
+
+# 题目：查询员工的id, salary, 按照department_name 排序
+select department_id, salary
+from employees e
+order by (
+  select department_name
+  from departments d
+  where e.department_id = d.department_id
+) asc;
+
+# 题目 若employees表中employee_id与job_history表中employee_id相同的数目不小于2
+# 输出这些相同id的员工的employee_id, last_name和其job_id
+select employee_id, last_name, job_id
+from employees e
+where 2 <= (
+  select count(*)
+  from job_history
+  where e.employee_id = j.employee_id
+)
+
