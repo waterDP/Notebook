@@ -189,3 +189,42 @@ where 2 <= (
   where e.employee_id = j.employee_id
 )
 
+# exists 与 not exists 关键字
+# 题目 查询公司管理者的emplyee_id, last_id, job_id, department_id
+# 方式1: 自连接
+select distinct mgr.employee_id, mgr.last_name, mgr.job_id, mgr.department_id
+from employees emp join employees mgr
+on emp.manager_id = mgr.employee_id;
+
+#方式2：子查询
+select employee_id, last_name, job_id, department_id
+from employees
+where employee_id in (
+  select distinct manager_id
+  from employees
+)
+
+#方式3  使用exists
+select employee_id, last_name, job_id, department_id
+from employees e1
+where exists (
+  select *
+  from employees e2
+  where e1.employee_id = e2.manager_id
+)
+
+# 题目：查询departments表中，不存在于employees表中的部门的department_id和department_name
+# 方式1 
+select d.department_id, d.department_name
+from employees e right join departments d
+on e.department_id = d.department_id
+where e.department_id is null
+
+#方式2
+select department_id, department_name
+from departments d
+where not exists (
+  select * 
+  from employees e
+  where e.department_id = d.department_id
+)
