@@ -326,6 +326,7 @@
  * @Leetcode 36    有效的数独
  * @Leetcode 49    字母异位分组
  * @Leetcode 76    最小覆盖子串
+ * @Leetcode 128   最长连接序列
  * @Leetcode 136   只出现一次的数字
  * @Leetcode 181   重复的DNA序列
  * @Leetcode 137   只出现一次的数字 II 
