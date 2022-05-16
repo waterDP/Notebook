@@ -46,8 +46,8 @@ select last_name, salary, if(salary >= 60000, '高工资', '低工资') "details
 from employees;
 
 select  last_name
-       ,salary
-       ,case when salary >= 15000 then '白骨精'
-             when salary >= 10000 then '潜力股'
-             when salary >= 8000 then '小屌丝'  else '草根' end 'details'
+  ,salary
+  ,case when salary >= 15000 then '白骨精'
+  when salary >= 10000 then '潜力股'
+  when salary >= 8000 then '小屌丝'  else '草根' end 'details'
 from employees;

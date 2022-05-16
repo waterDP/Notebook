@@ -12,7 +12,7 @@
             ],
             "cStandard": "${default}",
             "cppStandard": "c++20",
-            "intelliSenseMode": "windows-gcc-x64",
+            "intelliSenseMode": "windows-gcc-x86",
             "compilerPath": "D:\\minGW\\bin\\gcc",
             "compilerArgs": []
         }
