@@ -173,6 +173,7 @@
  * @Leetcode 76    最小覆盖子串
  * @Leetcode 86    分隔链表
  * @Leetcode 88    合并两个有序数组
+ * @Leetcode 125   验证回文串
  * @Leetcode 141   环形链表
  * @Leetcode 160   相交链表
  * @Leetcode 167   两数之和 II - 输入有序数组
@@ -479,4 +480,10 @@
 // todo 记忆化搜索
 /**
  * @Leetcode 576  出界的路径数
+ */
+
+// todo 数据库
+/**
+ * @Leetcode 175 组个两个表
+ * @Leetcode 176 第二高的薪水
  */
