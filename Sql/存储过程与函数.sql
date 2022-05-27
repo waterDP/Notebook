@@ -100,4 +100,20 @@ call show_mgr_name(@empname)
 
 select @empname;
 
-# 存储函数
+# 存储函数 
+# 例 创建存储函数，名称为email_by_name()，参数定义为空 该函数查询为Abell的email,并返回，数据类型为字符串类型的
+delimiter //
+
+create function email_by_name()
+returns varchar(25)
+        deterministic
+        contains sql
+        reads sql data
+begin
+  return (select email from emps where last_name = 'Abel')
+end //
+
+delimiter $
+
+# 调用
+select email_by_name();
