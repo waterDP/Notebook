@@ -294,6 +294,7 @@
  * @Leetcode 674   最长连续递增子序列
  * @Leetcode 733   图像渲染 （同200）
  * @Leetcode 766   托普利茨矩阵
+ * @Leetcode 769   最多能完成多少块
  * @Leetcode 905   按奇偶排序数组
  * @Leetcode 915   分割数组
  * @Leetcode 931   下降路径最小和
@@ -334,6 +335,7 @@
  * @Leetcode 217   存在重复元素
  * @Leetcode 234   回文链表
  * @Leetcode 554   砖墙
+ * @Leetcode 771   宝石与石头
  * @Leetcode 1408  点菜展示表
  */
 
