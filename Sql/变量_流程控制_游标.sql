@@ -89,8 +89,6 @@ end;
 delimiter ;
 
 
-
-
 delimiter //
 create procedure test_if()
 begin
@@ -102,4 +100,107 @@ begin
     select 'email is not null';
   end if;
 end;
+delimiter ;  #elseif
+
+# 分支结构 case
+delimiter //
+create procecdure test_case()
+begin
+  declare var int default  2;
+  case var
+    when 1 then select 'var = 1';
+    when 2 then select 'var = 2';
+    when 3 then select 'var = 3';
+    else select 'other value';
+  end case;
+end//
+delimiter ;
+
+# 声明存储过程"update_salary_by_eid4"，定义IN参数emp_id，输入员工编号
+# 判断该员工工资如果低于9000元，就更新薪资为9000元，薪资大于9000元低于10000的
+# 但是资金比例为null的，就更新资金比例为0.01；其他的涨薪100元
+delimiter //
+create procedure update_salary_by_eid4(in emp_id int)
+begin
+  #声明局部变量
+  declare emp_sal double; # 记录员工的工资
+  declare bonus double;   # 记录员工的资金率
+  
+  #局部变量的赋值
+  select salary into emp_sal from employees where employee_id = emp_id;
+  select commision_pct into bonus from employees where employee_id = emp_id;
+
+  case 
+    when emp_sal < 9000 then employees set salary =  9000 where employee_id = emp_id;
+    when emp_sal < 10000 and bonus is null then update set commision_pct = 0.01 where employee_id = emp_id; 
+    else update employees set salary = salary + 100 where employee_id = emp_id;
+  end case;
+end//
+delimiter ;
+
+# 调用
+call update_salary_by_eid4();
+
+
+# 循环结构 loop
+delimiter //
+create procedure test_loop()
+begin
+  # 声明局部变量
+  declare num int default 1;
+  loop_label:loop
+    set num = num + 1
+    if num > 10 then leave loop_label;
+    end if;
+  end loop loop_label;
+  # 查看num
+  select num;
+end //
+delimiter ;
+
+# 声明存储过程"update_salary_loop()", 声明out参数num，输出循环次数，存储过程实现给大家涨薪，
+# 薪资涨为原来的1.1倍。直至公司的平均薪资达到12000结束。并统计循环次数
+delimiter //
+create procedure update_salary_loop(out num int)
+begin
+  #声明局部变量
+  declare avg_sal double;
+  declare loop_count int default 0;
+  loop_label:loop
+    select avg(salary) into avg_sal from employees;
+    if avg_sal > 12000
+      then leave loop_label;
+    end if;
+
+    update employees set salary = salary * 1.1;
+
+    set loop_count = loop_count + 1;
+  end loop loop_label
+
+  set num = loop_count;
+
+end //
+delimiter ;
+
+
+# 循环结构之 while
+# 声明存储过程"update_salary_while()",声明out参数为num,输出循环次数
+# 存储过程实现循环给大家降薪，薪资降为原来的90%。直到全公司的平均薪资，
+# 达到5000结束，并统计循环次数
+delimiter //
+
+create procedure update_salary_while(out num int)
+begin
+  declare ava_sal double
+  declare while_count int default 0;
+
+  select avg(salary) into avg_sal from employees;
+  while avg_sal > 5000 
+    do update employees set salary = salary * 0.9;
+    set while_count = while_count +  1;
+    select avg(salary) into ava_sal from employees;
+  end while;
+  set num = while_count;
+end //
+
 delimiter ;
