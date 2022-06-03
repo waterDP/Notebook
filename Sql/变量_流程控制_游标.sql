@@ -116,9 +116,7 @@ begin
 end//
 delimiter ;
 
-# 声明存储过程"update_salary_by_eid4"，定义IN参数emp_id，输入员工编号
-# 判断该员工工资如果低于9000元，就更新薪资为9000元，薪资大于9000元低于10000的
-# 但是资金比例为null的，就更新资金比例为0.01；其他的涨薪100元
+# 声明存储过程"update_salary_by_eid4"，定义IN参数emp_id，输入员工编号判断该员工工资如果低于9000元，就更新薪资为9000元，薪资大于9000元低于10000的但是资金比例为null的，就更新资金比例为0.01；其他的涨薪100元
 delimiter //
 create procedure update_salary_by_eid4(in emp_id int)
 begin
@@ -158,8 +156,8 @@ begin
 end //
 delimiter ;
 
-# 声明存储过程"update_salary_loop()", 声明out参数num，输出循环次数，存储过程实现给大家涨薪，
-# 薪资涨为原来的1.1倍。直至公司的平均薪资达到12000结束。并统计循环次数
+# 声明存储过程"update_salary_loop()", 声明out参数num，输出循环次数，存储过程实现给大家涨薪，薪资涨为原来的1.1倍。直至公司的平均薪资达到12000结束。并统计循环次数
+
 delimiter //
 create procedure update_salary_loop(out num int)
 begin
@@ -184,9 +182,7 @@ delimiter ;
 
 
 # 循环结构之 while
-# 声明存储过程"update_salary_while()",声明out参数为num,输出循环次数
-# 存储过程实现循环给大家降薪，薪资降为原来的90%。直到全公司的平均薪资，
-# 达到5000结束，并统计循环次数
+# 声明存储过程"update_salary_while()",声明out参数为num,输出循环次数 存储过程实现循环给大家降薪，薪资降为原来的90%。直到全公司的平均薪资，达到5000结束，并统计循环次数
 delimiter //
 
 create procedure update_salary_while(out num int)
@@ -200,7 +196,41 @@ begin
     set while_count = while_count +  1;
     select avg(salary) into ava_sal from employees;
   end while;
-  set num = while_count;
+  set num = whi le_count;
 end //
 
+delimiter ;
+
+# 循环结构repeat
+repeat ... until ...
+
+# 游标
+声明地游标
+declare cursor_name cursor for select select_statement;
+
+# 举例：创建存储过程"get_count_by_limit_total_salary()"，声明in参数limit_total_salary double类型,声明out参数total_count,int类型。函数的功能可以实现累加薪资最高的几个员工的薪资值，直到薪资总和达到limit_total_salary参数的值，返回累加的人数给total_count
+
+delimiter //
+create procedure get_count_by_limit_total_salary(in limit_total_salary double, out total_count int)
+begin
+  #声明局部变量
+  declare sum_sal double default 0.0;
+  declare emp_sal double;
+  declare emp_count int default 0;
+  #声明游标
+  declare emp_cursor cursor for select salary from employees order by salary desc;
+  #打开游标
+  open emp_cursor;
+  
+  repeat
+    #使用游标
+    fetch emp_cursor into emp_sal;
+    set sum_sal = sum_sal + emp_sal;
+    set emp_count = emp_count + 1;
+    until sum_sal >= limit_total_salary
+  end repeat;
+  set total_count = emp_count;
+  # 关闭游标
+  close emp_cursor;
+end //
 delimiter ;
