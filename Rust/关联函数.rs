@@ -1,3 +1,11 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-06-02 14:02:11
+ * @LastEditors: water.li
+ * @LastEditTime: 2022-06-04 21:39:53
+ * @FilePath: \note\Rust\关联函数.rs
+ */
+
 #[derive(Debug)]
 struct Rectangle {
   width: u32,

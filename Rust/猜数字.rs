@@ -1,6 +1,13 @@
-
+/*
+ * @Author: water.li
+ * @Date: 2022-06-02 10:31:24
+ * @LastEditors: water.li
+ * @LastEditTime: 2022-06-04 21:39:36
+ * @FilePath: \note\Rust\猜数字.rs
+ */
 use std::io;
 use std::cmp::Ordering;
+
 use rand::Rng;
 
 fn main() {

@@ -1,3 +1,10 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-06-02 15:18:19
+ * @LastEditors: water.li
+ * @LastEditTime: 2022-06-04 21:40:08
+ * @FilePath: \note\Rust\Collection.rs
+ */
 fn main() {
   let v = vec![1,2,3];
   
