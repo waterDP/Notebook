@@ -314,6 +314,7 @@
  * @Leetcode 220   存在重复元素 三 [桶分组]
  * @Leetcode 567   字符串的排列
  * @Leetcode 718   最长的重复子数组
+ * @Leetcode 978   最长湍流子数组
  */
 
 // todo 拓扑排序

@@ -2,13 +2,14 @@
  * @Author: water.li
  * @Date: 2022-06-04 21:48:03
  * @LastEditors: water.li
- * @LastEditTime: 2022-06-04 22:28:42
+ * @LastEditTime: 2022-06-05 21:50:59
  * @FilePath: \note\Golang\类型系统.go
  */
 package main
 
 import (
 	"fmt"
+	"time"
 )
 
 type helloworld struct {
@@ -61,4 +62,31 @@ func main() {
 	// 8. 接口实现
 	var sh showhello = hw
 	sh.print()
+
+	// 9. 闭包实现
+	ClosurePrint()
+
+	// 10. channel实现
+	var ch chan string = make(chan string, 8)
+	go chanPrint(ch)
+	ch <- "hello"
+	ch <- " "
+	ch <- "world"
+	ch <- "!"
+	time.Sleep(time.Second * 5) // 等特5秒钟
+}
+
+// 闭包实现
+func ClosurePrint() {
+	var str string = "hello word"
+	f := func() {
+		fmt.Println(str)
+	}
+	f()
+}
+
+func chanPrint(ch chan string) {
+	for v := range ch {
+		fmt.Print(v)
+	}
 }
