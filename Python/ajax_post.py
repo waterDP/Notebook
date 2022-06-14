@@ -2,8 +2,8 @@
 Author: water.li
 Date: 2022-06-11 16:17:56
 LastEditors: water.li
-LastEditTime: 2022-06-11 16:40:12
-FilePath: \note\ajax_post.py
+LastEditTime: 2022-06-11 21:47:41
+FilePath: \note\Python\ajax_post.py
 '''
 
 # http://www.kfc.com.cn/kfccda/ashx/GetStoreList.ashx?op=cname
@@ -28,7 +28,7 @@ def create_request(page):
   data = parse.urlencode(data).encode('utf-8')
   
   headers = {
-     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36"
   }
   req = request.Request(url=base_url, headers=headers, data=data)
 
