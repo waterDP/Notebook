@@ -2,7 +2,7 @@
 Author: water.li
 Date: 2022-06-16 21:39:14
 LastEditors: water.li
-LastEditTime: 2022-06-16 22:44:21
+LastEditTime: 2022-06-16 23:30:30
 FilePath: \note\Python\xpath.py
 '''
 from lxml import etree
@@ -32,4 +32,3 @@ li = tree.xpath('//ui/li[@id="l1"]/@class')
     // div[@id="head" and @class="S_down"]
     // title | // price
 '''
-
