@@ -1,4 +1,10 @@
 /*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:02
+ * @Description: 
+ * @FilePath: \note\LeetCode\1705.吃苹果的最大数目.js
+ */
+/*
  * @lc app=leetcode.cn id=1705 lang=javascript
  *
  * [1705] 吃苹果的最大数目
@@ -44,7 +50,7 @@ var eatenApples = function(apples, days) {
 /**
  * 优先队列
  */
- class PriorityQueue {
+class PriorityQueue {
   constructor(comparison) {
     this.data = []
     this.comparison = comparison
