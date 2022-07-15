@@ -1,4 +1,10 @@
 /*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:02
+ * @Description: 
+ * @FilePath: \note\LeetCode\9.回文数.js
+ */
+/*
  * @lc app=leetcode.cn id=9 lang=javascript
  *
  * [9] 回文数

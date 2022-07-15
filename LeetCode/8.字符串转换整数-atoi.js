@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-03-24 23:01:07
  * @Description: 
- * @FilePath: \notebook\LeetCode\8.字符串转换整数-atoi.js
+ * @FilePath: \note\LeetCode\8.字符串转换整数-atoi.js
  */
 /*
  * @lc app=leetcode.cn id=8 lang=javascript

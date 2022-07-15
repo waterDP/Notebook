@@ -1,4 +1,10 @@
 /*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:02
+ * @Description: 
+ * @FilePath: \note\LeetCode\7.整数反转.js
+ */
+/*
  * @lc app=leetcode.cn id=7 lang=javascript
  *
  * [7] 整数反转
@@ -17,4 +23,4 @@ var reverse = function (x) {
   }
   return (result | 0) === result ? result : 0
 };
-// @lc code=end
+// @lc code=end 
