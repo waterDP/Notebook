@@ -25,44 +25,44 @@ todo 防抖
 			//2.返回闭包函数
 */
 
-		// 一个回调函数
-		function callback(content) {
-			console.log(content)
-		}
+// 一个回调函数
+function callback(content) {
+	console.log(content)
+}
 
-		function debounce(cb, delay = 500) {
-			let timer = null // 定时器
-			return (...args) => {
-				clearTimeout(timer)
-				timer = setTimeout(cb.bind(this, ...args), delay)
+function debounce(cb, delay = 500) {
+	let timer = null // 定时器
+	return (...args) => {
+		clearTimeout(timer)
+		timer = setTimeout(cb.bind(this, ...args), delay)
+	}
+}
+
+
+
+// 接着用变量保存保存 debounce 返回的带有延时功能的函数
+let handler = debounce(callback, 500)
+
+// 添加事件监听
+let input = document.getElementById('debounce');
+input.addEventListener('keyup', e => handler.apply(this, e.target.value));
+
+//<立即执行版>
+function debounce(cb, delay = 500, immediate = true) {
+	let timer  // 定时器
+	return (...args) => {
+		clearTimeout(timer)  // 不管是否立即执行，都要先删除定时器
+		if (immediate) {  // 立即执行版本
+			if (!timer) {
+				cb.apply(this, args)
 			}
+			timer = setTimeout(() => timer = null, delay)
+		} else {  // 非立即执行
+			timer = setTimeout(cb.bind(this, ...args), delay)
 		}
+	}
+}
 
-		
-
-		// 接着用变量保存保存 debounce 返回的带有延时功能的函数
-		let handler = debounce(callback, 500)
-
-		// 添加事件监听
-		let input = document.getElementById('debounce');
-		input.addEventListener('keyup', e => handler.apply(this, e.target.value));
-
-	//<立即执行版>
-	function debounce(cb, delay = 500, immediate = true) {
-		let timer  // 定时器
-		return (...args) => {
-			clearTimeout(timer)  // 不管是否立即执行，都要先删除定时器
-			if (immediate) {  // 立即执行版本
-				if (!timer) {
-					cb.apply(this, args)
-				}
-				timer = setTimeout(() => timer = null, delay)
-			} else{  // 非立即执行
-				timer = setTimeout(cb.bind(this, ...args), delay)
-			}
-		}
-	}	
-			
 // todo 节流
 // 	> 条件
 // 		1.客户连续频繁地触发事件； 
@@ -79,55 +79,55 @@ todo 防抖
 // 			2.定时器方式：原理与防抖类似。通过闭包保存上一次的定时器状态。然后事件触发时，如定时器为null（即代表时间间隔大于规定时间），则设置的定时器。到时间后执行回调函数，并将定时器设置为null。
 // 			. 特点： 当第一次触发事件时，不会立即执行函数，到了规定时间后才会执行。之后连续频繁的触发事件，也是到了规定时间才会执行一次(因为定时器)。当最后一次停止触发后，由于定时器的延时，还会执行一次回调查函数（那也是上一次成功触发执行的回调，而不是你最后一次触发产生的）。一句话总结就是延时回调，你能看到的回调都是上次成功触发的，而不是你此刻产生的。
 
-	// 时间戳版本		
-	function throttle(fn, delay = 500) {
-		let previous = null // 记录上一次触发的时间戳，这里初始化为0，是为了第一次触发产生回调
-		return (...args) => {
-			let now = Date.now()
-			if (previous) {
-				if (now - previous > delay) { // 如果时间差大于规定时间，则触发
-					previous = now
-					fn(...args)
-				}
-			} else {
+// 时间戳版本		
+function throttle(fn, delay = 500) {
+	let previous = null // 记录上一次触发的时间戳，这里初始化为0，是为了第一次触发产生回调
+	return (...args) => {
+		let now = Date.now()
+		if (previous) {
+			if (now - previous > delay) { // 如果时间差大于规定时间，则触发
 				previous = now
 				fn(...args)
 			}
+		} else {
+			previous = now
+			fn(...args)
 		}
 	}
+}
 
-	// 定时器版本
-	function throttle(fn, delay = 500) {
-		let timer
-		return (...args) => {
-			if (!timer) {
-				fn(...args)
-				timer = setTimeout(() => {
-					clearTimeout(timer)
-					timer = null
-				}, delay)
-			}
+// 定时器版本
+function throttle(fn, delay = 500) {
+	let timer
+	return (...args) => {
+		if (!timer) {
+			fn(...args)
+			timer = setTimeout(() => {
+				clearTimeout(timer)
+				timer = null
+			}, delay)
 		}
 	}
+}
 
-	// 时间戳+定时器版：实现第一次触发可以立即响应，结束触发后了也能响应
-	// 该版主体思路还是时间戳，定时器的作用仅是执行最后一次回调
-	function  throttle(fn, delay = 500) {
-		let timer = null;
-		let previous = 0;
-		return function (args) {
-			let now = Date.now();
-			let remaining = delay - (now - previous); //  距离规定时间还剩多少时间
-			let that = this;
-			let _args = args;
-			clearTimeout(timer);
-			if (remaining <= 0) {
+// 时间戳+定时器版：实现第一次触发可以立即响应，结束触发后了也能响应
+// 该版主体思路还是时间戳，定时器的作用仅是执行最后一次回调
+function throttle(fn, delay = 500) {
+	let timer = null;
+	let previous = 0;
+	return function (args) {
+		let now = Date.now();
+		let remaining = delay - (now - previous); //  距离规定时间还剩多少时间
+		let that = this;
+		let _args = args;
+		clearTimeout(timer);
+		if (remaining <= 0) {
+			fn.apply(that, _args);
+			previous = Date.now();
+		} else {
+			timer = setTimeout(function () {
 				fn.apply(that, _args);
-				previous = Date.now();
-			} else {
-				timer = setTimeout(function() {
-					fn.apply(that, _args);
-				}, remaining); // 因为上面添加一个clearTime，实际这个定时器只有最后一次才会执行。
-			}
+			}, remaining); // 因为上面添加一个clearTime，实际这个定时器只有最后一次才会执行。
 		}
 	}
+}
