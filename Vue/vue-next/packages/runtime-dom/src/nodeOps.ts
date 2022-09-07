@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-09 21:21:30
  * @Description: 
- * @FilePath: \notebook\Vue\vue-next\packages\runtime-dom\src\nodeOps.ts
+ * @FilePath: \note\Vue\vue-next\packages\runtime-dom\src\nodeOps.ts
  */
 
 export const nodeOps = {
@@ -21,3 +21,4 @@ export const nodeOps = {
   nextSibling: node => node.nextSibling,
   querySelector: selector => selector.querySelector(selector)
 }
+// runtime-dom提供节点操作的api -> 传递给runtime-core

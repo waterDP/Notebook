@@ -2,15 +2,15 @@
  * @Author: water.li
  * @Date: 2022-04-08 21:36:34
  * @Description: 
- * @FilePath: \notebook\Vue\vue-next\packages\reactivity\src\effect.ts
+ * @FilePath: \note\Vue\vue-next\packages\reactivity\src\effect.ts
  */
 
 let effectStack = [] // 栈结构
-let activeEffect
+let activeEffect // 当前激活的effect
 
 function cleanupEffect(effect: ReactiveEffect) {
   const {deps} = effect
-  for (let dep of deps) {
+  for (let dep of deps) { // dep是Set
     dep.delete(effect) // 让属性对应的effect移除掉，这样属性更新的时候 就不会触发这个effect重新执行了
   }
 }
@@ -25,7 +25,7 @@ export class ReactiveEffect {
     if (!this.active) { // 稍后如果非激活状态调用run方法 默认会执行fn函数
       return this.fn()
     } 
-    if (!effectStack.includes(this)) {
+    if (!effectStack.includes(this)) { // 屏蔽同一个effect被多次执行
       try {
         effectStack.push(activeEffect = this)
         return this.fn() // 执行函数 effect new Proxy会执行get方法 get中会调用track收集依赖
@@ -62,8 +62,8 @@ export function track(target, key) {
 }
 
 export function trackEffects(dep: Set<ReactiveEffect>) {
-  if (!dep.has(activeEffect)) {
-    dep.add(activeEffect) 
+  if (!dep.has(activeEffect)) { // activeEffect就是当前的这个effect
+    dep.add(activeEffect) // {对象: map{name: set[effect, effect]}}
     activeEffect.deps.push(dep)  // dep是一个Set集合
   }
 }
@@ -85,7 +85,7 @@ export function trigger(target, key) {
 export function triggerEffects(dep) {
   for (const effect of dep) { // 如果当前effect执行和要执行的effect是同一个，不要执行了 防止循环
     if (effect !== activeEffect) {
-      if (effect.scheduler) {
+      if (effect.scheduler) { // 计算属性中使用
         effect.scheduler()
       } else {
         effect.run()

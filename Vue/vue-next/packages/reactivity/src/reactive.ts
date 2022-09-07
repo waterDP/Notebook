@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-08 21:36:15
  * @Description: 
- * @FilePath: \notebook\Vue\vue-next\packages\reactivity\src\reactive.ts
+ * @FilePath: \note\Vue\vue-next\packages\reactivity\src\reactive.ts
  */
 
 import { isObject } from "@vue/shared"
@@ -28,14 +28,14 @@ const mutableHandlers: ProxyHandler<Record<any, any>> = {
     const res = Reflect.set(target, key, value, recevier)
 
     if (oldValue !== value ) {
+      // 如果改变值了，可以在这里触发effect更新
       trigger(target, key) // 找属性对应的effect，让他重新执行
     }
-    // 如果改变值了，可以在这里触发effect更新
     return res
   }
 }
 
-const reactiveMap = new WeakMap()
+const reactiveMap = new WeakMap() // 缓存已代理的对象，防止重复代理
 
 function createReactiveObject(target: object, isReadonly: boolean) {
 

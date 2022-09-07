@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-09 21:31:11
  * @Description: 
- * @FilePath: \notebook\Vue\vue-next\packages\runtime-dom\src\patchProp.ts
+ * @FilePath: \note\Vue\vue-next\packages\runtime-dom\src\patchProp.ts
  */
 
 function patchClass(el: HTMLElement, value) {
@@ -30,19 +30,20 @@ function patchStyle(el: HTMLElement, prev, next) {
   }
 }
 
-function createInvoker(value) {
+function createInvoker(value: Function) {
   const invoker = (e) => {
     invoker.value(e)
   }
-  invoker.value = value
+  invoker.value = value // 存储这个变量
   return invoker
 }
 
-function patchEvent(el: HTMLElement, key, nextValue) {
+function patchEvent(el: HTMLElement, key, nextValue: Function) {
   // 在元素上绑定一个自定义属性，用来记录绑定的事件
-  const invokers = (<any>el)._vei || ((<any>el)._vei = {})
+  // vei vue event invoker
+  const invokers = (<any>el)._vei || ((<any>el)._vei = {}) // 在元素绑定一个自定义的属性，用来记录绑定的事件
 
-  let exisitingInvoker = invokers[key]
+  let exisitingInvoker = invokers[key] // 先看一下有没有绑定过这个事件
   if (exisitingInvoker && nextValue) {
     // 换绑逻辑
     exisitingInvoker.value = nextValue

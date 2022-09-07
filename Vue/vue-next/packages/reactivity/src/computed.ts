@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-08 23:39:15
  * @Description: 
- * @FilePath: \notebook\Vue\vue-next\packages\reactivity\src\computed.ts
+ * @FilePath: \note\Vue\vue-next\packages\reactivity\src\computed.ts
  */
 
 import { isFunction } from "@vue/shared";
@@ -25,7 +25,7 @@ class ComputedRefImpl {
     
   }
   get value() { // 取值时
-    if (isTracking()) {  // 是否是在effect执行的
+    if (isTracking()) {  // 是否是在effect取值的
       trackEffects(this.dep || (this.dep = new Set()))
     }
     if (this._dirty) {

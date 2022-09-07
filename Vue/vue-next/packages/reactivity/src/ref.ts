@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-09 16:46:08
  * @Description: 
- * @FilePath: \notebook\Vue\vue-next\packages\reactivity\src\ref.ts
+ * @FilePath: \note\Vue\vue-next\packages\reactivity\src\ref.ts
  */
 
 import { isTracking, trackEffects, triggerEffects } from "./effect"
@@ -13,6 +13,7 @@ class RefImpl {
   public __v_isRef
   public _value
   constructor(public _rawValue) {
+    // _rawValue如果用户传进来的值是一个对象，需要将对象转换成响应式
     this._value = toReactive(_rawValue)
   }
   get value() { // 取值的时候进行依赖收集
