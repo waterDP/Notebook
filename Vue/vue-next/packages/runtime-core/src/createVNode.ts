@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-09 23:32:29
  * @Description: 
- * @FilePath: \notebook\Vue\vue-next\packages\runtime-core\src\createVnode.ts
+ * @FilePath: \note\Vue\vue-next\packages\runtime-core\src\createVNode.ts
  */
 
 import { isObject, isString } from "@vue/shared"
@@ -27,9 +27,8 @@ export function createVNode(type, props, children = null) {
     component: null, // 如果是组件的虚拟节点，要保存组件的实例
     el: null  // 虚拟节点对应的真实节点
   }
-  if (children) {
-    
-    vnode.shapFlag ||= isString(children) ? ShapeFlags.TEXT_CHILDREN : ShapeFlags.ARRAY_CHILDREN
+  if (children) { 
+    vnode.shapFlag |= isString(children) ? ShapeFlags.TEXT_CHILDREN : ShapeFlags.ARRAY_CHILDREN
   }
   return vnode
 }
