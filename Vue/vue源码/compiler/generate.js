@@ -8,8 +8,7 @@ export function generate(el) {
       "${el.tag}", 
       ${el.attrs.length ? genProps(el.attrs) : 'undefined'},
       ${children ? `,${children}` : ''}
-    )
-  `
+    )`
   return code
 }
 
