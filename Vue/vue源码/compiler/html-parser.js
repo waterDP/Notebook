@@ -7,7 +7,7 @@ const startTagClose = /^\s*(\/?)>/
 
 export function parseHTML(html) {
 
-  let root = null
+  let root = null // root是最后的返回值
   let currentParent
   let stack = []
   const ELEMENT_TYPE = 1
@@ -32,17 +32,8 @@ export function parseHTML(html) {
     currentParent = element
     stack.push(element)  // 将开始标签存入栈中
   }
-
-  function chars(text) {
-    text = text.replace(/\s/g, '')
-    if (text) {
-      currentParent.children.push({
-        text,
-        type: TEXT_TYPE
-      })
-    }
-  }
-
+  
+  
   function end(tagName) {
     let element = stack.pop()
     // 标识这个元素是属性这个。。。的儿子的
@@ -50,6 +41,17 @@ export function parseHTML(html) {
     if (currentParent) {
       element.parent = currentParent
       currentParent.children.push(element)
+    }
+  }
+
+
+  function chars(text) {
+    text = text.replace(/\s/g, '') // 去掉前后空格
+    if (text) {
+      currentParent.children.push({
+        text,
+        type: TEXT_TYPE
+      })
     }
   }
 
@@ -96,7 +98,7 @@ export function parseHTML(html) {
       while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
         // 将属性进行解析
         advance(attr[0].length) // 将属性去掉
-        match.push({ name: attr[1], value: attr[3] || attr[4] || attr[5] })
+        match.attrs.push({ name: attr[1], value: attr[3] || attr[4] || attr[5] })
       }
       if (end) { // 去掉开始标签>
         advance(end[0].length)
