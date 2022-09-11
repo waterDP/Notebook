@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-08 00:10:49
  * @Description: 
- * @FilePath: \notebook\Vue\vue-next\packages\shared\src\index.ts
+ * @FilePath: \note\Vue\vue-next\packages\shared\src\index.ts
  */
 
 export function isString(value) {
@@ -16,3 +16,5 @@ export function isObject(value: unknown): value is Record<any, any> {
 export function isFunction(value: unknown): boolean {
   return typeof value === 'function'
 }
+
+export const hasOwn = (value, key) => Object.prototype.hasOwnProperty(value, key)
