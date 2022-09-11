@@ -1,15 +1,15 @@
-import {initState} from './state'
-import {compilerToFunction} from './compiler'
-import {mountComponent, callHook} from './lifecycle'
-import {mergeOptions} from './util/index'
+import { initState } from './state'
+import { compileToRenderFunction } from './compiler'
+import { mountComponent, callHook } from './lifecycle'
+import { mergeOptions } from './util/index'
 
 export function initMixin(Vue) {
   // 初始化流程  负责Vue的初始化过程
-  Vue.prototype._init = function(options) {
+  Vue.prototype._init = function (options) {
     // 数据的劫持
     const vm = this
     vm.$options = mergeOptions(vm.constructor.options, options)
-    
+
     callHook(vm, 'beforeCreate')
     // ! 初始化状态  依赖收集
     initState(vm)
@@ -21,7 +21,7 @@ export function initMixin(Vue) {
     }
   }
 
-  Vue.prototype.$mount = function(el) {
+  Vue.prototype.$mount = function (el) {
     const vm = this
     const options = vm.options
     el = document.querySelect(el)
@@ -32,7 +32,7 @@ export function initMixin(Vue) {
         template = el.outerHTML
       }
       // todo template compile to render function
-      const render = compilerToFunction(template)
+      const render = compileToRenderFunction(template)
       options.render = render
     }
 
