@@ -13,7 +13,7 @@ export function compileToRenderFunction(template) {
   // 2 需要将ast语法树生成最终的render函数 模板引擎
   let code = generate(root)
 
-  let renderFn = new Function(`width(this) { return ${code}}`)
+  let renderFn = new Function(`with(this) { return ${code}}`)
 
   // vue的render 他返回的是虚拟dom
   return renderFn
