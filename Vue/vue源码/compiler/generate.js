@@ -17,12 +17,12 @@ export function generate(el) {
 function genChildren(el) {
   let children = el.children
   if (children && children.length) {
-    return `${children.map(c => gen(c)).join(',')}`
+    return `${children.map(c => generateChild(c)).join(',')}`
   }
   return false
 }
 
-function gen(node) {
+function generateChild(node) {
   if (node.type === ELEMENT_TYPE) { // 元素标签
     return generate(node)
   } else {
