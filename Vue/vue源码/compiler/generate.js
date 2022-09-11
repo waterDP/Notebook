@@ -4,8 +4,7 @@ const ELEMENT_TYPE = 1
 
 export function generate(el) {
   const children = genChildren(el)
-  let code = `
-    _c(
+  let code = `_c(
       "${el.tag}", 
       ${el.attrs.length ? genProps(el.attrs) : 'undefined'},
       ${children ? `,${children}` : ''}
