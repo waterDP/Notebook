@@ -4,7 +4,7 @@ import getSelector from '../utils/getSelector'
 import tracker from '../utils/tracker'
 export function injectJsError() {
 	//监听全局未捕获的错误
-	window.addEventListener('error', function (event) {//错误事件对象
+	window.addEventListener('error', event => {//错误事件对象
 		let lastEvent = getLastEvent() //最后一个交互事件
 		//这是一个脚本加载错误
 		if (event.target && (event.target.src || event.target.href)) {
