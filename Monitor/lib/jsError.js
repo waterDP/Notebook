@@ -13,8 +13,7 @@ export function injectJsError() {
 				type: 'error',//小类型 这是一个错误
 				errorType: 'resourceError',//js或css资源加载错误
 				filename: event.target.src || event.target.href,//哪个文件报错了
-				tagName: event.target.tagName,//SCRIPT
-				//body div#container div.content input
+				tagName: event.target.tagName, // SCRIPT
 				selector: getSelector(event.target) //代表最后一个操作的元素
 			});
 		} else {

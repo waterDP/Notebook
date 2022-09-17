@@ -1,6 +1,12 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:02
+ * @Description: 
+ * @FilePath: \note\Monitor\utils\getSelector.js
+ */
 
 function getSelectors(path) {
-	return path.reverse().filter(element => {
+	return path.reverse().filter(element => { // 过滤document与window
 		return element !== document && element !== window
 	}).map(element => {
 		let selector = ""
