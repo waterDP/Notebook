@@ -22,9 +22,11 @@ function getSelectors(path) {
 	}).join(' ')
 }
 export default function (pathsOrTarget) {
-	if (Array.isArray(pathsOrTarget)) {//可能是一个数组
+	if (Array.isArray(pathsOrTarget)) { 
+		// 可能是一个数组
 		return getSelectors(pathsOrTarget);
-	} else {//也有可有是一个对象 
+	} else {
+		// 也有可能是一个对象 
 		let path = []
 		while (pathsOrTarget) {
 			path.push(pathsOrTarget)
