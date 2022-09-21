@@ -81,7 +81,7 @@ var findMinMoves = function(machines) {
   if (total % n !== 0) {
     return -1
   }
-  let avg = total / n | 0
+  let avg = total / n | 0 // 向上取整
   let ans = 0, sum = 0
   for (let num of machines) {
     num -= avg
