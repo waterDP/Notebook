@@ -1,8 +1,8 @@
 '''
 Author: li.haoran li.haoran@99cloud.net
 Date: 2022-05-31 18:59:42
-LastEditors: li.haoran li.haoran@99cloud.net
-LastEditTime: 2022-05-31 19:15:29
+LastEditors: Please set LastEditors
+LastEditTime: 2022-09-24 22:19:42
 '''
 #
 # @lc app=leetcode.cn id=1 lang=python3
@@ -19,5 +19,4 @@ class Solution:
         return [hashtable[target - num], i]
       hashtable[nums[i]] = i
     return []
-
-    # @lc code=end
+# @lc code=end
