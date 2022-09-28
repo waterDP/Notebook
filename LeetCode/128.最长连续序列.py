@@ -1,3 +1,9 @@
+'''
+Author: water.li
+Date: 2022-05-16 20:11:56
+Description: 
+FilePath: \note\LeetCode\128.最长连续序列.py
+'''
 #
 # @lc app=leetcode.cn id=128 lang=python3
 #
@@ -22,4 +28,5 @@ class Solution:
         longest_streak = max(longest_streak, current_streak)
 
     return longest_streak
-    # @lc code=end
+    
+# @lc code=end
