@@ -1,9 +1,15 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:06
+ * @Description: 
+ * @FilePath: \note\Vue\vue源码\observer\dep.js
+ */
 let id = 0
 
 export default class Dep {
   constructor() {
     this.id = id++
-    this.subs = []
+    this.subs = [] // 存放当前属性对应的watcher有哪些
   }
   addSub(watcher) {
     this.subs.push(watcher)
