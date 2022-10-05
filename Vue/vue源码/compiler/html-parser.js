@@ -98,7 +98,7 @@ export function parseHTML(html) {
       while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
         // 将属性进行解析
         advance(attr[0].length) // 将属性去掉
-        match.attrs.push({ name: attr[1], value: attr[3] || attr[4] || attr[5] })
+        match.attrs.push({ name: attr[1], value: attr[3] || attr[4] || attr[5]|| true })
       }
       if (end) { // 去掉开始标签>
         advance(end[0].length)
