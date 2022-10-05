@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:06
+ * @Description: 
+ * @FilePath: \note\Vue\vue源码\observer\watcher.js
+ */
 import {pushTarget, popTarget} from './dep'
 import {queueWatcher} from './scheduler'
 
@@ -13,6 +19,7 @@ export default class Watcher {
     this.id = id++
     this.lazy = options.lazy
     this.dirty = this.lazy
+    this.depsId = new Set()
 
     if (isRenderWatcher) {
       //todo 把当前的watcher赋值给当前组件的_watcher实例
@@ -37,7 +44,7 @@ export default class Watcher {
   }
   addDep(dep) { // watcher不能放重复的dep dep里不能放重复的watcher
     let id = dep.id
-    if (!this.depsIs.has(id)) {
+    if (!this.depsId.has(id)) {
       this.depsId.add(id)
       this.deps = this.deps.push(dep)
       dep.addSub(this)
