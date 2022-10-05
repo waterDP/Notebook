@@ -10,9 +10,10 @@ let queue = []
 let has = {}
 
 function flushSchedulerQueue() {
-  queue.forEach(watcher => watcher.run())
+  const flushQueue = queue.slice(0)
   queue = []
   has = {}
+  flushQueue.forEach(watcher => watcher.run)
 }
 
 export function queueWatcher(watcher) {
