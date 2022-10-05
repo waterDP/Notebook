@@ -29,6 +29,9 @@ export function parseHTML(html) {
     if (!root) {
       root = element
     }
+    if (currentParent) {
+      element.parent = currentParent 
+    }
     currentParent = element
     stack.push(element)  // 将开始标签存入栈中
   }
@@ -50,6 +53,7 @@ export function parseHTML(html) {
     if (text) {
       currentParent.children.push({
         text,
+        parent: currentParent,
         type: TEXT_TYPE
       })
     }
