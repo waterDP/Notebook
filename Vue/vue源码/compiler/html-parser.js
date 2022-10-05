@@ -39,8 +39,8 @@ export function parseHTML(html) {
   
   
   function end(tagName) {
+    // 弹栈 并让当前节点指向栈顶
     stack.pop()
-    // 标识这个元素是属性这个。。。的儿子的
     currentParent = stack[stack.length - 1]
   }
 
