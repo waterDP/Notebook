@@ -8,7 +8,7 @@ import {createComponent} from './create-component'
 import {vnode} from './vnode'
 import {isReservedTag} from '../util/index'
 
-export function createElement(vm, tag,  ={}, ...children) {
+export function createElement(vm, tag, data={}, ...children) {
   let key = data.key
   delete data.key
   if (isReservedTag(tag)) {
