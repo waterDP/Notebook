@@ -30,7 +30,8 @@ export function parseHTML(html) {
       root = element
     }
     if (currentParent) {
-      element.parent = currentParent 
+      element.parent = currentParent
+      currentParent.children.push(element)
     }
     currentParent = element
     stack.push(element)  // 将开始标签存入栈中
@@ -38,13 +39,9 @@ export function parseHTML(html) {
   
   
   function end(tagName) {
-    let element = stack.pop()
+    stack.pop()
     // 标识这个元素是属性这个。。。的儿子的
-    let currentParent = stack[stack.length - 1]
-    if (currentParent) {
-      element.parent = currentParent
-      currentParent.children.push(element)
-    }
+    currentParent = stack[stack.length - 1]
   }
 
 
