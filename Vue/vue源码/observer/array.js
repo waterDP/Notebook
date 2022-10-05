@@ -33,7 +33,7 @@ methods.forEach(method => {
         break
     }
     if (inserted) ob.observerArray(inserted) // 监听用户当前添加的元素
-    ob.dep.notify()
+    ob.dep.notify() // ! 数组变化了，通知对应的watch实现更新
     return result
   }
 })
