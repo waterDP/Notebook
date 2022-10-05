@@ -1,5 +1,11 @@
-import {isObject, def} from '../util/index'
-import {arrayMethods} from './array'
+/*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:06
+ * @Description: 
+ * @FilePath: \note\Vue\vue源码\observer\index.js
+ */
+import { isObject, def } from '../util/index'
+import { newArrayProto } from "./array"
 import Dep from './dep'
 
 class Observer {
@@ -7,7 +13,7 @@ class Observer {
     this.dep = new Dep() // 这个是单独给数组用的
     def(value, '__ob__', this) // 给数组用的 这个值不能枚举
     if (Array.isArray(value)) {
-      value.__proto__ = arrayMethods
+      value.__proto__ = newArrayProto
       this.observeArray(value)
     } else {
       this.walk(value)
@@ -39,7 +45,7 @@ function defineReactive(data, key, value) {
   Object.defineProperty(data, key, {
     enumerable: true,
     configurable: true,
-    get () {
+    get() {
       // 每个属性都对应着自己的watcher
       if (Dep.target) {
         dep.depend() // 意味着我要将watcher存起来

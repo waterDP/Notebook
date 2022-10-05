@@ -1,6 +1,12 @@
-const oldArrayMethods = Array.prototype
+/*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:06
+ * @Description: 
+ * @FilePath: \note\Vue\vue源码\observer\array.js
+ */
+const oldArrayProto = Array.prototype
 
-export const arrayMethods = Object.create(oldArrayMethods)
+export const newArrayProto = Object.create(oldArrayProto)
 
 const methods = [
   'push',
@@ -13,8 +19,8 @@ const methods = [
 ]
 
 methods.forEach(method => {
-  arrayMethods[method] = function (...args) {
-    const result = oldArrayMethods[method].apply(this, args)
+  newArrayProto[method] = function (...args) {
+    const result = oldArrayProto[method].apply(this, args)
     const ob = this.__ob__
     let inserted // 当前用户插入的元素
     switch(method) {
