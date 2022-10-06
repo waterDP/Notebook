@@ -129,3 +129,17 @@ export function isReservedTag(tagName) {
   str.split(',').forEach(tag => obj[tag] = true)
   return obj[tagName]
 }
+
+export function toArray(list, start) {
+  start = start || 0
+  let i = list.length-start
+  const ret = new Array(i)
+  while(i--) {
+    ret[i] = list[i+start]
+  }
+  return ret
+}
+
+export function isFunction(value) {
+  return typeof value === 'function'
+}
