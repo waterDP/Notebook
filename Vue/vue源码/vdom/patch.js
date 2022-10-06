@@ -139,7 +139,7 @@ function updateChildren(parent, oldChildren, newChildren) {
     }
   }
 
-  if (oldStartIndex < oldEndIndex) {
+  if (oldStartIndex < oldEndIndex) { // 新的列表少了元素，应该把老的删除了
     for (let i = oldStartIndex; i <= oldEndIndex; i++) {
       let child = oldChildren[i]
       child && parent.removeChild(child.el)
