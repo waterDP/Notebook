@@ -16,6 +16,13 @@ export function lifecycleMixin(Vue) {
     }
  
   }
+
+  Vue.prototype.$forceUpdate = function () {
+    const vm = this
+    if (vm._watcher) {
+      vm._watcher.update()
+    }
+  }
 }
 
 export function mountComponent(vm, el) {
