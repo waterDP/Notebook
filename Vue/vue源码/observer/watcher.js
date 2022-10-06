@@ -14,7 +14,7 @@ export default class Watcher {
     this.vm = vm
     this.callback = callback
     this.options = options
-    this.user = options.user
+    this.user = options.user // 标识是否是用户自己的watcher
     this.sync = options.sync
     this.id = id++
     this.lazy = options.lazy
