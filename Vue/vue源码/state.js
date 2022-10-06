@@ -77,7 +77,8 @@ function createComputedGetter(key) {
     if (watcher.dirty) { // 如果dirty为true, 就调用用户的方法
       watcher.evaluate()
     }
-    if (Dep.target) {
+    if (Dep.target) { 
+      // 计算属性出栈后 还要渲染watcher 我应该让计算属性watcher里面的属性也要收集上一层的watcher
       watcher.depend()
     }
     return watcher.value

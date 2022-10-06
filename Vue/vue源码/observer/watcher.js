@@ -20,9 +20,12 @@ export default class Watcher {
     this.lazy = options.lazy
     this.dirty = this.lazy
     this.depsId = new Set()
+    this.deps = []
+    this.value = this.lazy || this.get()
 
     if (isRenderWatcher) {
-      //todo 把当前的watcher赋值给当前组件的_watcher实例
+      // 把当前的watcher赋值给当前组件的_watcher实例
+      // vm._watcher也就是当前组件的渲染watcher
       vm._watcher = this
     }
 
@@ -38,9 +41,6 @@ export default class Watcher {
         return val
       }
     }
-    this.depsId = new Set()
-    this.deps = []
-    this.value = this.lazy || this.get()
   }
   addDep(dep) { // watcher不能放重复的dep dep里不能放重复的watcher
     let id = dep.id
@@ -61,6 +61,7 @@ export default class Watcher {
     if (this.sync) {
       this.run()
     } else if (this.lazy) {
+      // 如果是计算属性 依赖的值变化了 就标识计算属性是脏值了
       this.dirty = true
     } else {
       queueWatcher(this)
