@@ -67,13 +67,13 @@ function isSameVnode(oldVnode, newVnode) {
 function updateChildren(parent, oldChildren, newChildren) {
   // vue采用的双指针的方式
   let oldStartIndex = 0
-  let oldStartVnode = oldChildren[0]
-  let oldEndIndex = oldChildren.length - 1
-  let oldEndVnode = oldChildren[oldEndIndex]
-
   let newStartIndex = 0
-  let newStartVnode = newChildren[0]
+  let oldEndIndex = oldChildren.length - 1
   let newEndIndex = newChildren.length - 1
+
+  let oldStartVnode = oldChildren[0]
+  let newStartVnode = newChildren[0]
+  let oldEndVnode = oldChildren[oldEndIndex]
   let newEndVnode = newChildren[newEndIndex]
 
   const makeIndexByKey = (children) => {
@@ -127,7 +127,7 @@ function updateChildren(parent, oldChildren, newChildren) {
     }
   }
 
-  if (newStartIndex <= newStartIndex) {
+  if (newStartIndex <= newEndIndex) {
     for (let i = newStartIndex; i <= newEndIndex; i++) {
       // 将新增的元素直接加入(可能是向后插入，也有可能是向前插入的) insertBefore
       let flag = newChildren[newEndIndex+1]
