@@ -75,7 +75,8 @@ function updateChildren(parent, oldChildren, newChildren) {
   let newStartVnode = newChildren[0]
   let oldEndVnode = oldChildren[oldEndIndex]
   let newEndVnode = newChildren[newEndIndex]
-
+  
+  // ^ 给老的children序列做一个映射表，todo 5 乱序比较中会用到
   const makeIndexByKey = (children) => {
     const map = {}
     children.forEach((item, index) => {
@@ -121,7 +122,7 @@ function updateChildren(parent, oldChildren, newChildren) {
         parent.insertBefore(createElm(newStartVnode), oldStartVnode.el)
       } else { // 如果在映射表中查找到了，则直接将元素移走，并且将当前位置置为空
         let moveVnode = oldChildren[moveIndex]
-        oldChildren[moveIndex] = undefined
+        oldChildren[moveIndex] = undefined // & 标识这个节点已经移动走了
         parent.insertBefore(moveVnode.el, oldStartVnode.el)
         patch(moveVnode, moveVnode)
       }
