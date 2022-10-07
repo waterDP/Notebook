@@ -4,11 +4,13 @@
  * @Description: 
  * @FilePath: \note\Vue\vue源码\index.js
  */
-import {initMixin} from './init'
-import {renderMixin} from './render'
-import {lifecycleMixin} from './lifecycle'
-import {initGlobalAPI} from './global-api'
-import {stateMixin} from './state'
+import { initGlobalAPI } from './global-api'
+
+import { initMixin } from './instance/init'
+import { renderMixin } from './instance/render'
+import { lifecycleMixin } from './instance/lifecycle'
+import { stateMixin } from './instance/state'
+import { eventMixin } from './instance/events'
 
 // 初始化全局api
 initGlobalAPI(Vue)
@@ -22,5 +24,6 @@ initMixin(Vue)
 renderMixin(Vue)
 lifecycleMixin(Vue)
 stateMixin(Vue)
+eventMixin(Vue)
 
 export default Vue

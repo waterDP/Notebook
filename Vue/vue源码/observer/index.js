@@ -8,6 +8,12 @@ import { isObject, def } from '../util/index'
 import { newArrayProto } from "./array"
 import Dep from './dep'
 
+export let shouldObserve = true
+
+export function toggleObserving (value) {
+  shouldObserve = value
+}
+
 class Observer {
   constructor(value) {
     this.dep = new Dep() // 这个是单独给数组用的
@@ -85,6 +91,9 @@ export function observe(data) {
   }
   if (data.__ob__ instanceof Observer) {
     return 
+  }
+  if (!shouldObserve) {
+    return
   }
   return new Observer(data)
 }

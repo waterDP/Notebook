@@ -1,7 +1,15 @@
-import { initState } from './state'
-import { compileToRenderFunction } from './compiler'
+/*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:06
+ * @Description: 
+ * @FilePath: \note\Vue\vue源码\instance\init.js
+ */
+import { compileToRenderFunction } from '../compiler'
 import { mountComponent, callHook } from './lifecycle'
-import { mergeOptions } from './util/index'
+import { mergeOptions } from '../util/index'
+import { initEvents } from './events'
+import { initState } from './state'
+import { initProvide, initInjections } from './inject'
 
 export function initMixin(Vue) {
   // 初始化流程  负责Vue的初始化过程
@@ -10,9 +18,13 @@ export function initMixin(Vue) {
     const vm = this
     vm.$options = mergeOptions(vm.constructor.options, options)
 
+    initEvents(vm)
     callHook(vm, 'beforeCreate')
     // ! 初始化状态  依赖收集
+    initInjections(vm) // resolve injections before data/props
     initState(vm)
+    initProvide(vm) // resolve provide after data/props
+
     callHook(vm, 'created')
 
     // 如果用户传入了el属性，需要将页面渲染出来
