@@ -33,7 +33,7 @@ function patchVnode(oldVnode, vnode) {
   let el = vnode.el = oldVnode.el // 复用才节点的元素
   if (!oldVnode.tag) {
     if (oldVnode.text !== vnode.text) {
-      oldVnode.el.textContent = vnode.text
+      el.textContent = vnode.text
     }
   }
 
