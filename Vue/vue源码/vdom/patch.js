@@ -17,13 +17,20 @@ export function patch(oldVnode, vnode) {
     return el
   }
 
+  return patchVnode(oldVnode, vnode)
+}
+
+function patchVnode(oldVnode, vnode) {
   // 虚拟dom 比对两个虚拟节点
   // 1.标签不一致 直接替换结果
-  if (oldVnode.tag !== vnode.tag) {
-    oldVnode.el.parentNode.replaceChild(createElm(vnode), oldVnode.el)
+  if (!isSameVnode(oldVnode, vnode)) {
+    let el = createElm(vnode)
+    oldVnode.el.parentNode.replaceChild(el, oldVnode.el)
+    return el
   }
 
   // 2.如果文本不一样呢？ 文本都没有tag
+  let el = vnode.el = oldVnode.el // 复用才节点的元素
   if (!oldVnode.tag) {
     if (oldVnode.text !== vnode.text) {
       oldVnode.el.textContent = vnode.text
@@ -31,7 +38,6 @@ export function patch(oldVnode, vnode) {
   }
 
   // 3.标签一致且不是文本了（比对属性是否一致）
-  let el = vnode.el = oldVnode.el
   updateProperties(vnode, oldVnode.data)
 
   // 比对儿子
@@ -52,6 +58,8 @@ export function patch(oldVnode, vnode) {
     // 老的有孩子，新的没孩子
     el.innerHTML = ''
   }
+
+  return el
 }
 
 function isSameVnode(oldVnode, newVnode) {
@@ -94,21 +102,21 @@ function updateChildren(parent, oldChildren, newChildren) {
       oldEndVnode = oldEndVnode[--oldEndIndex]
     } else if (isSameVnode(oldStartNode, newStartNode)) { // todo 1.优化后向插入的情况 abc -> abcd
       // 如果是同一个节点，就需要比对这个元素的属性
-      patch(oldStartVnode, newStartVnode) // 比对开头节点
+      patchVnode(oldStartVnode, newStartVnode) // 比对开头节点
       oldStartVnode = oldChildren[++oldStartIndex]
       newStartVnode = newChildren[++newStartIndex]
     } else if (isSameVnode(oldEndVnode, newEndVnode)) { // todo 2.优化向前插入的情况 abc -> eabc
-      patch(oldEndVnode, newEndVnode)
+      patchVnode(oldEndVnode, newEndVnode)
       oldEndVnode = oldChildren[--oldEndIndex]
       newEndVnode = newChildren[--newEndIndex]
     } else if (isSameVnode(oldStartVnode, newEndVnode)) { // todo 3.头移尾 abcd -> dabc 这里也涉及到倒序变正序
-      patch(oldStartVnode, newEndVnode)
+      patchVnode(oldStartVnode, newEndVnode)
       oldStartVnode = oldChildren[++oldStartIndex]
       newEndVnode = newChildren[--newEndIndex]
       // ^ 将老的头移动到尾部去
       parent.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling)
     } else if (isSameVnode(oldEndVnode, newStartVnode)) { // todo 4.尾移头
-      patch(oldEndVnode, newStartVnode)
+      patchVnode(oldEndVnode, newStartVnode)
       oldEndVnode = oldChildren[--oldEndIndex]
       newStartVnode = newChildren[++newStartIndex]
       // ^ 将老的尾巴移动到头部去
@@ -124,7 +132,7 @@ function updateChildren(parent, oldChildren, newChildren) {
         let moveVnode = oldChildren[moveIndex]
         oldChildren[moveIndex] = undefined // & 标识这个节点已经移动走了
         parent.insertBefore(moveVnode.el, oldStartVnode.el)
-        patch(moveVnode, moveVnode)
+        patchVnode(moveVnode, moveVnode)
       }
       newStartVnode = newChildren[++newStartIndex]
     }
