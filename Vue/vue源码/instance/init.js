@@ -4,7 +4,7 @@
  * @Description: 
  * @FilePath: \note\Vue\vue源码\instance\init.js
  */
-import { compileToRenderFunction } from '../compiler'
+import { compileToFunctions } from '../compiler'
 import { mountComponent, callHook } from './lifecycle'
 import { mergeOptions } from '../util/index'
 import { initEvents } from './events'
@@ -44,7 +44,7 @@ export function initMixin(Vue) {
         template = el.outerHTML
       }
       // todo template compile to render function
-      const render = compileToRenderFunction(template)
+      const render = compileToFunctions(template)
       options.render = render
     }
 
