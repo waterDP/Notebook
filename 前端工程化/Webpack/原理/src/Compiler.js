@@ -22,8 +22,8 @@ class Compiler {
       run: new SyncHook(),
       done: new SyncHook(),
       emit: new SyncHook()
-    },
-      this.context = options.context || process.cwd()
+    }
+    this.context = options.context || process.cwd()
   }
   run() {
     this.hooks.run.call()
@@ -64,10 +64,10 @@ class Compiler {
       const moduleID = './' + path.posix.relative(toUnixPath(this.context), modulePath)
 
       // 定义一个容器保存module
-      let module = {id: moduleID, name: moduleName, dependecies: []}
-      
-      const ast = parser.parser(targetSourceCode, {sourceType: 'module'})
-      
+      let module = { id: moduleID, name: moduleName, dependecies: [] }
+
+      const ast = parser.parser(targetSourceCode, { sourceType: 'module' })
+
     }
   }
 }
