@@ -86,7 +86,7 @@ function updateChildren(parent, oldChildren, newChildren) {
   let map = makeIndexByKey(oldChildren)
 
   // 在比对过程中 新老虚拟节点有一方循环完毕就结束
-  while(oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+  while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
     if (!oldStartVnode) {
       oldStartVnode = oldChildren[++oldStartIndex]
     } else if (!oldEndVnode) {
@@ -97,19 +97,21 @@ function updateChildren(parent, oldChildren, newChildren) {
       oldStartVnode = oldChildren[++oldStartIndex]
       newStartVnode = newChildren[++newStartIndex]
     } else if (isSameVnode(oldEndVnode, newEndVnode)) { // todo 2.优化向前插入的情况 abc -> eabc
-      patch(oldEndVnode, newEndVnode) 
+      patch(oldEndVnode, newEndVnode)
       oldEndVnode = oldChildren[--oldEndIndex]
       newEndVnode = newChildren[--newEndIndex]
     } else if (isSameVnode(oldStartVnode, newEndVnode)) { // todo 3.头移尾 abcd -> dabc 这里也涉及到倒序变正序
       patch(oldStartVnode, newEndVnode)
-      parent.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling)
       oldStartVnode = oldChildren[++oldStartIndex]
       newEndVnode = newChildren[--newEndIndex]
+      // ^ 将老的头移动到尾部去
+      parent.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling)
     } else if (isSameVnode(oldEndVnode, newStartVnode)) { // todo 4.尾移头
       patch(oldEndVnode, newStartVnode)
-      parent.insertBefore(oldEndVnode.el, oldStartVnode.el)
       oldEndVnode = oldChildren[--oldEndIndex]
       newStartVnode = newChildren[++newStartIndex]
+      // ^ 将老的尾巴移动到头部去
+      parent.insertBefore(oldEndVnode.el, oldStartVnode.el)
     } else { // todo 5.暴力比对 乱序
       // 根据老节点的key做一个映射表 拿新虚拟节点去映射表中查找
       // 如果可以查找到，则进行移动操作 即移动到头指针前面的位置
@@ -130,8 +132,10 @@ function updateChildren(parent, oldChildren, newChildren) {
   if (newStartIndex <= newEndIndex) {
     for (let i = newStartIndex; i <= newEndIndex; i++) {
       // 将新增的元素直接加入(可能是向后插入，也有可能是向前插入的) insertBefore
-      let flag = newChildren[newEndIndex+1]
-      if (!!flag) { // 向后插入
+      // ? 如果newStartVnode的下一个节点有值说明是向前追加的
+      // ? 否则表示是向后追加的
+      let flag = newChildren[newStartIndex + 1]
+      if (!flag) { // 向后插入
         parent.insertBefore(createElm(newChildren[i]), null) // 写null就等价于 appendChild
       } else {
         parent.insertBefore(createElm(newChildren[i]), flag.el)
@@ -195,7 +199,7 @@ function updateProperties(vnode, oldProps = {}) {
 
   let newStyle = newProps.style || {}
   let oldStyle = oldProps.style || {}
-  for(let key in oldStyle) {
+  for (let key in oldStyle) {
     if (!newStyle[key]) {
       el.style[key] = ''
     }
