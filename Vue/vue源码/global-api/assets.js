@@ -5,7 +5,7 @@
  * @FilePath: \note\Vue\vue源码\global-api\assets.js
 */
 
-import { isFunction } from "../util"
+import { isFunction, isPlainObject } from "../util"
 
 const ASSETS_TYPE = ['component', 'directive', 'filter']
 
@@ -20,7 +20,7 @@ export function initAssetRegisters(Vue) {
       if (!definition) {
         return this.options[type+'s'](id)
       }
-      if (type === 'component') {
+      if (type === 'component' && isPlainObject(definition)) {
         definition.name = definition.name || id
         definition = this.options._base.extend(definition)
       }

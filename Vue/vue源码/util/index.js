@@ -143,3 +143,9 @@ export function toArray(list, start) {
 export function isFunction(value) {
   return typeof value === 'function'
 }
+
+const _toString = Object.prototype.toString
+
+export function isPlainObject(obj) {
+  return _toString.call(obj) === '[object Object]'
+}
