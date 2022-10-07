@@ -7,7 +7,7 @@ import Watcher from './observer/watcher'
 export function initState(vm) {
   const opts = vm.$options
   if (opts.props) {
-    initProps(vm)
+    initProps(vm, opts.props)
   }
   if (opts.methods) {
     initMethods(vm, opts.methods)
@@ -23,7 +23,7 @@ export function initState(vm) {
   }
 }
 
-function initProps(vm) {}
+function initProps(vm, props) {}
 
 function initMethods(vm) {
   for (const key in methods) {
