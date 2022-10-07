@@ -9,15 +9,17 @@ import {mergeOptions} from '../util/index'
 export function initExtend (Vue) {
   let cid = 0
   Vue.extend = function(extendOptions) {
+    const Super = this
     const Sub = function VueComponent(options = {}) {
       this._init(options)
     }
+    
     Sub.cid = cid++
-    Sub.prototype = Object.create(Vue.prototype)
+    Sub.prototype = Object.create(Super.prototype)
     Sub.prototype.constructor = Sub
-    Sub.options = mergeOptions(this.options, extendOptions)
-    Sub.mixin = this.mixin
-    Sub.use = this.use
+    Sub.options = mergeOptions(Super.options, extendOptions)
+    Sub.mixin = Super.mixin
+    Sub.use = Super.use
     return Sub
   }
 }
