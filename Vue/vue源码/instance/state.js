@@ -1,4 +1,4 @@
-import {observe} from './observer'
+import {observe, set, del} from './observer'
 import Dep from './observer/dep'
 import {proxy, isObject, noop} from './util/index'
 import Watcher from './observer/watcher'
@@ -116,6 +116,8 @@ function createWatcher(vm, key, handler, options) {
 }
 
 export function stateMixin(Vue) {
+  Vue.prototype.$set = set
+  Vue.prototype.$del = del
   Vue.prototype.$watch = function(exprOrFn, cb, options) {
     const vm = this
     // ! 用户自己写的watcher

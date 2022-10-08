@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-10-05 20:19:26
+ * @Description: 
+ * @FilePath: \note\Vue\vue源码\instance\lifecycle.js
+ */
 import Watcher from './observer/watcher'
 import {noop} from './util/index'
 import {patch} from './vnode/patch'
@@ -20,7 +26,7 @@ export function lifecycleMixin(Vue) {
   Vue.prototype.$forceUpdate = function () {
     const vm = this
     if (vm._watcher) {
-      vm._watcher.update()
+      vm._watcher.update() // 这个_watcher就是这个组件的渲染watcher
     }
   }
 }

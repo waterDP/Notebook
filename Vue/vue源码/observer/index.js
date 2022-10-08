@@ -4,7 +4,7 @@
  * @Description: 
  * @FilePath: \note\Vue\vue源码\observer\index.js
  */
-import { isObject, def } from '../util/index'
+import { isObject, def, hasOwn } from '../util/index'
 import { newArrayProto } from "./array"
 import Dep from './dep'
 
@@ -16,6 +16,7 @@ export function toggleObserving (value) {
 
 class Observer {
   constructor(value) {
+    this.value = value
     this.dep = new Dep() // 这个是单独给数组用的
     def(value, '__ob__', this) // 给数组用的 这个值不能枚举
     if (Array.isArray(value)) {
@@ -96,4 +97,41 @@ export function observe(data) {
     return
   }
   return new Observer(data)
+}
+
+export function set(target, key, val) {
+  if (Array.isArray(target)) {
+    target.length = Math.max(target.length, key)
+    target.splice(key, 1, val)
+    return val
+  }
+  if (key in target && !(key in Object.prototype)) {
+    target[key] = val
+    return val
+  }
+  const ob = target.__ob__
+
+  // 以前不是响应式的，以后也不是
+  if (!ob) {
+    target[key] = val
+    return val
+  }
+
+  defineReactive(ob.value, key, val)
+  ob.dep.notify()
+  return val
+}
+
+export function del(target, key) {
+  if (Array.isArray(target)) {
+    target.splice(key, 1)
+    return 
+  }
+  const ob = target.__ob__
+  if (!hasOwn(target, key)) {
+    return
+  }
+  delete target[key]
+  if (!ob) return
+  ob.dep.notify()
 }
