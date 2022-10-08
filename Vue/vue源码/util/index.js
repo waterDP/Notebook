@@ -154,3 +154,14 @@ const hasOwnProperty = Object.prototype.hasOwnProperty
 export function hasOwn (obj, key) {
   return hasOwnProperty.call(obj, key)
 }
+
+export function toString(val) {
+  return val === null ? '' : (typeof val === 'object' ? JSON.stringify(val) : val)
+}
+
+export function extend(to, from) {
+  for (const key of from) {
+    to[key] = from
+  }
+  return to
+}

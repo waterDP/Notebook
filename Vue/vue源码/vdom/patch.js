@@ -83,7 +83,7 @@ function updateChildren(parent, oldChildren, newChildren) {
   let newStartVnode = newChildren[0]
   let oldEndVnode = oldChildren[oldEndIndex]
   let newEndVnode = newChildren[newEndIndex]
-  
+
   // ^ 给老的children序列做一个映射表，todo 5 乱序比较中会用到
   const makeIndexByKey = (children) => {
     const map = {}
