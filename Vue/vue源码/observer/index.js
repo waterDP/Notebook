@@ -91,7 +91,7 @@ export function observe(data) {
     return
   }
   if (data.__ob__ instanceof Observer) {
-    return 
+    return data.__ob__
   }
   if (!shouldObserve) {
     return
