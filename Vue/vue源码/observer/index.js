@@ -41,15 +41,15 @@ class Observer {
 
 /**
  * 定义响应式数据
- * @param data
+ * @param target
  * @param {string} key
  * @param value
  */
-function defineReactive(data, key, value) {
+function defineReactive(target, key, value) {
   let dep = new Dep() // 这个dep是给对象用的
   // 这里这个value可能是数组 也可能是对象，返回的结果是observer的实例，当前这个value对应的observer
   let childOb = observe(value) // ! 递归劫持数据
-  Object.defineProperty(data, key, {
+  Object.defineProperty(target, key, {
     enumerable: true,
     configurable: true,
     get() {
