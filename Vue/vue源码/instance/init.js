@@ -10,6 +10,7 @@ import { mergeOptions } from '../util/index'
 import { initEvents } from './events'
 import { initState } from './state'
 import { initProvide, initInjections } from './inject'
+import { initRender } from './render'
 
 export function initMixin(Vue) {
   // 初始化流程  负责Vue的初始化过程
@@ -19,6 +20,7 @@ export function initMixin(Vue) {
     vm.$options = mergeOptions(vm.constructor.options, options)
 
     initEvents(vm)
+    initRender(vm)
     callHook(vm, 'beforeCreate')
     // ! 初始化状态  依赖收集
     initInjections(vm) // resolve injections before data/props
