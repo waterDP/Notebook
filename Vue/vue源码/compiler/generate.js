@@ -28,7 +28,7 @@ function generateChild(node) {
     let tokens = []
     let match, index
     let lastIndex = defaultTagRE.lastIndex = 0
-    while(match = defaultTagRe.exec(text)) {
+    while(match = defaultTagRE.exec(text)) {
       index = match.index
       if (index > lastIndex) {
         tokens.push(JSON.stringify(text.slice(lastIndex, index)))
