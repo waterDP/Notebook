@@ -43,7 +43,7 @@ export function parseHTML(html) {
   }
   
   
-  function end(tagName) {
+  function end() {
     // 弹栈 并让当前节点指向栈顶
     stack.pop()
     currentParent = stack[stack.length - 1]
@@ -99,7 +99,7 @@ export function parseHTML(html) {
       let endTagMatch = html.match(endTag)
       if (endTagMatch) {
         advance(endTagMatch[0].length)
-        end(endTagMatch[1])
+        end()
         continue
       }
     }
