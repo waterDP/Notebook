@@ -103,13 +103,12 @@ export function parseHTML(html) {
         continue
       }
     }
-    let text
     if (textEnd > 0) {
-      text = html.substring(0, textEnd)
-    }
-    if (text) {
-      advance(text.length)
-      chars(text)
+      let text = html.substring(0, textEnd)
+      if (text) {
+        advance(text.length)
+        chars(text)
+      }
     }
   }
 
