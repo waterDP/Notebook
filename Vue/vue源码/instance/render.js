@@ -10,7 +10,7 @@ import { installRenderHelpers } from './render-helpers'
 import {nextTick} from './util/next-tick'
 
 export function initRender(vm) {
-  vm.$createElement = (a, b, c, c) => createElement(vm, a, b, c, d, true)
+  vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
 }
 
 export function renderMixin(Vue) {
