@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-04-16 20:38:06
+ * @Description:
+ * @FilePath: \note\Vue\vue源码\compiler\html-parser.js
+ */
 const ncname = `[a-zA-Z][\\-\\.0-9_a-zA-Z]*`
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`
 const startTagOpen = new RegExp(`^<${qnameCapture}`)  // 标签开头的正则，捕获的内容是标签名
@@ -6,7 +12,6 @@ const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s
 const startTagClose = /^\s*(\/?)>/
 
 export function parseHTML(html) {
-
   let root = null // root是最后的返回值
   let currentParent
   let stack = []
@@ -56,6 +61,31 @@ export function parseHTML(html) {
     }
   }
 
+  function advance(n) {
+    html = html.substring(n)
+  }
+
+  function parseStartTag() {
+    let start = html.match(startTagOpen)
+    if (start) {
+      const match = {
+        tagName: start[1],
+        attrs: []
+      }
+      advance(start[0].length) // 将标签删除
+      let end, attr
+      while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+        // 将属性进行解析
+        advance(attr[0].length) // 将属性去掉
+        match.attrs.push({ name: attr[1], value: attr[3] || attr[4] || attr[5]|| true })
+      }
+      if (end) { // 去掉开始标签>
+        advance(end[0].length)
+        return match
+      }
+    }
+  }
+
   // 不停的去解析html字符串
   while (html) {
     let textEnd = html.indexOf('<')
@@ -80,31 +110,6 @@ export function parseHTML(html) {
     if (text) {
       advance(text.length)
       chars(text)
-    }
-  }
-
-  function advance(n) {
-    html = html.substring(n)
-  }
-
-  function parseStartTag() {
-    let start = html.match(startTagOpen)
-    if (start) {
-      const match = {
-        tagName: start[1],
-        attrs: []
-      }
-      advance(start[0].length) // 将标签删除
-      let end, attr
-      while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
-        // 将属性进行解析
-        advance(attr[0].length) // 将属性去掉
-        match.attrs.push({ name: attr[1], value: attr[3] || attr[4] || attr[5]|| true })
-      }
-      if (end) { // 去掉开始标签>
-        advance(end[0].length)
-        return match
-      }
     }
   }
 
