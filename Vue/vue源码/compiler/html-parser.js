@@ -81,8 +81,8 @@ export function parseHTML(html) {
       }
       if (end) { // 去掉开始标签>
         advance(end[0].length)
-        return match
       }
+      return match
     }
   }
 
