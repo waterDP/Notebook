@@ -8,12 +8,14 @@ import {nextTick} from '../util/next-tick'
 
 let queue = []
 let has = {}
+let pending = false
 
 function flushSchedulerQueue() {
   const flushQueue = queue.slice(0)
+  flushQueue.forEach(watcher => watcher.run())
   queue = []
   has = {}
-  flushQueue.forEach(watcher => watcher.run)
+  pending = false
 }
 
 export function queueWatcher(watcher) {
@@ -21,6 +23,9 @@ export function queueWatcher(watcher) {
   if (!has[id]) {
     queue.push(watcher)
     has[id] = true
-    nextTick(flushSchedulerQueue)
+    if (!pending) { // 批量更新
+      nextTick(flushSchedulerQueue)
+      pending = true
+    }
   }
 }
