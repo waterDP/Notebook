@@ -21,7 +21,7 @@ export default class Watcher {
     this.dirty = this.lazy
     this.depsId = new Set()
     this.deps = []
-    this.value = this.lazy || this.get()
+    this.value = this.lazy || this.get() // ! 执行
 
     if (isRenderWatcher) {
       // 把当前的watcher赋值给当前组件的_watcher实例
