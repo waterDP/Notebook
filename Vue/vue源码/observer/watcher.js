@@ -46,7 +46,7 @@ export default class Watcher {
     let id = dep.id
     if (!this.depsId.has(id)) {
       this.depsId.add(id)
-      this.deps = this.deps.push(dep)
+      this.deps.push(dep)
       dep.addSub(this)
     }
   }
