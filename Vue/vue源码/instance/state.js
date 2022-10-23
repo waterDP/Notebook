@@ -73,7 +73,7 @@ function defineComputed(target, key, userDef) {
 
 function createComputedGetter(key) {
   return function() { // 做缓存
-    let watcher = this._computedWatchers[key]
+    let watcher = this._computedWatchers[key] // this = vm
     if (watcher.dirty) { // 如果dirty为true, 就调用用户的方法
       watcher.evaluate()
     }
