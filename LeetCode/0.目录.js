@@ -264,7 +264,7 @@
  * @Leetcode 5     最长回文子串
  * @Leetcode 14    最长公共前缀
  * @Leetcode 17    有效号码的字母组合
- * @Leetcode 28    找出字符串中第一个匹配项的下标 [kmp]
+ * @Leetcode 28    找出字符串中第一个匹配项的下标 [kmp] .js [sunday] .py
  * @Leetcode 38    外观数列
  * @Leetcode 58    最后一个单词长度
  * @Leetcode 76    最小覆盖子串
