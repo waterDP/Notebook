@@ -1,7 +1,7 @@
 '''
 Author: water.li
 Date: 2022-10-24 20:10:36
-Description: 
+Description: sunday
 FilePath: \note\LeetCode\28.找出字符串中第一个匹配项的下标.py
 '''
 #

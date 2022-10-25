@@ -51,6 +51,7 @@
  * @param {string} haystack
  * @param {string} needle
  * @return {number}
+ * @description KMP
  */
 var strStr = function(haystack, needle) {
   if (needle === '') return 0
