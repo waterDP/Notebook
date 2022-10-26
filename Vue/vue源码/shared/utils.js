@@ -1,4 +1,5 @@
 import { ASSETS_TYPE } from '../global-api/constant'
+import { LIFECYCLE_HOOKS } from './constants'
 /**
  * 当前数据是不是对象
  * @return {boolean}
@@ -36,16 +37,6 @@ export function proxy(obj, source, key) {
   })
 }
 
-const LIFECYCLE_HOOKS = [
-  'beforeCreate',
-  'created',
-  'beforeMount',
-  'mounted',
-  'beforeUpdate',
-  'updated',
-  'beforeDestroy',
-  'destroyed'
-]
 
 let strats = {}
 /** 

@@ -5,12 +5,11 @@
  * @FilePath: \note\Vue\vue源码\global-api\assets.js
 */
 
+import { ASSET_TYPES } from "../shared/constants"
 import { isFunction, isPlainObject } from "../shared/utils"
 
-const ASSETS_TYPE = ['component', 'directive', 'filter']
-
 export function initAssetRegisters(Vue) {
-  ASSETS_TYPE.forEach(type => {
+  ASSET_TYPES.forEach(type => {
     /**
      * @param {string} id
      * @param {Function|Object} definition
