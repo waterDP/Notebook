@@ -5,7 +5,7 @@
  * @FilePath: \note\Vue\vue源码\instance\events.js
  */
 
-import { toArray, invokeWithErrorHandling } from "../util"
+import { toArray, invokeWithErrorHandling } from "../shared/utils"
 
 export function initEvents(vm) {
   vm._events = Object.create(null)

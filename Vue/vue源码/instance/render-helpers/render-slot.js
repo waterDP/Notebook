@@ -5,7 +5,7 @@
  * @FilePath: \note\Vue\vue源码\instance\render-helpers\render-slot.js
  */
 
-import { extend } from "../../util"
+import { extend } from "../../shared/utils"
 
 export function renderSlot(name, fallbackRender, props, bindObject) {
   const scopedSlotFn = this.$scopedSlots[name]

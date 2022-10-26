@@ -5,7 +5,7 @@
  * @FilePath: \note\Vue\vue源码\global-api\use.js
  */
 
-import { isFunction, toArray } from "../util"
+import { isFunction, toArray } from "../shared/utils"
 
 export function initUse(Vue) {
   Vue.use = function(plugin) {

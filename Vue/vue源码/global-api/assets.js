@@ -5,7 +5,7 @@
  * @FilePath: \note\Vue\vue源码\global-api\assets.js
 */
 
-import { isFunction, isPlainObject } from "../util"
+import { isFunction, isPlainObject } from "../shared/utils"
 
 const ASSETS_TYPE = ['component', 'directive', 'filter']
 

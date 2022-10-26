@@ -4,7 +4,8 @@
  * @Description: 
  * @FilePath: \note\Vue\vue源码\observer\scheduler.js
  */
-import {nextTick} from '../util/next-tick'
+
+import { nextTick } from "../shared/next-tick"
 
 let queue = []
 let has = {}

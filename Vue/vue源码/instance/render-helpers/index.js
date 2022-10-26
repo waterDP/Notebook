@@ -6,7 +6,7 @@
  */
 import { renderList } from "./render-list"
 import { createEmptyVnode, createTextVNode } from '../../vdom/vnode'
-import { toString } from '../../util'
+import { toString } from '../../shared/utils'
 import { createElement } from "../../vdom/create-element"
 import { renderSlot } from "./render-slot"
 
