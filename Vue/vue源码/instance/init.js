@@ -6,7 +6,7 @@
  */
 import { compileToFunctions } from '../compiler'
 import { mountComponent, callHook } from './lifecycle'
-import { mergeOptions } from '../util/index'
+import { mergeOptions } from '../shared/utils'
 import { initEvents } from './events'
 import { initState } from './state'
 import { initProvide, initInjections } from './inject'

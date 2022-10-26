@@ -6,7 +6,7 @@
  */
 import { createComponent } from './create-component'
 import { vnode } from './vnode'
-import { isReservedTag } from '../util/index'
+import { isReservedTag } from '../shared/utils'
 
 export function createElement(vm, tag, data = {}, ...children) {
   let key = data.key

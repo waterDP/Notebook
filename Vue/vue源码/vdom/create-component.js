@@ -4,7 +4,7 @@
  * @Description: 
  * @FilePath: \note\Vue\vue源码\vdom\create-component.js
  */
-import { isObject } from "../util/index"
+import { isObject } from "../shared/utils"
 import { vnode } from './vnode'
 
 export function createComponent(vm, tag, data, key, children, Ctor) {

@@ -5,7 +5,7 @@
  * @FilePath: \note\Vue\vue源码\instance\lifecycle.js
  */
 import Watcher from './observer/watcher'
-import {noop} from './util/index'
+import {noop} from './shared/utils'
 import {patch} from './vnode/patch'
 
 export function lifecycleMixin(Vue) {

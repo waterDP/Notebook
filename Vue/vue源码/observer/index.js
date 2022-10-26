@@ -4,7 +4,7 @@
  * @Description: 
  * @FilePath: \note\Vue\vue源码\observer\index.js
  */
-import { isObject, def, hasOwn } from '../util/index'
+import { isObject, def, hasOwn } from '../shared/utils'
 import { newArrayProto } from "./array"
 import Dep from './dep'
 

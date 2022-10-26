@@ -1,6 +1,6 @@
 import {observe, set, del} from './observer'
 import Dep from './observer/dep'
-import {proxy, isObject, noop} from './util/index'
+import {proxy, isObject, noop} from './shared/utils'
 import Watcher from './observer/watcher'
 
 // 此方法在init中调用

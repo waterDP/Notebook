@@ -4,7 +4,7 @@
  * @Description: 
  * @FilePath: \note\Vue\vue源码\global-api\extend.js
  */
-import {mergeOptions} from '../util/index'
+import {mergeOptions} from '../shared/utils'
 
 export function initExtend (Vue) {
   let cid = 0
