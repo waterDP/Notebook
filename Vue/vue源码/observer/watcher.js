@@ -31,7 +31,10 @@ export default class Watcher {
 
     if (typeof exprOrFn === 'function') {
       this.getter = exprOrFn // 将内部传过来的回调函数放到getter属性上
-    } else {
+    } else { 
+      /** 
+       * this.$watch(vm, 'state.preson.name', null, {})
+       */
       this.getter = function() {
         let path = exprOrFn.split('.')
         let val = vm
