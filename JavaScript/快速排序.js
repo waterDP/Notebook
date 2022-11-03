@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-01-16 11:29:53
  * @Description: 快速排序
- * @FilePath: \notebook\JavaScript\quickSort.js
+ * @FilePath: \notebook\JavaScript\快速排序.js
  */
 
 function quickSort(arr, left, right) {
@@ -30,4 +30,4 @@ function partition(arr, left, right) {
   return index - 1
 }
 
-console.log(quickSort([2, 4, 1, 2, 6, 4, 10, 20, 3, 6]))
+console.log(quickSort([2, 4, 1, 2, 6, 4, 10, 20, 3, 6, 10]))
