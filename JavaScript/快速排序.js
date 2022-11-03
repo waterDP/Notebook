@@ -30,4 +30,4 @@ function partition(arr, left, right) {
   return index - 1
 }
 
-console.log(quickSort([2, 4, 1, 2, 6, 4, 10, 20, 3, 6, 10]))
+console.log(quickSort([2, 4, 1, 2, 6, 4, 10, 20, 3, 6]))
