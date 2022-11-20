@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2022-11-03 21:26:02
+ * @Description: 
+ * @FilePath: \Notebook\React\原理\react-dom\SyntheticEvent.js
+ */
 // 合成事件
 class SyntheticEvent {
   constructor() {
@@ -8,7 +14,7 @@ class SyntheticEvent {
   persist() {
     this.isPersist = true
   }
-  on = (type, dom, handler, componentInstance) => {
+  on(type, dom, handler, componentInstance) {
     let listeners = this.events
     if (listeners) {
       this.listeners.push({dom, handler, componentInstance})
@@ -16,7 +22,7 @@ class SyntheticEvent {
       this.events[type] = [{dom, handler, componentInstance}]
     }
   }
-  trigger= (type, event) => {
+  trigger(type, event) {
     let listeners = this.events[type]
     listeners.forEach(item => {
       if (item.dom === event.target) {
