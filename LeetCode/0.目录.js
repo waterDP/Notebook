@@ -150,6 +150,7 @@
  * @Leetcode 461  汉明距离
  * @Leetcode 476  数字的补数
  * @Leetcode 693  交换位二进制数
+ * @Leetcode 779  第k个语法符号
  * @Leetcode 1310 子数组异或查询
  * @Leetcode 1486 数组的异或操作
  * @Leetcode 1720 解码异或后的数组
@@ -425,6 +426,7 @@
  * @Leetcode 22   括号生成
  * @Leetcode 104  二叉树的最大深度
  * @Leetcode 124  二叉树的最大路径和
+ * @Leetcode 779  第K个语法符号
  */
 
 // todo 二叉树
