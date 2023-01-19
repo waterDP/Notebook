@@ -9,6 +9,8 @@ import { AxiosPromise, AxiosRequestConfig, AxiosResponse } from "../types";
 import { isFormData } from "../helpers/util";
 import { AxiosError } from "../helpers/error";
 import { parseHeaders } from "../helpers/header";
+import isURLSameOrigin from "../helpers/isURLSameOrigin";
+import cookies from "../helpers/cookies";
 
 export default function xhr(config: AxiosRequestConfig): AxiosPromise {
   return new Promise((resolve, reject) => {
@@ -36,6 +38,34 @@ export default function xhr(config: AxiosRequestConfig): AxiosPromise {
 
     if (isFormData(data)) {
       delete headers["Content-Type"];
+    }
+
+    let xrsfValue =
+      (withCredentials || isURLSameOrigin(url!)) && xsrfCookieName
+        ? cookies.read(xsrfCookieName)
+        : undefined;
+    if (xrsfValue) {
+      headers[xrsfValue] = xrsfValue;
+    }
+
+    if (auth) {
+      const username = auth.username || "";
+      const password = auth.password || "";
+      headers["Authorization"] = "Basic " + btoa(username + ":" + password);
+    }
+
+    if (responseType) {
+      request.responseType = responseType;
+    }
+
+    if (withCredentials) {
+      request.withCredentials = withCredentials;
+    }
+    if (onDownloadProgress) {
+      request.onprogress = onDownloadProgress;
+    }
+    if (onUploadProgress) {
+      request.upload.onprogress = onUploadProgress;
     }
 
     // 3.发送请求
