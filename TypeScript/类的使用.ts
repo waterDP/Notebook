@@ -22,7 +22,8 @@ abstract class Person {
     console.log("aaa");
   }
   abstract say: () => void; // ^ 实例上的方法
-  abstract eat(): void; // ! 抽象方法只能定义在抽象类中
+  abstract eat(): void; // ^ 原型上的方法
+  // ! 抽象方法只能定义在抽象类中
 }
 
 class Teacher extends Person {
