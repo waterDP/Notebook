@@ -81,7 +81,7 @@ function getLen<T extends IWithLength>(val: T) {
 }
 
 // 约束索引的签名
-function getVal<T extends object, U extends keyof T>(obj: T, key: U) {
+function getVal<T extends object, U extends keyof T>(obj: T, key: U): T[U] {
   return obj[key];
 }
 
