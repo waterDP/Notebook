@@ -31,3 +31,7 @@ select ... from ... where ... group by ... having ... order by ... limit ...
 
 # select语句的执行顺序
 from (-> on -> left join / right join) -> where -> group by -> having -> select -> distinct -> order by -> limit 
+
+
+
+
