@@ -128,6 +128,7 @@ let time = '2019-08-13'
 // 变为 "2019年08月13"
 let reg = /^(\d{4})-(\d{1,2})-(\d{2})$/g
 time = time.replace(reg, `$1年$2月$3日`)
+console.log(time)
 
 time.replace(reg, (big, $1, $2, $3)=> {
   return `${$1}年${$2}月${$3}日` 

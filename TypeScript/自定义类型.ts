@@ -37,6 +37,7 @@ type IsEqual<T, U, Success, Fail> = [T] extends [U]
     ? Success
     : Fail
   : Fail;
+
 type ExtractKeysByValueType<T, U> = {
   [K in keyof T]: IsEqual<T[K], U, K, never>;
 }[keyof T]; // 找到需要的属性
