@@ -5,7 +5,7 @@
  * @FilePath: \Notebook\TypeScript\类型体操.ts
  */
 
-// ^ 返转
+// ^ ReverseTuple
 export type ReverseTuple<T extends any[], F extends any[] = []> = T extends [
   infer L,
   ...infer R
@@ -17,7 +17,7 @@ type A1 = ReverseTuple<[string, number, boolean]>; // [boolean, number, string]
 type B1 = ReverseTuple<[1, 2, 3]>; // [3, 2, 1]
 type C1 = ReverseTuple<[]>; // []
 
-// ^ 展平
+// ^ Flat
 export type Flat<T extends any[]> = T extends [infer L, ...infer R]
   ? [...(L extends any[] ? Flat<L> : [L]), ...Flat<R>]
   : [];
@@ -104,6 +104,7 @@ export type StringToTuple<
   T extends string,
   F extends any[] = []
 > = T extends `${infer L}${infer R}` ? StringToTuple<R, [...F, L]> : F;
+
 type A6 = StringToTuple<"abdus,lce">;
 
 // ^ TupleToString
@@ -113,3 +114,86 @@ export type TupleToString<T, F extends string = ""> = T extends [
 ]
   ? TupleToString<R, `${F}${L & string}`>
   : F;
+type A7 = TupleToString<["1", "2", "3"]>; // 元组中只能放字符串
+
+// ^ RepeatString
+export type RepeatString<
+  T extends string,
+  C,
+  A extends any[] = [],
+  F extends string = ""
+> = C extends A["length"] ? F : RepeatString<T, C, [...A, null], `${F}${T}`>;
+
+type A8 = RepeatString<"a", 3>; // 'aaa'
+type B8 = RepeatString<"a", 0>; // ''
+
+// ^ SplitString
+export type SplitString<
+  T extends string,
+  S extends string,
+  F extends any[] = []
+> = T extends `${infer L}${S}${infer R}`
+  ? SplitString<R, S, [...F, L]>
+  : [...F, T];
+
+type A9 = SplitString<"handle-open-flag", "-">; // ['handle', 'open', 'flag']
+type B9 = SplitString<"open-flag", "-">; // ['open', 'flag']
+type C9 = SplitString<"handle.open.flag", ".">; // ['open', 'flag']
+
+// ^ LengthOfString
+
+export type LengthOfString<
+  T extends string,
+  A extends any[] = []
+> = T extends `${infer L}${infer R}`
+  ? LengthOfString<R, [...A, null]>
+  : A["length"];
+
+type A10 = LengthOfString<"BFE.dev">; // 7
+type B10 = LengthOfString<"">; // 0
+
+// ^ KebabCase
+
+export type KebabCase<
+  T extends string,
+  F extends string = ""
+> = T extends `${infer L}${infer R}`
+  ? KebabCase<R, `${F}${Capitalize<L> extends L ? `-${Lowercase<L>}` : L}`>
+  : RemoveFirst<F, "-">;
+
+type RemoveFirst<T extends string, S> = T extends `${S & string}${infer R}`
+  ? R
+  : T;
+
+type A11 = KebabCase<"HandleOpenFlag">; // 'handle-open-flag'
+type B11 = KebabCase<"OpenFlag">; // open-flag
+
+// ^ CamelCase
+export type CamelCase<
+  T extends string,
+  F extends string = ""
+> = T extends `${infer L}-${infer R1}${infer R2}`
+  ? CamelCase<R2, `${F}${L}${Capitalize<R1>}`>
+  : Capitalize<`${F}${T}`>;
+
+type A12 = CamelCase<"handle-open-flag">; // HandleOpenFlag
+type B12 = CamelCase<"open-flag">; // 'OpenFlag'
+
+// ^ Replace
+export type Replace<
+  T extends string,
+  C extends string,
+  RC extends string,
+  F extends string = ""
+> = C extends ""
+  ? T extends ""
+    ? RC
+    : `${RC}${T}`
+  : T extends `${infer L}${C}${infer R}`
+  ? Replace<R, C, RC, `${F}${L}${RC}`>
+  : `${F}${T}`;
+
+type A13 = Replace<"ha ha ha", "ha", "he">;
+type B13 = Replace<"hr", "hr", "hrao">;
+type C13 = Replace<"a", "", "he">;
+type D13 = Replace<"", "", "heheh">;

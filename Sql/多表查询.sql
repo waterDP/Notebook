@@ -1,10 +1,10 @@
 # SQL92 语法实现外连接：使用+
-select
-    employee_id,
-    department_name
-from employees e, departments d
-where
-    e.department_id = d.department_id(+);
+SELECT
+    e.employee_id,
+    d.department_name
+FROM employees e, departments d
+WHERE
+    e.department_id = d.department_id;
 
 # SQL99语法实现内连接
 select

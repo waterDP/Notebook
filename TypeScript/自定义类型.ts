@@ -100,9 +100,58 @@ type B1 = {
   name: string;
   address: string;
 };
+
 // & 求补集  求B1在A1中的补集
 type ObjectComp<T extends object, U extends T> = Omit<
   U,
   Extract<keyof T, keyof U>
 >;
 type xx3 = ObjectComp<B1, A1>;
+
+// todo 重写A类型
+type A2 = {
+  name: string;
+  age: number;
+  address: string;
+};
+
+type B2 = {
+  name: string;
+  address: number;
+  male: boolean;
+};
+
+type OverWrite<T extends object, U extends object> = ObjectInter<A2, B2> &
+  ObjectDiff<B2, A2>;
+
+type x4 = OverWrite<A2, B2>;
+type r = Compute<x4>;
+
+// ? 类型互斥问题
+interface Man1 {
+  fortune: string; // 有钱的
+}
+
+interface Man2 {
+  funny: string; // 风趣的
+}
+
+interface Man3 {
+  foreign: string;
+}
+
+type ManType = Man1 | Man2 | Man3;
+
+let man: ManType = {
+  fortune: "有钱",
+  funny: "有趣",
+  foreign: "有品",
+};
+
+type Discard<T, U> = {
+  [K in Extract<keyof U, keyof T>]?: never;
+};
+
+type OnceType<T, U> = (Discard<T, U> & T) | (Discard<U, T> & U);
+
+type OnceManType = OnceType<Man1, Man2>;
