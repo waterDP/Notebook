@@ -197,3 +197,29 @@ type A13 = Replace<"ha ha ha", "ha", "he">;
 type B13 = Replace<"hr", "hr", "hrao">;
 type C13 = Replace<"a", "", "he">;
 type D13 = Replace<"", "", "heheh">;
+
+// ^ OptionalKeys
+export type OptionalKeys<T, K = keyof T> = K extends keyof T //
+  ? Omit<T, K> extends T // 将当前每次分发后的属性忽略掉看是否能赋予给原来的T
+    ? K // 如果可以说明这个属性是可选的
+    : never
+  : never;
+
+type A14 = OptionalKeys<{
+  foo: number | number;
+  bar?: string;
+  flag: boolean;
+}>; // bar
+type B14 = OptionalKeys<{ foo: number; bar?: string }>; // bar
+type C14 = OptionalKeys<{ foo: number; flag: boolean }>; // never
+type D14 = OptionalKeys<{ foo?: number; flag?: boolean }>; // foo|flag
+type E14 = OptionalKeys<{}>; // never
+
+// ^ UnionToIntersection 联合转交叉 利用函数的逆变
+export type UnionToIntersection<T> = (
+  T extends any ? (a: T) => void : never
+) extends (b: infer R) => void
+  ? R
+  : never;
+type A15 = UnionToIntersection<{ a: string } | { b: string } | { c: string }>;
+// {a: string} & {b: string} & {c: string}
