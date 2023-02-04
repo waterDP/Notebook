@@ -122,3 +122,30 @@ FROM employees e FULL OUTER
     JOIN departments d ON e.department_id = d.department_id;
 
 # UNION 操作符 UNION ALL(重复的部分的不去重) 合并查询集 
+# SQL99自然连接
+SELECT
+    employee_id,
+    last_name,
+    department_name
+FROM employees e
+    JOIN departments d ON e.department_id = d.department_id AND e.manager_id = d.manager_id;
+
+SELECT
+    employee_id,
+    last_name,
+    department_name
+FROM employees e
+    NATURAL JOIN departments d;
+
+# SQL99 USING的使用
+SELECT
+    last_name,
+    department_name
+FROM employees e
+    JOIN departments d ON e.department_id = d.department_id;
+
+SELECT
+    last_name,
+    department_name
+FROM employees e
+    JOIN departments d USING (department_id);

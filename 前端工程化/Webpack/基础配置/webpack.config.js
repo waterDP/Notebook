@@ -65,10 +65,18 @@ module.exports = smw.wrap({
           priority: 1,  // 优先级
           test: /node_modules/,
           chunks: 'initial',
+          reuseExistingChunk: true, // 重用现在的代码块 
           minSize: 0,
           minChunks: 2
         }
-      }
+      },
+      /**
+       * 把运行时当成一个代码块进行单独提取
+       * runtime为了让打包后的代码在浏览器里能运行 模拟一个require方法 这个就叫运行时
+       * 可以把runtimeChunk设置为true就可以把运行时代码块单独提取，实现长期缓存
+       * 因为运行时代码块只是一断工具代码，跟业务无关，不管你业务如何写，它始终不变 
+       */
+      runtimeChunk: true
     }
   },
   module: {  // loader  
