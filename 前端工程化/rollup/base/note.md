@@ -13,4 +13,4 @@
 
 ## 初始安装
 
-pnpm i @babel/core @babel/preset-env @rollup/plugin-commonjs @rollup/plugin-node-resolve @rollup/plugin-typescript lodash rollup rollup-plugin-babel postcss rollup-plugin-postcss rollup-plugin-terser tslint typescript rollup-plugin-server rollup-plugin-livereload -D
+pnpm i @babel/core @babel/preset-env @rollup/plugin-commonjs @rollup/plugin-node-resolve @rollup/plugin-typescript lodash rollup rollup-plugin-babel postcss rollup-plugin-postcss rollup-plugin-terser tslint typescript rollup-plugin-serve rollup-plugin-livereload -D
