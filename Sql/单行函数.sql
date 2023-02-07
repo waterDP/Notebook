@@ -5,11 +5,12 @@ DEGREES() # 角度换弧度
 ASCII('as') #  返回第一个字母的ASCII码ADD
 CHAR_LENGTH() # 字符个数
 LENGTH() # 字节个数
-CONCAT(x1, x2, x3,...) # 连接字符
+CONCAT(x1, x2, x3,...); # 连接字符
+
 SELECT
     CONCAT(
         emp.last_name,
-        ' worked for',
+        ' worked for ',
         mgr.last_name
     ) "details"
 FROM employees emp
