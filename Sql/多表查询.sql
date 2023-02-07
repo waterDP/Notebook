@@ -149,3 +149,68 @@ SELECT
     department_name
 FROM employees e
     JOIN departments d USING (department_id);
+
+# 练习1 显示所有员工的姓名、部门号和部门名称
+SELECT
+    emp.last_name,
+    dep.department_id,
+    dep.department_name
+FROM employees emp
+    LEFT JOIN departments dep ON emp.department_id = dep.department_id;
+
+# 练习2 查询90号部门员工的job_id和 90号部门的localtion_id
+SELECT
+    e.job_id,
+    d.location_id
+FROM employees e
+    JOIN departments d ON e.department_id = d.department_id
+WHERE e.department_id = 90;
+
+# 练习3 选择所有有奖金的员工的last_name, department_name, lacation_id, city
+SELECT
+    e.last_name,
+    d.department_name,
+    l.location_id,
+    l.city
+FROM employees e
+    LEFT JOIN departments d ON e.department_id = d.department_id
+    LEFT JOIN locations l ON d.location_id = l.location_id
+WHERE
+    e.commission_pct IS NOT NULL;
+
+# 练习4. 选择city在Toronto工作的员工的last_name, job_id, dempartment_id, department_name
+SELECT
+    e.last_name,
+    e.job_id,
+    d.department_id,
+    d.department_name
+FROM employees e
+    JOIN departments d ON e.department_id = d.department_id
+    JOIN locations l ON d.location_id = l.location_id
+WHERE l.city = 'Toronto';
+
+# 练习5 查询哪些部门没有员工
+SELECT d.department_id
+FROM departments d
+    LEFT JOIN employees e ON d.department_id = e.department_id
+WHERE e.department_id IS NULL;
+
+# 子查询
+SELECT department_id
+FROM departments d
+WHERE NOT EXISTS (
+        SELECT *
+        FROM employees e
+        WHERE
+            e.department_id = d.department_id
+    );
+
+# 练习6 查询部门名为Sales或IT的员工信息
+SELECT
+    e.employee_id,
+    e.last_name,
+    e.department_id
+FROM employees e
+    JOIN departments d ON e.department_id = d.department_id
+WHERE
+    d.department_name IN ('Sales', 'IT');

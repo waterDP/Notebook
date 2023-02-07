@@ -1,5 +1,6 @@
 const walk = require("./walk");
 const Scope = require("./scope");
+const { hasOwnProperty } = require("../utils");
 
 function analyse(ast, code, module) {
   //^ 开始第一轮循环，找出本模块内导入导出了哪些变量
@@ -13,7 +14,8 @@ function analyse(ast, code, module) {
       _source: { value: code.snip(statement.start, statement.end) },
       // 依赖的变量
       _dependsOn: { value: {} },
-      _defines: { value: {} },
+      _defines: { value: {} }, // 存放本语句定义了哪些变量
+      _modifies: { value: {} }, // 存放本语句修改了哪些变量
     });
 
     // todo 找出导入导出了哪些变量
@@ -27,7 +29,7 @@ function analyse(ast, code, module) {
         // 我当前模块内导入的变量名localName来自于source模块导出的importName变量名
         module.imports[localName] = { source, importName };
       });
-    } else if (statement.type === "ExportNamedDelaration") {
+    } else if (statement.type === "ExportNamedDeclaration") {
       // & 导出 exports
       const declaration = statement.declaration;
       if (declaration && declaration.type === "VariableDeclaration") {
@@ -46,20 +48,44 @@ function analyse(ast, code, module) {
   // 创建顶级作用域
   let currentScope = new Scope({ name: "模块内的顶级作用域" });
   ast.body.forEach((statement) => {
-    function addToScope(name) {
-      currentScope.add(name); // 把此变量名添加到当前作用域的变量数组中
-      if (!currentScope.parent) {
-        // 顶级作用域
+    function addToScope(name, isBlockDeclaration) {
+      currentScope.add(name, isBlockDeclaration); // 把此变量名添加到当前作用域的变量数组中
+      if (
+        !currentScope.parent ||
+        // * 如果当前的作用域（BlockStatement）是块级作用域，并且变量声明不是块级声明 var
+        (currentScope.isBlock && !isBlockDeclaration)
+      ) {
+        // 表示此语句定义了一个顶级变量
         statement._defines[name] = true;
         module.definitions[name] = statement;
       }
     }
+    function checkForReads(node) {
+      if (node.type === "Identifier") {
+        // 表示当前的这个语句依赖了node.name这个变量
+        statement._dependsOn[node.name] = true;
+      }
+    }
+    function checkForWrites(node) {
+      function addNode(node) {
+        const { name } = node;
+        statement._modifies[name] = true; // 表示此语句修改了name这个变量
+        if (!hasOwnProperty(module.modifications, name)) {
+          module.modifications[name] = [];
+        }
+        // 存放此变量对应的所有的修改语句
+        module.modifications[name].push(statement);
+      }
+      if (node.type === "AssignmentExpression") {
+        addNode(node.left);
+      } else if (node.type === "UpdateExpression") {
+        addNode(node.argument);
+      }
+    }
     walk(statement, {
       enter(node) {
-        if (node.type === "Identifier") {
-          // 表示当前的这个语句依赖了node.name这个变量
-          statement._dependsOn[node.name] = true;
-        }
+        checkForReads(node);
+        checkForWrites(node);
         let newScope;
         switch (node.type) {
           case "FunctionDeclaration":
@@ -69,12 +95,20 @@ function analyse(ast, code, module) {
               name: node.id.name,
               parent: currentScope,
               names,
+              isBlock: false, // 函数创建的不是一个块级作用域
             });
             break;
           case "VariableDeclaration":
-            node.declaration.forEach((declaration) => {
-              addToScope(declaration.id.name);
+            node.declarations.forEach((declaration) => {
+              if (node.kind === "let" || node.kind === "const") {
+                addToScope(declaration.id.name, true);
+              } else {
+                addToScope(declaration.id.name);
+              }
             });
+            break;
+          case "BlockStatement":
+            newScope = new Scope({ parent: currentScope, isBlock: true });
             break;
         }
         if (newScope) {
