@@ -223,3 +223,40 @@ export type UnionToIntersection<T> = (
   : never;
 type A15 = UnionToIntersection<{ a: string } | { b: string } | { c: string }>;
 // {a: string} & {b: string} & {c: string}
+
+// ^ Add
+export type Add<
+  A extends number,
+  B extends number,
+  AA extends any[] = [],
+  BA extends any[] = [],
+  R extends any[] = []
+> = AA["length"] extends A
+  ? BA["length"] extends B
+    ? R["length"]
+    : Add<A, B, AA, [...BA, null], [...R, null]>
+  : Add<A, B, [...AA, null], BA, [...R, null]>;
+
+type Ar16 = Add<1, 2>;
+
+// ^ Fibonacci 斐波拉契数列
+export type Fibonacci<
+  Target extends number,
+  CurrentIndex extends number = 1,
+  CurrentCount extends number = 1,
+  BeforeCount extends number = 0
+> = Target extends CurrentIndex
+  ? CurrentCount
+  : Fibonacci<
+      Target,
+      Add<CurrentIndex, 1>,
+      Add<CurrentCount, BeforeCount>,
+      CurrentCount
+    >;
+type F17 = [
+  Fibonacci<1>,
+  Fibonacci<2>,
+  Fibonacci<3>,
+  Fibonacci<4>,
+  Fibonacci<9>
+];
