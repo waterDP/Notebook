@@ -2,8 +2,14 @@ const walk = require("./walk");
 const Scope = require("./scope");
 const { hasOwnProperty } = require("../utils");
 
+/**
+ * 分析模块对应的语法树
+ * @param {*} ast 语法树
+ * @param {*} code 源代码
+ * @param {*} module 模块的实例
+ */
 function analyse(ast, code, module) {
-  //^ 开始第一轮循环，找出本模块内导入导出了哪些变量
+  // ^ 开始第一轮循环，找出本模块内导入导出了哪些变量
   ast.body.forEach((statement) => {
     Object.defineProperties(statement, {
       // 表示这条语句默认不包括在输出结果里

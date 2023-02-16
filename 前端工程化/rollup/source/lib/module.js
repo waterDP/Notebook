@@ -18,9 +18,10 @@ class Module {
     this.definitions = {}; // 存放本模块的顶级变量的定义语句是哪条
     this.modifications = {}; // 存放变量修改语句
     // console.log(this.ast)
+    // ! 分析语法树
     analyse(this.ast, this.code, this);
   }
-  expandAllStatement() {
+  expandAllStatements() {
     let allStatements = [];
     this.ast.body.forEach((statement) => {
       if (statement.type === "ImportDeclaration") return;

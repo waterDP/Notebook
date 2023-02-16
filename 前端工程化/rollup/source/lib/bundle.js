@@ -17,7 +17,7 @@ class Bundle {
   }
   build(output) {
     const entryModule = this.fetchModule(this.entryPath);
-    this.statements = entryModule.expandAllStatement();
+    this.statements = entryModule.expandAllStatements();
     const { code } = this.generate();
     fs.writeFileSync(output, code);
   }
