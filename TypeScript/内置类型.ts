@@ -72,6 +72,8 @@ type Pick<T, K extends keyof T> = {
   [P in K]: T[P];
 };
 type PickPerson = Pick<Person, "name" | "age">;
+type Exclude<T, U> = T extends U ? never : T; // 排除
+type Extract<T, U> = T extends U ? T : never; // 提取
 
 type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
 type OmitPerson = Omit<Person, "name" | "age">;

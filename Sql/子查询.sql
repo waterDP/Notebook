@@ -16,7 +16,8 @@ WHERE salary > (
             last_name = 'Abel'
     );
 
-# 单行子查询
+# 单行子查询 内查询返回了一条数据
+# 单行操作符 = != >= <= > <
 # 查询工资大于149号员工工资的员工的信息
 SELECT
     employee_id,
@@ -44,7 +45,7 @@ WHERE job_id = (
     )
     AND salary > (
         SELECT salary
-        from employees
+        FROM employees
         WHERE
             employee_id = 143
     );
@@ -94,7 +95,7 @@ WHERE (department_id, manager_id) = (
         WHERE
             employee_id = 141
     )
-    AND employee_id != 141;
+    AND employee_id <> 141;
 
 # having 中的子查询
 # 查询最低工资大于50号部门最低工资的部门id和其最低工资
@@ -112,88 +113,95 @@ HAVING MIN(salary) > (
             department_id = 50
     );
 
+/*
+ 题目 显示员工的dempartment_id, last_name 和 location
+ 其中，若员工的department_id与location_id为1800的department_id相同
+ 则location为Canada，其余则为USA
+ */
+
+SELECT
+    employee_id,
+    last_name,
+    CASE department_id
+        WHEN (
+            SELECT
+                department_id
+            FROM locations
+            WHERE
+                location_id = 1800
+        ) THEN 'Canada'
+        ELSE 'USA'
+    END "location"
+FROM employees;
+
 # 多行子查询 内查询返回了多条数据
-# 多行查询的操作符 in any all some (同any)
-select
-    employee_id,
+/* 
+ 多行查询的操作符 
+ IN 等于列表中的任意一个
+ ANY 需要和单行操作符一起使用，和子查询返回的某一个值比较
+ ALL 需要和单行操作符一起使用，和子查询返回的所有值比较
+ SOME(同ANY)
+ */
+# 题目 返回其它job_id中比job_id为IT_PROG 部门任意工资低的员工的员工号 姓名 job_id以及salary
+SELECT
     last_name,
+    job_id,
     salary
-from employees
-where salary in (
-        select min(salary)
-        from employees
-        group by
-            department_id
+FROM employees
+WHERE
+    job_id <> 'IT_PROG'
+    AND salary < ALL (
+        SELECT salary
+        FROM employees
+        WHERE
+            job_id = 'IT_PROG'
     );
 
-# 返回其它job_id中比job_id为IT_PROG 部门任意工资低的员工的员工号 姓名 job_id以及salary
-select
-    employee_id,
-    last_name,
-    job_id,
-    salaray
-from employees
-where
-    job_id <> 'IT_GROUP'
-    and salary < any (
-        select salary
-        from employees
-        where
-            job_id = 'IT_GROUP'
-    );
-
-# 返回其它job_id中比job_id为IT_PROG 部门所有工资低的员工的员工号 姓名 job_id以及salary
-select
-    employee_id,
-    last_name,
-    job_id,
-    salaray
-from employees
-where
-    job_id <> 'IT_GROUP'
-    and salary < all (
-        select salary
-        from employees
-        where
-            job_id = 'IT_GROUP'
-    ) # 查询平均工资最低的部门id
-    # mysql的聚合函数是不能嵌套的
-select department_id
-from employees
-group by department_id
-having avg(salary) = (
-        select min(avg_sal)
-        from (
-                select
-                    avg(salaray) avg_sal
-                from
+# 查询平均工资最低的部门id
+# mysql的聚合函数是不能嵌套的
+SELECT department_id
+FROM employees
+GROUP BY department_id
+HAVING AVG(salary) = (
+        SELECT
+            MIN(avg_salary)
+        FROM (
+                SELECT
+                    AVG(salary) avg_salary
+                FROM
                     employees
-                group by
+                GROUP BY
                     department_id
             ) t_dept_avg_sal
-    ) #方式二
-select department_id
-from employees
-group by department_id
-having avg(salary) < all (
-        select avg(salary)
-        from employees
-        group by
+    );
+
+#方式二
+SELECT department_id
+FROM employees
+GROUP BY department_id
+HAVING AVG(salary) <= ALL (
+        SELECT AVG(salary)
+        FROM employees
+        GROUP BY
             department_id
-    ) # 相关子查询
-    # 案例 查询员工中工资大于本部门平均工资的员工的last_name, salary和其department_id
-    # 方式一 相关子查询
-select
+    );
+
+# 相关子查询
+# 案例 查询员工中工资大于本部门平均工资的员工的last_name, salary和其department_id
+# 方式一 相关子查询
+SELECT
     last_name,
     salary,
     department_id
-from employees outer
-where salary > (
-        select avg(salary)
-        from employees
-        where
-            department_id = outer.department_id
-    ) #方式二 在from声明子查询
+FROM employees `outer`
+WHERE salary > (
+        SELECT AVG(salary)
+        FROM employees
+        WHERE
+            department_id = `outer`.department_id
+    );
+
+#方式二 在from声明子查询
 select
     e.last_name,
     e.salary,
