@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-02-04 20:37:15
+ * @Description:
+ * @FilePath: \Notebook\前端工程化\rollup\source\lib\module.js
+ */
 const MagicString = require("magic-string");
 const { parse } = require("acorn");
 const analyse = require("./ast/analyse");
@@ -13,10 +19,11 @@ class Module {
       ecmaVersion: 8,
       sourceType: "module",
     });
-    this.imports = {}; // 存放本模块同导入了的变量
-    this.exports = {}; // 存放本模块同的导出的变量
-    this.definitions = {}; // 存放本模块的顶级变量的定义语句是哪条
-    this.modifications = {}; // 存放变量修改语句
+    this.imports = {}; // ~ 存放本模块同导入了的变量
+    this.exports = {}; // ~ 存放本模块同的导出的变量
+    this.definitions = {}; // ~ 存放本模块的顶级变量的定义语句是哪条
+    this.modifications = {}; // ~ 存放变量修改语句
+    this.canonicalNames = {}; // ~ 重命名的变量
     // console.log(this.ast)
     // ! 分析语法树
     analyse(this.ast, this.code, this);
@@ -24,8 +31,9 @@ class Module {
   expandAllStatements() {
     let allStatements = [];
     this.ast.body.forEach((statement) => {
+      // todo 删除import这个语句
       if (statement.type === "ImportDeclaration") return;
-      // 默认情况下不包括所有的变量声明语句
+      // todo 默认情况下不包括所有的变量声明语句
       if (statement.type === "VariableDeclaration") return;
       let statements = this.expandStatement(statement);
       allStatements.push(...statements);
@@ -61,15 +69,16 @@ class Module {
     return result;
   }
   define(name) {
-    // 区分此变量是函数自己声明的，还是外部导入的
+    // todo 区分此变量是函数自己声明的，还是外部导入的
     if (hasOwnProperty(this.imports, name)) {
+      // ~ 这里是外部导入的变量
       // console.log(this.imports);
       // 获取从那个模块引入的哪个变量
       const { source, importName } = this.imports[name];
       // 获取导入的模块 source是相对于当前模块路径的相对路径 path是当前模块的绝对路径
       const importedModule = this.bundle.fetchModule(source, this.path);
       const { localName } = importedModule.exports[importName];
-      return importedModule.define(localName);
+      return importedModule.define(localName); // ? 递归
     }
     // 非导入模块  是本地模块的话 获取些变量的变量定义语句
     let statement = this.definitions[name];
@@ -83,6 +92,12 @@ class Module {
       return [];
     }
     throw new Error(`变量${name}既没有从外部导入，也没有在当前的模块内声明！`);
+  }
+  rename(name, replacement) {
+    this.canonicalNames[name] = replacement;
+  }
+  getCanonicalName(name) {
+    return this.canonicalNames[name] || name;
   }
 }
 

@@ -26,7 +26,7 @@ function analyse(ast, code, module) {
 
     // todo 找出导入导出了哪些变量
     if (statement.type === "ImportDeclaration") {
-      // & 导入 imports
+      // ~ 导入 imports
       // 获取导入的模块的相对路径
       let source = statement.source.value;
       statement.specifiers.forEach((specifier) => {
@@ -57,7 +57,7 @@ function analyse(ast, code, module) {
     function addToScope(name, isBlockDeclaration) {
       currentScope.add(name, isBlockDeclaration); // 把此变量名添加到当前作用域的变量数组中
       if (
-        !currentScope.parent ||
+        !currentScope.parent || // 如果当前没有父作用域了，说明它就是顶级作用域了
         // * 如果当前的作用域（BlockStatement）是块级作用域，并且变量声明不是块级声明 var
         (currentScope.isBlock && !isBlockDeclaration)
       ) {

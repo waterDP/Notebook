@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "build": "rollup --config",
+    "build": "rollup --c",
     "dev": "rollup --config -w"
   },
   "keywords": [],
@@ -28,7 +29,6 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
-    "@rollup/plugin-babel": "^6.0.3",
-    "rollup-plugin-serve": "^2.0.2"
+    "@rollup/plugin-babel": "^6.0.3"
   }
 }
