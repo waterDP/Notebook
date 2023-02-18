@@ -42,7 +42,7 @@ function injectPolyfill() {
     },
     load(id) {
       if (id === POLLYFILL_ID) {
-        return `console.log('腻子代码')`;
+        return `import 'polyfill'`;
       }
       // 如果是一个需要代理的入口 特殊处理下，生成一个中间的代理模块
       if (id.endsWith(PROXY_SUFFIX)) {

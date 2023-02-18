@@ -1,9 +1,11 @@
 # 添加数据
 # 方式一 一条一条的加入数据
 # 1 没有指明添加的字段
-insert into emp1
-values (1, 'tom', '2000-12-20', 3400) # 注意，一定要按照声明的字段的先后顺序添加
-    # 2 指明要添加的字段
+INSERT INTO emp1
+VALUES (1, 'tom', '2000-12-20', 3400);
+
+# 注意，一定要按照声明的字段的先后顺序添加
+# 2 指明要添加的字段
 insert into
     emp1(id, hire, salary, `name`)
 values (2, '1999-12-1', 4000, 'jerry')

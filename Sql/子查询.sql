@@ -202,95 +202,103 @@ WHERE salary > (
     );
 
 #方式二 在from声明子查询
-select
+SELECT
     e.last_name,
     e.salary,
     e.department_id
-from employees e, (
-        select
+FROM employees e, (
+        SELECT
             department_id,
-            avg(salary) avg_sal
-        from employees
-        group by
+            AVG(salary) avg_sal
+        FROM employees
+        GROUP BY
             department_id
     ) t_dept_avg_sal
-where
+WHERE
     e.department_id = t_dept_avg_sal.department_id
-    and e.salaray > t_dept_avg_sal.avg_sal # 题目：查询员工的id, salary, 按照department_name 排序
-select department_id, salary
-from employees e
-order by (
-        select
+    AND e.salaray > t_dept_avg_sal.avg_sal;
+
+# 题目：查询员工的id, salary, 按照department_name 排序
+SELECT department_id, salary
+FROM employees e
+ORDER BY (
+        SELECT
             department_name
-        from departments d
-        where
+        FROM departments d
+        WHERE
             e.department_id = d.department_id
-    ) asc;
+    ) ASC;
 
 # 题目 若employees表中employee_id与job_history表中employee_id相同的数目不小于2
 # 输出这些相同id的员工的employee_id, last_name和其job_id
-select
+SELECT
     employee_id,
     last_name,
     job_id
-from employees e
-where 2 <= (
-        select count(*)
-        from job_history
-        where
+FROM employees e
+WHERE 2 <= (
+        SELECT count(*)
+        FROM job_history
+        WHERE
             e.employee_id = j.employee_id
-    ) # exists 与 not exists 关键字
-    # 题目 查询公司管理者的emplyee_id, last_id, job_id, department_id
-    # 方式1: 自连接
-select
-    distinct mgr.employee_id,
+    );
+
+# exists 与 not exists 关键字
+# 题目 查询公司管理者的emplyee_id, last_id, job_id, department_id
+# 方式1: 自连接
+SELECT
+    DISTINCT mgr.employee_id,
     mgr.last_name,
     mgr.job_id,
     mgr.department_id
-from employees emp
-    join employees mgr on emp.manager_id = mgr.employee_id;
+FROM employees emp
+    JOIN employees mgr ON emp.manager_id = mgr.employee_id;
 
 #方式2：子查询
-select
+SELECT
     employee_id,
     last_name,
     job_id,
     department_id
-from employees
-where employee_id in (
-        select
-            distinct manager_id
-        from
-            employees
-    ) #方式3  使用exists
-select
+FROM employees
+WHERE employee_id IN (
+        SELECT
+            DISTINCT manager_id
+        FROM employees
+    );
+
+#方式3  使用exists
+SELECT
     employee_id,
     last_name,
     job_id,
     department_id
-from employees e1
-where exists (
-        select *
-        from employees e2
-        where
+FROM employees e1
+WHERE EXISTS (
+        SELECT *
+        FROM employees e2
+        WHERE
             e1.employee_id = e2.manager_id
-    ) # 题目：查询departments表中，不存在于employees表中的部门的department_id和department_name
-    # 方式1 
-select
+    );
+
+# 题目：查询departments表中，不存在于employees表中的部门的department_id和department_name
+# 方式1 
+SELECT
     d.department_id,
     d.department_name
-from employees e
-    right join departments d on e.department_id = d.department_id
-where
-    e.department_id is null #方式2
-select
+FROM employees e
+    RIGHT JOIN departments d ON e.department_id = d.department_id
+WHERE e.department_id IS NULL;
+
+#方式2
+SELECT
     department_id,
     department_name
-from departments d
-where not exists (
-        select *
-        from employees e
-        where
+FROM departments d
+WHERE NOT EXISTS (
+        SELECT *
+        FROM employees e
+        WHERE
             e.department_id = d.department_id
     );
 
