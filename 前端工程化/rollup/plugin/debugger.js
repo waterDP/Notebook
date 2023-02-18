@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-02-18 00:03:22
+ * @Description:
+ * @FilePath: \Notebook\前端工程化\rollup\plugin\debugger.js
+ */
 import { rollup } from "rollup";
 import rollUpOpitions from "./rollup.config.js";
 
