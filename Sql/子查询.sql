@@ -358,3 +358,95 @@ WHERE department_id IN (
         WHERE
             location_id = 1700
     );
+
+# 题目：查询员工的id, salary 按照department_name排序
+SELECT employee_id, salary
+FROM employees e
+ORDER BY (
+        SELECT
+            department_name
+        FROM departments d
+        WHERE
+            e.department_id = d.department_id
+    ) ASC;
+
+/* 
+ 题目 若employees表中employee_id与job_history表中employee_id相同的数目不小于2 
+ 输出这些相同的id的员工的employee_id, last_name和其job_id
+ */
+
+SELECT
+    employee_id,
+    last_name,
+    job_id
+FROM employees e
+WHERE 2 <= (
+        SELECT COUNT(*)
+        FROM job_history j
+        WHERE
+            e.employee_id = j.employee_id
+    );
+
+# EXISTS 存在的
+/*
+ 题目 查询公司管理者的employee_id, last_name, job_id, department_id信息
+ */
+# 方式1 自接连
+SELECT
+    DISTINCT mgr.employee_id,
+    mgr.last_name,
+    mgr.job_id,
+    mgr.department_id
+FROM employees emp
+    JOIN employees mgr ON emp.manager_ id = mgr.employee_id;
+
+# 方式2 子查询
+SELECT
+    employee_id,
+    last_name,
+    job_id,
+    department_id
+FROM employees
+WHERE employee_id IN (
+        SELECT
+            DISTINCT manager_id
+        FROM employees
+    );
+
+# 方式3 他用EXISTS
+SELECT
+    employee_id,
+    last_name,
+    job_id,
+    department_id
+FROM employees e1
+WHERE EXISTS (
+        SELECT *
+        FROM employees e2
+        WHERE
+            e1.employee_id = e2.manager_id
+    );
+
+/*
+ 题目 查询departments表中，不存在于employees表中的部门的department_id和department_name
+ */
+
+# 方式一
+SELECT
+    d.department_id,
+    d.department_name
+FROM employees e
+    RIGHT JOIN departments d ON e.department_id = d.department_id
+WHERE e.department_id IS NULL;
+
+# 方式二 NOT EXISTS
+SELECT
+    department_id,
+    department_name
+FROM departments d
+WHERE NOT EXISTS (
+        SELECT *
+        FROM employees e
+        WHERE
+            d.department_id = e.department_id
+    );
