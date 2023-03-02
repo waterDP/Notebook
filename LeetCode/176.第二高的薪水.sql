@@ -1,21 +1,23 @@
 --
+
 -- @lc app=leetcode.cn id=176 lang=mysql
+
 --
+
 -- [176] 第二高的薪水
+
 --
 
 -- @lc code=start
-# Write your MySQL query statement below
-select 
-  ifnull(
-    (
-      select distinct salary
-      from employee
-      order by salary desc
-      limit 1 offset 1
-    ),
-    null
-  )
-as SecondHighestSalary;
--- @lc code=end
 
+# Write your MySQL query statement below
+SELECT (
+        SELECT DISTINCT Salary
+        FROM Employee
+        ORDER BY Salary DESC
+        LIMIT 1
+        OFFSET
+            1
+    ) AS SecondHighestSalary;
+
+-- @lc code=end

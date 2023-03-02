@@ -450,3 +450,34 @@ WHERE NOT EXISTS (
         WHERE
             d.department_id = e.department_id
     );
+
+# 题目 查询员工中工资大于本部门平均工资的员工的last_name, salary 和其department_id
+# 方式一 相关子查询
+SELECT
+    last_name,
+    salary,
+    department_id
+FROM employees e1
+WHERE salary > (
+        SELECT AVG(salary)
+        FROM employees e2
+        WHERE
+            e1.department_id = e2.department_id
+    );
+
+# 方式2：在FROM中声明子查询
+SELECT
+    el.last_name,
+    el.salary,
+    el.department_id
+FROM employees el, (
+        SELECT
+            department_id,
+            AVG(salary) avg_sal
+        FROM employees
+        GROUP BY
+            department_id
+    ) t_emp_avg_sal
+WHERE
+    el.department_id = t_emp_avg_sal.department_id
+    AND el.salary > t_emp_avg_sal.avg_sal;
