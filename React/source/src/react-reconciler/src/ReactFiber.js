@@ -4,7 +4,12 @@
  * @Description:
  * @FilePath: \Notebook\React\source\src\react-reconciler\src\ReactFiber.js
  */
-import { HostRoot } from "./ReactWorkTags";
+import {
+  HostComponent,
+  HostRoot,
+  HostText,
+  IndeterminateComponent,
+} from "./ReactWorkTags";
 import { NoFlags } from "./ReactFiberFlags";
 /**
  *
@@ -32,6 +37,7 @@ export function FiberNode(tag, pendingProps, key) {
   this.subtreeFlags = NoFlags; // 子节点对应的副作用的标识
   // 替身 轮替 DOM-DIFF
   this.alternate = null;
+  this.index = 0;
 }
 
 export function createFiber(tag, pendingProps, key) {
@@ -53,7 +59,7 @@ export function createWorkInProgress(current, pendingProps) {
     workInProgress = createFiber(current.tag, pendingProps, current.key);
     workInProgress.type = current.type;
     workInProgress.stateNode = current.stateNode;
-    workInProgress.alternate = current;
+    workInProgress.alternate = current; // alternate相互指向
     current.alternate = workInProgress;
   } else {
     workInProgress.pendingProps = current.pendingProps;
@@ -69,4 +75,28 @@ export function createWorkInProgress(current, pendingProps) {
   workInProgress.index = current.index;
 
   return workInProgress;
+}
+
+/**
+ * 模拟虚拟DOM创建Fiber节点
+ * @param {*} element
+ */
+export function createFiberElement(element) {
+  const { type, key, props: pendingProps } = element;
+  return createFiberFromTypeAndProps(type, key, pendingProps);
+}
+
+function createFiberFromTypeAndProps(type, key, pendingProps) {
+  let tag = IndeterminateComponent;
+  // 如果类型type是一个字符串 span div 说明此Fiber类型是一个原生组件
+  if (typeof type === "string") {
+    tag = HostComponent;
+  }
+  const fiber = createFiber(tag, pendingProps, key);
+  fiber.type = type;
+  return fiber;
+}
+
+export function createFiberFromText(content) {
+  return createFiber(HostText, content, null);
 }

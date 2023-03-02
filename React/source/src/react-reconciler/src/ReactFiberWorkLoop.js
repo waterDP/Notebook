@@ -48,6 +48,10 @@ function workLoopSync() {
   }
 }
 
+/**
+ * 执行一个工作单元
+ * @param {*} unitOfWork
+ */
 function performUnitOfWork(unitOfWork) {
   // 获取新的fiber对应的老的fiber
   const current = unitOfWork.alternate;
