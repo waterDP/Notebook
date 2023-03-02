@@ -5,11 +5,11 @@
  * @FilePath: \Notebook\React\source\src\react-reconciler\src\ReactFiberBeginWork.js
  */
 
-import logger from "shared/logger";
+import logger, { indent } from "shared/logger";
 import { HostComponent, HostRoot, HostText } from "./ReactWorkTags";
 import { processUpdateQueue } from "./ReactFiberClassUpdateQueue";
 import { mountChildFibers, reconcileChildFibers } from "./ReactChildFiber";
-import { shoudSetTextContent } from "react-dom-bindings/src/ReactDOMHostConfig";
+import { shouldSetTextContent } from "react-dom-bindings/src/ReactDOMHostConfig";
 
 /**
  * 根据新的虚拟DOM生成新的fiber链表
@@ -34,12 +34,13 @@ function reconcileChildren(current, workInProgress, nextChildren) {
 function updateHostRoot(current, workInProgress) {
   // 子vdom
   processUpdateQueue(workInProgress); // workInProgress.memoizedState = {element}
-  const nextState = workInProgress.memorizedState;
+  const nextState = workInProgress.memoizedState;
   // nextChildren就是新的虚拟dom
-  const nextChildren = nextState.element;
+  let nextChildren = nextState.element;
   // ! 协调了节点 DOM-DIFF算法
+  const { type, props } = nextState.element;
   // 判断当前虚拟DOM是不是文本的独生子，如果是的话nextChild=null
-  const isDirectTextChild = shoudSetTextContent(type, nextProps);
+  const isDirectTextChild = shouldSetTextContent(type, props);
   if (isDirectTextChild) {
     nextChildren = null;
   }
@@ -53,7 +54,6 @@ function updateHostRoot(current, workInProgress) {
  * @param {*} workInProgress 新fiber
  */
 function updateHostComponent(current, workInProgress) {
-  const { type } = workInProgress;
   const nextProps = workInProgress.pendingProps;
   let nextChildren = nextProps.children;
   reconcileChildren(current, workInProgress, nextChildren);
@@ -66,8 +66,9 @@ function updateHostComponent(current, workInProgress) {
  * @param {*} workInProgress 新fiber
  */
 export function beginWork(current, workInProgress) {
-  logger("beginWork", workInProgress);
-  switch (workInProgress.type) {
+  logger(" ".repeat(indent.number) + "beginWork", workInProgress);
+  indent.number += 2;
+  switch (workInProgress.tag) {
     case HostRoot:
       return updateHostRoot(current, workInProgress);
     case HostComponent:

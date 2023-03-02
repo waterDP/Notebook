@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-02-26 21:43:51
+ * @Description:
+ * @FilePath: \Notebook\React\source\src\react-reconciler\src\ReactFiberClassUpdateQueue.js
+ */
 import { markUpdateLaneFromFiberToRoot } from "./ReactFiberConcurrentUpdates";
 import assign from "shared/assign";
 
@@ -23,7 +29,7 @@ export function createUpdate() {
 
 export function enqueueUpate(fiber, update) {
   const updateQueue = fiber.updateQueue;
-  const pending = update.shared.pending;
+  const pending = fiber.updateQueue.shared.pending;
   if (pending === null) {
     update.next = update;
   } else {

@@ -7,6 +7,7 @@
 import { scheduleCallback } from "scheduler";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
+import { completeWork } from "./ReactFiberCompleteWork";
 
 let workInProgress = null;
 
@@ -60,9 +61,29 @@ function performUnitOfWork(unitOfWork) {
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
   if (next === null) {
     // 如果没有子节点，说明当前fiber已经完成了
-    // completeUnitOfWork(unitOfWork);
+    completeUnitOfWork(unitOfWork);
   } else {
     // 如果有子节点就让子节点成为下一个工作单元
     workInProgress = next;
   }
+}
+
+function completeUnitOfWork(unitOfWork) {
+  let competedWork = unitOfWork;
+  do {
+    const current = competedWork.alternate;
+    const returnFiber = competedWork.return;
+    // 执行此fiber 的完成工作 如果是原生组件的话就是创建真实DOM节点
+    completeWork(current, competedWork);
+    const siblingFiber = competedWork.sibling;
+    // 如果有弟弟 就构建弟弟对应的fiber链表
+    if (siblingFiber !== null) {
+      workInProgress = siblingFiber;
+      return;
+    }
+    // 如果没有弟弟，说明当前完成的是父fiber的最后一个节点
+    // 也就是说一个父fiber的所有的子fiber全部完成了
+    competedWork = returnFiber;
+    workInProgress = competedWork;
+  } while (competedWork !== null);
 }

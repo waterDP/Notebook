@@ -1,5 +1,9 @@
 import { REACT_ELEMENT_TYPE } from "shared/ReactSymbols";
-import { createFiberElement, createFiberFromText } from "./ReactFiber";
+import {
+  createFiberElement,
+  createFiberFromText,
+  createFiberFromElement,
+} from "./ReactFiber";
 import { Placement } from "./ReactFiberFlags";
 import isArray from "shared/isArray";
 /**
@@ -41,7 +45,7 @@ function createChildReconciler(shouldTrackSideEffects) {
     if (typeof newChild === "object" && newChild !== null) {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
-          // ? const created = createFiberFromElement(newChild);
+          const created = createFiberFromElement(newChild);
           createChild.return = returnFiber;
           return created;
         default:

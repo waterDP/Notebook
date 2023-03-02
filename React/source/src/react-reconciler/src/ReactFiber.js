@@ -100,3 +100,11 @@ function createFiberFromTypeAndProps(type, key, pendingProps) {
 export function createFiberFromText(content) {
   return createFiber(HostText, content, null);
 }
+
+export function createFiberFromElement(element) {
+  const type = element.type;
+  const key = element.key;
+  const pendingProps = element.props;
+  const fiber = createFiberFromTypeAndProps(type, key, pendingProps);
+  return fiber;
+}
