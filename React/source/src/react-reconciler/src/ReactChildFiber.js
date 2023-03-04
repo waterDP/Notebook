@@ -1,9 +1,5 @@
 import { REACT_ELEMENT_TYPE } from "shared/ReactSymbols";
-import {
-  createFiberElement,
-  createFiberFromText,
-  createFiberFromElement,
-} from "./ReactFiber";
+import { createFiberFromText, createFiberFromElement } from "./ReactFiber";
 import { Placement } from "./ReactFiberFlags";
 import isArray from "shared/isArray";
 /**
@@ -12,7 +8,7 @@ import isArray from "shared/isArray";
  */
 function createChildReconciler(shouldTrackSideEffects) {
   function reconcileSingleElement(returnFiber, currentFirstFiber, element) {
-    const created = createFiberElement(element);
+    const created = createFiberFromElement(element);
     created.return = returnFiber;
     return created;
   }

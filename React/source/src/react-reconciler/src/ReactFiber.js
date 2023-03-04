@@ -62,7 +62,7 @@ export function createWorkInProgress(current, pendingProps) {
     workInProgress.alternate = current; // alternate相互指向
     current.alternate = workInProgress;
   } else {
-    workInProgress.pendingProps = current.pendingProps;
+    workInProgress.pendingProps = pendingProps;
     workInProgress.type = current.type;
     workInProgress.flags = NoFlags;
     workInProgress.subtreeFlags = NoFlags;
@@ -75,15 +75,6 @@ export function createWorkInProgress(current, pendingProps) {
   workInProgress.index = current.index;
 
   return workInProgress;
-}
-
-/**
- * 模拟虚拟DOM创建Fiber节点
- * @param {*} element
- */
-export function createFiberElement(element) {
-  const { type, key, props: pendingProps } = element;
-  return createFiberFromTypeAndProps(type, key, pendingProps);
 }
 
 function createFiberFromTypeAndProps(type, key, pendingProps) {
@@ -101,6 +92,11 @@ export function createFiberFromText(content) {
   return createFiber(HostText, content, null);
 }
 
+/**
+ * 根据虚拟DOM节点创建fiber节点
+ * @param {*} element
+ * @returns
+ */
 export function createFiberFromElement(element) {
   const type = element.type;
   const key = element.key;

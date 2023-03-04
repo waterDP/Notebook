@@ -22,7 +22,7 @@ function reconcileChildren(current, workInProgress, nextChildren) {
   if (current === null) {
     workInProgress.child = mountChildFibers(workInProgress, null, nextChildren);
   } else {
-    // 如果说有老Fiber的话做DOM_DIFF 拿老的子fiber链表和新虚拟DOM进行最小化的更新
+    // 如果说有老Fiber的话做DOM_DIFF 拿老的子fiber子链表和新虚拟DOM进行最小化的更新
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
@@ -37,7 +37,7 @@ function updateHostRoot(current, workInProgress) {
   const nextState = workInProgress.memoizedState;
   // nextChildren就是新的虚拟dom
   let nextChildren = nextState.element;
-  // ! 协调了节点 DOM-DIFF算法
+  // ! 协调子节点 DOM-DIFF算法
   const { type, props } = nextState.element;
   // 判断当前虚拟DOM是不是文本的独生子，如果是的话nextChild=null
   const isDirectTextChild = shouldSetTextContent(type, props);

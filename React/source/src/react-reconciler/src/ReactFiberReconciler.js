@@ -26,5 +26,6 @@ export function updateContainer(element, container) {
   update.payload = { element };
   // 把此更新对象添加到current这个根Fiber的更新队列上去 返回根节点
   const root = enqueueUpate(current, update);
+  console.log("root", root);
   scheduleUpdateOnFiber(root);
 }

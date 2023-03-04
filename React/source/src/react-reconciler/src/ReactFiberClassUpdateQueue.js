@@ -29,7 +29,7 @@ export function createUpdate() {
 
 export function enqueueUpate(fiber, update) {
   const updateQueue = fiber.updateQueue;
-  const pending = fiber.updateQueue.shared.pending;
+  const pending = updateQueue.shared.pending;
   if (pending === null) {
     update.next = update;
   } else {
