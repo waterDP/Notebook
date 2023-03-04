@@ -13,6 +13,6 @@ let element = (
 )
 
 console.log(element)
-const root = createRoot(document.getElementById('#root'))
+const root = createRoot(document.getElementById('root'))
 // 把element虚拟DOM渲染到容器中
 root.render(element)
