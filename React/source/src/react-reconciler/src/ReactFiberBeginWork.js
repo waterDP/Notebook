@@ -38,12 +38,6 @@ function updateHostRoot(current, workInProgress) {
   // nextChildren就是新的虚拟dom
   let nextChildren = nextState.element;
   // ! 协调子节点 DOM-DIFF算法
-  const { type, props } = nextState.element;
-  // 判断当前虚拟DOM是不是文本的独生子，如果是的话nextChild=null
-  const isDirectTextChild = shouldSetTextContent(type, props);
-  if (isDirectTextChild) {
-    nextChildren = null;
-  }
   reconcileChildren(current, workInProgress, nextChildren);
   return workInProgress.child; // {tag: 5, type: 'h1'}
 }
@@ -54,8 +48,15 @@ function updateHostRoot(current, workInProgress) {
  * @param {*} workInProgress 新fiber
  */
 function updateHostComponent(current, workInProgress) {
+  const { type } = workInProgress;
   const nextProps = workInProgress.pendingProps;
   let nextChildren = nextProps.children;
+  // 判断当前虚拟DOM是不是文本的独生子，如果是的话nextChild=null
+  const isDirectTextChild = shouldSetTextContent(type, nextProps);
+  if (isDirectTextChild) {
+    nextChildren = null;
+  }
+
   reconcileChildren(current, workInProgress, nextChildren);
   return workInProgress.child;
 }

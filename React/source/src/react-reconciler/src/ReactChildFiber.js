@@ -22,7 +22,7 @@ function createChildReconciler(shouldTrackSideEffects) {
       /**
        * 要在最后的提交阶段插入些节点
        * ~ React渲染分成了
-       * * 渲染（创建Fiber树挂）与
+       * * 渲染（创建Fiber树）与
        * * 提交 (更新真实DOM) 两个阶段
        */
       newFiber.flags |= Placement;
@@ -35,14 +35,14 @@ function createChildReconciler(shouldTrackSideEffects) {
       typeof newChild === "number"
     ) {
       const created = createFiberFromText(`${newChild}`);
-      createChild.return = returnFiber;
+      created.return = returnFiber;
       return created;
     }
     if (typeof newChild === "object" && newChild !== null) {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
           const created = createFiberFromElement(newChild);
-          createChild.return = returnFiber;
+          created.return = returnFiber;
           return created;
         default:
           break;
@@ -60,8 +60,8 @@ function createChildReconciler(shouldTrackSideEffects) {
   function reconcileChildrenArray(returnFiber, currentFirstFiber, newChildren) {
     let resultingFirstChild = null; // 返回的第一个新儿子
     let previousNewFiber = null; // 上一个的一个新的fiber
-    let newIndex = 0;
-    for (; newIndex < newChildren.length; newIndex++) {
+
+    for (let newIndex = 0; newIndex < newChildren.length; newIndex++) {
       const newFiber = createChild(returnFiber, newChildren[newIndex]);
       if (newFiber === null) continue;
       placeChild(newFiber, newIndex);
