@@ -82,7 +82,7 @@ export function mountIndeterminateComponent(
   const props = workInProgress.pendingProps;
   const value = renderWithHooks(current, workInProgress, Component, props);
   workInProgress.tag = FunctionComponent;
-  reconcileChildren(null, workInProgress, value);
+  reconcileChildren(current, workInProgress, value);
   return workInProgress.child;
 }
 
