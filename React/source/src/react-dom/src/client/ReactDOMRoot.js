@@ -17,6 +17,7 @@ function ReactDOMRoot(internalRoot) {
 
 ReactDOMRoot.prototype.render = function (children) {
   const root = this._internalRoot;
+  root.containerInfo.innerHTML = ""; // ? 临时清空 DOM-DIFF
   updateContainer(children, root);
 };
 

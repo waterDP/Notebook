@@ -2,6 +2,13 @@ import { allNativeEvents } from "./EventRegistry";
 import * as SimpleEventPlugin from "./plugins/SimpleEventPlugins";
 import { IS_CAPTURE_PHASE } from "./EventSystemFlags";
 import { createEventListenerWrapperWithPripority } from "./ReactDOMEventListener";
+import {
+  addEventCaptureListener,
+  addEventBubbleListener,
+} from "./EventListener";
+import getEventTarget from "./getEventTarget";
+import { HostComponent } from "react-reconciler/src/ReactWorkTags";
+import getListener from "./getListener";
 
 SimpleEventPlugin.registerEvents();
 
@@ -59,4 +66,85 @@ function addTrappedEventListener(
   } else {
     addEventBubbleListener(targetContainer, domEventName, listener);
   }
+}
+
+export function dispatchEventForPluginEventSystem(
+  domEventName,
+  eventSystemFlags,
+  nativeEvent,
+  targetInst,
+  targetContainer
+) {
+  dispatchEventForPlugins(
+    domEventName,
+    eventSystemFlags,
+    nativeEvent,
+    targetInst,
+    targetContainer
+  );
+}
+
+function dispatchEventForPlugins(
+  domEventName,
+  eventSystemFlags,
+  nativeEvent,
+  targetInst,
+  targetContainer
+) {
+  const nativeEventTarget = getEventTarget(nativeEvent);
+  // 派发事件的数组
+  const dispatchQueue = [];
+  extractEvents(
+    dispatchQueue,
+    domEventName,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+    eventSystemFlags,
+    targetContainer
+  );
+  console.log("dispatchQueue", dispatchQueue);
+}
+
+function extractEvents(
+  dispatchQueue,
+  domEventName,
+  targetInst,
+  nativeEvent,
+  nativeEventTarget,
+  eventSystemFlags,
+  targetContainer
+) {
+  SimpleEventPlugin.extractEvents(
+    dispatchQueue,
+    domEventName,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+    eventSystemFlags,
+    targetContainer
+  );
+}
+
+export function accumulateSinglePhaseListeners(
+  targetFiber,
+  reactName,
+  nativeEventType,
+  isCapturePhase
+) {
+  const captureName = reactName + "Capture";
+  const reactEventName = isCapturePhase ? captureName : reactName;
+  const listeners = [];
+  let instance = targetFiber;
+  while (instance !== null) {
+    const { stateNode, tag } = instance;
+    if (tag === HostComponent && stateNode !== null) {
+      const listener = getListener(instance, reactEventName);
+      if (listener) {
+        listeners.push(listener);
+      }
+    }
+    instance = instance.return;
+  }
+  return listeners;
 }

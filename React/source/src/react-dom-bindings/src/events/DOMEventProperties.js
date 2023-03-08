@@ -5,6 +5,7 @@
  * @FilePath: \Notebook\React\source\src\react-dom-bindings\src\events\DOMEventProperties.js
  */
 import { registerTwoPhaseEvent } from "./EventRegistry";
+
 const simpleEventPluginEvents = ["click", "abort"];
 
 export const topLevelEventsToReactNames = new Map();
