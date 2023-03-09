@@ -22,7 +22,6 @@ function extractEvents(
     nativeEvent.type,
     isCapturePhase
   );
-  debugger;
   console.log("listener", listeners);
 }
 
