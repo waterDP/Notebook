@@ -10,7 +10,7 @@
     "esModuleInterop": true,
     "jsx": "preserve",
     "lib": ["esnext", "dom"],
-    "baseUrl": ".",
+    "baseUrl": ".", // 以当前路径为基准进行查找
     "paths": {
       "@vue/*": ["packages/*/src"]
     }
