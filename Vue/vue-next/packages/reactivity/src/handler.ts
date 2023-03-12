@@ -5,12 +5,17 @@
  * @FilePath: \Notebook\Vue\vue-next\packages\reactivity\src\handler.ts
  */
 import { track, trigger } from "./effect";
-import { ReactiveFlags } from "./reactive";
+import { ReactiveFlags, reactive } from "./reactive";
+import { isObject } from "@vue/shared";
 
 export const mutableHandlers: ProxyHandler<Record<any, any>> = {
   get(target, key, receiver) {
     if (key === ReactiveFlags.IS_REACTIVE) {
       return true;
+    }
+    // ~ 如果在当前取值发现在取出来的值是对象，那么再进行代理 返回代理后的结果
+    if (isObject((<any>target)[key])) {
+      return reactive((<any>target)[key]);
     }
     // ^ 这里取值了，可以收集他在哪个effect中
     track(target, key);

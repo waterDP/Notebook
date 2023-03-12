@@ -35,6 +35,10 @@ function createReactiveObject(target: object, isReadonly: boolean) {
   return proxy;
 }
 
+export function isReactive(value) {
+  return value[ReactiveFlags.IS_REACTIVE];
+}
+
 export function reactive(target: object) {
   return createReactiveObject(target, false);
 }

@@ -242,3 +242,43 @@ function Article({id}) {
     </div>
   )
 }
+
+// todo 利用闭包处理竞态问题 vue3
+let arr = []
+let state = reactive({age: 1})
+let timer = 3000
+function getData(data) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve(data)
+    }, timer -= 1000)
+  })
+}
+// 闭包
+watch(() => state.age, async (newVal, oldVal) => {
+  while(arr.length) {
+    arr.shift()()
+  }
+  let flag = false
+  arr.push(() => {
+    // 产生闭包
+    flag = true
+  })
+
+  let r = await getData(newVal)
+  flag && (app.innerHTML = r)
+})
+state.age = 200
+state.age = 100
+
+// vue 3
+watch(() => state.age, async (newVal, oldVal, onCleanup) => {
+  let flag = false
+  onCleanup(() => {
+    // 产生闭包
+    flag = true
+  })
+
+  let r = await getData(newVal)
+  flag && (app.innerHTML = r)
+})

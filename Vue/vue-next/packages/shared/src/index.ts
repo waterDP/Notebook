@@ -1,20 +1,21 @@
 /*
  * @Author: water.li
  * @Date: 2022-04-08 00:10:49
- * @Description: 
- * @FilePath: \note\Vue\vue-next\packages\shared\src\index.ts
+ * @Description:
+ * @FilePath: \Notebook\Vue\vue-next\packages\shared\src\index.ts
  */
 
 export function isString(value) {
-  return typeof value === 'string'
+  return typeof value === "string";
 }
 
 export function isObject(value: unknown): value is Record<any, any> {
-  return typeof value === 'object' && value !== null
+  return typeof value === "object" && value !== null;
 }
 
 export function isFunction(value: unknown): boolean {
-  return typeof value === 'function'
+  return typeof value === "function";
 }
 
-export const hasOwn = (value, key) => Object.prototype.hasOwnProperty(value, key)
+export const hasOwn = (value, key) =>
+  Object.prototype.hasOwnProperty.call(value, key);

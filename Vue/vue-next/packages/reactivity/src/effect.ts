@@ -19,7 +19,7 @@ export class ReactiveEffect {
   active = true;
   deps = []; // 依赖了哪些列表
   parent = null;
-  constructor(public fn: Function, public scheduler?: Function) {
+  constructor(public fn, public scheduler?) {
     // 让effect记录他依赖了哪些属性，同时要记录当前属性依赖了哪个effect
   }
   run() {
@@ -96,7 +96,7 @@ export function triggerEffects(dep) {
   }
 }
 
-export function effect(fn: Function) {
+export function effect(fn: Function, options: any = {}) {
   const _effect = new ReactiveEffect(fn);
 
   _effect.run(); // 会默认让fn执行一次
