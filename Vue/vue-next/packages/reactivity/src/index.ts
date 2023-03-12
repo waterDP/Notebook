@@ -7,6 +7,6 @@
 
 export * from "./effect";
 export * from "./reactive";
+export * from "./apiWatch";
 export * from "./computed";
 export * from "./ref";
-export * from "./apiWatch";
