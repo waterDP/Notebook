@@ -2,44 +2,21 @@
  * @Author: water.li
  * @Date: 2022-04-08 21:36:15
  * @Description:
- * @FilePath: \note\Vue\vue-next\packages\reactivity\src\reactive.ts
+ * @FilePath: \Notebook\Vue\vue-next\packages\reactivity\src\reactive.ts
  */
 
 import { isObject } from "@vue/shared";
-import { track, trigger } from "./effect";
+import { mutableHandlers } from "./handler";
 
-const enum ReactiveFlags {
+export const enum ReactiveFlags {
   IS_REACTIVE = "__v_isReactive",
 }
-
-const mutableHandlers: ProxyHandler<Record<any, any>> = {
-  get(target, key, recevier) {
-    if (key === ReactiveFlags.IS_REACTIVE) {
-      return true;
-    }
-    track(target, key);
-    const res = Reflect.get(target, key, recevier);
-
-    // 这里取值了，可以收集他在哪个effect中
-    return res;
-  },
-  set(target, key, value, recevier) {
-    let oldValue = (<any>target)[key];
-    const res = Reflect.set(target, key, value, recevier);
-
-    if (oldValue !== value) {
-      // 如果改变值了，可以在这里触发effect更新
-      trigger(target, key); // 找属性对应的effect，让他重新执行
-    }
-    return res;
-  },
-};
 
 const reactiveMap = new WeakMap(); // 缓存已代理的对象，防止重复代理
 
 function createReactiveObject(target: object, isReadonly: boolean) {
   // 先默认认为这个target已经是代理过的属性了
-  if ((<any>target)[ReactiveFlags.IS_REACTIVE]) {
+  if (target[ReactiveFlags.IS_REACTIVE]) {
     return target;
   }
 
