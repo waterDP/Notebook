@@ -104,6 +104,40 @@ function dispatchEventForPlugins(
     targetContainer
   );
   console.log("dispatchQueue", dispatchQueue);
+  processDispatchQueue(dispatchQueue, eventSystemFlags);
+}
+
+function processDispatchQueue(dispatchQueue, eventSystemFlags) {
+  // 判断是否在捕获阶段
+  const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
+  for (let i = 0; i < dispatchQueue.length; i++) {
+    const { event, listeners } = dispatchQueue[i];
+    processDispatchQueueItemsInOrder(event, listeners, inCapturePhase);
+  }
+}
+
+function processDispatchQueueItemsInOrder(
+  event,
+  dispatchListeners,
+  inCapturePhase
+) {
+  if (inCapturePhase) {
+    for (let i = dispatchListeners.length - 1; i >= 0; i--) {
+      const listener = dispatchListeners[i];
+      if (event.isPropagationStopped()) {
+        return;
+      }
+      listener(event);
+    }
+  } else {
+    for (let i = 0; i < dispatchListeners.length; i++) {
+      const listener = dispatchListeners[i];
+      if (event.isPropagationStopped()) {
+        return;
+      }
+      listener(event);
+    }
+  }
 }
 
 function extractEvents(

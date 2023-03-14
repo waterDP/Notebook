@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-03-01 23:53:47
  * @Description:
- * @FilePath: \Notebook\React\source\src\react-dom-bindings\src\client\ReactDOMHostConfig.js
+ * @FilePath: \Notebook\React\packages\src\react-dom-bindings\src\client\ReactDOMHostConfig.js
  */
 import { setInitialProperties } from "./ReactDOMComponent";
 import { precacheFiberNode, updateFiberProps } from "./ReactDOMComponentTree";
@@ -17,8 +17,16 @@ export function createTextInstance(content) {
   return document.createTextNode(content);
 }
 
+/**
+ * 在原生组件初始挂载的时候，会通过此方法创建真实的DOM
+ * @param {*} type 类型span
+ * @param {*} props 属性
+ * @param {*} internalInstanceHandle 它对应的fiber
+ * @returns
+ */
 export function createInstance(type, props, internalInstanceHandle) {
   const domElement = document.createElement(type);
+  // 预先缓存fiber节点在DOM元素上
   precacheFiberNode(internalInstanceHandle, domElement);
   // 把属性直接保存在domElement的属性上
   updateFiberProps(domElement, props);
