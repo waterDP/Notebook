@@ -116,6 +116,11 @@ function processDispatchQueue(dispatchQueue, eventSystemFlags) {
   }
 }
 
+function executeDispatch(event, listener, currentTarget) {
+  event.currentTarget = currentTarget;
+  listener(event);
+}
+
 function processDispatchQueueItemsInOrder(
   event,
   dispatchListeners,
@@ -123,19 +128,19 @@ function processDispatchQueueItemsInOrder(
 ) {
   if (inCapturePhase) {
     for (let i = dispatchListeners.length - 1; i >= 0; i--) {
-      const listener = dispatchListeners[i];
+      const { listener, currentTarget } = dispatchListeners[i];
       if (event.isPropagationStopped()) {
         return;
       }
-      listener(event);
+      executeDispatch(event, listener, currentTarget);
     }
   } else {
     for (let i = 0; i < dispatchListeners.length; i++) {
-      const listener = dispatchListeners[i];
+      const { listener, currentTarget } = dispatchListeners[i];
       if (event.isPropagationStopped()) {
         return;
       }
-      listener(event);
+      executeDispatch(event, listener, currentTarget);
     }
   }
 }
@@ -171,14 +176,18 @@ export function accumulateSinglePhaseListeners(
   const listeners = [];
   let instance = targetFiber;
   while (instance !== null) {
-    const { stateNode, tag } = instance;
+    const { stateNode, tag } = instance; // stateNode 当前执行回调的DOM节点
     if (tag === HostComponent && stateNode !== null) {
       const listener = getListener(instance, reactEventName);
       if (listener) {
-        listeners.push(listener);
+        listeners.push(createDispatchListener(instance, listener, stateNode));
       }
     }
     instance = instance.return;
   }
   return listeners;
+}
+
+function createDispatchListener(instance, listener, currentTarget) {
+  return { instance, listener, currentTarget };
 }

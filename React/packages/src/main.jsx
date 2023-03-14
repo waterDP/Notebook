@@ -2,19 +2,19 @@
  * @Author: water.li
  * @Date: 2023-02-25 21:58:15
  * @Description: 
- * @FilePath: \Notebook\React\source\src\main.jsx
+ * @FilePath: \Notebook\React\packages\src\main.jsx
  */
 import { createRoot } from "react-dom/client"
 
 function FunctionComponent() {
   return (
     <h1 id="container" 
-      onClick={() => console.log('父冒泡')}
-      onClickCapture={() => console.log('父捕获') }
+      onClick={(e) => console.log('父冒泡', e.currentTarget)}
+      onClickCapture={(e) => console.log('父捕获', e.currentTarget) }
       >
       <span 
-        onClick={() => console.log('子冒泡')}
-        onClickCapture={() => console.log('子捕获') }
+        onClick={(e) => console.log('子冒泡', e.currentTarget)}
+        onClickCapture={(e) => console.log('子捕获', e.currentTarget) }
       >world</span>
     </h1>
   )
