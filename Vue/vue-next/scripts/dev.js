@@ -11,8 +11,8 @@ const args = minimist(process.argv.slice(2));
 //  "node scripts/dev.js reactivity -f global -s"
 console.log(args);
 
-const target = args._.length ? args._[0] : "runtime-dom";
-const formats = args.f || "global";
+const target = args._.length ? args._[0] : "compiler-core";
+const formats = args.f || "esm-bundler";
 const sourcemap = args.s || false;
 
 console.log(formats);

@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-08 00:30:15
  * @Description:
- * @FilePath: \notebook\Vue\vue-next\rollup.config.js
+ * @FilePath: \Notebook\Vue\vue-next\rollup.config.js
  */
 import path from "path";
 import ts from "rollup-plugin-typescript2";
@@ -27,7 +27,7 @@ console.log(name);
 
 const outputConfig = {
   "esm-bundler": {
-    file: resolve(`dist/${name}.esm-bundle,js`),
+    file: resolve(`dist/${name}.js`),
     format: "es",
   },
   cjs: {
@@ -43,8 +43,8 @@ const outputConfig = {
 const packageConfigs = packageFormats || pkg.buildOptions.formats;
 
 function createConfig(format, output) {
-  output.sourcemap = sourcemap; // 添加sourcemap
-  output.exports = "named";
+  //output.sourcemap = sourcemap; // 添加sourcemap
+  // output.exports = "named";
   let external = [];
   if (format === "global") {
     output.name = pkg.buildOptions.name;
