@@ -4,20 +4,17 @@
  * @Description: 
  * @FilePath: \Notebook\React\packages\src\main.jsx
  */
+import * as React from "react"
 import { createRoot } from "react-dom/client"
 
+function reducer(state, action) {
+  if (action.type === 'add') return state + action.payload
+  return state
+}
+
 function FunctionComponent() {
-  return (
-    <h1 id="container" 
-      onClick={(e) => console.log('父冒泡', e.currentTarget)}
-      onClickCapture={(e) => console.log('父捕获', e.currentTarget) }
-      >
-      <span 
-        onClick={(e) => console.log('子冒泡', e.currentTarget)}
-        onClickCapture={(e) => console.log('子捕获', e.currentTarget) }
-      >world</span>
-    </h1>
-  )
+  const [number, dispatch] = React.useReducer(reducer, 0)
+  return <button onClick={() => dispatch({type: 'add', payload: 1})}>{number}</button>
 }
 
 let element = <FunctionComponent />
