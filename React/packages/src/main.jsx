@@ -14,7 +14,11 @@ function reducer(state, action) {
 
 function FunctionComponent() {
   const [number, dispatch] = React.useReducer(reducer, 0)
-  return <button onClick={() => dispatch({type: 'add', payload: 1})}>{number}</button>
+  return <button onClick={() => {
+    dispatch({type: 'add', payload: 1})
+    dispatch({type: 'add', payload: 2})
+    dispatch({type: 'add', payload: 3})
+  }}>{number}</button>
 }
 
 let element = <FunctionComponent />

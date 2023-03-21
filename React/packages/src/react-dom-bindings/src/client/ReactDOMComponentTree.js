@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-03-08 21:57:01
+ * @Description:
+ * @FilePath: \Notebook\React\packages\src\react-dom-bindings\src\client\ReactDOMComponentTree.js
+ */
 const randomKey = Math.random().toString(36).slice(2);
 const internalInstanceKey = "__reactFiber$" + randomKey;
 const internalPropsKey = "__reactProps$" + randomKey;
@@ -8,7 +14,11 @@ const internalPropsKey = "__reactProps$" + randomKey;
  */
 export function getClosestInstanceFromNode(targetNode) {
   const targetInst = targetNode[internalInstanceKey];
-  return targetInst;
+
+  if (targetInst) {
+    return targetInst;
+  }
+  return null;
 }
 
 /**

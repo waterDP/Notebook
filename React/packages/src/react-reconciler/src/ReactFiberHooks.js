@@ -5,10 +5,12 @@
  * @FilePath: \Notebook\React\packages\src\react-reconciler\src\ReactFiberHooks.js
  */
 import ReactSharedInterals from "shared/ReactSharedInternals";
+import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
+import { enqueueConcurrentHookUpdate } from "./ReactFiberConcurrentUpdates";
 
 const { ReactCurrentDispatcher } = ReactSharedInterals;
 
-let currentRenderingFiber = null;
+let currentlyRenderingFiber = null;
 let workInProgressHook = null;
 
 const HooksDispatcherOnMount = {
@@ -20,13 +22,14 @@ function mountReducer(reducer, initialArg) {
   hook.memorized = initialArg;
   const queue = {
     pending: null,
+    dispatch: null,
   };
   hook.queue = queue;
-  const dispatch = dispatchReducerAction.bind(
+  const dispatch = (queue.dispatch = dispatchReducerAction.bind(
     null,
-    currentRenderingFiber,
+    currentlyRenderingFiber,
     queue
-  );
+  ));
   return [hook.memorized, dispatch];
 }
 
@@ -37,7 +40,14 @@ function mountReducer(reducer, initialArg) {
  * @param {*} action 派发的动作
  */
 function dispatchReducerAction(fiber, queue, action) {
-  console.log(fiber, queue, action);
+  // 在每个hook里会存放一个更新队列，更新队列是一个更新对象的循环链表
+  const update = {
+    action, // {type: 'add', payload: 1}
+    next: null, // 指向下一个更新
+  };
+  // 把当前最新的更新添加到更新队列中，并且返回当前的根fiber
+  const root = enqueueConcurrentHookUpdate(fiber, queue, update);
+  scheduleUpdateOnFiber(root);
 }
 
 /**
@@ -51,7 +61,7 @@ function mountWorkInProgressHook() {
   };
   if (workInProgressHook === null) {
     // 当前函数对应的fiber的状态等于第一个hook对象
-    currentRenderingFiber.memorized = workInProgressHook = hook;
+    currentlyRenderingFiber.memorized = workInProgressHook = hook;
   } else {
     workInProgressHook = workInProgressHook.next = hook;
   }
@@ -67,7 +77,7 @@ function mountWorkInProgressHook() {
  * @returns 虚拟DOM或者说是React元素
  */
 export function renderWithHooks(current, workInProgress, Component, props) {
-  currentRenderingFiber = workInProgress;
+  currentlyRenderingFiber = workInProgress;
   // 需要在函数组件执行前给ReactCurrentDispatcher.current赋值
   ReactCurrentDispatcher.current = HooksDispatcherOnMount;
   const children = Component(props);

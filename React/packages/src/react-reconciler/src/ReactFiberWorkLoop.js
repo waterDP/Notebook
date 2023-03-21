@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-02-26 23:12:04
  * @Description:
- * @FilePath: \Notebook\React\source\src\react-reconciler\src\ReactFiberWorkLoop.js
+ * @FilePath: \Notebook\React\packages\src\react-reconciler\src\ReactFiberWorkLoop.js
  */
 import { scheduleCallback } from "scheduler";
 import { createWorkInProgress } from "./ReactFiber";
@@ -11,9 +11,10 @@ import { completeWork } from "./ReactFiberCompleteWork";
 import { NoFlags, MutationMask, Placement, Update } from "./ReactFiberFlags";
 import { commitMutationEffectsOnFiber } from "./ReactFiberCommitWork";
 import { HostRoot, HostComponent, HostText } from "./ReactWorkTags";
+import { finishQueueingConcurrentUpdates } from "./ReactFiberConcurrentUpdates";
 
 let workInProgress = null;
-
+let workInProgressRoot = null;
 /**
  * 计划更新root
  * @param {*} root
@@ -24,6 +25,8 @@ export function scheduleUpdateOnFiber(root) {
 }
 
 function ensureRootIsScheduled(root) {
+  if (workInProgressRoot) return;
+  workInProgressRoot = root;
   scheduleCallback(performConcurrentWorkOnRoot.bind(null, root));
 }
 
@@ -39,6 +42,7 @@ function performConcurrentWorkOnRoot(root) {
   const finishedWork = root.current.alternate;
   root.finishedWork = finishedWork;
   commitRoot(root);
+  workInProgressRoot = null;
 }
 
 function commitRoot(root) {
@@ -58,6 +62,7 @@ function commitRoot(root) {
 
 function prepareFreshStack(root) {
   workInProgress = createWorkInProgress(root.current, null);
+  finishQueueingConcurrentUpdates();
 }
 
 function renderRootSync(root) {
