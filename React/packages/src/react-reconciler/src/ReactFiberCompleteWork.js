@@ -6,7 +6,7 @@ import {
   appendInitialChild,
   finializeInitialChildren,
 } from "react-dom-bindings/src/client/ReactDOMHostConfig";
-import { NoFlags } from "./ReactFiberFlags";
+import { NoFlags, Update } from "./ReactFiberFlags";
 
 /**
  * 把当前完成的fiber所有的子节点对应的真实DOM都挂载到自己父parent真实DOM节点上
@@ -36,6 +36,29 @@ function appendAllChildren(parent, workInProgress) {
   }
 }
 
+function markUpdate(workInProgress) {
+  workInProgress.flags |= Update; // 给当前的fiber添加更新的副作用
+}
+
+/**
+ * 在fiber(button)的完成阶段准备更新DOM
+ * @param {*} current button的老fiber
+ * @param {*} workInProgress button的新fiber
+ * @param {*} type 类型
+ * @param {*} newProps 新属性
+ */
+function updateHostComponent(current, workInProgress, type, newProps) {
+  const oldProps = current.memoizedProps;
+  const instance = workInProgress.stateNode; // 老的DOM节点
+  // 比较新老属性 收集属性的差异
+  const updatePayload = prepareUpdate(instance, type, oldProps, newProps);
+
+  workInProgress.updateQueue = updatePayload;
+  if (updatePayload) {
+    markUpdate(workInProgress);
+  }
+}
+
 /**
  * 完成一个fiber节点
  * @param {*} current
@@ -54,11 +77,16 @@ export function completeWork(current, workInProgress) {
       // 如果完成的是一个原生节点的话
       // 创建真实的DOM节点
       const { type } = workInProgress;
-      const instance = createInstance(type, newProps, workInProgress);
-      // 把自己所有的儿子都挂载到处理身上
-      workInProgress.stateNode = instance;
-      appendAllChildren(instance, workInProgress);
-      finializeInitialChildren(instance, type, newProps);
+      if (current !== null && workInProgress.stateNode !== null) {
+        // 如何老的Fiber存在，并且老fiber上真实DOM节点，要走节点更新的逻辑
+        updateHostComponent(current, workInProgress, type, newProps);
+      } else {
+        const instance = createInstance(type, newProps, workInProgress);
+        // 把自己所有的儿子都挂载到处理身上
+        workInProgress.stateNode = instance;
+        appendAllChildren(instance, workInProgress);
+        finializeInitialChildren(instance, type, newProps);
+      }
       bubbleProperties(workInProgress);
       break;
     case HostText:

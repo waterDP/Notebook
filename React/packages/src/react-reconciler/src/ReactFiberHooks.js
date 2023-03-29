@@ -12,10 +12,65 @@ const { ReactCurrentDispatcher } = ReactSharedInterals;
 
 let currentlyRenderingFiber = null;
 let workInProgressHook = null;
+let currentHook = null;
 
 const HooksDispatcherOnMount = {
   useReducer: mountReducer,
 };
+
+const HooksDispatcherOnUpdate = {
+  useReducer: updateReducer,
+};
+
+/**
+ * 构建新的hooks
+ */
+function updateWorkInProgressHook() {
+  // 获将要构建的新的hook的老hook
+  if (currentHook === null) {
+    const current = currentlyRenderingFiber.alternate;
+    currentHook = current.memorizedState;
+  } else {
+    currentHook = currentHook.next;
+  }
+
+  // 根据老hook创建新hook
+  const newHook = {
+    memorizedState: currentHook.memorizedState,
+    queue: currentHook.queue,
+    next: null,
+  };
+  if (workInProgressHook === null) {
+    currentlyRenderingFiber.memorizedState = workInProgressHook = newHook;
+  } else {
+    workInProgressHook = workInProgressHook.next = newHook;
+  }
+  return workInProgressHook;
+}
+
+function updateReducer(reducer) {
+  const hook = updateWorkInProgressHook();
+  // 获取新的hook的更新队列
+  const queue = hook.queue;
+  // 获取老的hook
+  const current = currentHook;
+  // 获取将要生效的更新队列
+  const pendingQueue = queue.pending;
+  // 初始化一个新的状态 取值为当前的状态
+  let newState = current.memorizedState;
+  if (pendingQueue !== null) {
+    queue.pending = null;
+    const firstUpdate = pendingQueue.next;
+    let update = firstUpdate;
+    do {
+      const action = update.action;
+      newState = reducer(newState, action);
+      update = update.next;
+    } while (update !== null && update !== firstUpdate);
+  }
+  hook.memorizedState = newState;
+  return [hook.memorizedState, queue.dispatch];
+}
 
 function mountReducer(reducer, initialArg) {
   const hook = mountWorkInProgressHook();
@@ -30,7 +85,7 @@ function mountReducer(reducer, initialArg) {
     currentlyRenderingFiber,
     queue
   ));
-  return [hook.memorized, dispatch];
+  return [hook.memorizedState, dispatch];
 }
 
 /**
@@ -78,8 +133,15 @@ function mountWorkInProgressHook() {
  */
 export function renderWithHooks(current, workInProgress, Component, props) {
   currentlyRenderingFiber = workInProgress;
-  // 需要在函数组件执行前给ReactCurrentDispatcher.current赋值
-  ReactCurrentDispatcher.current = HooksDispatcherOnMount;
+  if (current !== null && current.memorized !== null) {
+    //如果有老的Fiber，并且有老的Hook链表
+    ReactCurrentDispatcher.current = HooksDispatcherOnUpdate;
+  } else {
+    // 需要在函数组件执行前给ReactCurrentDispatcher.current赋值
+    ReactCurrentDispatcher.current = HooksDispatcherOnMount;
+  }
   const children = Component(props);
+  currentlyRenderingFiber = null;
+  workInProgressHook = null;
   return children;
 }
