@@ -1,6 +1,6 @@
 (() => {
   // env-namespace:env
-  var OS = "windowNT";
+  var OS = "Windows_NT";
 
   // entry.js
   console.log("OS", OS);

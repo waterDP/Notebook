@@ -4,6 +4,9 @@
  * @Description:
  * @FilePath: \Notebook\前端工程化\Vite\base\vite.config.js
  */
+
+// # npm i vite @vitejs/plugin-vue --save-dev
+
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 

@@ -17,10 +17,10 @@ let envPlugin = {
     );
 
     // ~ 代理生产一个虚拟模块
-    build.onLoad({ filter: /^env$/ }, () => {
+    build.onLoad({ filter: /^env$/, namespace: "env-namespace" }, () => {
       return {
-        contents: 'export const OS = "windowNT"',
-        loader: "js",
+        contents: JSON.stringify(process.env),
+        loader: "json",
       };
     });
   },

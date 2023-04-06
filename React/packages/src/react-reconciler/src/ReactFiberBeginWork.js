@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-02-28 22:41:05
  * @Description:
- * @FilePath: \Notebook\React\source\src\react-reconciler\src\ReactFiberBeginWork.js
+ * @FilePath: \Notebook\React\packages\src\react-reconciler\src\ReactFiberBeginWork.js
  */
 
 import logger, { indent } from "shared/logger";
@@ -86,6 +86,22 @@ export function mountIndeterminateComponent(
   return workInProgress.child;
 }
 
+export function updateFunctionComponent(
+  current,
+  workInProgress,
+  Component,
+  nextProps
+) {
+  const nextChildren = renderWithHooks(
+    current,
+    workInProgress,
+    Component,
+    nextProps
+  );
+  reconcileChildren(current, workInProgress, nextChildren);
+  return workInProgress.child;
+}
+
 /**
  * 目标是根据vdom构建新的fiber子链表
  * @param {*} current 老fiber
@@ -100,6 +116,15 @@ export function beginWork(current, workInProgress) {
         current,
         workInProgress,
         workInProgress.type
+      );
+    case FunctionComponent:
+      const Component = workInProgress.type;
+      const nextProps = workInProgress.pendingProps;
+      return updateFunctionComponent(
+        current,
+        workInProgress,
+        Component,
+        nextProps
       );
     case HostRoot:
       return updateHostRoot(current, workInProgress);
