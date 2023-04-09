@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-04-09 09:56:17
+ * @Description:
+ * @FilePath: \Notebook\前端工程化\Vite\source\lib\optimizer\scan.js
+ */
 const path = require("path");
 const { build } = require("esbuild");
 const getScanPlugin = require("./getScanPlugin");
@@ -17,7 +23,7 @@ async function scanImports(config) {
     bundle: true,
     format: "esm",
     outfile: "./dist/bundle.js",
-    write: true, // 在真实的代码 write=false 不需要写入硬盘
+    write: false, // 在真实的代码 write=false 不需要写入硬盘
     plugins: [scanPlugin],
   });
 }

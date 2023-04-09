@@ -18,15 +18,16 @@ async function createServer() {
     async listen(port, callback) {
       // ~ 在项目启动前 进行依赖的预构建
       // 1.找到本项目依赖的第三方模板
-      await runOptimize(config);
+      await runOptimize(config, server);
       require("http").createServer(middlewares).listen(port, callback);
     },
   };
   return server;
 }
 
-async function runOptimize(config) {
-  await createOptimizeDepsRun(config);
+async function runOptimize(config, server) {
+  const optimizeDeps = await createOptimizeDepsRun(config);
+  server._optimizeDepsMetadata = optimizeDeps.metadata;
 }
 
 exports.createServer = createServer;
