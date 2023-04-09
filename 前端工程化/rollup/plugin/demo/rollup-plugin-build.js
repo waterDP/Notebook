@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-04-07 20:32:28
+ * @Description:
+ * @FilePath: \Notebook\前端工程化\rollup\plugin\demo\rollup-plugin-build.js
+ */
 function build() {
   return {
     name: "build", // 插件的名字
@@ -9,7 +15,7 @@ function build() {
       // 如果你想读取所有插件的配置内容的汇总，需要buildStart
       console.log("buildStart");
     },
-    async resolved(source, importer) {
+    async resolveId(source, importer) {
       console.log(source);
       console.log(importer);
     },
