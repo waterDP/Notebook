@@ -18,7 +18,7 @@ async function scanImports(config) {
   // 创建一个esbuild的扫描插件
   const scanPlugin = await getScanPlugin(config, depImports);
   await build({
-    absWorkingDir: config.rootm, // 当前的工作目录
+    absWorkingDir: config.root, // 当前的工作目录
     entryPoints: [path.resolve("./index.html")], // 指定编译的入口
     bundle: true,
     format: "esm",
