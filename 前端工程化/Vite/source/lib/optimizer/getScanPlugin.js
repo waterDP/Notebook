@@ -17,6 +17,7 @@ async function getScanPlugin(config, depImports) {
     root: config.root,
   });
   const resolve = async function (path, importer) {
+    // 由插件容器进行路径解析 返回绝对路径
     return await container.resolveId(path, importer);
   };
 
@@ -43,11 +44,10 @@ async function getScanPlugin(config, depImports) {
               path: id,
               external: true, // 表示这是一个外部模块，不需要进一步处理了
             };
-          } else {
-            return {
-              path: id,
-            };
           }
+          return {
+            path: id,
+          };
         }
       });
       build.onload({ filter: htmlTypesRE, namespace: "html" }, ({ path }) => {

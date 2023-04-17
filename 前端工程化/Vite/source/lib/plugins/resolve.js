@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-04-09 11:17:42
+ * @Description:
+ * @FilePath: \Notebook\前端工程化\Vite\source\lib\plugins\resolve.js
+ */
 const pathLib = require("path");
 const resolve = require("resolve");
 const fs = require("fs-extra");
@@ -28,7 +34,7 @@ function resolvePlugin({ root }) {
 }
 
 function tryNodeResolve(path, importer, root) {
-  const pkgPath = resolve.sync(`${path}/package.json`, { basedir: root });
+  const pkgPath = resolve.sync(`${path}/package.json`, { baseDir: root });
   const pkgDir = pathLib.dirname(pkgPath);
   const pkg = JSON.parse(fs.readFileSync(pkgDir));
   const entryPoint = pkg.module;
