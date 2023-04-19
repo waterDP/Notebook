@@ -12,13 +12,13 @@ function resolvePlugin({ root }) {
   return {
     name: "resolve",
     resolveId(path, importer) {
+      if (path.isAbsolute(path) && fs.pathExistsSync(path)) {
+        // 如果path是一个绝对路径
+        return { id: path };
+      }
       if (path.startsWith("/")) {
         // 如果path以/开头，说明它是一个根目录下的绝对路径
         return { id: pathLib.resolve(root, path.slice(1)) };
-      }
-      if (path.isAbsolute(path)) {
-        // 如果path是一个绝对路径
-        return { id: path };
       }
       if (path.startsWith(".")) {
         // 如果是一个相对路径
