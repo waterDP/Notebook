@@ -4,6 +4,8 @@ export class Observable<T> {
   source: Observable<any> | undefined;
 
   protected _subscribe: any;
+  operator: any;
+
   constructor(_subscribe?) {
     if (_subscribe) {
       this._subscribe = _subscribe;
@@ -21,7 +23,14 @@ export class Observable<T> {
   }
 
   // subscribe()：执行初始化传入的 _subscribe
-  subscribe(next, error, complete) {
-    
+  subscribe(observerOrNext, error, complete) {
+    const subscriber = observerOrNext;
+    const { operator, source } = this;
+
+    // ! 订阅时，执行_subscribe函数 并将结果传递
+    subscriber.add(
+      operator ? operator.call(subscriber, source) : this._subscribe(subscriber)
+    );
+    return subscriber;
   }
 }
