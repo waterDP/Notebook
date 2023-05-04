@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-05-04 22:06:38
  * @Description:
- * @FilePath: \Notebook\前端运维\linus.md
+ * @FilePath: \Notebook\前端运维\Linux\cmd.md
 -->
 
 ## ls 查看目录
@@ -51,3 +51,15 @@
 ## 环境变量
 
 ### echo $PATH 显示环境变量
+
+### find 文件搜索命令
+
+- find [搜索范围][搜索条件]
+- 通配符
+  - \*匹配任意内容
+  - ?匹配任意一个字符
+  - []匹配任意一个中括号内的字符
+- -i 不区分大小写
+- -user 按所有者搜索
+- -a and 逻辑与
+- -o or 逻辑否
