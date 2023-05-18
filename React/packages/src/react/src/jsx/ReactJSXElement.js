@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-01-03 21:56:26
  * @Description:
- * @FilePath: \Notebook\React\source\src\react\src\jsx\ReactJSXElement.js
+ * @FilePath: \Notebook\React\packages\src\react\src\jsx\ReactJSXElement.js
  */
 
 import hasOwnProperty from "shared/hasOwnProperty";
@@ -39,7 +39,7 @@ export function jsxDEV(type, config) {
   let propName; // 属性名
   const props = {}; // 属对象
   let key = null; // 每个虚拟Dom可以有一个可选的key属性，用来区分一个父节点下的不同子节点
-  let ref = null; // 引入，后面可能通过这实现获取直接的DOM的需求
+  let ref = null; // 引入，后面可以通过这实现获取直接的DOM的需求
   if (hasValidKey(config)) {
     key = config.key;
   }
