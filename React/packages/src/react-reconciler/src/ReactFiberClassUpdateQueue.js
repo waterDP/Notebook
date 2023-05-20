@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-02-26 21:43:51
  * @Description:
- * @FilePath: \Notebook\React\source\src\react-reconciler\src\ReactFiberClassUpdateQueue.js
+ * @FilePath: \Notebook\React\packages\src\react-reconciler\src\ReactFiberClassUpdateQueue.js
  */
 import { markUpdateLaneFromFiberToRoot } from "./ReactFiberConcurrentUpdates";
 import assign from "shared/assign";
