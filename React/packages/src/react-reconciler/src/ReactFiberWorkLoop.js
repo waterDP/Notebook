@@ -31,7 +31,9 @@ function ensureRootIsScheduled(root) {
 }
 
 /**
- * 根据vdom构建fiber树 要创建真实的Dom节点 把真实的dom节点插入容器
+ * 根据vdom 构建fiber树
+ * 创建真实的Dom节点
+ * 把真实的dom节点插入容器
  * @param {*} root
  */
 function performConcurrentWorkOnRoot(root) {
