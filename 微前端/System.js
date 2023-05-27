@@ -5,6 +5,7 @@
  * @FilePath: \Notebook\微前端\System.js
  */
 const newMapUrl = {};
+let lastRegister;
 
 // 解析importsMap
 function processScripts() {
@@ -47,6 +48,7 @@ export class SystemJs {
       });
   }
   register(deps, declare) {
-    
+    // 将回调的结果保存起来
+    lastRegister = [deps, declare];
   }
 }
