@@ -23,13 +23,32 @@ function processScripts() {
 function load(id) {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = id;
+    script.src = newMapUrl[id] || id;
     script.async = true;
     document.head.appendChild(script);
     script.addEventListener("load", () => {
-      resolve();
+      let _lastRegister = lastRegister;
+      lastRegister = null;
+      resolve(_lastRegister);
     });
   });
+}
+
+let set = new Set();
+function saveGlobalProperty() {
+  for (let k in window) {
+    set.add(k);
+  }
+}
+saveGlobalProperty();
+function getLastGlobalProperty() {
+  for (let k in window) {
+    if (set.has(k)) {
+      if (set.has(k)) continue;
+      set.add(k);
+      return window[k];
+    }
+  }
 }
 
 export class SystemJs {
@@ -44,7 +63,29 @@ export class SystemJs {
       })
       .then((id) => {
         // 根据文件的路径 来加载资源
-        return load(id).then(() => {});
+        let execute;
+        return load(id)
+          .then((register) => {
+            // execute 是真正的渲染逻辑
+            // setters 是用来保存加载后的资源 加载资源调用setters
+            let { setters, execute: exe } = register[1](() => {});
+            execute = exe;
+            return [register[0], setters];
+          })
+          .then(([registeration, setters]) => {
+            return Promise.all(
+              registeration.map((dep, i) => {
+                return load(dep).then(() => {
+                  // 加载完毕后，会在window上增添属性 window.React window.ReactDOM
+                  const property = getLastGlobalProperty();
+                  setters[i](property);
+                });
+              })
+            );
+          })
+          .then(() => {
+            execute();
+          });
       });
   }
   register(deps, declare) {
