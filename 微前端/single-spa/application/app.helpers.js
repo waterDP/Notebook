@@ -6,6 +6,8 @@
  */
 // app status
 
+import { apps } from "./app";
+
 export const NOT_LOADED = "NOT_LOADED"; // 没有被加载
 export const LOADING_SOURCE_CODE = "LOADING_SOURCE_CODE"; //路径匹配了 要去加载这个资源
 export const LOAD_ERROR = "LOAD_ERROR";
@@ -30,4 +32,38 @@ export function isActive(app) {
 // 看一下此应用是否被激活
 export function shouldBeActive(app) {
   return app.activeWhen(window.location);
+}
+
+export function getAppChanges() {
+  const appsToLoad = [];
+  const appsToMount = [];
+  const appsToUnmount = [];
+
+  apps.forEach((app) => {
+    let appShouldBeActive = shouldBeActive();
+    switch (app.status) {
+      case NOT_LOADED:
+      case LOADING_SOURCE_CODE:
+        if (appShouldBeActive) {
+          appsToLoad.push(app);
+        }
+        break;
+      case NOT_BOOTSTRAPED:
+      case BOOTSTRAPING:
+      case NOT_MOUNTED:
+        if (appShouldBeActive) {
+          appsToMount.push(app);
+        }
+        break;
+      case MOUNTED:
+        if (!appShouldBeActive) {
+          appsToUnmount.push(app);
+        }
+        break;
+      default:
+        break;
+    }
+  });
+
+  return { appsToLoad, appsToMount, appsToUnmount };
 }
