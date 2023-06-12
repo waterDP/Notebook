@@ -10,7 +10,17 @@ import { callCaptureEventListeners } from "./navigation-events.js";
 
 // * important
 // 后续路径变化后 也需要走这里，重新计算哪些应用被加载或者卸载
+
+let appChangeUnderWap = false;
+let peopleWaitingOnChange = [];
+
 export function reroute(event) {
+  if (appChangeUnderWap) {
+    return new Promise((resolve, reject) => {
+      peopleWaitingOnChange.push({ resolve, reject });
+    });
+  }
+
   const { appsToLoad, appsToMount, appsToUnmount } = getAppChanges();
 
   function performAppChange() {
@@ -30,9 +40,10 @@ export function reroute(event) {
       appsToMount.map((app) => tryBoostrapAndMount(app))
     );
 
-    return Promise.all([loadMountPromises, mountePromises]).then(
-      callEventListener
-    );
+    return Promise.all([loadMountPromises, mountePromises]).then(() => {
+      callEventListener();
+      appChangeUnderWap = false;
+    });
   }
 
   function tryBoostrapAndMount(app, unmountAllPromises) {
@@ -46,6 +57,7 @@ export function reroute(event) {
 
   if (started) {
     // 用记调了start方法 我们需要处理当前应用要挂载或者卸载
+    appChangeUnderWap = true;
     return performAppChange();
   }
 
