@@ -1,18 +1,47 @@
-import { getAppChanges } from "../application/app.helpers";
+import { getAppChanges, shouldBeActive } from "../application/app.helpers";
+import { toBootstrapPromise } from "../lifecycles/boostrap";
 import { toLoadPromise } from "../lifecycles/load";
+import { toMountPromise } from "../lifecycles/mount";
 import { toUnmountPromise } from "../lifecycles/unmount";
 import { started } from "../start";
 
+import "./navigation-events.js";
+import { callCaptureEventListeners } from "./navigation-events.js";
+
 // * important
 // 后续路径变化后 也需要走这里，重新计算哪些应用被加载或者卸载
-export function reroute() {
+export function reroute(event) {
   const { appsToLoad, appsToMount, appsToUnmount } = getAppChanges();
 
   function performAppChange() {
     // 将不需要的应用卸载
-    const unmountPromise = Promise.all(appsToUnmount.map(toUnmountPromise));
+    const unmountAllPromises = Promise.all(appsToUnmount.map(toUnmountPromise));
     // 加载需要的应用 =》 启动对应的应用 =》 挂载对应的应用
-    
+    const loadMountPromises = Promise.all(
+      appsToLoad.map((app) =>
+        toLoadPromise(app).then((app) => {
+          // 当应用加载完毕后，需要启动和挂载，但是要保证挂载前 先卸载丢老的应用
+          return tryBoostrapAndMount(app, unmountAllPromises);
+        })
+      )
+    );
+
+    const mountePromises = Promise.all(
+      appsToMount.map((app) => tryBoostrapAndMount(app))
+    );
+
+    return Promise.all([loadMountPromises, mountePromises]).then(
+      callEventListener
+    );
+  }
+
+  function tryBoostrapAndMount(app, unmountAllPromises) {
+    if (shouldBeActive(app)) {
+      // 保证先卸载完毕再挂载
+      return toBootstrapPromise(app).then((app) =>
+        unmountAllPromises().then(() => toMountPromise(app))
+      );
+    }
   }
 
   if (started) {
@@ -20,5 +49,13 @@ export function reroute() {
     return performAppChange();
   }
 
-  appsToLoad.map(toLoadPromise);
+  return loadApps();
+  function loadApps() {
+    return Promise.all(appsToLoad.map(toLoadPromise)).then(
+      callCaptureEventListeners
+    );
+  }
+  function callEventListener() {
+    callCaptureEventListeners(event);
+  }
 }
