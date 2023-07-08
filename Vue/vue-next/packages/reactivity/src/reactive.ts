@@ -24,10 +24,10 @@ function createReactiveObject(target: object, isReadonly: boolean) {
     return target;
   }
 
-  const exisitingProxy = reactiveMap.get(target);
-  if (exisitingProxy) {
+  const existingProxy = reactiveMap.get(target);
+  if (existingProxy) {
     // 如果已经代理了，就直接从缓存中返回
-    return exisitingProxy;
+    return existingProxy;
   }
 
   const proxy = new Proxy(target, mutableHandlers); // ! 代理
