@@ -54,6 +54,7 @@ export function isTracking(): boolean {
 
 // {对象：{属性: [effect1, effect2]}}
 const targetMap = new WeakMap();
+// todo 触发收集依赖
 export function track(target, key) {
   if (!isTracking()) return; // 如果这个属性，不依赖于effect直接跳出即可
 
