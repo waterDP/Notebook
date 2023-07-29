@@ -74,7 +74,7 @@ export function trackEffects(dep) {
   }
 }
 
-export function trigger(target, key) {
+export function trigger(target, key, value, oldValue) {
   let depsMap = targetMap.get(target);
   if (!depsMap) return; // 修改的属性根本没有依赖任何effect
   let dep = depsMap.get(key);

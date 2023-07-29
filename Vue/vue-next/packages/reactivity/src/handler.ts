@@ -32,7 +32,7 @@ export const mutableHandlers: ProxyHandler<Record<any, any>> = {
     let result = Reflect.set(target, key, value, receiver);
     if (oldValue !== value) {
       // ^ 如果改变值了，可以在这里触发effect更新
-      trigger(target, key); // 找属性对应的effect，让他重新执行
+      trigger(target, key, value, oldValue); // 找属性对应的effect，让他重新执行
     }
     return result;
   },
