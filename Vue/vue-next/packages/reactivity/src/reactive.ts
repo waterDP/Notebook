@@ -36,7 +36,7 @@ function createReactiveObject(target: object, isReadonly: boolean) {
 }
 
 export function isReactive(value) {
-  return value[ReactiveFlags.IS_REACTIVE];
+  return value && value[ReactiveFlags.IS_REACTIVE];
 }
 
 export function reactive(target: object) {
