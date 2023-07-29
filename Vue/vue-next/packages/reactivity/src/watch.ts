@@ -9,6 +9,7 @@ import { isFunction, isObject } from "@vue/shared";
 import { isReactive } from "./reactive";
 import { ReactiveEffect } from "./effect";
 
+// 访问一下对象中的属性，触发getter收集依赖
 function traverse(value, seen = new Set()) {
   if (!isObject(value)) {
     return value;
@@ -28,8 +29,8 @@ export function watch(source, cb, options) {
   return dowatch(source, cb, options);
 }
 
-export function watchEffect(source, options) {
-  return dowatch(source, null, options);
+export function watchEffect(effect, options = {}) {
+  dowatch(effect, null, options);
 }
 
 export function dowatch(source, cb, options) {
