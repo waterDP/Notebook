@@ -78,7 +78,7 @@ export function trigger(target, key, value, oldValue) {
   let depsMap = targetMap.get(target);
   if (!depsMap) return; // 修改的属性根本没有依赖任何effect
   let dep = depsMap.get(key);
-  let effects = [...dep];
+  let effects = [...dep]; // 防止边删除，边添加时出现死循环
 
   triggerEffects(effects);
 }
