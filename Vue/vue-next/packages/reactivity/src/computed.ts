@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2022-04-08 23:39:15
  * @Description:
- * @FilePath: \note\Vue\vue-next\packages\reactivity\src\computed.ts
+ * @FilePath: \Notebook\Vue\vue-next\packages\reactivity\src\computed.ts
  */
 
 import { isFunction } from "@vue/shared";
@@ -23,7 +23,7 @@ class ComputedRefImpl {
     // 这里将计算属性包成一个effect
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
-        this._dirty = true;
+        this._dirty = true; //让计算属性标记为脏值
         // 当依赖的值发生变化了 也应该触发更新
         triggerEffects(this.dep);
       }
