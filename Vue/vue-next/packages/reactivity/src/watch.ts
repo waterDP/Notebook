@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-03-12 17:31:16
  * @Description:
- * @FilePath: \Notebook\Vue\vue-next\packages\reactivity\src\apiWatch.ts
+ * @FilePath: \Notebook\Vue\vue-next\packages\reactivity\src\watch.ts
  */
 
 import { isFunction, isObject } from "@vue/shared";
@@ -60,5 +60,8 @@ export function dowatch(source, cb, options) {
   };
   // 如果数据变化了执行对应的scheduler方法
   const effect = new ReactiveEffect(getter, job);
+  if (options.immediate) {
+    job();
+  }
   oldValue = effect.run();
 }
