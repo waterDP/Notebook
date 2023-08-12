@@ -19,7 +19,7 @@ export const mutableHandlers: ProxyHandler<Record<any, any>> = {
       return (<any>target)[key].vaue;
     }
 
-    if (isObject((<any>target)[key])) {
+    if ((<any>target)[key]) {
       // ! 懒代理
       // ~ 如果在当前取值发现在取出来的值是对象，那么再进行代理 返回代理后的结果
       return reactive((<any>target)[key]);
@@ -30,11 +30,10 @@ export const mutableHandlers: ProxyHandler<Record<any, any>> = {
   },
   set(target, key, value, receiver) {
     let oldValue = (<any>target)[key];
-    let result = Reflect.set(target, key, value, receiver);
     if (oldValue !== value) {
       // ^ 如果改变值了，可以在这里触发effect更新
       trigger(target, key, value, oldValue); // 找属性对应的effect，让他重新执行
     }
-    return result;
+    return Reflect.set(target, key, value, receiver);
   },
 };
