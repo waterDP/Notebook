@@ -1,4 +1,5 @@
 import { Subscriber } from "./Subscriber";
+import { pipeFromArray } from "./util/pipe";
 
 export class Observable {
   constructor(subscribe) {
@@ -16,5 +17,8 @@ export class Observable {
     // 把销毁函数存放到subscriber
     subscriber.add(teardown);
     return subscriber;
+  }
+  pipe(...operations) {
+    return pipeFromArray(operations)(this);
   }
 }
