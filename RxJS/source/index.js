@@ -9,5 +9,6 @@ export { interval } from "./internal/observable/interval";
 
 export { map } from "./internal/operators/map";
 export { filter } from "./internal/operators/filter";
+export { take } from "./internal/operators/take";
 
 export { asyncScheduler } from "./internal/scheduler/async";
