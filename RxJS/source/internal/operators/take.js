@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-09-16 14:34:36
+ * @Description:
+ * @FilePath: \Notebook\RxJS\source\internal\operators\take.js
+ */
 import { Observable } from "../Observable";
 
 export function map(count) {

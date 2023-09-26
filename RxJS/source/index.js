@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-09-15 21:31:44
+ * @Description:
+ * @FilePath: \Notebook\RxJS\source\index.js
+ */
 export { Observable } from "./internal/Observable";
 
 // 创建操作符 可以基于一组参数创建可观察对象
@@ -12,3 +18,4 @@ export { filter } from "./internal/operators/filter";
 export { take } from "./internal/operators/take";
 
 export { asyncScheduler } from "./internal/scheduler/async";
+export { Subject } from "./internal/Subject";
