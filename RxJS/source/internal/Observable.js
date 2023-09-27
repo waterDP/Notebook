@@ -1,7 +1,7 @@
 /*
  * @Author: water.li
  * @Date: 2023-09-15 21:32:46
- * @Description: 
+ * @Description:
  * @FilePath: \Notebook\RxJS\source\internal\Observable.js
  */
 import { Subscriber } from "./Subscriber";
@@ -16,7 +16,7 @@ export class Observable {
   }
   // 当调用Observable的subscribe的时候，就要开始执行
   subscribe(observerOrNext) {
-    // 创建一个订阅都的对象
+    // 创建一个订阅者的对象
     const subscriber = new Subscriber(observerOrNext);
     // 订阅函数执行后会返回一个销毁函数
     const teardown = this._subscribe(subscriber);
