@@ -1,7 +1,11 @@
 import { Observable } from "../Observable";
-
+/**
+ * @param {function} project
+ */
 export function map(project) {
-  // operation
+  /**
+   * @param {Observable} source 老的Observable
+   */
   return (source) => {
     return new Observable((subscriber) => {
       return source.subscribe({
