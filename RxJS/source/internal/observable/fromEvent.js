@@ -10,6 +10,6 @@ import { Observable } from "../Observable";
 export function fromEvent(target, eventName) {
   return new Observable((subscriber) => {
     const handler = (...args) => subscriber.next(...args);
-    target.eventListener(eventName, handler);
+    target.addEventListener(eventName, handler);
   });
 }
