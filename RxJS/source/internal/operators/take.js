@@ -9,7 +9,7 @@ import { Observable } from "../Observable";
 export function map(count) {
   // operation
   return (source) => {
-    // 记数器 用来记录已经获取的值的数量
+    // 计数器 用来记录已经获取的值的数量
     let seen = 0;
     return new Observable((subscriber) => {
       return source.subscribe({
