@@ -140,7 +140,4 @@ FROM (
         HAVING
             COUNT(Id) >= 5
     ) as Manager
-    join Employee ON Manager.id = Employee.id 
-    
--- @lc code=end
-
+    JOIN Employee ON Manager.id = Employee.id -- @lc code=end
