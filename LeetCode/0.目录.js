@@ -508,5 +508,6 @@
  * @Leetcode 177 第n高的薪水
  * @Leetcode 183 从不订购的客户
  * @Leetcode 184 部门工资最高的员工
+ * @Leetcode 570 至少有5名直接下属的经理
  * @Leetcode 627 变更性别
  */
