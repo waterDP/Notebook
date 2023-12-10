@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mecha Shark Rig
+* source:	https://sketchfab.com/3d-models/mecha-shark-rig-446b1ab8d5944cda9c4651d4f655ed2d
+* author:	Jamir_Cornejo_Vilca (https://sketchfab.com/Jamir_Percy_Cornejo)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mecha Shark Rig" (https://sketchfab.com/3d-models/mecha-shark-rig-446b1ab8d5944cda9c4651d4f655ed2d) by Jamir_Cornejo_Vilca (https://sketchfab.com/Jamir_Percy_Cornejo) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

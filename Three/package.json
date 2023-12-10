@@ -1,0 +1,34 @@
+{
+  "name": "threejs-lessons",
+  "description": "threejs lessons by keman5",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/keman5/threejs-courses.git"
+  },
+  "keywords": [
+    "threejs"
+  ],
+  "author": "keman.wu",
+  "license": "MIT",
+  "dependencies": {
+    "@types/three": "^0.150.2",
+    "cannon": "^0.6.2",
+    "dat.gui": "^0.7.9",
+    "gsap": "^3.11.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.10.0",
+    "three": "^0.151.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
+    "@vitejs/plugin-react": "^4.0.0",
+    "vite": "^4.3.1"
+  }
+}

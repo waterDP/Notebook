@@ -1,0 +1,372 @@
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html class="with-top-bar" lang="zh-CN">
+<head prefix="og: http://ogp.me/ns#">
+<meta charset="utf-8">
+<title>2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb · master · keman5 / GlTF Sample Models · GitLab</title>
+<link rel="preload" href="/assets/application_utilities-3bec0ef667aa2d798d0e668d99e91d11b71b60a67b1b0bdef92ecb433390f72c.css" as="style" type="text/css" nonce="Kc4QXspLI9SUfAtabrF32w==">
+<link rel="preload" href="/assets/application-ad779fabb121ac9d0c594b996d2fddb1fee9ce36c886c73c3d0e6fe10233819b.css" as="style" type="text/css" nonce="Kc4QXspLI9SUfAtabrF32w==">
+<link rel="preload" href="/assets/highlight/themes/monokai-37c1c7d2c1ba743caf32dff79fcf999c4459d9daec9ef2517786911e41448f79.css" as="style" type="text/css" nonce="Kc4QXspLI9SUfAtabrF32w==">
+<link crossorigin="" href="https://snowplow.trx.gitlab.net" rel="preconnect">
+<link as="font" crossorigin="" href="/assets/gitlab-sans/GitLabSans-d7fd6710b89a849e5226ae731af634e673f093b8086b067f052b40df8ceb8285.woff2" rel="preload">
+<link as="font" crossorigin="" href="/assets/gitlab-mono/GitLabMono-abe47cfd35abd73c211641d8c16e03f0bb68c051a35cec13f61415b4b3f24fce.woff2" rel="preload">
+<link as="font" crossorigin="" href="/assets/gitlab-mono/GitLabMono-Italic-4e53f89603679ed9c6f6b6411d7517e490c314ab175bda2669335c5d0dad495b.woff2" rel="preload">
+<link rel="preload" href="/assets/fonts-69462a96d25f0fedf56239dd5f545e463bc98f0a04d17cb50f7d44eb4a06348e.css" as="style" type="text/css" nonce="Kc4QXspLI9SUfAtabrF32w==">
+
+<meta content="IE=edge" http-equiv="X-UA-Compatible">
+<script nonce="6G9CuE+LltS9n9/qb3Svyw==">
+//<![CDATA[
+var gl = window.gl || {};
+gl.startup_calls = null;
+gl.startup_graphql_calls = [{"query":"query getBlobInfo(\n  $projectPath: ID!\n  $filePath: String!\n  $ref: String!\n  $shouldFetchRawText: Boolean!\n) {\n  project(fullPath: $projectPath) {\n    __typename\n    id\n    repository {\n      __typename\n      empty\n      blobs(paths: [$filePath], ref: $ref) {\n        __typename\n        nodes {\n          __typename\n          id\n          webPath\n          name\n          size\n          rawSize\n          rawTextBlob @include(if: $shouldFetchRawText)\n          fileType\n          language\n          path\n          blamePath\n          editBlobPath\n          gitpodBlobUrl\n          ideEditPath\n          forkAndEditPath\n          ideForkAndEditPath\n          codeNavigationPath\n          projectBlobPathRoot\n          forkAndViewPath\n          environmentFormattedExternalUrl\n          environmentExternalUrlForRouteMap\n          canModifyBlob\n          canCurrentUserPushToBranch\n          archived\n          storedExternally\n          externalStorage\n          externalStorageUrl\n          rawPath\n          replacePath\n          pipelineEditorPath\n          simpleViewer {\n            fileType\n            tooLarge\n            type\n            renderError\n          }\n          richViewer {\n            fileType\n            tooLarge\n            type\n            renderError\n          }\n        }\n      }\n    }\n  }\n}\n","variables":{"projectPath":"keman51/glTF-Sample-Models","ref":"master","filePath":"2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb","shouldFetchRawText":false}}];
+
+if (gl.startup_calls && window.fetch) {
+  Object.keys(gl.startup_calls).forEach(apiCall => {
+   gl.startup_calls[apiCall] = {
+      fetchCall: fetch(apiCall, {
+        // Emulate XHR for Rails AJAX request checks
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        // fetch won’t send cookies in older browsers, unless you set the credentials init option.
+        // We set to `same-origin` which is default value in modern browsers.
+        // See https://github.com/whatwg/fetch/pull/585 for more information.
+        credentials: 'same-origin'
+      })
+    };
+  });
+}
+if (gl.startup_graphql_calls && window.fetch) {
+  const headers = {"X-CSRF-Token":"4fUHKDRNBpX9-3ABFgBpmSuiUNsWc6rBl5hYtR48soKFQOhp35B1ynUY3m9ctRuAy0K_xhAFgvPHSIrNmpFJrA","x-gitlab-feature-category":"source_code_management"};
+  const url = `https://gitlab.com/api/graphql`
+
+  const opts = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    }
+  };
+
+  gl.startup_graphql_calls = gl.startup_graphql_calls.map(call => ({
+    ...call,
+    fetchCall: fetch(url, {
+      ...opts,
+      credentials: 'same-origin',
+      body: JSON.stringify(call)
+    })
+  }))
+}
+
+
+//]]>
+</script>
+
+<link rel="prefetch" href="/assets/webpack/monaco.7f1bd94b.chunk.js">
+<link rel="shortcut icon" type="image/png" href="/assets/favicon-72a2cad5025aa931d6ea56c3201d1f18e68a8cd39788c7c80d5b2b82aa5143ef.png" id="favicon" data-original-href="/assets/favicon-72a2cad5025aa931d6ea56c3201d1f18e68a8cd39788c7c80d5b2b82aa5143ef.png" />
+<link rel="stylesheet" media="screen" href="/assets/themes/theme_light_gray-bf48d91471b52b5791f6235a7e87814ec04609e09a3a12e71fdb718dadb341b2.css" />
+
+<link rel="stylesheet" media="all" href="/assets/application-ad779fabb121ac9d0c594b996d2fddb1fee9ce36c886c73c3d0e6fe10233819b.css" />
+<link rel="stylesheet" media="all" href="/assets/page_bundles/tree-86a16f68ea7bde025a5a521d3a1332e85e8484bad7d4c52e0bd04f0ed1b3571f.css" />
+<link rel="stylesheet" media="all" href="/assets/application_utilities-3bec0ef667aa2d798d0e668d99e91d11b71b60a67b1b0bdef92ecb433390f72c.css" />
+
+
+<link rel="stylesheet" media="all" href="/assets/fonts-69462a96d25f0fedf56239dd5f545e463bc98f0a04d17cb50f7d44eb4a06348e.css" />
+<link rel="stylesheet" media="all" href="/assets/highlight/themes/monokai-37c1c7d2c1ba743caf32dff79fcf999c4459d9daec9ef2517786911e41448f79.css" />
+
+<script src="/assets/webpack/runtime.d6c1b21d.bundle.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/main.b83f5f6c.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/tracker.bd064e20.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script nonce="6G9CuE+LltS9n9/qb3Svyw==">
+//<![CDATA[
+window.snowplowOptions = {"namespace":"gl","hostname":"snowplow.trx.gitlab.net","cookieDomain":".gitlab.com","appId":"gitlab","formTracking":true,"linkClickTracking":true}
+
+gl = window.gl || {};
+gl.snowplowStandardContext = {"schema":"iglu:com.gitlab/gitlab_standard/jsonschema/1-0-9","data":{"environment":"production","source":"gitlab-rails","plan":"free","extra":{"new_nav":true},"user_id":12690200,"namespace_id":58612473,"project_id":41240712,"context_generated_at":"2023-06-18T07:45:34.897Z"}}
+gl.snowplowPseudonymizedPageUrl = "https://gitlab.com/namespace58612473/project41240712/-/blob/:repository_path";
+
+
+//]]>
+</script>
+<script nonce="6G9CuE+LltS9n9/qb3Svyw==">
+//<![CDATA[
+window.gon={};gon.api_version="v4";gon.default_avatar_url="https://gitlab.com/assets/no_avatar-849f9c04a3a0d0cea2424ae97b27447dc64a7dbfae83c036c45b403392f0e8ba.png";gon.max_file_size=100;gon.asset_host=null;gon.webpack_public_path="/assets/webpack/";gon.relative_url_root="";gon.user_color_scheme="monokai";gon.markdown_surround_selection=true;gon.markdown_automatic_lists=true;gon.sentry_dsn="https://f5573e26de8f4293b285e556c35dfd6e@new-sentry.gitlab.net/4";gon.sentry_environment="gprd";gon.recaptcha_api_server_url="https://www.recaptcha.net/recaptcha/api.js";gon.recaptcha_sitekey="6LfAERQTAAAAAL4GYSiAMGLbcLyUIBSfPrDNJgeC";gon.gitlab_url="https://gitlab.com";gon.revision="ea26f0ef42c";gon.feature_category="source_code_management";gon.gitlab_logo="/assets/gitlab_logo-2957169c8ef64c58616a1ac3f4fc626e8a35ce4eb3ed31bb0d873712f2a041a0.png";gon.secure=true;gon.sprite_icons="/assets/icons-b8c5a9711f73b1de3c81754da0aca72f43b0e6844aa06dd03092b601a493f45b.svg";gon.sprite_file_icons="/assets/file_icons/file_icons-6489590d770258cc27e4698405d309d83e42829b667b4d601534321e96739a5a.svg";gon.emoji_sprites_css_path="/assets/emoji_sprites-e1b1ba2d7a86a445dcb1110d1b6e7dd0200ecaa993a445df77a07537dbf8f475.css";gon.gridstack_css_path="/assets/lazy_bundles/gridstack-f9e005145f1f29d3fd436ec6eda8b264c017ee47886472841ed47e32332518ff.css";gon.test_env=false;gon.disable_animations=null;gon.suggested_label_colors={"#cc338b":"Magenta-pink","#dc143c":"Crimson","#c21e56":"Rose red","#cd5b45":"Dark coral","#ed9121":"Carrot orange","#eee600":"Titanium yellow","#009966":"Green-cyan","#8fbc8f":"Dark sea green","#6699cc":"Blue-gray","#e6e6fa":"Lavender","#9400d3":"Dark violet","#330066":"Deep violet","#36454f":"Charcoal grey","#808080":"Gray"};gon.first_day_of_week=0;gon.time_display_relative=true;gon.ee=true;gon.jh=false;gon.dot_com=true;gon.uf_error_prefix="UF";gon.pat_prefix="glpat-";gon.diagramsnet_url="https://embed.diagrams.net";gon.version="16.1.0-pre";gon.current_user_id=12690200;gon.current_username="keman5";gon.current_user_fullname="keman wu";gon.current_user_avatar_url="/uploads/-/system/user/avatar/12690200/avatar.png";gon.use_new_navigation=true;gon.features={"usageDataApi":true,"securityAutoFix":false,"sourceEditorToolbar":false,"vscodeWebIde":true,"unbatchGraphqlQueries":false,"commandPalette":false,"removeMonitorMetrics":true,"gitlabDuo":false,"highlightJs":true,"explainCodeChat":false};gon.roadmap_epics_limit=1000;gon.ai={"chat":{"total_model_token":4096,"max_response_token":300,"input_content_limit":15184}};gon.subscriptions_url="https://customers.gitlab.com";gon.subscriptions_legacy_sign_in_url="https://customers.gitlab.com/customers/sign_in?legacy=true";gon.payment_form_url="https://customers.gitlab.com/payment_forms/cc_validation";gon.payment_validation_form_id="payment_method_validation";gon.registration_validation_form_url="https://customers.gitlab.com/payment_forms/cc_registration_validation";
+//]]>
+</script>
+<script src="/assets/locale/zh_CN/app-749ee3c1faa2a79e6732e3397934ad86d33679e61a7cbf225e2f517064539c80.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+
+<script src="/assets/webpack/sentry.f34bc92c.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+
+
+<script src="/assets/webpack/commons-pages.groups.new-pages.import.gitlab_projects.new-pages.import.manifest.new-pages.projects.n-4e5d09f9.7ae276a2.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/commons-pages.search.show-super_sidebar.97ffc102.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/super_sidebar.94f8400f.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/shortcutsBundle.97887e18.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/commons-pages.groups.boards-pages.groups.details-pages.groups.epic_boards-pages.groups.show-pages.gr-ab16f30c.8e31630c.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/commons-pages.admin.runners.show-pages.groups.achievements-pages.groups.crm.contacts-pages.groups.cr-e23430ec.cf1e6259.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/commons-pages.projects.blob.show-pages.projects.show-pages.projects.snippets.edit-pages.projects.sni-dd84f7c7.88e208f5.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/commons-pages.projects.blob.show-pages.projects.show-pages.projects.snippets.show-pages.projects.tre-25c821a4.94490374.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/commons-pages.groups.show-pages.projects.blob.show-pages.projects.show-pages.projects.tree.show.e523abdc.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/commons-pages.projects.blob.show-pages.projects.show-pages.projects.tree.show.8c10d425.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/commons-pages.projects.blob.show-pages.projects.tree.show-treeList.9d469c16.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script src="/assets/webpack/pages.projects.blob.show.b21285e6.chunk.js" defer="defer" nonce="6G9CuE+LltS9n9/qb3Svyw=="></script>
+<script nonce="6G9CuE+LltS9n9/qb3Svyw==">
+//<![CDATA[
+window.uploads_path = "/keman51/glTF-Sample-Models/uploads";
+
+
+
+//]]>
+</script>
+<meta content="object" property="og:type">
+<meta content="GitLab" property="og:site_name">
+<meta content="2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb · master · keman5 / GlTF Sample Models · GitLab" property="og:title">
+<meta content="GitLab.com" property="og:description">
+<meta content="https://gitlab.com/assets/twitter_card-570ddb06edf56a2312253c5872489847a0f385112ddbcd71ccfa1570febab5d2.jpg" property="og:image">
+<meta content="64" property="og:image:width">
+<meta content="64" property="og:image:height">
+<meta content="https://gitlab.com/keman51/glTF-Sample-Models/-/blob/master/2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" property="og:url">
+<meta content="summary" property="twitter:card">
+<meta content="2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb · master · keman5 / GlTF Sample Models · GitLab" property="twitter:title">
+<meta content="GitLab.com" property="twitter:description">
+<meta content="https://gitlab.com/assets/twitter_card-570ddb06edf56a2312253c5872489847a0f385112ddbcd71ccfa1570febab5d2.jpg" property="twitter:image">
+
+<meta content="GitLab.com" name="description">
+<link href="/-/manifest.json" rel="manifest">
+<meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport">
+<meta content="#666" name="theme-color">
+<meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="-HqG__1WnsQ-fH_kI5l-f_CHZ10QKyRabxHnkZl9ygucz2m-Fovtm7af0YppLAxmEGeIQBZdDGg_wTXpHdAxJQ" />
+<meta name="csp-nonce" content="6G9CuE+LltS9n9/qb3Svyw==" />
+<meta name="action-cable-url" content="/-/cable" />
+<link rel="apple-touch-icon" type="image/x-icon" href="/assets/apple-touch-icon-b049d4bc0dd9626f31db825d61880737befc7835982586d015bded10b4435460.png" />
+<link href="/search/opensearch.xml" rel="search" title="Search GitLab" type="application/opensearchdescription+xml">
+
+
+
+
+</head>
+
+<body class="ui-light-gray tab-width-8 gl-browser-chrome gl-platform-mac" data-find-file="/keman51/glTF-Sample-Models/-/find_file/master" data-group="keman51" data-namespace-id="58612473" data-page="projects:blob:show" data-page-type-id="master/2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" data-project="glTF-Sample-Models" data-project-id="41240712">
+
+<script nonce="6G9CuE+LltS9n9/qb3Svyw==">
+//<![CDATA[
+gl = window.gl || {};
+gl.client = {"isChrome":true,"isMac":true};
+
+
+//]]>
+</script>
+
+
+
+<style>
+  body {
+    --header-height: 0px;
+  }
+</style>
+<div class="layout-page hide-when-top-nav-responsive-open page-with-super-sidebar">
+<aside class="js-super-sidebar super-sidebar super-sidebar-loading" data-force-desktop-expanded-sidebar="" data-root-path="/" data-sidebar="{&quot;current_menu_items&quot;:[{&quot;id&quot;:&quot;project_overview&quot;,&quot;title&quot;:&quot;项目概览&quot;,&quot;icon&quot;:&quot;project&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-project rspec-project-link&quot;,&quot;is_active&quot;:false},{&quot;title&quot;:&quot;管理&quot;,&quot;icon&quot;:&quot;users&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/activity&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;activity&quot;,&quot;title&quot;:&quot;动态&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/activity&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-project-activity&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;members&quot;,&quot;title&quot;:&quot;成员&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/project_members&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;labels&quot;,&quot;title&quot;:&quot;标记&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/labels&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;计划&quot;,&quot;icon&quot;:&quot;planning&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/issues&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;project_issue_list&quot;,&quot;title&quot;:&quot;议题&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/issues&quot;,&quot;pill_count&quot;:&quot;0&quot;,&quot;link_classes&quot;:&quot;shortcuts-issues has-sub-items&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;boards&quot;,&quot;title&quot;:&quot;议题看板&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/boards&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-issue-boards&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;milestones&quot;,&quot;title&quot;:&quot;里程碑&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/milestones&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;project_wiki&quot;,&quot;title&quot;:&quot;Wiki&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/wikis/home&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-wiki&quot;,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;代码&quot;,&quot;icon&quot;:&quot;code&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/merge_requests&quot;,&quot;is_active&quot;:true,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;project_merge_request_list&quot;,&quot;title&quot;:&quot;合并请求&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/merge_requests&quot;,&quot;pill_count&quot;:&quot;0&quot;,&quot;link_classes&quot;:&quot;shortcuts-merge_requests&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;files&quot;,&quot;title&quot;:&quot;仓库&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/tree/master&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-tree&quot;,&quot;is_active&quot;:true},{&quot;id&quot;:&quot;branches&quot;,&quot;title&quot;:&quot;分支&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/branches&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;commits&quot;,&quot;title&quot;:&quot;提交&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/commits/master?ref_type=heads&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-commits&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;tags&quot;,&quot;title&quot;:&quot;标签&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/tags&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;graphs&quot;,&quot;title&quot;:&quot;代码库图&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/network/master?ref_type=heads&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-network&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;compare&quot;,&quot;title&quot;:&quot;比较修订版本&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/compare?from=master\u0026to=master&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;project_snippets&quot;,&quot;title&quot;:&quot;代码片段&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/snippets&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-snippets&quot;,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;构建&quot;,&quot;icon&quot;:&quot;rocket&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/pipelines&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;pipelines&quot;,&quot;title&quot;:&quot;流水线&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/pipelines&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-pipelines&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;jobs&quot;,&quot;title&quot;:&quot;作业&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/jobs&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-builds&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;pipelines_editor&quot;,&quot;title&quot;:&quot;流水线编辑器&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/ci/editor?branch_name=master&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;pipeline_schedules&quot;,&quot;title&quot;:&quot;流水线计划&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/pipeline_schedules&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-builds&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;artifacts&quot;,&quot;title&quot;:&quot;产物&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/artifacts&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-builds&quot;,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;安全&quot;,&quot;icon&quot;:&quot;shield&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/security/discover&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;discover_project_security&quot;,&quot;title&quot;:&quot;安全能力&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/security/discover&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;audit_events&quot;,&quot;title&quot;:&quot;审计事件&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/audit_events&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;configuration&quot;,&quot;title&quot;:&quot;安全配置&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/security/configuration&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;部署&quot;,&quot;icon&quot;:&quot;deployments&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/releases&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;releases&quot;,&quot;title&quot;:&quot;发布&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/releases&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-deployments-releases&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;feature_flags&quot;,&quot;title&quot;:&quot;功能标志&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/feature_flags&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-feature-flags&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;packages_registry&quot;,&quot;title&quot;:&quot;软件包库&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/packages&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-container-registry&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;container_registry&quot;,&quot;title&quot;:&quot;容器镜像库&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/container_registry&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;model_experiments&quot;,&quot;title&quot;:&quot;模型实验&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/ml/experiments&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;运维&quot;,&quot;icon&quot;:&quot;cloud-pod&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/environments&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;environments&quot;,&quot;title&quot;:&quot;环境&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/environments&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-environments&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;kubernetes&quot;,&quot;title&quot;:&quot;Kubernetes 集群&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/clusters&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-kubernetes&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;terraform_states&quot;,&quot;title&quot;:&quot;Terraform 状态&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/terraform&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;infrastructure_registry&quot;,&quot;title&quot;:&quot;Terraform 模块&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/infrastructure_registry&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;google_cloud&quot;,&quot;title&quot;:&quot;Google Cloud&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/google_cloud/configuration&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;监控&quot;,&quot;icon&quot;:&quot;monitor&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/error_tracking&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;error_tracking&quot;,&quot;title&quot;:&quot;错误跟踪&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/error_tracking&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;alert_management&quot;,&quot;title&quot;:&quot;警报&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/alert_management&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;incidents&quot;,&quot;title&quot;:&quot;事件&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/incidents&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;service_desk&quot;,&quot;title&quot;:&quot;服务台&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/issues/service_desk&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;分析&quot;,&quot;icon&quot;:&quot;chart&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/value_stream_analytics&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;cycle_analytics&quot;,&quot;title&quot;:&quot;价值流分析&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/value_stream_analytics&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-project-cycle-analytics&quot;,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;contributors&quot;,&quot;title&quot;:&quot;贡献者统计&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/graphs/master?ref_type=heads&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;ci_cd_analytics&quot;,&quot;title&quot;:&quot;CI/CD 分析&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/pipelines/charts&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;repository_analytics&quot;,&quot;title&quot;:&quot;代码库分析&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/graphs/master/charts&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:&quot;shortcuts-repository-charts&quot;,&quot;is_active&quot;:false}],&quot;separated&quot;:false},{&quot;title&quot;:&quot;设置&quot;,&quot;icon&quot;:&quot;settings&quot;,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/edit&quot;,&quot;is_active&quot;:false,&quot;pill_count&quot;:null,&quot;items&quot;:[{&quot;id&quot;:&quot;general&quot;,&quot;title&quot;:&quot;通用&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/edit&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;integrations&quot;,&quot;title&quot;:&quot;集成&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/settings/integrations&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;webhooks&quot;,&quot;title&quot;:&quot;Webhooks&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/hooks&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;access_tokens&quot;,&quot;title&quot;:&quot;访问令牌&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/settings/access_tokens&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;repository&quot;,&quot;title&quot;:&quot;仓库&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/settings/repository&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;merge_request_settings&quot;,&quot;title&quot;:&quot;合并请求&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/settings/merge_requests&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;ci_cd&quot;,&quot;title&quot;:&quot;CI/CD&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/settings/ci_cd&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;packages_and_registries&quot;,&quot;title&quot;:&quot;软件包与镜像库&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/settings/packages_and_registries&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;pages&quot;,&quot;title&quot;:&quot;Pages&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/pages&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;monitor&quot;,&quot;title&quot;:&quot;监控&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/settings/operations&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false},{&quot;id&quot;:&quot;usage_quotas&quot;,&quot;title&quot;:&quot;使用量配额&quot;,&quot;icon&quot;:null,&quot;link&quot;:&quot;/keman51/glTF-Sample-Models/-/usage_quotas&quot;,&quot;pill_count&quot;:null,&quot;link_classes&quot;:null,&quot;is_active&quot;:false}],&quot;separated&quot;:true}],&quot;current_context_header&quot;:{&quot;title&quot;:&quot;GlTF Sample Models&quot;,&quot;avatar&quot;:null,&quot;id&quot;:41240712},&quot;name&quot;:&quot;keman wu&quot;,&quot;username&quot;:&quot;keman5&quot;,&quot;avatar_url&quot;:&quot;/uploads/-/system/user/avatar/12690200/avatar.png&quot;,&quot;has_link_to_profile&quot;:true,&quot;link_to_profile&quot;:&quot;https://gitlab.com/keman5&quot;,&quot;logo_url&quot;:null,&quot;status&quot;:{&quot;can_update&quot;:true,&quot;busy&quot;:null,&quot;customized&quot;:null,&quot;availability&quot;:&quot;&quot;,&quot;emoji&quot;:null,&quot;message&quot;:null,&quot;clear_after&quot;:null},&quot;settings&quot;:{&quot;has_settings&quot;:true,&quot;profile_path&quot;:&quot;/-/profile&quot;,&quot;profile_preferences_path&quot;:&quot;/-/profile/preferences&quot;},&quot;user_counts&quot;:{&quot;assigned_issues&quot;:0,&quot;assigned_merge_requests&quot;:0,&quot;review_requested_merge_requests&quot;:0,&quot;todos&quot;:0,&quot;last_update&quot;:1687074334961},&quot;can_sign_out&quot;:true,&quot;sign_out_link&quot;:&quot;/users/sign_out&quot;,&quot;issues_dashboard_path&quot;:&quot;/dashboard/issues?assignee_username=keman5&quot;,&quot;todos_dashboard_path&quot;:&quot;/dashboard/todos&quot;,&quot;create_new_menu_groups&quot;:[{&quot;name&quot;:&quot;在此项目中&quot;,&quot;items&quot;:[{&quot;text&quot;:&quot;新建议题&quot;,&quot;href&quot;:&quot;/keman51/glTF-Sample-Models/-/issues/new&quot;,&quot;component&quot;:null,&quot;extraAttrs&quot;:{&quot;data-track-label&quot;:&quot;new_issue&quot;,&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-property&quot;:&quot;nav_create_menu&quot;,&quot;data-qa-selector&quot;:&quot;create_menu_item&quot;,&quot;data-qa-create-menu-item&quot;:&quot;new_issue&quot;}},{&quot;text&quot;:&quot;新建合并请求&quot;,&quot;href&quot;:&quot;/keman51/glTF-Sample-Models/-/merge_requests/new&quot;,&quot;component&quot;:null,&quot;extraAttrs&quot;:{&quot;data-track-label&quot;:&quot;new_mr&quot;,&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-property&quot;:&quot;nav_create_menu&quot;,&quot;data-qa-selector&quot;:&quot;create_menu_item&quot;,&quot;data-qa-create-menu-item&quot;:&quot;new_mr&quot;}},{&quot;text&quot;:&quot;新建代码片段&quot;,&quot;href&quot;:&quot;/keman51/glTF-Sample-Models/-/snippets/new&quot;,&quot;component&quot;:null,&quot;extraAttrs&quot;:{&quot;data-track-label&quot;:&quot;new_snippet&quot;,&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-property&quot;:&quot;nav_create_menu&quot;,&quot;data-qa-selector&quot;:&quot;create_menu_item&quot;,&quot;data-qa-create-menu-item&quot;:&quot;new_snippet&quot;}},{&quot;text&quot;:&quot;邀请成员&quot;,&quot;href&quot;:null,&quot;component&quot;:&quot;invite_members&quot;,&quot;extraAttrs&quot;:{&quot;data-track-label&quot;:&quot;invite&quot;,&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-property&quot;:&quot;nav_create_menu&quot;,&quot;data-qa-selector&quot;:&quot;create_menu_item&quot;,&quot;data-qa-create-menu-item&quot;:&quot;invite&quot;}}]},{&quot;name&quot;:&quot;在此实例中&quot;,&quot;items&quot;:[{&quot;text&quot;:&quot;新建项目/仓库&quot;,&quot;href&quot;:&quot;/projects/new&quot;,&quot;component&quot;:null,&quot;extraAttrs&quot;:{&quot;data-track-label&quot;:&quot;general_new_project&quot;,&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-property&quot;:&quot;nav_create_menu&quot;,&quot;data-qa-selector&quot;:&quot;create_menu_item&quot;,&quot;data-qa-create-menu-item&quot;:&quot;general_new_project&quot;}},{&quot;text&quot;:&quot;新建群组&quot;,&quot;href&quot;:&quot;/groups/new&quot;,&quot;component&quot;:null,&quot;extraAttrs&quot;:{&quot;data-track-label&quot;:&quot;general_new_group&quot;,&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-property&quot;:&quot;nav_create_menu&quot;,&quot;data-qa-selector&quot;:&quot;create_menu_item&quot;,&quot;data-qa-create-menu-item&quot;:&quot;general_new_group&quot;}},{&quot;text&quot;:&quot;新建代码片段&quot;,&quot;href&quot;:&quot;/-/snippets/new&quot;,&quot;component&quot;:null,&quot;extraAttrs&quot;:{&quot;data-track-label&quot;:&quot;general_new_snippet&quot;,&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-property&quot;:&quot;nav_create_menu&quot;,&quot;data-qa-selector&quot;:&quot;create_menu_item&quot;,&quot;data-qa-create-menu-item&quot;:&quot;general_new_snippet&quot;}}]}],&quot;merge_request_menu&quot;:[{&quot;name&quot;:&quot;合并请求&quot;,&quot;items&quot;:[{&quot;text&quot;:&quot;已指派&quot;,&quot;href&quot;:&quot;/dashboard/merge_requests?assignee_username=keman5&quot;,&quot;count&quot;:0,&quot;userCount&quot;:&quot;assigned_merge_requests&quot;,&quot;extraAttrs&quot;:{&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-label&quot;:&quot;merge_requests_assigned&quot;,&quot;data-track-property&quot;:&quot;nav_core_menu&quot;,&quot;class&quot;:&quot;dashboard-shortcuts-merge_requests&quot;}},{&quot;text&quot;:&quot;审核请求&quot;,&quot;href&quot;:&quot;/dashboard/merge_requests?reviewer_username=keman5&quot;,&quot;count&quot;:0,&quot;userCount&quot;:&quot;review_requested_merge_requests&quot;,&quot;extraAttrs&quot;:{&quot;data-track-action&quot;:&quot;click_link&quot;,&quot;data-track-label&quot;:&quot;merge_requests_to_review&quot;,&quot;data-track-property&quot;:&quot;nav_core_menu&quot;,&quot;class&quot;:&quot;dashboard-shortcuts-review_requests&quot;}}]}],&quot;projects_path&quot;:&quot;/dashboard/projects&quot;,&quot;groups_path&quot;:&quot;/dashboard/groups&quot;,&quot;support_path&quot;:&quot;https://about.gitlab.com/get-help/&quot;,&quot;display_whats_new&quot;:true,&quot;whats_new_most_recent_release_items_count&quot;:14,&quot;whats_new_version_digest&quot;:&quot;e38e216cb55bf07f1b4188684ef9d47945ad0247c1bb6314fe03f2b99a0c7145&quot;,&quot;show_version_check&quot;:false,&quot;gitlab_version&quot;:{&quot;major&quot;:16,&quot;minor&quot;:1,&quot;patch&quot;:0,&quot;suffix_s&quot;:&quot;&quot;},&quot;gitlab_version_check&quot;:{&quot;latest_stable_versions&quot;:[],&quot;latest_version&quot;:&quot;16.0.5&quot;,&quot;severity&quot;:&quot;success&quot;,&quot;critical_vulnerability&quot;:false,&quot;details&quot;:&quot;&quot;},&quot;gitlab_com_but_not_canary&quot;:true,&quot;gitlab_com_and_canary&quot;:null,&quot;canary_toggle_com_url&quot;:&quot;https://next.gitlab.com&quot;,&quot;current_context&quot;:{&quot;namespace&quot;:&quot;projects&quot;,&quot;item&quot;:{&quot;id&quot;:41240712,&quot;name&quot;:&quot;GlTF Sample Models&quot;,&quot;namespace&quot;:&quot;keman5 / GlTF Sample Models&quot;,&quot;webUrl&quot;:&quot;/keman51/glTF-Sample-Models&quot;,&quot;avatarUrl&quot;:null}},&quot;context_switcher_links&quot;:[{&quot;title&quot;:&quot;您的工作&quot;,&quot;link&quot;:&quot;/&quot;,&quot;icon&quot;:&quot;work&quot;},{&quot;title&quot;:&quot;探索&quot;,&quot;link&quot;:&quot;/explore&quot;,&quot;icon&quot;:&quot;compass&quot;}],&quot;search&quot;:{&quot;search_path&quot;:&quot;/search&quot;,&quot;issues_path&quot;:&quot;/dashboard/issues&quot;,&quot;mr_path&quot;:&quot;/dashboard/merge_requests&quot;,&quot;autocomplete_path&quot;:&quot;/search/autocomplete&quot;,&quot;search_context&quot;:{&quot;group&quot;:{&quot;id&quot;:58612473,&quot;name&quot;:&quot;keman5&quot;,&quot;full_name&quot;:&quot;keman5&quot;},&quot;group_metadata&quot;:{&quot;issues_path&quot;:&quot;/groups/keman51/-/issues&quot;,&quot;mr_path&quot;:&quot;/groups/keman51/-/merge_requests&quot;},&quot;project&quot;:{&quot;id&quot;:41240712,&quot;name&quot;:&quot;GlTF Sample Models&quot;},&quot;project_metadata&quot;:{&quot;mr_path&quot;:&quot;/keman51/glTF-Sample-Models/-/merge_requests&quot;,&quot;issues_path&quot;:&quot;/keman51/glTF-Sample-Models/-/issues&quot;},&quot;code_search&quot;:true,&quot;ref&quot;:&quot;master&quot;,&quot;scope&quot;:null,&quot;for_snippets&quot;:null}},&quot;pinned_items&quot;:[],&quot;panel_type&quot;:&quot;project&quot;,&quot;update_pins_url&quot;:&quot;https://gitlab.com/-/users/pins&quot;,&quot;is_impersonating&quot;:false,&quot;stop_impersonation_path&quot;:&quot;/admin/impersonation&quot;,&quot;shortcut_links&quot;:[{&quot;title&quot;:&quot;里程碑&quot;,&quot;href&quot;:&quot;/dashboard/milestones&quot;,&quot;css_class&quot;:&quot;dashboard-shortcuts-milestones&quot;},{&quot;title&quot;:&quot;代码片段&quot;,&quot;href&quot;:&quot;/dashboard/snippets&quot;,&quot;css_class&quot;:&quot;dashboard-shortcuts-snippets&quot;},{&quot;title&quot;:&quot;动态&quot;,&quot;href&quot;:&quot;/dashboard/activity&quot;,&quot;css_class&quot;:&quot;dashboard-shortcuts-activity&quot;},{&quot;title&quot;:&quot;创建新议题&quot;,&quot;href&quot;:&quot;/keman51/glTF-Sample-Models/-/issues/new&quot;,&quot;css_class&quot;:&quot;shortcuts-new-issue&quot;}],&quot;show_tanuki_bot&quot;:false,&quot;trial&quot;:{&quot;has_start_trial&quot;:true,&quot;url&quot;:&quot;/-/trials/new?glm_content=top-right-dropdown\u0026glm_source=gitlab.com&quot;}}" data-toggle-new-nav-endpoint="https://gitlab.com/-/profile/preferences"></aside>
+<div data-version-digest="e38e216cb55bf07f1b4188684ef9d47945ad0247c1bb6314fe03f2b99a0c7145" id="whats-new-app"></div>
+
+<div class="content-wrapper">
+<div class="mobile-overlay"></div>
+
+<div class="alert-wrapper gl-force-block-formatting-context">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="top-bar-fixed container-fluid">
+<div class="top-bar-container gl-display-flex gl-align-items-center">
+<button class="gl-button btn btn-icon btn-md btn-default btn-default-tertiary js-super-sidebar-toggle-expand super-sidebar-toggle gl-ml-n3 gl-mr-2" title="展开侧边栏" aria-controls="super-sidebar" aria-expanded="false" aria-label="导航侧边栏" type="button"><svg class="s16 gl-icon gl-button-icon " data-testid="sidebar-icon"><use href="/assets/icons-b8c5a9711f73b1de3c81754da0aca72f43b0e6844aa06dd03092b601a493f45b.svg#sidebar"></use></svg>
+
+</button>
+<nav aria-label="面包屑导航" class="breadcrumbs" data-qa-selector="breadcrumb_links_content" data-testid="breadcrumb-links">
+<ul class="list-unstyled breadcrumbs-list js-breadcrumbs-list">
+<li><a class="group-path breadcrumb-item-text js-breadcrumb-item-text " href="/keman51">keman5</a><svg class="s8 breadcrumbs-list-angle" data-testid="chevron-lg-right-icon"><use href="/assets/icons-b8c5a9711f73b1de3c81754da0aca72f43b0e6844aa06dd03092b601a493f45b.svg#chevron-lg-right"></use></svg></li> <li><a href="/keman51/glTF-Sample-Models"><span class="breadcrumb-item-text js-breadcrumb-item-text">GlTF Sample Models</span></a><svg class="s8 breadcrumbs-list-angle" data-testid="chevron-lg-right-icon"><use href="/assets/icons-b8c5a9711f73b1de3c81754da0aca72f43b0e6844aa06dd03092b601a493f45b.svg#chevron-lg-right"></use></svg></li>
+
+<li data-qa-selector="breadcrumb_current_link" data-testid="breadcrumb-current-link">
+<a href="/keman51/glTF-Sample-Models/-/blob/master/2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">仓库</a>
+</li>
+</ul>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"keman5","item":"https://gitlab.com/keman51"},{"@type":"ListItem","position":2,"name":"GlTF Sample Models","item":"https://gitlab.com/keman51/glTF-Sample-Models"},{"@type":"ListItem","position":3,"name":"仓库","item":"https://gitlab.com/keman51/glTF-Sample-Models/-/blob/master/2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"}]}
+
+</script>
+</nav>
+
+
+</div>
+</div>
+
+</div>
+<div class="container-fluid container-limited project-highlight-puc">
+<main class="content" id="content-body" itemscope itemtype="http://schema.org/SoftwareSourceCode">
+<div class="flash-container flash-container-page sticky" data-qa-selector="flash_container">
+</div>
+
+
+<div class="js-invite-members-modal" data-access-levels="{&quot;Guest&quot;:10,&quot;Reporter&quot;:20,&quot;Developer&quot;:30,&quot;Maintainer&quot;:40,&quot;Owner&quot;:50}" data-default-access-level="10" data-full-path="keman51/glTF-Sample-Models" data-help-link="https://gitlab.com/help/user/permissions" data-id="41240712" data-is-project="true" data-name="GlTF Sample Models" data-reload-page-on-submit="false" data-root-id="58612473" data-users-limit-dataset="{&quot;alert_variant&quot;:null,&quot;new_trial_registration_path&quot;:&quot;/-/trials/new?namespace_id=58612473&quot;,&quot;members_path&quot;:&quot;/groups/keman51/-/usage_quotas&quot;,&quot;purchase_path&quot;:&quot;/groups/keman51/-/billings&quot;,&quot;remaining_seats&quot;:4,&quot;free_users_limit&quot;:5}"></div>
+
+
+<div class="js-signature-container" data-signatures-path="/keman51/glTF-Sample-Models/-/commits/3787f278ea4a562f102ded6d510178ead3065a2d/signatures?limit=1"></div>
+
+<div class="tree-holder" id="tree-holder">
+<div class="nav-block">
+<div class="tree-ref-container">
+<div class="tree-ref-holder">
+<div data-project-id="41240712" data-project-root-path="/keman51/glTF-Sample-Models" data-ref="master" data-ref-type="" id="js-tree-ref-switcher"></div>
+</div>
+<ul class="breadcrumb repo-breadcrumb">
+<li class="breadcrumb-item">
+<a href="/keman51/glTF-Sample-Models/-/tree/master">glTF-Sample-Models
+</a></li>
+<li class="breadcrumb-item">
+<a href="/keman51/glTF-Sample-Models/-/tree/master/2.0">2.0</a>
+</li>
+<li class="breadcrumb-item">
+<a href="/keman51/glTF-Sample-Models/-/tree/master/2.0/DamagedHelmet">DamagedHelmet</a>
+</li>
+<li class="breadcrumb-item">
+<a href="/keman51/glTF-Sample-Models/-/tree/master/2.0/assets/DamagedHelmet/glTF-Binary">glTF-Binary</a>
+</li>
+<li class="breadcrumb-item">
+<a href="/keman51/glTF-Sample-Models/-/blob/master/2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"><strong>DamagedHelmet.glb</strong>
+</a></li>
+</ul>
+</div>
+<div class="tree-controls gl-children-ml-sm-3"><a class="gl-button btn btn-default shortcuts-find-file" rel="nofollow" href="/keman51/glTF-Sample-Models/-/find_file/master">查找文件
+</a><a class="gl-button btn btn-default" href="/keman51/glTF-Sample-Models/-/commits/master/2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">History</a><a class="gl-button btn btn-default js-data-file-blob-permalink-url" href="/keman51/glTF-Sample-Models/-/blob/8e9a5a6ad1a2790e2333e3eb48a1ee39f9e0e31b/2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">Permalink</a></div>
+</div>
+
+<div class="info-well d-none d-sm-block">
+<div class="well-segment">
+<ul class="blob-commit-info">
+<li class="commit flex-row js-toggle-container" id="commit-3787f278">
+<div class="avatar-cell d-none d-sm-block">
+<a href="mailto:elm19087@gmail.com"><img alt="Ed Mackey&#39;s avatar" src="https://secure.gravatar.com/avatar/15d4fb8421a0101bc5c58ca05f331011?s=80&amp;d=identicon" class="avatar s40 d-none d-sm-inline-block" title="Ed Mackey"></a>
+</div>
+<div class="commit-detail flex-list gl-display-flex gl-justify-content-space-between gl-align-items-flex-start gl-flex-grow-1 gl-min-w-0">
+<div class="commit-content" data-qa-selector="commit_content">
+<a class="commit-row-message item-title js-onboarding-commit-item " href="/keman51/glTF-Sample-Models/-/commit/3787f278ea4a562f102ded6d510178ead3065a2d">Update DamagedHelmet for +Z</a>
+<span class="commit-row-message d-inline d-sm-none">
+&middot;
+3787f278
+</span>
+<div class="committer">
+由 <a class="commit-author-link" href="mailto:elm19087@gmail.com">Ed Mackey</a> 创作于 <time class="js-timeago" title="11月 6, 2017 10:07下午" datetime="2017-11-06T22:07:01Z" data-toggle="tooltip" data-placement="bottom" data-container="body">11月 06, 2017</time>
+</div>
+
+</div>
+<div class="commit-actions flex-row">
+
+<div class="js-commit-pipeline-status" data-endpoint="/keman51/glTF-Sample-Models/-/commit/3787f278ea4a562f102ded6d510178ead3065a2d/pipelines?ref=master"></div>
+<div class="commit-sha-group btn-group d-none d-sm-flex">
+<div class="label label-monospace monospace">
+3787f278
+</div>
+<button class="btn gl-button btn btn-default btn-icon" data-toggle="tooltip" data-placement="bottom" data-container="body" data-clipboard-text="3787f278ea4a562f102ded6d510178ead3065a2d" type="button" title="复制提交SHA" aria-label="复制提交SHA" aria-live="polite"><svg class="s16 gl-icon" data-testid="copy-to-clipboard-icon"><use href="/assets/icons-b8c5a9711f73b1de3c81754da0aca72f43b0e6844aa06dd03092b601a493f45b.svg#copy-to-clipboard"></use></svg></button>
+
+</div>
+</div>
+</div>
+</li>
+
+</ul>
+</div>
+
+</div>
+<div class="blob-content-holder js-per-page" data-blame-per-page="1000" id="blob-content-holder">
+<div data-blob-path="2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" data-explain-code-available="false" data-original-branch="master" data-project-path="keman51/glTF-Sample-Models" data-resource-id="gid://gitlab/Project/41240712" data-target-branch="master" data-user-id="gid://gitlab/User/12690200" id="js-view-blob-app">
+<div class="gl-spinner-container" role="status"><span aria-label="加载中" class="gl-spinner gl-spinner-md gl-spinner-dark gl-vertical-align-text-bottom!"></span></div>
+</div>
+</div>
+
+</div>
+
+<script nonce="6G9CuE+LltS9n9/qb3Svyw==">
+//<![CDATA[
+  window.gl = window.gl || {};
+  window.gl.webIDEPath = '/-/ide/project/keman51/glTF-Sample-Models/edit/master/-/2.0/assets/DamagedHelmet/glTF-Binary/DamagedHelmet.glb'
+
+
+//]]>
+</script>
+
+</main>
+</div>
+
+
+</div>
+</div>
+
+
+
+<script nonce="6G9CuE+LltS9n9/qb3Svyw==">
+//<![CDATA[
+if ('loading' in HTMLImageElement.prototype) {
+  document.querySelectorAll('img.lazy').forEach(img => {
+    img.loading = 'lazy';
+    let imgUrl = img.dataset.src;
+    // Only adding width + height for avatars for now
+    if (imgUrl.indexOf('/avatar/') > -1 && imgUrl.indexOf('?') === -1) {
+      const targetWidth = img.getAttribute('width') || img.width;
+      imgUrl += `?width=${targetWidth}`;
+    }
+    img.src = imgUrl;
+    img.removeAttribute('data-src');
+    img.classList.remove('lazy');
+    img.classList.add('js-lazy-loaded');
+    img.dataset.qa_selector = 'js_lazy_loaded_content';
+  });
+}
+
+//]]>
+</script>
+<script nonce="6G9CuE+LltS9n9/qb3Svyw==">
+//<![CDATA[
+gl = window.gl || {};
+gl.experiments = {};
+
+
+//]]>
+</script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+Model Information:
+* title:	F1 2021 McLaren MCL35M
+* source:	https://sketchfab.com/3d-models/f1-2021-mclaren-mcl35m-967ecec37468412083c40c62b3d7234d
+* author:	Excalibur (https://sketchfab.com/excalibur)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "F1 2021 McLaren MCL35M" (https://sketchfab.com/3d-models/f1-2021-mclaren-mcl35m-967ecec37468412083c40c62b3d7234d) by Excalibur (https://sketchfab.com/excalibur) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

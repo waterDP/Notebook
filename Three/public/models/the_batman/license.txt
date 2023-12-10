@@ -1,0 +1,11 @@
+Model Information:
+* title:	The Batman
+* source:	https://sketchfab.com/3d-models/the-batman-5d329a40e805437884f18ad525cb1562
+* author:	hwk10037 (https://sketchfab.com/hwk10037)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "The Batman" (https://sketchfab.com/3d-models/the-batman-5d329a40e805437884f18ad525cb1562) by hwk10037 (https://sketchfab.com/hwk10037) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

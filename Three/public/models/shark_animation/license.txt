@@ -1,0 +1,11 @@
+Model Information:
+* title:	High quality shark animation
+* source:	https://sketchfab.com/3d-models/high-quality-shark-animation-d6cdfc4fed3549b494bf91caadc3824c
+* author:	Al-Deezel (https://sketchfab.com/Al-dezel)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "High quality shark animation" (https://sketchfab.com/3d-models/high-quality-shark-animation-d6cdfc4fed3549b494bf91caadc3824c) by Al-Deezel (https://sketchfab.com/Al-dezel) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

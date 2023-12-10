@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+  <head>
+    <meta charset='UTF-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>three 入门</title>
+    <style>
+        *{
+            margin:0;
+            padding:0;
+        }
+    </style>
+  </head>
+
+  <body>
+    <canvas id='c'></canvas>
+    <script src='./js/three.js'></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', function () {
+        console.log(window.THREE);
+        const canvas = document.getElementById('c');
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // 创建3D场景
+        const scene = new THREE.Scene();
+        // 创建立方体
+        const box = new THREE.BoxGeometry(1, 1, 1);
+        // 创建立方体的材质
+        const material = new THREE.MeshBasicMaterial({
+        	color: 0x1890ff,
+        });
+            // 创建物体对象
+        const mesh = new THREE.Mesh(box, material);
+
+        scene.add(mesh);
+
+        // 创建相机对象
+        const camera = new THREE.PerspectiveCamera(75, width/height); // 透视相机
+
+        // 设置相机位置
+        camera.position.set(1, 1, 3); // 相机默认的坐标是在(0,0,0);
+        // 设置相机方向
+        camera.lookAt(scene.position); // 将相机朝向场景
+        // 将相机添加到场景中
+        scene.add(camera);
+
+        // 创建渲染器
+        const renderer = new THREE.WebGLRenderer({
+          canvas,
+        });
+
+        // 设置渲染器大小
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        // 执行渲染
+        renderer.render(scene, camera);
+      });
+    </script>
+  </body>
+
+</html>

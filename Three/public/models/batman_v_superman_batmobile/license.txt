@@ -1,0 +1,11 @@
+Model Information:
+* title:	Batman v Superman Batmobile
+* source:	https://sketchfab.com/3d-models/batman-v-superman-batmobile-abea4cdb296f4fafab03a404e515c109
+* author:	sam146 (https://sketchfab.com/sam146)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Batman v Superman Batmobile" (https://sketchfab.com/3d-models/batman-v-superman-batmobile-abea4cdb296f4fafab03a404e515c109) by sam146 (https://sketchfab.com/sam146) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

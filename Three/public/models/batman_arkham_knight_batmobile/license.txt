@@ -1,0 +1,11 @@
+Model Information:
+* title:	Batman Arkham Knight: Batmobile
+* source:	https://sketchfab.com/3d-models/batman-arkham-knight-batmobile-ac7d58429ed040f29a7232615293ccb0
+* author:	EWTube0 (https://sketchfab.com/EWTube0)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Batman Arkham Knight: Batmobile" (https://sketchfab.com/3d-models/batman-arkham-knight-batmobile-ac7d58429ed040f29a7232615293ccb0) by EWTube0 (https://sketchfab.com/EWTube0) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
