@@ -13,7 +13,7 @@ const Page = () => {
     const geometry = new THREE.BoxGeometry(1, 1, 1)
 
     const material = new THREE.MeshBasicMaterial({
-      color: 0x1890ff
+      color: 0x189000
     })
     const mesh = new THREE.Mesh(geometry, material)
     
