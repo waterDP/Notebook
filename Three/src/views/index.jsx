@@ -9,18 +9,43 @@ const Page = () => {
     const height = canvas.height = window.innerHeight
 
     const scene = new THREE.Scene()
+    // 添加全局光照
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+    const directiLight = new THREE.DirectionalLight(0xffffff, 0.5)
+    scene.add(ambientLight, directiLight)
+
 
     const geometry = new THREE.BoxGeometry(1, 1, 1)
 
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x189000
+    const faces = []
+
+    for(let i = 0; i < geometry.groups.length; i++) {
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xffffff * Math.random()
+      })
+      faces.push(material)
+    }
+
+    const material = new THREE.MeshLambertMaterial({
+      color: 0x1890ff
     })
-    const mesh = new THREE.Mesh(geometry, material)
-    
+    const mesh = new THREE.Mesh(geometry, faces)
+
     scene.add(mesh)
 
-    const camera = new THREE.PerspectiveCamera(75, width / height)
-
+    const axesHelper = new THREE.AxesHelper()
+    scene.add(axesHelper)
+    
+    const aspect = width / height
+    const camera = new THREE.OrthographicCamera(
+      -aspect,
+      aspect,
+      aspect,
+      -aspect,
+      0.01,
+      100
+    )
+  
     // 设置相机位置
     camera.position.set(2, 2, 3)
     // 相机朝向
@@ -28,8 +53,11 @@ const Page = () => {
     scene.add(camera)
 
     const renderer = new THREE.WebGLRenderer({
-      canvas
+      canvas,
+      antialias: true
     })
+
+    renderer.setPixelRatio(window.devicePixelRatio || 1)
 
     // 设置渲染器大小
     renderer.setSize(width, height)
