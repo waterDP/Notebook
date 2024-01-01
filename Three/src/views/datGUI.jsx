@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import Stats from 'three/examples/jsm/libs/stats.module';
+import * as dat from 'dat.gui';
 
 const Page = () => {
   useEffect(() => {
@@ -61,6 +62,31 @@ const Page = () => {
       antialias: true,
     });
 
+    const gui = new dat.GUI();
+    gui.add(camera.position, 'x', 0.1, 1000, 1);
+    gui.add(camera, 'zoom', 0.1, 10, 0.1).onChange((val) => {
+      camera.zoom = val;
+      camera.updateProjectionMatrix();
+      renderer.render(scene, camera);
+    });
+
+    const params = {
+      wireframe: false,
+      switchCamera() {
+        if (camera.type === 'OrthographicCamera') {
+          
+        } else {
+
+        }
+      }
+    };
+    gui.add(params, 'wireframe').onChange((val) => {
+      mesh.material.wireframe = val;
+      renderer.render(scene, camera);
+    });
+
+    gui.add(params, 'switchCamera')
+
     renderer.setPixelRatio(window.devicePixelRatio || 1);
 
     // 设置渲染器大小
@@ -79,20 +105,6 @@ const Page = () => {
     const stats = new Stats();
     stats.setMode(0);
     document.body.appendChild(stats.domElement);
-    const tick = () => {
-      const elapsedTime = clock.getElapsedTime();
-      // mesh.rotation.y += elapsedTime / 1000;
-      // mesh.position.x += elapsedTime / 1000;
-      // mesh.scale.x += elapsedTime / 1000;
-
-      camera.position.x = Math.cos(elapsedTime);
-      camera.position.y = Math.sin(elapsedTime);
-      oribitControls.update();
-      stats.update();
-      renderer.render(scene, camera);
-      window.requestAnimationFrame(tick);
-    };
-    tick();
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
