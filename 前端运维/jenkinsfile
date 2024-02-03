@@ -1,0 +1,32 @@
+pipeline {
+  stage("GetCode") { // 阶段名称
+    steps { // 步骤 
+      timeout(time: 4, unit: 'MINUTES') { // 步骤超时时间
+        script { // 填写运行代码
+          println('获取代码')
+        }
+      }
+    }
+  }
+  // 构建
+  stage("Build") {
+    steps {
+
+    }
+  }
+
+  post {
+    always {
+      // 总是执行脚本片段
+    }
+    success {
+      // 成功后执行
+    }
+    failure {
+      // 失败后执行
+    }
+    aborted {
+      // 取消后执行
+    }
+  }
+}
