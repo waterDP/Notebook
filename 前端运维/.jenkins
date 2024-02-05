@@ -27,6 +27,7 @@ pipeline {
     }
     aborted {
       // 取消后执行
+      currentBuild.description += '\n 构建取消'
     }
   }
 }

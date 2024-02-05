@@ -1,4 +1,4 @@
-user nginx;
+usr nginx;
 
 # 工作进程数 cpu 核心数
 worker_processes 1;
