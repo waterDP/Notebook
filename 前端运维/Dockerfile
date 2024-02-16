@@ -11,7 +11,7 @@ WORKDIR /the/workdir/path
 RUN
 
 # 暴露端口
-EXPOSE
+EXPOSE 3000
 
 # 容器运行阶段运行的命令
 CMD npm start
