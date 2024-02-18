@@ -62,9 +62,9 @@ http {
 
   # 5 fair 第三方 按后端服务器的响应时间来分配请求，响应时间短的优先分配
   upstream myServer5 {
+    fair;
     server 192.168.17.129:8080;
     server 192.168.17.129:8081;
-    fair;
   }
 
   # 6 url_hash 按访问url的hash结果来分配请求，使每个url定向到同一个后端服务器
