@@ -2,30 +2,37 @@ usr nginx;
 
 # 工作进程数 cpu 核心数
 worker_processes 1;
+# 指定错误日志的路径 日志的格式
 error_log /var/log/nginx/error.log warn;
-# pid        /let/run/nginx.pid;
+# 这是一个文件，里面放的是当前nginx的进程号
+pid /let/run/nginx.pid;
 
 
 # 事件驱动模块
 events {
-  # 单个工作进程可以允许同时建立外部链接的数量
-  worker_connections 1024;
+  worker_connections 1024; # 工作进程的最大接连数
 }
 
 # http内核模块
 http {
-  include /etc/nginx/mime.types;
-  default_type application/octet-stream;
+  include /etc/nginx/mime.types; # 包含内容和文件后缀的对应关系
+  default_type application/octet-stream; # 默认的文件类型
 
+  # 定义一个日志格式main
   log_format main '$remote_addr - $remote_user [$time_local] "$request" '
   '$status $body_bytes_sent "$http_referer" '
-  '"$http_user_agent" "$http_x_forwarded_for"';
+  '"$http_user_agent" "$http_x_forwarded_for"'
+  '"$arg_name" "$http_host" "$sent_http_date"';
 
-  sendfile on;
-  keepalive_timeout 600s;
+  access_log /var/log/nginx/access.log main;
+
+  sendfile on; # 零拷贝传输械
+  tcp_nopush on; # tcp 有一定的缓存
+  keepalive_timeout 600s; # 活动链接的超时时间
+  gzip on; # 是否启用压缩
   client_max_body_size 500m;
   client_body_timeout 600s;
-  
+
   # 配置上游服务，用以实现负载均衡
   # 1 默认策略 轮询
   upstream myServer {
@@ -67,9 +74,13 @@ http {
     server 192.168.17.129:8081;
   }
 
+  limit_req_zone $binary_remote_addr zone=req_zone:10m rate=1r/s;
+  limit_conn_zone $binary_remote_addr zone=conn_zone:10m;
+
   server {
-    listen 80;
+    listen 80; # 监听的端口号
     server_name 192.168.17.129;
+    charset charset | off; # 指定字符集
 
     # 限制请求体的大小，若超过所设定的大小，返回413错误
     client_max_body_size 1024m;
@@ -89,11 +100,11 @@ http {
     # http请求被服务器处理完后，把数据返回给nginx的用时，默认为60秒
     proxy_send_timeout 1m;
     root /usr/share/nginx/html;
-    
+
     # nginx配置 https
     ssl on;
     #ssl证书的pem文件路径
-    ssl_certificate  /root/card/huiblog.top.pem;
+    ssl_certificate /root/card/huiblog.top.pem;
     #ssl证书的key文件路径
     ssl_certificate_key /root/card/huiblog.top.key;
 
@@ -108,12 +119,18 @@ http {
     # router history模式设置
     location / {
       try_files $uri $uri/ /index.html;
+      limit_req zone=req_zone burst=3 nodelay; # 请求限制
+      limit_conn conn_zone 1; # 连接限制
     }
-
 
     # 负载均衡
     location ^~ /fzjh {
       proxy_pass http://myserver
+    }
+
+    # 此路径可以返回服务器状态
+    location = /status {
+      stub_status on;
     }
 
     location ^~ /csm {
