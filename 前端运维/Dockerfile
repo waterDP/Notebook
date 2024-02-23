@@ -8,7 +8,7 @@ COPY source dest
 WORKDIR /the/workdir/path
 
 # 编译打包阶段运行的命令
-RUN
+RUN npm run build
 
 # 暴露端口
 EXPOSE 3000
