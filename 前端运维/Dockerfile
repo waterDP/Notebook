@@ -8,7 +8,7 @@ COPY source dest
 WORKDIR /the/workdir/path
 
 # 编译打包阶段运行的命令
-RUN npm run build
+RUN npm run install
 
 # 暴露端口
 EXPOSE 80
