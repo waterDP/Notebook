@@ -9,6 +9,7 @@ WORKDIR /the/workdir/path
 
 # 编译打包阶段运行的命令
 RUN npm run install
+RUN echo hello
 
 # 暴露端口
 EXPOSE 80
