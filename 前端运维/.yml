@@ -1,0 +1,26 @@
+version: "2"
+services:
+  nginx1:
+    image: nginx
+    networks:
+      - "myweb"
+      - "default"
+    volumes:
+      - "data:/data"
+      - "./front:/usr/share/nginx/html"
+    ports:
+      - "8081:80"
+  nginx2:
+    image: nginx
+    # 数据卷
+    volumes:
+      - "data:/data"
+      - "./backend:/usr/share/nginx/html"
+    ports:
+      - "8082:80"
+volumes:
+  data:
+    driver: local
+networks:
+  myweb:
+    driver: bridge
