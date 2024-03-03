@@ -83,8 +83,8 @@ export function trigger(target, key, value, oldValue) {
   triggerEffects(effects);
 }
 
-export function triggerEffects(dep) {
-  for (const effect of dep) {
+export function triggerEffects(effects) {
+  for (const effect of effects) {
     // 如果当前effect执行和要执行的effect是同一个，不要执行了 防止循环
     if (effect !== activeEffect) {
       if (effect.scheduler) {
