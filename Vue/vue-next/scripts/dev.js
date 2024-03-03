@@ -1,36 +1,26 @@
-/*
- * @Author: water.li
- * @Date: 2022-04-08 00:22:22
- * @Description:
- * @FilePath: \Notebook\Vue\vue-next\scripts\dev.js
- */
-const minimist = require("minimist"); // 解析命令行中的参数
-const execa = require("execa");
+import minimist from "minimist";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+import esbuild from "esbuild";
 
 const args = minimist(process.argv.slice(2));
-//  "node scripts/dev.js reactivity -f global -s"
-console.log(args);
+const format = args.f || "iife";
+const target = args._[0] || "reactivity";
 
-const target = args._.length ? args._[0] : "compiler-core";
-const formats = args.f || "esm-bundler";
-const sourcemap = args.s || false;
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-console.log(formats);
+const IIFENamesMap = {
+  reactivity: "VueReactivity",
+};
 
-execa(
-  "rollup",
-  [
-    "-wc", // --watch --config
-    "--environment",
-    [
-      `TARGET:${target}`,
-      `FORMATS:${formats}`,
-      sourcemap ? `SOURCE_MAP:true` : "",
-    ]
-      .filter(Boolean)
-      .join(","),
-  ],
-  {
-    stdio: "inherit", // 这个子进程的输出是在我们当前命令行中输出的
-  }
-);
+esbuild
+  .context({
+    entryPoints: [resolve(__dirname, `../packages/${target}/src/index.ts`)],
+    outfile: resolve(__dirname, `../packages/${target}/dist/${target}.js`),
+    bundle: true, // 将所有的文件打包在一起
+    sourcemap: true,
+    format,
+    globalName: IIFENamesMap[target],
+    platform: "browser",
+  })
+  .then((ctx) => ctx.watch());

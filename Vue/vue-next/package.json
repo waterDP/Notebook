@@ -18,5 +18,8 @@
     "rollup": "^2.70.1",
     "rollup-plugin-typescript2": "^0.31.2",
     "typescript": "^4.6.3"
+  },
+  "dependencies": {
+    "esbuild": "^0.20.1"
   }
 }
