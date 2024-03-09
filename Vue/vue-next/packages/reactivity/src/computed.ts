@@ -53,7 +53,9 @@ export function computed(getterOrOption) {
   let getter, setter;
   if (onlyGetter) {
     getter = getterOrOption;
-    setter = () => {};
+    setter = () => {
+      console.warn("computed is readonly");
+    };
   } else {
     getter = getterOrOption.get;
     setter = getterOrOption.set;
