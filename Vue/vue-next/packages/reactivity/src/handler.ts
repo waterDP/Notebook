@@ -19,14 +19,16 @@ export const mutableHandlers: ProxyHandler<Record<any, any>> = {
       return (<any>target)[key].vaue;
     }
 
-    if ((<any>target)[key]) {
+    let result = Reflect.get(target, key, receiver);
+
+    if (result) {
       // ! 懒代理
       // ~ 如果在当前取值发现在取出来的值是对象，那么再进行代理 返回代理后的结果
-      return reactive((<any>target)[key]);
+      return reactive(result);
     }
     // ^ 这里取值了，可以收集他在哪个effect中
     track(target, key);
-    return Reflect.get(target, key, receiver);
+    return result;
   },
   set(target, key, value, receiver) {
     let oldValue = (<any>target)[key];
