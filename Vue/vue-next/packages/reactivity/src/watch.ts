@@ -25,7 +25,7 @@ function traverse(value, seen = new Set()) {
   return value;
 }
 
-export function watch(source, cb, options) {
+export function watch(source, cb, options: any = {}) {
   return dowatch(source, cb, options);
 }
 
