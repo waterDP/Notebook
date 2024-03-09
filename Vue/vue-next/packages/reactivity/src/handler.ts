@@ -21,7 +21,7 @@ export const mutableHandlers: ProxyHandler<Record<any, any>> = {
 
     let result = Reflect.get(target, key, receiver);
 
-    if (result) {
+    if (isObject(result)) {
       // ! 懒代理
       // ~ 如果在当前取值发现在取出来的值是对象，那么再进行代理 返回代理后的结果
       return reactive(result);
