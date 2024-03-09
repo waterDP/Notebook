@@ -98,7 +98,7 @@ export function triggerEffects(effects) {
 }
 
 export function effect(fn: Function, options: any = {}) {
-  const _effect = new ReactiveEffect(fn);
+  const _effect = new ReactiveEffect(fn, options.scheduler);
 
   _effect.run(); // 会默认让fn执行一次
 
