@@ -23,7 +23,7 @@ class ComputedRefImpl {
     // 这里将计算属性包成一个effect
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
-        this._dirty = true; //让计算属性标记为脏值
+        this._dirty = true; // ^ 让计算属性标记为脏值
         // 当依赖的值发生变化了 也应该触发更新
         triggerEffects(this.dep);
       }
