@@ -155,6 +155,15 @@ http {
     }
 
   }
+
+  # nginx 状态页
+  server {
+    listen 85;
+    location / {
+      stub_status on; # 开启状态页功能
+      access_log off; # 关闭访客日志功能
+    }
+  }
   # 导入extra目录下的所有信息
   include extra/*.conf;
 }
