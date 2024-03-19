@@ -26,7 +26,7 @@ http {
 
   access_log /var/log/nginx/access.log main;
 
-  sendfile on; # 零拷贝传输械
+  sendfile on; # 零拷贝传输模式
   tcp_nopush on; # tcp 有一定的缓存
   keepalive_timeout 600s; # 活动链接的超时时间
   gzip on; # 是否启用压缩
