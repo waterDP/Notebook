@@ -30,6 +30,9 @@ http {
   tcp_nopush on; # tcp 有一定的缓存
   keepalive_timeout 600s; # 活动链接的超时时间
   gzip on; # 是否启用压缩
+  gzip_http_version 1.1;
+  gzip_comp_level 4;
+  gzip_types text/plain applicaion/javascript application/x-javascript;
   client_max_body_size 500m;
   client_body_timeout 600s;
 
