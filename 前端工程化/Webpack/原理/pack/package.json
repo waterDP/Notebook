@@ -7,7 +7,7 @@
     "pack": "./bin/pack.js"
   },
   "devDependencies": {
-    "ejs": "^3.0.1",
+    "ejs": "^3.1.7",
     "tapable": "^1.1.3"
   }
 }
