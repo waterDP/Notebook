@@ -29,7 +29,7 @@ export declare function CreateBox(
   scene?: Nullable<Scene>
 ): Mesh;
 
-// ^ 球休 Shpere
+// ^ 球体 Shpere
 
 const shpere = BABYLON.MeshBuilder.CreateSphere("shpere", {}, scene);
 
@@ -41,12 +41,14 @@ export declare function CreateSphere(
     diameterX?: number; // X轴直径, 覆盖diameter的X方向的值
     diameterY?: number;
     diameterZ?: number;
-    arc?: number;
-    slice?: number;
-    sideOrientation?: number;
+    arc?: number; // 圆周率(纬度方向切割)，取值范围0到1，0.5相当于一个半球
+    slice?: number; // 高度比 (经度方向切割)，取值范围0到1，与arc类似，只是切割方向不一样
+    sideOrientation?: number; // 物体可被看到的面 默认0，正面，可选：0 正面，1 背面，2 双面
     frontUVs?: Vector4;
     backUVs?: Vector4;
     updatable?: boolean;
   },
   scene?: Nullable<Scene>
 ): Mesh;
+
+// ^ 平面 Plane
