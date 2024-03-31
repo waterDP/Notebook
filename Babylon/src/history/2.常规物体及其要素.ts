@@ -31,7 +31,7 @@ export declare function CreateBox(
 
 // ^ 球体 Shpere
 
-const shpere = BABYLON.MeshBuilder.CreateSphere("shpere", {}, scene);
+const sphere = BABYLON.MeshBuilder.CreateSphere("shpere", {}, scene);
 
 export declare function CreateSphere(
   name: string,
