@@ -1,5 +1,7 @@
 # 基础镜像
 FROM node
+# 添加宿主机文件到窗口内 自动解压 Copy指令不会自动解压
+ADD source dest
 # 拷贝一个文件（夹）
 COPY web /web
 # 镜像构建时执行的命令
@@ -14,3 +16,8 @@ ENV key=value
 VOLUME [ "/data" ]
 # 为容器设置默认启动命令
 CMD npm start
+
+# 作用和CMD一样，都是在指定容器启动程序以及参数
+# 当指定ENTRYPOINT之后，CMD指令的语义就有了变化
+# 是把CMD的内容当作参数传递给ENTRYPOINT指令
+ENTRYPOINT [ "executable" ]
