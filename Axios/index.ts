@@ -15,11 +15,11 @@ import isCancel from "./cancel/isCancel";
 
 function getAxios(config: AxiosRequestConfig): AxiosStatic {
   const context = new Axios(config);
-  const axios = Axios.prototype.request.bind(context);
+  const instance = Axios.prototype.request.bind(context);
 
   extend(axios, context); // context -> axios
 
-  return axios;
+  return instance;
 }
 
 const axios = getAxios(defaults);
