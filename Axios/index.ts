@@ -13,7 +13,7 @@ import Cancel from "./cancel/Cancel";
 import CancelToken from "./cancel/CancelToken";
 import isCancel from "./cancel/isCancel";
 
-function getAxios(config: AxiosRequestConfig): AxiosStatic {
+function createInstance(config: AxiosRequestConfig): AxiosStatic {
   const context = new Axios(config);
   const instance = Axios.prototype.request.bind(context);
 
@@ -22,10 +22,10 @@ function getAxios(config: AxiosRequestConfig): AxiosStatic {
   return instance;
 }
 
-const axios = getAxios(defaults);
+const axios = createInstance(defaults);
 
 axios.create = (config: AxiosRequestConfig) => {
-  return getAxios(mergeConfig(defaults, config));
+  return createInstance(mergeConfig(defaults, config));
 };
 
 axios.Cancel = Cancel as any;
