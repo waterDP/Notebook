@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-01-18 19:00:06
  * @Description:
- * @FilePath: \Notebook\Axios\axios.ts
+ * @FilePath: \Notebook\Axios\index.ts
  */
 import defaults from "./defaultes";
 import Axios from "./core/Axios";
@@ -17,7 +17,7 @@ function getAxios(config: AxiosRequestConfig): AxiosStatic {
   const context = new Axios(config);
   const instance = Axios.prototype.request.bind(context);
 
-  extend(axios, context); // context -> axios
+  extend(instance, context); // context -> axios
 
   return instance;
 }
