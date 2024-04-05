@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2024-03-29 22:06:02
+ * @Description:
+ * @FilePath: \Notebook\Babylon\src\history\2.常规物体及其要素.ts
+ */
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 import { Vector4, Nullable, Scene, Mesh, Color4 } from "@babylonjs/core";
 
@@ -52,3 +58,7 @@ export declare function CreateSphere(
 ): Mesh;
 
 // ^ 平面 Plane
+const plane = BABYLON.MeshBuilder.CreatePlane("plane", {}, scene);
+
+// ^ 地面 Ground
+const ground = BABYLON.MeshBuilder.CreateGround("ground", {}, scene);

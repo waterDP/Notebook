@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2024-03-29 22:00:19
  * @Description:
- * @FilePath: \Notebook\Babylon\src\lib\index copy.ts
+ * @FilePath: \Notebook\Babylon\src\history\1.第一个简单的Demo.ts
  */
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 
