@@ -1,40 +1,41 @@
 /*
  * @Author: water.li
  * @Date: 2021-09-29 22:34:31
- * @Description: 
- * @FilePath: \notebook\浏览器原理\前端跨域.js
+ * @Description:
+ * @FilePath: \Notebook\浏览器原理\前端跨域.js
  */
 // todo jsonp
 
 // todo cors 跨域资源共享
-xhr.withCredentials = true // 允许ajax的cookie跨域访问
+xhr.withCredentials = true; // 允许ajax的cookie跨域访问
 /* request 设置请求头 */
 // 允许哪个源，可以访问我
-res.setHeader('Access-Control-Allow-Origin', '*')
+res.setHeader("Access-Control-Allow-Origin", "*");
 // 允许携带哪个头访问我
-res.setHeader('Access-Control-Allow-Headers', 'name')
+res.setHeader("Access-Control-Allow-Headers", "name");
 // 允许哪个方法访问我
-res.setHeader('Access-Control-Allow-Methods', 'PUT')
+res.setHeader("Access-Control-Allow-Methods", "PUT");
 // 允许携带cookie
-res.setHeader('Access-Control-Allow-Credentials', true)
+res.setHeader("Access-Control-Allow-Credentials", true);
 // 预检的存活时间 options
-res.setHeader('Access-Control-Max-Age', '6')
-// 允许前端获取哪个头 
-res.setHeader('Access-Control-Expose-Headers', 'name')
-
-// todo postMessage
-`<iframe src='http://localhost:3000/b.html' onload='load()'></iframe>`
+res.setHeader("Access-Control-Max-Age", "6");
+// 允许前端获取哪个头
+res.setHeader(
+  "Access-Control-Expose-Headers",
+  "name"
+) // todo postMessage
+`<iframe src='http://localhost:3000/b.html' onload='load()'></iframe>`;
 // window.a
 function load() {
-  const b = document.getElementById('b')
-  b.contentWindow.postMessage('data', 'http://localhosit:3000')
+  const b = document.getElementById("b");
+  b.contentWindow.postMessage("data", "http://localhosit:3000");
 }
 
 // window b
-window.onmessage(e => e.source.postMessage('aaaa', e.origin))
+window.onmessage((e) => e.source.postMessage("aaaa", e.origin));
 
 // todo window.name
 // todo hash
 // todo document.domain 一级域名与二级域名的通信
-// todo websocket 
+// todo websocket
 // todo proxy
