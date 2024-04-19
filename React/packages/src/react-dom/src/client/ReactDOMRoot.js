@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2023-01-03 22:46:32
  * @Description:
- * @FilePath: \Notebook\React\source\src\react-dom\src\client\ReactDOMRoot.js
+ * @FilePath: \Notebook\React\packages\src\react-dom\src\client\ReactDOMRoot.js
  */
 
 import {
@@ -12,6 +12,7 @@ import {
 import { listenToAllSupportedEvents } from "react-dom-bindings/src/events/DOMPluginEventSystem";
 
 function ReactDOMRoot(internalRoot) {
+  // div#root
   this._internalRoot = internalRoot;
 }
 
