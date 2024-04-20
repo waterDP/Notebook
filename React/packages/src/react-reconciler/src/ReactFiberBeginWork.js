@@ -29,7 +29,7 @@ function reconcileChildren(current, workInProgress, nextChildren) {
   if (current === null) {
     workInProgress.child = mountChildFibers(workInProgress, null, nextChildren);
   } else {
-    // 如果说有老Fiber的话做DOM_DIFF 拿老的子fiber子链表和新虚拟DOM进行最小化的更新
+    // 如果说有老Fiber的话做DOM_DIFF 拿老的子fiber链表和新虚拟DOM进行最小化的更新
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
