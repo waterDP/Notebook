@@ -20,6 +20,7 @@ function appendAllChildren(parent, workInProgress) {
     if (node.tag === HostComponent || node.tag === HostText) {
       appendInitialChild(parent, node.stateNode);
     } else if (node.child !== null) {
+      // 如果第一个儿子不是原生节点，说明它可能是一个函数组件
       node = node.child;
       continue;
     }
