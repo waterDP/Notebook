@@ -61,8 +61,8 @@ function updateHostComponent(current, workInProgress, type, newProps) {
 
 /**
  * 完成一个fiber节点
- * @param {*} current
- * @param {*} workInProgress
+ * @param {*} current 老fiber
+ * @param {*} workInProgress 新的构建的fiber
  */
 export function completeWork(current, workInProgress) {
   indent.number -= 2;
