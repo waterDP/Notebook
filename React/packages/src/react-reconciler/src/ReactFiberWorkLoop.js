@@ -52,7 +52,7 @@ function commitRoot(root) {
   printFinishedWork(finishedWork);
   const subtreeHasEffects =
     (finishedWork.subtreeFlags & MutationMask) !== NoFlags;
-  const rootHasEffects = (finishedWork.NoFlags & MutationMask) !== NoFlags;
+  const rootHasEffects = (finishedWork.flags & MutationMask) !== NoFlags;
 
   // 如果自己有副作用或者子节点有副作用就进行提交操作
   if (subtreeHasEffects || rootHasEffects) {
