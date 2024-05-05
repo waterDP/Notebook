@@ -3,7 +3,12 @@ import {
   insertBefore,
 } from "react-dom-bindings/src/client/ReactDOMHostConfig";
 import { MutationMask, Placement } from "./ReactFiberFlags";
-import { FunctionComponent, HostComponent, HostRoot, HostText } from "./ReactWorkTags";
+import {
+  FunctionComponent,
+  HostComponent,
+  HostRoot,
+  HostText,
+} from "./ReactWorkTags";
 
 function recursivelyTraverseMutationEffects(root, parentFiber) {
   if (parentFiber.subtreeFlags & MutationMask) {
@@ -109,7 +114,7 @@ function commitPlacement(finishedWork) {
   switch (parentFiber.tag) {
     case HostRoot: {
       const parent = parentFiber.stateNode.containerInfo;
-      const before = getHostSibling(finishedWork);
+      const before = getHostSibling(finishedWork); // 获取最近的弟弟DOM节点
       insertOrAppendPlacementNode(finishedWork, before, parent);
       break;
     }
