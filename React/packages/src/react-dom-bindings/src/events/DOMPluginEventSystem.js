@@ -10,6 +10,7 @@ import getEventTarget from "./getEventTarget";
 import { HostComponent } from "react-reconciler/src/ReactWorkTags";
 import getListener from "./getListener";
 
+// todo 这里为./EventRegistry中的allNativeEvents赋值
 SimpleEventPlugin.registerEvents();
 
 const listeningMarker = `_reactListening` + Math.random().toString(36).slice(2);
