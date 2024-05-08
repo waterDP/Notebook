@@ -16,7 +16,7 @@ SimpleEventPlugin.registerEvents();
 const listeningMarker = `_reactListening` + Math.random().toString(36).slice(2);
 
 export function listenToAllSupportedEvents(rootContainerElement) {
-  //监听根容器 也就是div#root只监听一次
+  // 监听根容器 也就是div#root只监听一次
   if (!rootContainerElement[listeningMarker]) {
     rootContainerElement[listeningMarker] = true;
 
