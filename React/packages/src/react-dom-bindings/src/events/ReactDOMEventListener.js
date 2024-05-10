@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-04-07 20:32:28
+ * @Description:
+ * @FilePath: \Notebook\React\packages\src\react-dom-bindings\src\events\ReactDOMEventListener.js
+ */
 import getEventTarget from "./getEventTarget";
 import { getClosestInstanceFromNode } from "../client/ReactDOMComponentTree";
 import { dispatchEventForPluginEventSystem } from "./DOMPluginEventSystem";
@@ -19,7 +25,7 @@ export function createEventListenerWrapperWithPripority(
 
 /**
  * 派发离散的事件的监听函数
- * @param {*} domEventName 事件名
+ * @param {*} domEventName 事件名 click
  * @param {*} eventSystemFlags 阶段 0冒泡  4捕获
  * @param {*} container 容器div#root
  * @param {*} nativeEvent 原生的事件
@@ -40,7 +46,7 @@ function dispatchDiscreteEvent(
  * @param {*} targetContainer
  * @param {*} nativeEvent
  */
-function dispatchEvent(
+export function dispatchEvent(
   domEventName,
   eventSystemFlags,
   targetContainer,
