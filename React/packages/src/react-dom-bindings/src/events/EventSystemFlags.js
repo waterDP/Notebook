@@ -5,4 +5,4 @@
  * @FilePath: \Notebook\React\source\src\react-dom-bindings\src\events\EventSystemFlags.js
  */
 
-export const IS_CAPTURE_PHASE = 1 << 2;
+export const IS_CAPTURE_PHASE = 1 << 2; // 0b0100

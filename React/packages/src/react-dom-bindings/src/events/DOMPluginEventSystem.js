@@ -59,8 +59,7 @@ function addTrappedEventListener(
   const listener = createEventListenerWrapperWithPripority(
     targetContainer,
     domEventName,
-    eventSystemFlags,
-    isCapturePhaseListener
+    eventSystemFlags
   );
   if (isCapturePhaseListener) {
     addEventCaptureListener(targetContainer, domEventName, listener);
