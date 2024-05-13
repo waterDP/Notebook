@@ -1,7 +1,7 @@
 /*
  * @Author: water.li
  * @Date: 2023-04-07 20:32:28
- * @Description: 
+ * @Description:
  * @FilePath: \Notebook\React\packages\src\react-dom-bindings\src\events\SyntheticEvent.js
  */
 import assign from "shared/assign";
@@ -61,7 +61,7 @@ function createdSyntheticEvent(inter) {
       } else {
         event.returnValue = false;
       }
-      this.isDefaultPrevented = functionThatReturnFalse;
+      this.isDefaultPrevented = functionThatReturnTrue;
     },
     stopPropagation() {
       const event = this.nativeEvent;
