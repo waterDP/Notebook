@@ -20,7 +20,7 @@ import { SyntheticMouseEvent } from "../SyntheticEvent";
  * @param {*} nativeEvent 原生事件
  * @param {*} nativeEventTarget 原生事件源
  * @param {*} eventSystemFlags 事件系统标识 0表示冒泡 4表示捕获
- * @param {*} targetContainer 目标窗口 div#root
+ * @param {*} targetContainer 目标容器 div#root
  */
 function extractEvents(
   dispatchQueue,
