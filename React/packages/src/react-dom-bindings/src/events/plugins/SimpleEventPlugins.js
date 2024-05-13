@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-04-07 20:32:28
+ * @Description:
+ * @FilePath: \Notebook\React\packages\src\react-dom-bindings\src\events\plugins\SimpleEventPlugins.js
+ */
 import {
   registerSimpleEvents,
   topLevelEventsToReactNames,
