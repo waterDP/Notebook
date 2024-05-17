@@ -97,8 +97,8 @@ function mountReducer(reducer, initialArg) {
 function dispatchReducerAction(fiber, queue, action) {
   // 在每个hook里会存放一个更新队列，更新队列是一个更新对象的循环链表
   const update = {
-    action, // {type: 'add', payload: 1}
-    next: null, // 指向下一个更新
+    action, // {type: 'add', payload: 1} 派发的动作
+    next: null, // 指向下一个更新更新对象
   };
   // 把当前最新的更新添加到更新队列中，并且返回当前的根fiber
   const root = enqueueConcurrentHookUpdate(fiber, queue, update);

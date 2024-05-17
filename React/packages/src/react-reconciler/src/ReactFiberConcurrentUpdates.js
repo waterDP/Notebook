@@ -48,7 +48,7 @@ function getRootForUpdatedFiber(sourceFiber) {
     node = parent;
     parent = node.return;
   }
-  return node.tag === HostRoot ? node.stateNode : null; // FiberRootNode
+  return node.tag === HostRoot ? node.stateNode : null; // FiberRootNode div#root
 }
 
 /**
