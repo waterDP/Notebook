@@ -9,6 +9,18 @@ import { HostRoot } from "./ReactWorkTags";
 const concurrentQueue = [];
 let concurrentQueueIndex = 0;
 
+/**
+ * 把更新先缓到concurrentQueue数组中
+ * @param {*} fiber
+ * @param {*} queue
+ * @param {*} update
+ */
+function enqueueUpdate(fiber, queue, update) {
+  concurrentQueue[concurrentQueueIndex++] = fiber;
+  concurrentQueue[concurrentQueueIndex++] = queue;
+  concurrentQueue[concurrentQueueIndex++] = update;
+}
+
 export function finishQueueingConcurrentUpdates() {
   const endIndex = concurrentQueueIndex;
   concurrentQueueIndex = 0;
@@ -49,18 +61,6 @@ function getRootForUpdatedFiber(sourceFiber) {
     parent = node.return;
   }
   return node.tag === HostRoot ? node.stateNode : null; // FiberRootNode div#root
-}
-
-/**
- * 把更新先缓到concurrentQueue数组中
- * @param {*} fiber
- * @param {*} queue
- * @param {*} update
- */
-function enqueueUpdate(fiber, queue, update) {
-  concurrentQueue[concurrentQueueIndex++] = fiber;
-  concurrentQueue[concurrentQueueIndex++] = queue;
-  concurrentQueue[concurrentQueueIndex++] = update;
 }
 
 export function markUpdateLaneFromFiberToRoot(soruceFiber) {
