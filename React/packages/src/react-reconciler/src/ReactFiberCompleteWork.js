@@ -1,12 +1,18 @@
 import logger, { indent } from "shared/logger";
-import { HostComponent, HostRoot, HostText } from "./ReactWorkTags";
 import {
   createTextInstance,
   createInstance,
   appendInitialChild,
   finializeInitialChildren,
+  prepareUpdate,
 } from "react-dom-bindings/src/client/ReactDOMHostConfig";
 import { NoFlags, Update } from "./ReactFiberFlags";
+import {
+  HostComponent,
+  HostRoot,
+  HostText,
+  FunctionComponent,
+} from "./ReactWorkTags";
 
 /**
  * 把当前完成的fiber所有的子节点对应的真实DOM都挂载到自己父parent真实DOM节点上
@@ -71,6 +77,10 @@ export function completeWork(current, workInProgress) {
   const newProps = workInProgress.pendingProps;
   switch (workInProgress.tag) {
     case HostRoot:
+      // 根节点
+      bubbleProperties(workInProgress);
+      break;
+    case FunctionComponent:
       // 根节点
       bubbleProperties(workInProgress);
       break;

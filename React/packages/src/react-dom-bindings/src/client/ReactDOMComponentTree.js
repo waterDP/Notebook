@@ -18,6 +18,7 @@ export function getClosestInstanceFromNode(targetNode) {
   if (targetInst) {
     return targetInst;
   }
+  // 如果真实的DOM上没有Fiber,不要返回undefined，而是要返回null
   return null;
 }
 
