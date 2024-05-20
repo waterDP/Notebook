@@ -16,11 +16,63 @@ let currentHook = null;
 
 const HooksDispatcherOnMount = {
   useReducer: mountReducer,
+  useState: mountState,
 };
 
 const HooksDispatcherOnUpdate = {
   useReducer: updateReducer,
+  useState: updateState,
 };
+
+function baseStateReducer(state, action) {
+  return typeof action === "function" ? action(state) : action;
+}
+
+function updateState() {
+  return updateReducer(baseStateReducer);
+}
+
+function mountState(initialState) {
+  const hook = mountWorkInProgressHook();
+  hook.memorized = initialState;
+  const queue = {
+    pending: null,
+    dispatch: null,
+    lastRenderedReducer: baseStateReducer,
+    lastRenderedState: initialState,
+  };
+  hook.queue = queue;
+  const dispatch = (queue.dispatch = dispatchSetState.bind(
+    null,
+    currentlyRenderingFiber,
+    queue
+  ));
+  return [hook.memorized, dispatch];
+}
+
+function dispatchSetState(fiber, queue, action) {
+  const update = {
+    action,
+    hasEagerState: false,
+    eagerState: null,
+    next: null,
+  };
+
+  // 当派发动作后，立刻用上一次的状态和上一次的reducer计算新状态
+  const { lastRenderedReducer, lastRenderedState } = queue;
+  const eagerState = lastRenderedReducer(lastRenderedState, action);
+  update.hasEagerState = true;
+  update.eagerState = eagerState;
+
+  // 如果老的状态和新状态一样，就不去走调度更新的逻辑了
+  if (Object.is(update.eagerState, lastRenderedState)) {
+    return;
+  }
+
+  // 下面是真正的入队更新，并调度更新的逻辑
+  const root = enqueueConcurrentHookUpdate(fiber, queue, update);
+  scheduleUpdateOnFiber(root);
+}
 
 /**
  * 构建新的hooks
@@ -63,8 +115,12 @@ function updateReducer(reducer) {
     const firstUpdate = pendingQueue.next;
     let update = firstUpdate;
     do {
-      const action = update.action;
-      newState = reducer(newState, action);
+      if (update.hasEagerState) {
+        newState = update.eagerState;
+      } else {
+        const action = update.action;
+        newState = reducer(newState, action);
+      }
       update = update.next;
     } while (update !== null && update !== firstUpdate);
   }
@@ -143,5 +199,6 @@ export function renderWithHooks(current, workInProgress, Component, props) {
   const children = Component(props);
   currentlyRenderingFiber = null;
   workInProgressHook = null;
+  currentHook = null;
   return children;
 }

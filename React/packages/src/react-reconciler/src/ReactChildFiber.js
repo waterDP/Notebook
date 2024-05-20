@@ -31,7 +31,7 @@ function createChildReconciler(shouldTrackSideEffects) {
       if (child.key === key) {
         // 判断老fiber对应的类型和新的元素对应的虚拟DOM是否相同
         if (child.type === element.type) {
-          // 可以利用
+          // 可以复用
           const existing = useFiber(child, element.props);
           existing.return = returnFiber;
           return existing;
