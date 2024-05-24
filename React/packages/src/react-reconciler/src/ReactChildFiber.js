@@ -16,7 +16,18 @@ function createChildReconciler(shouldTrackSideEffects) {
     clone.sibling = null;
     return clone;
   }
-
+  function deleteChild(returnFiber, childToDelete) {
+    if (!shouldTrackSideEffects) {
+      return 
+    }
+    const deletions = returnFiber.deletions
+    if (deletions === null) {
+      returnFiber.deletions = [childToDelete]
+      returnFiber.flags != childToDelete
+    } else {
+      returnFiber.deletions.push(childToDelete)
+    }
+  }
   /**
    * @param {*} returnFiber 新的父fiber
    * @param {*} currentFirstChild 老fiber的第一个子fiber
@@ -81,21 +92,88 @@ function createChildReconciler(shouldTrackSideEffects) {
     }
     return null;
   }
-  function placeChild(newFiber, newIndex) {
-    newFiber.index = newIndex;
-    if (shouldTrackSideEffects) {
-      // 如果一个fiber它的flags上有 Placement，说明此节点需要创建真实DOM 并且插入到父容器中
-      newFiber.flags |= Placement;
+  function placeChild(newFiber, mewIdx) {
+    // 指定新的fiber的新的索引
+    newFiber.index = mewIdx;
+
+    if (!shouldTrackSideEffects) {
+      return;
     }
+    // 获取它的老fiber
+    const current = newFiber.alternate;
+    // 如果有 说明这是一个更新的节点，有老的真实的DOM
+    if (current !== null) {
+      return;
+    }
+    // 如果没有，说明这是一个新的节点，需要插入
+    newFiber.flags |= Placement;
   }
-  function reconcileChildrenArray(returnFiber, currentFirstFiber, newChildren) {
+  function updateElement(returnFiber, current, element) {
+    const elementType = element.type;
+    if (current !== null) {
+      // 判断是否类型一样 则表示key和type都一样，可以复用老的fiber和真实DOM
+      if (current.type === elementType) {
+        const existing = useFiber(current, element.props);
+        existing.return = returnFiber;
+        return existing;
+      }
+    }
+    const created = createFiberFromElement(element);
+    created.return = returnFiber;
+    return created;
+  }
+  function updateSlot(returnFiber, oldFiber, newChild) {
+    const key = oldFiber !== null ? oldFiber.key : null;
+    if (newChild !== null && typeof newChild === "object") {
+      switch (newChild.$$typeof) {
+        case REACT_ELEMENT_TYPE: {
+          // 如果key一样，就进入更新元素的逻辑
+          if (newChild.key === key) {
+            return updateElement(returnFiber, oldFiber, newChild);
+          }
+        }
+        default:
+          return null;
+      }
+    }
+    return null;
+  }
+  function reconcileChildrenArray(returnFiber, currentFirstChild, newChildren) {
     let resultingFirstChild = null; // 返回的第一个新儿子
     let previousNewFiber = null; // 上一个的一个新的fiber
+    let mewIdx = 0; // 用来遍历新的虚拟DOM的索引
+    let oldFiber = currentFirstChild; // 第一个老fiber
+    let nextOldFiber = null; // 下一个老fiber
 
-    for (let newIndex = 0; newIndex < newChildren.length; newIndex++) {
-      const newFiber = createChild(returnFiber, newChildren[newIndex]);
+    // 开始第一轮循环 如果老fiber有值，新的虚拟DOM也有值
+    for (; oldFiber !== null && mewIdx < newChildren.length; mewIdx++) {
+      // 先暂存下一个老fiber
+      nextOldFiber = oldFiber.sibling;
+      // 试图更新或者复用老的fiber
+      const newFiber = updateSlot(returnFiber, oldFiber, newChildren[mewIdx]);
+      if (newFiber === null) {
+        break;
+      }
+      if (shouldTrackSideEffects) {
+        // 如果有老fiber,但新的fiber并没有成功复用老fiber和老的真实DOM，那就删除老Fiber，在提交阶段会删除真实DOM
+        if (oldFiber && newFiber.alternate === null) {
+          deleteChild(returnFiber, oldFiber);
+        }
+      }
+      placeChild(newFiber, mewIdx);
+      if (previousNewFiber === null) {
+        resultingFirstChild = newFiber; // 链表头
+      } else {
+        previousNewFiber.sibling = newFiber;
+      }
+      previousNewFiber = newFiber;
+      oldFiber = nextOldFiber;
+    }
+
+    for (; mewIdx < newChildren.length; mewIdx++) {
+      const newFiber = createChild(returnFiber, newChildren[mewIdx]);
       if (newFiber === null) continue;
-      placeChild(newFiber, newIndex);
+      placeChild(newFiber, mewIdx);
       // 如果previousNewFiber为null 说明这是第一个fiber
       if (previousNewFiber === null) {
         resultingFirstChild = newFiber;
