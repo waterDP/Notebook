@@ -131,7 +131,7 @@ function completeUnitOfWork(unitOfWork) {
 
 function printFinishedWork(fiber) {
   const { flags, deletions } = fiber;
-  if (flags === ChildDeletion) {
+  if ((flags & ChildDeletion) !== NoFlags) {
     fiber.flags &= ~ChildDeletion;
 
     console.log(
