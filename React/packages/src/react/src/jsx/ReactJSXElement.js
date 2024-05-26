@@ -16,10 +16,6 @@ const RESERVED_PROPS = {
   __source: true,
 };
 
-function hasValidKey(config) {
-  return config.key !== undefined;
-}
-
 function hasValidRef(config) {
   return config.ref !== undefined;
 }
@@ -35,13 +31,13 @@ function ReactElement(type, key, ref, props) {
   };
 }
 
-export function jsxDEV(type, config) {
+export function jsxDEV(type, config, maybeKey) {
   let propName; // 属性名
   const props = {}; // 属性对象
   let key = null; // 每个虚拟Dom可以有一个可选的key属性，用来区分一个父节点下的不同子节点
   let ref = null; // 引入，后面可以通过这实现获取真实DOM的需求
-  if (hasValidKey(config)) {
-    key = config.key;
+  if (typeof maybeKey !== "undefined") {
+    key = maybeKey;
   }
   if (hasValidRef(config)) {
     ref = config.ref;

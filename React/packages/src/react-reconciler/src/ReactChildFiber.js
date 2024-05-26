@@ -4,7 +4,7 @@ import {
   createFiberFromElement,
   createWorkInProgress,
 } from "./ReactFiber";
-import { Placement } from "./ReactFiberFlags";
+import { ChildDeletion, Placement } from "./ReactFiberFlags";
 import isArray from "shared/isArray";
 /**
  *
@@ -18,14 +18,14 @@ function createChildReconciler(shouldTrackSideEffects) {
   }
   function deleteChild(returnFiber, childToDelete) {
     if (!shouldTrackSideEffects) {
-      return 
+      return;
     }
-    const deletions = returnFiber.deletions
+    const deletions = returnFiber.deletions;
     if (deletions === null) {
-      returnFiber.deletions = [childToDelete]
-      returnFiber.flags != childToDelete
+      returnFiber.deletions = [childToDelete];
+      returnFiber.flags |= ChildDeletion;
     } else {
-      returnFiber.deletions.push(childToDelete)
+      returnFiber.deletions.push(childToDelete);
     }
   }
   /**
@@ -47,6 +47,8 @@ function createChildReconciler(shouldTrackSideEffects) {
           existing.return = returnFiber;
           return existing;
         }
+      } else {
+        deleteChild(returnFiber, child);
       }
       child = child.sibling;
     }
@@ -170,19 +172,29 @@ function createChildReconciler(shouldTrackSideEffects) {
       oldFiber = nextOldFiber;
     }
 
-    for (; mewIdx < newChildren.length; mewIdx++) {
-      const newFiber = createChild(returnFiber, newChildren[mewIdx]);
-      if (newFiber === null) continue;
-      placeChild(newFiber, mewIdx);
-      // 如果previousNewFiber为null 说明这是第一个fiber
-      if (previousNewFiber === null) {
-        resultingFirstChild = newFiber;
-      } else {
-        previousNewFiber.sibling = newFiber;
-      }
-      // 让previous成为最后一个或者说上一个子fiber
-      previousNewFiber = newFiber;
+    if (newIdx === newChildren.length) {
+      // 删除剩下的老fiber
+      deleteRemainingChildren(returnFiber, oldFiber);
+      return resultingFirstChild;
     }
+
+    if (oldFiber === null) {
+      // 如果老的fiber已经没有了，新的虚拟DOM还有，进入插入新节点的逻辑
+      for (; mewIdx < newChildren.length; mewIdx++) {
+        const newFiber = createChild(returnFiber, newChildren[mewIdx]);
+        if (newFiber === null) continue;
+        placeChild(newFiber, mewIdx);
+        // 如果previousNewFiber为null 说明这是第一个fiber
+        if (previousNewFiber === null) {
+          resultingFirstChild = newFiber;
+        } else {
+          previousNewFiber.sibling = newFiber;
+        }
+        // 让previous成为最后一个或者说上一个子fiber
+        previousNewFiber = newFiber;
+      }
+    }
+
     return resultingFirstChild;
   }
   /**

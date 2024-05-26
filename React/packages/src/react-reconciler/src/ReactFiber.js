@@ -38,6 +38,7 @@ export function FiberNode(tag, pendingProps, key) {
   // 替身 轮替 DOM-DIFF
   this.alternate = null;
   this.index = 0;
+  this.deletions = null;
 }
 
 export function createFiber(tag, pendingProps, key) {
