@@ -144,6 +144,7 @@ function createChildReconciler(shouldTrackSideEffects) {
         return existing;
       }
     }
+    // 不能复用 就新建
     const created = createFiberFromElement(element);
     created.return = returnFiber;
     return created;
@@ -230,7 +231,7 @@ function createChildReconciler(shouldTrackSideEffects) {
           deleteChild(returnFiber, oldFiber);
         }
       }
-      placeChild(newFiber, mewIdx);
+      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, mewIdx);
       if (previousNewFiber === null) {
         resultingFirstChild = newFiber; // 链表头
       } else {
@@ -251,7 +252,7 @@ function createChildReconciler(shouldTrackSideEffects) {
       for (; mewIdx < newChildren.length; mewIdx++) {
         const newFiber = createChild(returnFiber, newChildren[mewIdx]);
         if (newFiber === null) continue;
-        placeChild(newFiber, mewIdx);
+        lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, mewIdx);
         // 如果previousNewFiber为null 说明这是第一个fiber
         if (previousNewFiber === null) {
           resultingFirstChild = newFiber;
@@ -283,7 +284,19 @@ function createChildReconciler(shouldTrackSideEffects) {
           }
         }
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+        // 如果previousNewFiber为null 说明这是第一个fiber
+        if (previousNewFiber === null) {
+          resultingFirstChild = newFiber;
+        } else {
+          previousNewFiber.sibling = newFiber;
+        }
+        // 让previous成为最后一个或者说上一个子fiber
+        previousNewFiber = newFiber;
       }
+    }
+    if (shouldTrackSideEffects) {
+      // 等全部处理完后，删除map中所有剩下的老fiber
+      existingChildren.forEach((child) => deleteChild(returnFiber, child));
     }
     return resultingFirstChild;
   }
