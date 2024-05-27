@@ -6,6 +6,7 @@ import {
 } from "./ReactFiber";
 import { ChildDeletion, Placement } from "./ReactFiberFlags";
 import isArray from "shared/isArray";
+import { HostText } from "./ReactWorkTags";
 /**
  *
  * @param {*} shouldTrackSideEffects 是否跟踪副作用
@@ -110,7 +111,7 @@ function createChildReconciler(shouldTrackSideEffects) {
     }
     return null;
   }
-  function placeChild(newFiber, mewIdx) {
+  function placeChild(newFiber, lastPlacedIndex, mewIdx) {
     // 指定新的fiber的新的索引
     newFiber.index = mewIdx;
 
@@ -121,10 +122,17 @@ function createChildReconciler(shouldTrackSideEffects) {
     const current = newFiber.alternate;
     // 如果有 说明这是一个更新的节点，有老的真实的DOM
     if (current !== null) {
-      return;
+      const oldIndex = current.index;
+      // 如果找到的老的fiber的索引比lastPlacedIndex要小，则老fiber对应的DOM节点需要移动
+      if (oldIndex < lastPlacedIndex) {
+        newFiber.flags |= Placement;
+        return lastPlacedIndex;
+      }
+      return oldIndex;
     }
     // 如果没有，说明这是一个新的节点，需要插入
     newFiber.flags |= Placement;
+    return lastPlacedIndex;
   }
   function updateElement(returnFiber, current, element) {
     const elementType = element.type;
@@ -156,12 +164,56 @@ function createChildReconciler(shouldTrackSideEffects) {
     }
     return null;
   }
+  function mapRemainingChildren(returnFiber, currentFirstChild) {
+    const existingChildren = new Map();
+    let existingChild = currentFirstChild;
+    while (existingChild !== null) {
+      if (existingChild.key !== null) {
+        existingChildren.set(existingChild.key, existingChild);
+      } else {
+        existingChildren.set(existingChild.index, existingChild);
+      }
+      existingChild = existingChild.sibling;
+    }
+    return existingChildren;
+  }
+  function updateTextNode(returnFiber, current, textContent) {
+    if (current === null || current.tag !== HostText) {
+      const created = createFiberFromText(textContent);
+      created.return = returnFiber;
+      return created;
+    }
+    const existing = useFiber(current, textContent);
+    existing.returnFiber = returnFiber;
+    return returnFiber;
+  }
+  function updateFromMap(existingChildren, returnFiber, newIdx, newChild) {
+    if (
+      (typeof newChild === "string" && newChild !== "") ||
+      typeof newChild === "number"
+    ) {
+      const matchedFiber = existingChildren.get(newIdx) || null;
+      return updateTextNode(returnFiber, matchedFiber, "" + newIdx);
+    }
+    if (typeof newChild === "object" && newChild !== null) {
+      switch (newChild.$$typeof) {
+        case REACT_ELEMENT_TYPE: {
+          const matchedFiber =
+            existingChildren.get(
+              newChild.key === null ? newIdx : newChild.key
+            ) || null;
+          return updateElement(returnFiber, matchedFiber, newChild);
+        }
+      }
+    }
+  }
   function reconcileChildrenArray(returnFiber, currentFirstChild, newChildren) {
     let resultingFirstChild = null; // 返回的第一个新儿子
     let previousNewFiber = null; // 上一个的一个新的fiber
     let mewIdx = 0; // 用来遍历新的虚拟DOM的索引
     let oldFiber = currentFirstChild; // 第一个老fiber
     let nextOldFiber = null; // 下一个老fiber
+    let lastPlacedIndex = 0; // 上一个不需要移动的老节点的索引
 
     // 开始第一轮循环 如果老fiber有值，新的虚拟DOM也有值
     for (; oldFiber !== null && mewIdx < newChildren.length; mewIdx++) {
@@ -211,6 +263,28 @@ function createChildReconciler(shouldTrackSideEffects) {
       }
     }
 
+    // 开始处理移动的情况
+    const existingChildren = mapRemainingChildren(returnFiber, oldFiber);
+    // 开始遍历剩下的虚拟DOM子节点
+    for (; newIdx < newChildren.length; newIdx++) {
+      const newFiber = updateFromMap(
+        existingChildren,
+        returnFiber,
+        newIdx,
+        newChildren[newIdx]
+      );
+      if (newFiber !== null) {
+        if (shouldTrackSideEffects) {
+          // 如果要跟踪副作用，并用有老fiber
+          if (newFiber.alternate !== null) {
+            existingChildren.delete(
+              newFiber.key === null ? newIdx : newFiber.key
+            );
+          }
+        }
+        lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
+      }
+    }
     return resultingFirstChild;
   }
   /**
