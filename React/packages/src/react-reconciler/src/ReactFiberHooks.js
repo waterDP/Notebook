@@ -31,20 +31,55 @@ const HooksDispatcherOnUpdate = {
   useEffect: updateEffect,
 };
 
+function updateEffect(create, deps) {
+  return updateEffectImpl(PassiveEffect, HookPassive, create, deps)
+}
+function updateEffectImpl(fiberFlags, hookFlags, create, deps) {
+  const hook = updateWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
+  let destroy
+  if (currentHook !== null) {
+    // 获取此useEffect这个hook上老的effect对象
+    const prevEffect = currentHook.memorizedState
+    destroy = prevEffect.destroy
+    if (nextDeps !== null) {
+      const prevDeps = prevEffect.deps
+      // 用新数组和老数组进行对比，如果一样的话
+      if (areHookInputsEqual(nextDeps, prevDeps)) {
+        // 不管要不要重新执行，都需要把新的effect组成完整的循环链表放到fiber.updateQueue中
+        hook.memorizedState = pushEffect(hookFlags, create, destroy, nextDeps)
+        return
+      }
+    }
+  }
+  // 如果要执行的话需要修改fiber的flags
+  currentlyRenderingFiber |= fiberFlags
+  // 如果要执行的话 添加HookHasEffect flag
+  hook.memorizedState = pushEffect(HookHasEffect | hookFlags, create, destroy, nextDeps)
+}
+
+function areHookInputsEqual(nextDeps, prevDeps) {
+  if (prevDeps === null) {
+    return null
+  }
+  for (let i = 0; i < prevDeps.length & i < nextDeps.length; i++) {
+    if (Object.is(nextDeps[i], prevDeps[i])) {
+      continue
+    }
+    return false
+  }
+  return true
+}
+
 function mountEffect(create, deps) {
   return mountEffectImpl(PassiveEffect, HookPassive, create, deps);
 }
 function mountEffectImpl(fiberFlags, hookFlags, create, deps) {
-  const hook = mountWorkInProgressHook();
-  const nextDeps = deps === undefined ? null : deps;
+  const hook = mountWorkInProgressHook()
+  const nextDeps = deps === undefined ? null : deps
   // 给当前的函数组件fiber添加flags
-  currentlyRenderingFiber.flags |= fiberFlags;
-  hook.memorizedState = pushEffect(
-    HookHasEffect | hookFlags,
-    create,
-    undefined,
-    nextDeps
-  );
+  currentlyRenderingFiber.flags |= fiberFlags
+  hook.memorizedState = pushEffect(HookHasEffect | hookFlags, create, undefined, nextDeps)
 }
 
 function createFunctionComponentUpdateQueue() {

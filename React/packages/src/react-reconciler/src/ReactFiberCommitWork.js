@@ -2,15 +2,19 @@ import {
   appendChild,
   insertBefore,
   commitUpdate,
-  removeChild
+  removeChild,
 } from "react-dom-bindings/src/client/ReactDOMHostConfig";
-import { MutationMask, Placement, Update } from "./ReactFiberFlags";
+import { MutationMask, Passive, Placement, Update } from "./ReactFiberFlags";
 import {
   FunctionComponent,
   HostComponent,
   HostRoot,
   HostText,
 } from "./ReactWorkTags";
+import {
+  HasEffect as HookHasPassive,
+  Passive as HookPassive,
+} from "./ReactHookEffectTags";
 
 let hostParent = null;
 
@@ -243,14 +247,7 @@ export function commitMutationEffectsOnFiber(finishedWork, root) {
           const updatePayload = finishedWork.updateQueue;
           finishedWork.updateQueue = null;
           if (updatePayload) {
-            commitUpdate(
-              instance,
-              updatePayload,
-              type,
-              oldProps,
-              newProps,
-              finishedWork
-            );
+            commitUpdate(instance, updatePayload, type, oldProps, newProps, finishedWork);
           }
         }
       }
@@ -258,5 +255,105 @@ export function commitMutationEffectsOnFiber(finishedWork, root) {
     }
     default:
       break;
+  }
+}
+
+export function commitPassiveUnmountEffects(finishedWork) {
+  commitPassiveUnmountOnFiber(finishedWork)
+}
+
+function commitPassiveUnmountOnFiber(finishedWork) {
+  const flags = finishedWork.flags
+  switch (finishedWork.tag) {
+    case HostRoot:
+      recursivelyTraverseUnmountEffects(finishedWork)
+      break;
+    case FunctionComponent:
+      recursivelyTraverseUnmountEffects(finishedWork)
+      if (flags & Passive) {
+        commitHookPassiveUnmountEffects(HookHasPassive | HookPassive)
+      }
+      break;
+  }
+}
+
+function recursivelyTraverseUnmountEffects(finishedRoot, parentFiber) {
+  if (parentFiber.subtreeFlags & Passive) {
+    let child = parent.child
+    while (child !== null) {
+      commitPassiveUnmountOnFiber(root, child)
+      child = child.sibling
+    }
+  }
+}
+
+function commitHookPassiveUnmountEffects(finishedWork, hookFlags) {
+  commitHookEffectListUnmount(hookFlags, finishedWork)
+}
+
+function commitHookEffectListUnmount(flags, finishedWork) {
+  const updateQueue = finishedWork.updateQueue
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next
+    let effect = firstEffect
+    do {
+      if ((effect.tag & flags) === flags) {
+        const destroy = effect.create
+        if (destroy !== undefined) {
+          destroy()
+        }
+      }
+      effect = effect.next
+    } while (effect !== firstEffect)
+  }
+}
+
+export function commitPassiveMountEffects(root, finishedWork) {
+  commitPassiveMountOnFiber(root, finishedWork);
+}
+
+function commitPassiveMountOnFiber(finishedRoot, finishedWork) {
+  const flags = finishedWork.flags;
+  switch (finishedWork.tag) {
+    case HostRoot:
+      recursivelyTraverseMountEffects(finishedRoot, finishedWork);
+      break;
+    case FunctionComponent:
+      recursivelyTraverseMountEffects(finishedRoot, finishedWork);
+      if (flags & Passive) {
+        commitHookPassiveMountEffects(finishedWork, HookHasPassive | HookPassive);
+      }
+      break;
+  }
+}
+
+function recursivelyTraverseMountEffects(root, parentFiber) {
+  if (parentFiber.subtreeFlags & Passive) {
+    let child = parent.child
+    while (child !== null) {
+      commitPassiveMountOnFiber(root, child)
+      child = child.sibling
+    }
+  }
+}
+
+function commitHookPassiveMountEffects(finishedWork, hookFlags) {
+  commitHookEffectListMount(hookFlags, finishedWork)
+}
+
+function commitHookEffectListMount(flags, finishedWork) {
+  const updateQueue = finishedWork.updateQueue
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next
+    let effect = firstEffect
+    do {
+      if ((effect.tag & flags) === flags) {
+        const create = effect.create
+        effect.destroy = create()
+      }
+      effect = effect.next
+    } while (effect !== firstEffect)
   }
 }

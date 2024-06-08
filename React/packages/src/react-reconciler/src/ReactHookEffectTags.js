@@ -6,7 +6,7 @@
  */
 
 export const NoFlags /*   */ = 0b0000;
-// 有effect
+// 有effect 只有此flag才会执行effect
 export const HasEffect /* */ = 0b0001;
 export const Insertion /* */ = 0b0010;
 export const Layout /*    */ = 0b0100;

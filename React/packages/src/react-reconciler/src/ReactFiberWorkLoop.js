@@ -4,7 +4,6 @@
  * @Description:
  * @FilePath: \Notebook\React\packages\src\react-reconciler\src\ReactFiberWorkLoop.js
  */
-import { scheduleCallback } from "scheduler";
 import { createWorkInProgress } from "./ReactFiber";
 import { beginWork } from "./ReactFiberBeginWork";
 import { completeWork } from "./ReactFiberCompleteWork";
@@ -14,8 +13,13 @@ import {
   Placement,
   Update,
   ChildDeletion,
+  Passive,
 } from "./ReactFiberFlags";
-import { commitMutationEffectsOnFiber } from "./ReactFiberCommitWork";
+import {
+  commitMutationEffectsOnFiber, // 执行DOM操作
+  commitPassiveUnmountEffects, // 执行destroy
+  commitPassiveMountEffects, // 执行create
+} from "./ReactFiberCommitWork";
 import {
   HostRoot,
   HostComponent,
@@ -23,9 +27,12 @@ import {
   FunctionComponent,
 } from "./ReactWorkTags";
 import { finishQueueingConcurrentUpdates } from "./ReactFiberConcurrentUpdates";
+import { scheduleCallback } from "scheduler/index";
 
 let workInProgress = null;
 let workInProgressRoot = null;
+let rootDoesHavePassiveEffect = false; // 此根节点上有没有useEffect类似的作用
+let rootWithPendingPassiveEffects = null; // 具有useEffect副作用的根节点 FiberRootNode 根fiber.stateNode
 /**
  * 计划更新root
  * @param {*} root
@@ -58,8 +65,29 @@ function performConcurrentWorkOnRoot(root) {
   workInProgressRoot = null;
 }
 
+function flushPassiveEffect() {
+  if (rootWithPendingPassiveEffects !== null) {
+    const root = rootWithPendingPassiveEffects;
+    // 执行卸载副作用 destroy
+    commitPassiveUnmountEffects(root.current);
+    // 执行挂载副作用 create
+    commitPassiveMountEffects(root, root.current);
+  }
+}
+
 function commitRoot(root) {
+  // 获取新的构建好的fiber树的根fiber
   const { finishedWork } = root;
+  if (
+    (finishedWork.subtreeFlags & Passive) !== NoFlags ||
+    (finishedWork.flag & Passive) !== NoFlags
+  ) {
+    if (!rootDoesHavePassiveEffect) {
+      rootDoesHavePassiveEffect = true;
+      scheduleCallback(flushPassiveEffect);
+    }
+  }
+
   printFinishedWork(finishedWork);
   const subtreeHasEffects =
     (finishedWork.subtreeFlags & MutationMask) !== NoFlags;
@@ -67,7 +95,12 @@ function commitRoot(root) {
 
   // 如果自己有副作用或者子节点有副作用就进行提交操作
   if (subtreeHasEffects || rootHasEffects) {
+    // 当DOM执行变更之后
     commitMutationEffectsOnFiber(finishedWork, root);
+    if (rootDoesHavePassiveEffect) {
+      rootDoesHavePassiveEffect = false;
+      rootWithPendingPassiveEffects = root;
+    }
   }
   // 等DOM变更后，就可以把root的current指新的fiber树
   root.current = finishedWork;
