@@ -19,6 +19,7 @@ import {
   commitMutationEffectsOnFiber, // 执行DOM操作
   commitPassiveUnmountEffects, // 执行destroy
   commitPassiveMountEffects, // 执行create
+  commitLayoutEffect
 } from "./ReactFiberCommitWork";
 import {
   HostRoot,
@@ -97,6 +98,8 @@ function commitRoot(root) {
   if (subtreeHasEffects || rootHasEffects) {
     // 当DOM执行变更之后
     commitMutationEffectsOnFiber(finishedWork, root);
+    // 执行layoutEffect
+    commitLayoutEffect(finishedWork, root)
     if (rootDoesHavePassiveEffect) {
       rootDoesHavePassiveEffect = false;
       rootWithPendingPassiveEffects = root;
@@ -169,9 +172,9 @@ function printFinishedWork(fiber) {
 
     console.log(
       "子节点有删除" +
-        deletions
-          .map((fiber) => `${fiber.type}#${fiber.memoizedProps.id}`)
-          .join(",")
+      deletions
+        .map((fiber) => `${fiber.type}#${fiber.memoizedProps.id}`)
+        .join(",")
     );
   }
   let child = fiber.child;
