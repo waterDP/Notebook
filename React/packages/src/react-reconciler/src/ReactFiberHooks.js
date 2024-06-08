@@ -286,17 +286,18 @@ function mountWorkInProgressHook() {
  * @returns 虚拟DOM或者说是React元素
  */
 export function renderWithHooks(current, workInProgress, Component, props) {
-  currentlyRenderingFiber = workInProgress;
+  currentlyRenderingFiber = workInProgress
+  workInProgress.updateQueue = null
   if (current !== null && current.memorized !== null) {
     //如果有老的Fiber，并且有老的Hook链表
-    ReactCurrentDispatcher.current = HooksDispatcherOnUpdate;
+    ReactCurrentDispatcher.current = HooksDispatcherOnUpdate
   } else {
     // 需要在函数组件执行前给ReactCurrentDispatcher.current赋值
-    ReactCurrentDispatcher.current = HooksDispatcherOnMount;
+    ReactCurrentDispatcher.current = HooksDispatcherOnMount
   }
-  const children = Component(props);
-  currentlyRenderingFiber = null;
-  workInProgressHook = null;
-  currentHook = null;
-  return children;
+  const children = Component(props)
+  currentlyRenderingFiber = null
+  workInProgressHook = null
+  currentHook = null
+  return children
 }
