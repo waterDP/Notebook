@@ -19,7 +19,7 @@ import {
   commitMutationEffectsOnFiber, // 执行DOM操作
   commitPassiveUnmountEffects, // 执行destroy
   commitPassiveMountEffects, // 执行create
-  commitLayoutEffect
+  commitLayoutEffects
 } from "./ReactFiberCommitWork";
 import {
   HostRoot,
@@ -99,7 +99,7 @@ function commitRoot(root) {
     // 当DOM执行变更之后
     commitMutationEffectsOnFiber(finishedWork, root);
     // 执行layoutEffect
-    commitLayoutEffect(finishedWork, root)
+    commitLayoutEffects(finishedWork, root)
     if (rootDoesHavePassiveEffect) {
       rootDoesHavePassiveEffect = false;
       rootWithPendingPassiveEffects = root;
