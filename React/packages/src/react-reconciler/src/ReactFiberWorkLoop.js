@@ -28,7 +28,7 @@ import {
   FunctionComponent,
 } from "./ReactWorkTags";
 import { finishQueueingConcurrentUpdates } from "./ReactFiberConcurrentUpdates";
-import { scheduleCallback } from "scheduler/index";
+import { scheduleCallback, NormalPriority as NormalSchedulerPriority, shouldYield } from "scheduler/index";
 
 let workInProgress = null;
 let workInProgressRoot = null;
@@ -46,7 +46,7 @@ export function scheduleUpdateOnFiber(root) {
 function ensureRootIsScheduled(root) {
   if (workInProgressRoot) return;
   workInProgressRoot = root;
-  scheduleCallback(performConcurrentWorkOnRoot.bind(null, root));
+  scheduleCallback(NormalSchedulerPriority, performConcurrentWorkOnRoot.bind(null, root));
 }
 
 /**
@@ -85,7 +85,7 @@ function commitRoot(root) {
   ) {
     if (!rootDoesHavePassiveEffect) {
       rootDoesHavePassiveEffect = true;
-      scheduleCallback(flushPassiveEffect);
+      scheduleCallback(NormalSchedulerPriority, flushPassiveEffect);
     }
   }
 
@@ -118,6 +118,13 @@ function renderRootSync(root) {
   // !开始构建 fiber 树
   prepareFreshStack(root);
   workLoopSync();
+}
+
+function workLoopConcurrent() {
+  // 如果有下一个要构建的fiber，并且时间片没有过期
+  while (workInProgress !== null && !shouldYield()) {
+    performUnitOfWork(workInProgress);
+  }
 }
 
 function workLoopSync() {
