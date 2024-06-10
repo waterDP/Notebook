@@ -110,7 +110,8 @@ function workLoop(startTime) {
     const callback = currentTask.callback
     if (typeof callback === 'function') {
       currentTask.callback = null
-      const continuationCallbck = callback()
+      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime
+      const continuationCallbck = callback(didUserCallbackTimeout)
       if (typeof continuationCallbck === 'function') {
         currentTask.callback = continuationCallbck
         return true //还有任务要执行

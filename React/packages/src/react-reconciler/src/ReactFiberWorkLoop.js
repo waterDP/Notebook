@@ -55,7 +55,7 @@ function ensureRootIsScheduled(root) {
  * 把真实的dom节点插入容器
  * @param {*} root
  */
-function performConcurrentWorkOnRoot(root) {
+function performConcurrentWorkOnRoot(root, timeout) {
   // 第一次渲染以同步的方式渲染根节点 初次渲染的时候 都是同步的
   renderRootSync(root);
   console.log("renderRootSync", root);
