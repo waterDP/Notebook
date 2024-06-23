@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "target": "ES2021",
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext"
+  }
+}
+  
