@@ -6,6 +6,14 @@
  */
 import "reflect-metadata";
 
-export function Get(): MethodDecorator {
-  return (target: any, property: string, descriptor: PropertyDescriptor) => {};
+export function Get(path: string = ""): MethodDecorator {
+  /**
+   * @param target AppController.prototype 类的原型
+   * @param propertyKey 方法名index
+   * @param descriptor index方法的属性描述器
+   */
+  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+    Reflect.defineMetadata("path", path, descriptor.value);
+    Reflect.defineMetadata("method", "GET", descriptor.value);
+  };
 }
