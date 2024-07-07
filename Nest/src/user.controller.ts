@@ -5,8 +5,8 @@
  * @FilePath: \Notebook\Nest\src\user.controller.ts
  */
 
-import { Controller, Get, Req, Request } from "@nestjs/common";
-import { Request as ExpressRequest } from "express";
+import { Controller, Get, Req, Request, Query } from "@nestjs/common";
+import { Request as ExpressRequest, query } from "express";
 
 @Controller("users")
 export class UserController {
@@ -15,4 +15,10 @@ export class UserController {
     @Req() req: ExpressRequest,
     @Request() request: ExpressRequest
   ) {}
+  @Get("query")
+  handleQuery(@Query() query: any, @Query("id") id: string) {
+    console.log("query", query);
+    console.log("id", id);
+    return `query is: ${id}`
+  }
 }

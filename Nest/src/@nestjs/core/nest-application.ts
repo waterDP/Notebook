@@ -74,11 +74,13 @@ export class NestApplication {
     // 获取参数的原数据
     const paramsMetadata = Reflect.getMetadata("params", instance, methodName);
     return paramsMetadata.map((paramMetadata) => {
-      const { key } = paramMetadata;
+      const { key, data } = paramMetadata;
       switch (key) {
         case "Request":
         case "Req":
           return req;
+        case "Query":
+          return data ? req.query[data] : req.query
         default:
           return null;
       }
