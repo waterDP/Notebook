@@ -3,7 +3,11 @@
     "experimentalDecorators": true,
     "target": "ES2021",
     "moduleResolution": "NodeNext",
-    "module": "NodeNext"
+    "module": "NodeNext",
+    "baseUrl": "./",
+    "paths": {
+      "@nestjs/*": ["src/@nestjs/*"]
+    }
   }
 }
   

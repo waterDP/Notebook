@@ -5,8 +5,14 @@
  * @FilePath: \Notebook\Nest\src\@nestjs\core\nest-application.ts
  */
 import "reflect-metadata";
-import express, { Express } from "express";
+import express, {
+  Express,
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+  NextFunction,
+} from "express";
 import { Logger } from "./logger";
+import path from "path";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -24,10 +30,60 @@ export class NestApplication {
       // 获取前缀
       const prefix = Reflect.getMetadata("prefix", Controller) || "/";
       // 开始解析路由
-      Logger.log(`${Controller.name} {${prefix}}`, 'RoutesResolver')
+      Logger.log(`${Controller.name} {${prefix}}`, "RoutesResolver");
+      const controllerPrototype = Controller.prototype;
+      for (const methodName of Object.getOwnPropertyNames(
+        controllerPrototype
+      )) {
+        const method = controllerPrototype[methodName];
+        const httpMethod = Reflect.getMetadata("method", method);
+        const pathMetadata = Reflect.getMetadata("path", method);
+        // 如果方法名不存在，则不处理
+        if (!httpMethod) continue;
+        const routePath = path.posix.join("/", prefix, pathMetadata);
+        // 配置路由，当客端以httpMethod方法请求routePath路径的时候，会由对应的函数进行处理
+        this.app[httpMethod.toLowerCase()](
+          routePath,
+          (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
+            const args = this.resolveParams(
+              controller,
+              methodName,
+              req,
+              res,
+              next
+            );
+            const result = method.call(controller, ...args);
+            res.send(result);
+          }
+        );
+        Logger.log(
+          `Mapped {${routePath}, ${httpMethod}} route`,
+          "RoutesResolver"
+        );
+      }
+      Logger.log(`Nest application successfully started`, "NestApplication");
     }
   }
-
+  private resolveParams(
+    instance: any,
+    methodName: string,
+    req: ExpressRequest,
+    res: ExpressResponse,
+    next: NextFunction
+  ) {
+    // 获取参数的原数据
+    const paramsMetadata = Reflect.getMetadata("params", instance, methodName);
+    return paramsMetadata.map((paramMetadata) => {
+      const { key } = paramMetadata;
+      switch (key) {
+        case "Request":
+        case "Req":
+          return req;
+        default:
+          return null;
+      }
+    });
+  }
   // 启动HTTP服务器
   async listen(port) {
     await this.init();

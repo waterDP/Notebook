@@ -7,10 +7,14 @@
 
 import { Controller, Get } from "@nestjs/common";
 
-@Controller("a")
+@Controller()
 export class AppController {
-  @Get("b")
+  @Get()
   getHello(): string {
     return "hello";
+  }
+  @Get("info")
+  main() {
+    return "info";
   }
 }
