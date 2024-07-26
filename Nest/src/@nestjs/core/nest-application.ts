@@ -74,7 +74,8 @@ export class NestApplication {
     next: NextFunction
   ) {
     // 获取参数的原数据
-    const paramsMetadata = Reflect.getMetadata("params", instance, methodName);
+    const paramsMetadata =
+      Reflect.getMetadata("params", instance, methodName) ?? [];
     return paramsMetadata.map((paramMetadata) => {
       const { key, data } = paramMetadata;
       switch (key) {
