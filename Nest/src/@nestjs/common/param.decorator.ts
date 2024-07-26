@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2024-07-07 21:02:19
+ * @Description:
+ * @FilePath: \Notebook\Nest\src\@nestjs\common\param.decorator.ts
+ */
 import "reflect-metadata";
 
 export const createParamDecorator = (key: string) => {
@@ -16,3 +22,6 @@ export const Request = createParamDecorator("Request");
 export const Req = createParamDecorator("Req");
 export const Query = createParamDecorator("Query");
 export const Headers = createParamDecorator("Headers");
+export const Session = createParamDecorator("Session");
+export const Ip = createParamDecorator("Ip");
+export const Param = createParamDecorator("Param");
