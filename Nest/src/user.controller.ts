@@ -8,15 +8,21 @@
 import {
   Controller,
   Get,
+  Post,
   Req,
   Request,
   Query,
   Headers,
   Session,
+  Body,
   Ip,
-  Param
+  Param,
+  Response
 } from "@nestjs/common";
-import { Request as ExpressRequest } from "express";
+import {
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from "express";
 
 @Controller("users")
 export class UserController {
@@ -66,5 +72,15 @@ export class UserController {
     console.log("username", username);
     console.log("age", age);
     return `age: ${age}`;
+  }
+  @Post("create")
+  createUser(@Body() createUserDto, @Body("username") username: string) {
+    console.log(createUserDto);
+    return "user created";
+  }
+  @Get("res")
+  response(@Response() response: ExpressResponse) {
+    console.log("response", response);
+    return "response";
   }
 }

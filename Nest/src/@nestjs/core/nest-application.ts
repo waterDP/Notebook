@@ -17,7 +17,10 @@ import path from "path";
 export class NestApplication {
   // 在它的内部私有化一个Express实例
   private readonly app: Express = express();
-  constructor(protected readonly module) {}
+  constructor(protected readonly module) {
+    this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
+    this.app.use(express.urlencoded({ extended: true })); // 把form表单格式的请求体对象放在body上
+  }
   use(middleware: any) {
     this.app.use(middleware);
   }
@@ -55,7 +58,14 @@ export class NestApplication {
               next
             );
             const result = method.call(controller, ...args);
-            res.send(result);
+            const responseMetadata = this.getResponseMetaData(
+              controller,
+              methodName
+            );
+            // 或者没有注入Response装饰器，或者注入了但传入passthrough参数，都会由Nest.js来返回响应
+            if (!responseMetadata || responseMetadata?.data?.passthrough) {
+              res.send(result);
+            }
           }
         );
         Logger.log(
@@ -65,6 +75,16 @@ export class NestApplication {
       }
       Logger.log(`Nest application successfully started`, "NestApplication");
     }
+  }
+  private getResponseMetaData(controller, methodName) {
+    const paramsMetadata = Reflect.getMetadata(
+      "params",
+      controller,
+      methodName
+    );
+    return paramsMetadata
+      .filter(Boolean)
+      .find((params) => params.key === "Response" || params.key === "res");
   }
   private resolveParams(
     instance: any,
@@ -92,6 +112,11 @@ export class NestApplication {
           return req.ip;
         case "Param":
           return data ? req.params[data] : req.params;
+        case "Body":
+          return data ? req.body[data] : req.body;
+        case "Response":
+        case "Res":
+          return res;
         default:
           return null;
       }
