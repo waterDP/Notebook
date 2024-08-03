@@ -10,6 +10,7 @@ import express, {
   Request as ExpressRequest,
   Response as ExpressResponse,
   NextFunction,
+  response,
 } from "express";
 import { Logger } from "./logger";
 import path from "path";
@@ -43,6 +44,14 @@ export class NestApplication {
         const method = controllerPrototype[methodName];
         const httpMethod = Reflect.getMetadata("method", method);
         const pathMetadata = Reflect.getMetadata("path", method);
+        const redirectUrl = Reflect.getMetadata("redirectUrl", method);
+        const redirectStatusCode = Reflect.getMetadata(
+          "redirectStatusCode",
+          method
+        );
+        const statusCode = Reflect.getMetadata("statusCode", method);
+        const headers = Reflect.getMetadata("headers", method) ?? [];
+
         // 如果方法名不存在，则不处理
         if (!httpMethod) continue;
         const routePath = path.posix.join("/", prefix, pathMetadata);
@@ -58,12 +67,29 @@ export class NestApplication {
               next
             );
             const result = method.call(controller, ...args);
+            if (result.url) {
+              return res.redirect(result.redirectCode || 302, result.url);
+            }
+            // 判断如果需要重定向，则直接重定向到指定的redirectUrl地址去
+            if (redirectUrl) {
+              return res.redirect(redirectStatusCode || 302, redirectUrl);
+            }
+
+            if (statusCode) {
+              res.statusCode = statusCode;
+            } else if (httpMethod === "POST") {
+              res.statusCode = 201;
+            }
+
             const responseMetadata = this.getResponseMetaData(
               controller,
               methodName
             );
             // 或者没有注入Response装饰器，或者注入了但传入passthrough参数，都会由Nest.js来返回响应
             if (!responseMetadata || responseMetadata?.data?.passthrough) {
+              headers.forEach(({ name, value }) => {
+                res.setHeader(name, value);
+              });
               res.send(result);
             }
           }
@@ -84,7 +110,12 @@ export class NestApplication {
     );
     return paramsMetadata
       .filter(Boolean)
-      .find((params) => params.key === "Response" || params.key === "res");
+      .find(
+        (params) =>
+          params.key === "Response" ||
+          params.key === "res" ||
+          params.key === "Next"
+      );
   }
   private resolveParams(
     instance: any,
@@ -97,7 +128,16 @@ export class NestApplication {
     const paramsMetadata =
       Reflect.getMetadata("params", instance, methodName) ?? [];
     return paramsMetadata.map((paramMetadata) => {
-      const { key, data } = paramMetadata;
+      const { key, data, factory } = paramMetadata;
+      const ctx = {
+        switchToHttp: () => {
+          return {
+            getRequest: () => req,
+            getResponse: () => res,
+            getNext: () => next,
+          };
+        },
+      };
       switch (key) {
         case "Request":
         case "Req":
@@ -117,6 +157,10 @@ export class NestApplication {
         case "Response":
         case "Res":
           return res;
+        case "Next":
+          return next;
+        case "DecoratorFactory":
+          return factory(data, ctx);
         default:
           return null;
       }

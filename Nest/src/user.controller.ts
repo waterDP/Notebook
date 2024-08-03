@@ -17,7 +17,11 @@ import {
   Body,
   Ip,
   Param,
-  Response
+  Response,
+  Next,
+  Redirect,
+  HttpCode,
+  Header
 } from "@nestjs/common";
 import {
   Request as ExpressRequest,
@@ -74,13 +78,25 @@ export class UserController {
     return `age: ${age}`;
   }
   @Post("create")
+  @HttpCode(200)
+  @Header("Cache-Control", "none") // 向客户端发送一个响应头
   createUser(@Body() createUserDto, @Body("username") username: string) {
     console.log(createUserDto);
     return "user created";
   }
+
   @Get("res")
   response(@Response() response: ExpressResponse) {
     console.log("response", response);
     return "response";
   }
+
+  @Get("next")
+  next(@Next() next) {
+    console.log(next);
+  }
+
+  @Get("/redirect/req")
+  @Redirect("/users", 301)
+  handleRedirect() {}
 }
