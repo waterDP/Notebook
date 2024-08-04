@@ -37,12 +37,11 @@ export class NestApplication {
       } else if (provider.provide && provider.useFactory) {
         const inject = provider.inject ?? [];
         const injectedValues = inject.map(this.getProviderByToken);
-        this.providers.set(
-          provider.provide,
-          provider.useFactory(...injectedValues)
-        );
+        const value = provider.useFactory(...injectedValues);
+        this.providers.set(provider.provide, value);
       } else {
-        this.providers.set(provider, new provider());
+        const dependencies = this.resolveDependencies(provider);
+        this.providers.set(provider, new provider(...dependencies));
       }
     }
   }
