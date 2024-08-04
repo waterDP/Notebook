@@ -14,16 +14,55 @@ import express, {
 } from "express";
 import { Logger } from "./logger";
 import path from "path";
+import { INJECTED_TOKENS, DESIGN_PARAMTYPES } from "../common/constants";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
   private readonly app: Express = express();
+  private readonly providers = new Map();
   constructor(protected readonly module) {
     this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
     this.app.use(express.urlencoded({ extended: true })); // 把form表单格式的请求体对象放在body上
+    this.initProviders();
+  }
+  initProviders() {
+    const providers = Reflect.getMetadata("providers", this.module) ?? [];
+    for (let provider of providers) {
+      if (provider.provide && provider.useClass) {
+        const dependencies = this.resolveDependencies(provider.useClass);
+        const classInstance = new provider.useClass(...dependencies);
+        this.providers.set(provider.provide, classInstance);
+      } else if (provider.provide && provider.useValue) {
+        this.providers.set(provider.provide, provider.useValue);
+      } else if (provider.provide && provider.useFactory) {
+        const inject = provider.inject ?? [];
+        const injectedValues = inject.map(this.getProviderByToken);
+        this.providers.set(
+          provider.provide,
+          provider.useFactory(...injectedValues)
+        );
+      } else {
+        this.providers.set(provider, new provider());
+      }
+    }
   }
   use(middleware: any) {
     this.app.use(middleware);
+  }
+  private getProviderByToken = (injectedToken) => {
+    return this.providers.get(injectedToken) ?? injectedToken;
+  };
+  private resolveDependencies(Controller) {
+    // 取得注入的token
+    const injectTokens = Reflect.getMetadata(INJECTED_TOKENS, Controller) ?? [];
+    // 取得构造函数的参数类型
+    const constructorParams = Reflect.getMetadata(
+      DESIGN_PARAMTYPES,
+      Controller
+    );
+    return constructorParams.map((param, index) => {
+      return this.getProviderByToken(injectTokens[index] ?? param);
+    });
   }
   // 配置初始化工作
   async init() {
@@ -31,8 +70,10 @@ export class NestApplication {
     const controllers = Reflect.getMetadata("controllers", this.module) || [];
     Logger.log("AppModule dependencies initialized", "InstanceLoader");
     for (const Controller of controllers) {
+      // 解析出控制器的依赖
+      const dependencies = this.resolveDependencies(Controller);
       // 创建控制器的实例
-      const controller = new Controller();
+      const controller = new Controller(...dependencies);
       // 获取前缀
       const prefix = Reflect.getMetadata("prefix", Controller) || "/";
       // 开始解析路由

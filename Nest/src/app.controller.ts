@@ -6,9 +6,14 @@
  */
 
 import { Controller, Get } from "@nestjs/common";
+import { LoggerService } from './logger.service';
 
 @Controller()
 export class AppController {
+  constructor (private loggerService: LoggerService) {
+    
+  }
+
   @Get()
   getHello(): string {
     return "hello";
