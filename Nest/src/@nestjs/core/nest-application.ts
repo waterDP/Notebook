@@ -52,14 +52,12 @@ export class NestApplication {
   private getProviderByToken = (injectedToken) => {
     return this.providers.get(injectedToken) ?? injectedToken;
   };
-  private resolveDependencies(Controller) {
+  private resolveDependencies(Clazz) {
     // 取得注入的token
-    const injectTokens = Reflect.getMetadata(INJECTED_TOKENS, Controller) ?? [];
+    const injectTokens = Reflect.getMetadata(INJECTED_TOKENS, Clazz) ?? [];
     // 取得构造函数的参数类型
-    const constructorParams = Reflect.getMetadata(
-      DESIGN_PARAMTYPES,
-      Controller
-    );
+    const constructorParams = Reflect.getMetadata(DESIGN_PARAMTYPES, Clazz);
+
     return constructorParams.map((param, index) => {
       return this.getProviderByToken(injectTokens[index] ?? param);
     });
