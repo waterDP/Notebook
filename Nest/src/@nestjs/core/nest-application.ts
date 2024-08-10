@@ -61,7 +61,7 @@ export class NestApplication {
     return (
       exportToken &&
       exportToken instanceof Function &&
-      Reflect.getMetadata("isToken", exportToken)
+      Reflect.getMetadata("isModule", exportToken)
     );
   }
   addProvider(provider) {
