@@ -18,10 +18,25 @@ export function Module(metadata: ModuleMetadata): ClassDecorator {
   return (target: Function) => {
     Reflect.defineMetadata("isModule", true, target);
     // 给模块类添加元数据，AppModule元数据的名字叫controller, 值是controller数组
+    defineModule(target, metadata.controllers);
     Reflect.defineMetadata("controllers", metadata.controllers, target);
     // 给模块类添加元数据 providers
+    defineModule(target, metadata.providers ?? []);
     Reflect.defineMetadata("providers", metadata.providers, target);
     Reflect.defineMetadata("exports", metadata.exports, target);
     Reflect.defineMetadata("imports", metadata.imports, target);
+  };
+}
+
+export function defineModule(nestModule, targets = []) {
+  // 遍历targets数组，为每个元素添加元数据 key是nestModule 值是对应的模块
+  targets.forEach((target) => {
+    Reflect.defineMetadata("module", nestModule, target);
+  });
+}
+
+export function Global() {
+  return (target: Function) => {
+    Reflect.defineMetadata("global", true, target);
   };
 }

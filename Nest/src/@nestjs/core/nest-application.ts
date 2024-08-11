@@ -19,7 +19,11 @@ import { INJECTED_TOKENS, DESIGN_PARAMTYPES } from "../common/constants";
 export class NestApplication {
   // 在它的内部私有化一个Express实例
   private readonly app: Express = express();
-  private readonly providers = new Map();
+  // 在此处保存所有provider的实例，key就是token，值就是类的实例或者值
+  private readonly providerInstance = new Map();
+  private readonly globalProviders = new Set();
+  // 记录每个模块里有哪些provider的token
+  private readonly moduleProviders = new Map();
   constructor(protected readonly module) {
     this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
     this.app.use(express.urlencoded({ extended: true })); // 把form表单格式的请求体对象放在body上
@@ -34,27 +38,28 @@ export class NestApplication {
     // 获取当前模块提供的元数据
     const providers = Reflect.getMetadata("providers", this.module) ?? [];
     for (const provider of providers) {
-      this.addProvider(provider);
+      this.addProvider(provider, this.module);
     }
   }
-  private registerProviderFromModule(module) {
+  private registerProviderFromModule(module, ...parentModules) {
+    // 获取导入的是不是全局模块
+    const global = Reflect.getMetadata("global", module);
     const importedProviders = Reflect.getMetadata("providers", module) ?? [];
     const exports = Reflect.getMetadata("exports", module) ?? [];
     for (const exportToken of exports) {
       if (this.isModule(exportToken)) {
-        this.registerProviderFromModule(exportToken);
+        this.registerProviderFromModule(exportToken, module, ...parentModules);
       } else {
         const provider = importedProviders.find(
           (provider) =>
             provider === exportToken || provider.provide === exportToken
         );
         if (provider) {
-          this.addProvider(provider);
+          [module, ...parentModules].forEach((module) => {
+            this.addProvider(provider, module, global);
+          });
         }
       }
-    }
-    for (const provider of importedProviders) {
-      this.addProvider(provider);
     }
   }
   private isModule(exportToken) {
@@ -64,35 +69,55 @@ export class NestApplication {
       Reflect.getMetadata("isModule", exportToken)
     );
   }
-  addProvider(provider) {
-    // 为了避免循依赖，每次添加前可以做一个判断，如果Map中已经存在，则直接返回
+  addProvider(provider, module, global = false) {
+    const providers = global
+      ? this.globalProviders
+      : this.providerInstance.get(module) || new Set();
+
     const injectToken = provider.provide ?? provider;
-    if (this.providers.has(injectToken)) return;
+    if (this.providerInstance.has(injectToken)) {
+      providers.add(injectToken);
+      return;
+    }
+
+    if (!this.moduleProviders.has(module)) {
+      this.moduleProviders.set(module, providers);
+    }
+
     if (provider.provid && provider.useClass) {
       const Clazz = provider.useClass;
       const dependencies = this.resolveDependencies(Clazz);
       const classInstance = new Clazz(...dependencies);
-      this.providers.set(provider.provide, classInstance);
+      this.providerInstance.set(provider.provide, classInstance);
+      providers.add(provider.provide);
     } else if (provider.provide && provider.useValue) {
-      this.providers.set(provider.provide, provider.useValue);
+      this.providerInstance.set(provider.provide, provider.useValue);
+      providers.add(provider.provide);
     } else if (provider.provide && provider.useFactory) {
       const inject = provider.inject ?? [];
       const injectedValues = inject.map((injectToken) =>
-        this.getProviderByToken(injectToken)
+        this.getProviderByToken(injectToken, module)
       );
       const value = provider.useFactory(...injectedValues);
-      this.providers.set(provider.provide, value);
+      this.providerInstance.set(provider.provide, value);
+      providers.add(provider.provide);
     } else {
       const dependencies = this.resolveDependencies(provider);
       const value = new provider(...dependencies);
-      this.providers.set(provider, value);
+      this.providerInstance.set(provider, value);
+      providers.add(provider);
     }
   }
   use(middleware: any) {
     this.app.use(middleware);
   }
-  private getProviderByToken = (injectedToken) => {
-    return this.providers.get(injectedToken) ?? injectedToken;
+  private getProviderByToken = (injectedToken, module) => {
+    if (
+      this.moduleProviders.get(module)?.has(injectedToken) ||
+      this.globalProviders.has(injectedToken)
+    ) {
+      return this.providerInstance.get(injectedToken);
+    }
   };
   private resolveDependencies(Clazz) {
     // 取得注入的token
@@ -101,7 +126,8 @@ export class NestApplication {
     const constructorParams = Reflect.getMetadata(DESIGN_PARAMTYPES, Clazz);
 
     return constructorParams.map((param, index) => {
-      return this.getProviderByToken(injectTokens[index] ?? param);
+      const module = Reflect.getMetadata("module", Clazz);
+      return this.getProviderByToken(injectTokens[index] ?? param, module);
     });
   }
   // 配置初始化工作
