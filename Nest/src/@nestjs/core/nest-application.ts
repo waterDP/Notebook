@@ -28,14 +28,18 @@ export class NestApplication {
   constructor(protected readonly module) {
     this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
     this.app.use(express.urlencoded({ extended: true })); // 把form表单格式的请求体对象放在body上
-    this.initProviders();
   }
-  initProviders() {
+  async initProviders() {
     const imports = Reflect.getMetadata("imports", this.module) ?? [];
     //遍历所有导入的模块
     for (const importModule of imports) {
+      let importedModule = importModule;
+      // 如果导入的是一个Promise，说明它是异步的动态模块
+      if (importModule instanceof Promise) {
+        importedModule = await importedModule;
+      }
       // 如果导入的模块有module属性，说明这是一个动态模块
-      if ("module" in importModule) {
+      if ("module" in importedModule) {
         const { module, providers, exports, controllers } = importModule;
 
         const oldControllers = Reflect.getMetadata("controllers", module);
@@ -302,6 +306,7 @@ export class NestApplication {
   }
   // 启动HTTP服务器
   async listen(port) {
+    await this.initProviders();
     await this.init();
     this.app.listen(port, () => {
       Logger.log(
