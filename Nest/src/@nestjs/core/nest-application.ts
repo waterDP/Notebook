@@ -15,6 +15,7 @@ import express, {
 import { Logger } from "./logger";
 import path from "path";
 import { INJECTED_TOKENS, DESIGN_PARAMTYPES } from "../common/constants";
+import { defineModule } from "../common/module.decorator";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -33,7 +34,33 @@ export class NestApplication {
     const imports = Reflect.getMetadata("imports", this.module) ?? [];
     //遍历所有导入的模块
     for (const importModule of imports) {
-      this.registerProviderFromModule(importModule);
+      // 如果导入的模块有module属性，说明这是一个动态模块
+      if ("module" in importModule) {
+        const { module, providers, exports, controllers } = importModule;
+
+        const oldControllers = Reflect.getMetadata("controllers", module);
+        const newControllers = [
+          ...(oldControllers ?? []),
+          ...(controllers ?? []),
+        ];
+
+        const oldProviders = Reflect.getMetadata("providers", module);
+        const newProviders = [...(oldProviders ?? []), ...(providers ?? [])];
+
+        const oldExports = Reflect.getMetadata("exports", module);
+        const newExports = [...(oldExports ?? []), ...(exports ?? [])];
+
+        defineModule(module, newControllers);
+        defineModule(module, newProviders);
+
+        Reflect.defineMetadata("controllers", newControllers, module);
+        Reflect.defineMetadata("providers", newProviders, module);
+        Reflect.defineMetadata("exports", newExports, module);
+
+        this.registerProviderFromModule(module, this.module);
+      } else {
+        this.registerProviderFromModule(importModule);
+      }
     }
     // 获取当前模块提供的元数据
     const providers = Reflect.getMetadata("providers", this.module) ?? [];
