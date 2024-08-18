@@ -10,7 +10,7 @@ export default {
           }
         }
         el.handler = handler
-        document.addEventListener('clcick', el.handler)
+        document.addEventListener('click', el.handler)
       },
       unbind(el) {
         document.removeEventListener('click', el.handler)
