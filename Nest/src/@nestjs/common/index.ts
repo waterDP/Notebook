@@ -11,3 +11,8 @@ export * from "./param.decorator";
 export * from "./injectable.decorator";
 export * from "./inject.decorator";
 export * from "./constants";
+export * from "./request.method.enum";
+export * from "./middleware.interface";
+export * from "./nest-module.interface";
+export * from "./middleware-consumer.interface";
+export * from "./request.method.enum";

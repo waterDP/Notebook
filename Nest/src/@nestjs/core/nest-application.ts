@@ -16,6 +16,7 @@ import { Logger } from "./logger";
 import path from "path";
 import { INJECTED_TOKENS, DESIGN_PARAMTYPES } from "../common/constants";
 import { defineModule } from "../common/module.decorator";
+import { RequestMethod } from "../common/request.method.enum";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -25,9 +26,56 @@ export class NestApplication {
   private readonly globalProviders = new Set();
   // 记录每个模块里有哪些provider的token
   private readonly moduleProviders = new Map();
+
+  // 记录所有的中间件
+  private readonly middlewares = [];
   constructor(protected readonly module) {
     this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
     this.app.use(express.urlencoded({ extended: true })); // 把form表单格式的请求体对象放在body上
+    // 初始化中间件配置
+    this.initMiddlewares();
+  }
+  private initMiddlewares() {
+    // 调用配置中间件的方法 MiddlewareConsumer就是当前的NestApplication的实例
+    this.module.prototype.configure?.(this);
+  }
+  apply(...middlewares) {
+    // 把接收到的中间件放到中件数组中，并且返回当前的实例
+    this.middlewares.push(middlewares);
+    return this;
+  }
+  getMiddlewareInstance(middleware) {
+    if (middleware instanceof Function) {
+      return new middleware();
+    }
+    return middleware;
+  }
+  forRoot(...routes) {
+    for (const route of routes) {
+      for (const middleware of this.middlewares) {
+        const { routePath, routeMethod } = this.normalizeRouteInfo(route);
+        this.app.use(routePath, (req, res, next) => {
+          if (routeMethod === RequestMethod.ALL || routeMethod === req.method) {
+            const middlewareInstance = this.getMiddlewareInstance(middleware);
+            middlewareInstance.use(req, res, next);
+          } else {
+            next();
+          }
+        });
+      }
+    }
+  }
+  private normalizeRouteInfo(route) {
+    let routePath = "";
+    let routeMethod = RequestMethod.ALL;
+    if (typeof route === "string") {
+      routePath = route;
+    } else if ("path" in route) {
+      routePath = route.path;
+      routeMethod = route.method;
+    }
+    routePath = path.posix.join("/", routePath);
+    return { routePath, routeMethod };
   }
   async initProviders() {
     const imports = Reflect.getMetadata("imports", this.module) ?? [];
