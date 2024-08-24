@@ -1,4 +1,4 @@
-import { PathRebuilder } from '../core/PathProxy';
+import { PathRebuilder } from '../../core/PathProxy';
 import { isAroundZero } from './helper';
 
 const mathSin = Math.sin;
