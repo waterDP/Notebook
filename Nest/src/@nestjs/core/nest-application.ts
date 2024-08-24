@@ -26,19 +26,26 @@ export class NestApplication {
   private readonly globalProviders = new Set();
   // 记录每个模块里有哪些provider的token
   private readonly moduleProviders = new Map();
-
   // 记录所有的中间件
   private readonly middlewares = [];
+  // 记录所有要排除的路径
+  private readonly excludedRoutes = [];
+
   constructor(protected readonly module) {
     this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
     this.app.use(express.urlencoded({ extended: true })); // 把form表单格式的请求体对象放在body上
+  }
+
+  exclude(...routeInfos): this {
+    this.excludedRoutes.push(...routeInfos.map(this.normalizeRouteInfo));
+    return this;
   }
   private async initMiddlewares() {
     // 调用配置中间件的方法 MiddlewareConsumer就是当前的NestApplication的实例
     await this.module.prototype.configure?.(this);
   }
   apply(...middlewares) {
-    defineModule(this.module, middlewares)
+    defineModule(this.module, middlewares);
     // 把接收到的中间件放到中件数组中，并且返回当前的实例
     this.middlewares.push(middlewares);
     return this;
@@ -50,11 +57,23 @@ export class NestApplication {
     }
     return middleware;
   }
-  forRoot(...routes) {
+  isExcluded(reqPath: string, method: RequestMethod) {
+    return this.excludedRoutes.some((routeInfo) => {
+      const { routePath, routeMethod } = routeInfo;
+      return (
+        routePath === reqPath &&
+        (routeMethod === RequestMethod.ALL || routeMethod === method)
+      );
+    });
+  }
+  forRoutes(...routes): this {
     for (const route of routes) {
       for (const middleware of this.middlewares) {
         const { routePath, routeMethod } = this.normalizeRouteInfo(route);
         this.app.use(routePath, (req, res, next) => {
+          if (this.isExcluded(req.originalUrl, req.method as RequestMethod)) {
+            return next();
+          }
           if (routeMethod === RequestMethod.ALL || routeMethod === req.method) {
             const middlewareInstance = this.getMiddlewareInstance(middleware);
             middlewareInstance.use(req, res, next);
@@ -64,6 +83,7 @@ export class NestApplication {
         });
       }
     }
+    return this;
   }
   private normalizeRouteInfo(route) {
     let routePath = "";
@@ -73,6 +93,9 @@ export class NestApplication {
     } else if ("path" in route) {
       routePath = route.path;
       routeMethod = route.method;
+    } else if (route instanceof Function) {
+      // 如果route是一个控制器的话，以它的路径前缀作为路径
+      routePath = Reflect.getMetadata("prefix", route);
     }
     routePath = path.posix.join("/", routePath);
     return { routePath, routeMethod };
