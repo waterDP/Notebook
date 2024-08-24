@@ -75,8 +75,14 @@ export class NestApplication {
             return next();
           }
           if (routeMethod === RequestMethod.ALL || routeMethod === req.method) {
-            const middlewareInstance = this.getMiddlewareInstance(middleware);
-            middlewareInstance.use(req, res, next);
+            if ("use" in middleware.prototype || "use" in middleware) {
+              const middlewareInstance = this.getMiddlewareInstance(middleware);
+              middlewareInstance.use(req, res, next);
+            } else if (middleware instanceof Function) {
+              middleware(req, res, next);
+            } else {
+              next();
+            }
           } else {
             next();
           }

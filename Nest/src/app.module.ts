@@ -14,6 +14,7 @@ import { AppController } from "./app.controller";
 import { UserController } from "./user.controller";
 import { LoggerService } from "./logger.service";
 import { LoggerMiddleware } from "./logger.middleware";
+import { loggerFunction } from "./logger.function.middleware";
 @Module({
   controllers: [AppController, UserController],
   providers: [LoggerService],
@@ -21,7 +22,9 @@ import { LoggerMiddleware } from "./logger.middleware";
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(LoggerMiddleware)
+      //.apply(LoggerMiddleware)
+      .apply(loggerFunction)
+      .exclude({ path: "cats/create", method: RequestMethod.POST })
       .forRoutes({ path: "cats", method: RequestMethod.GET });
   }
 }
