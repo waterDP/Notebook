@@ -20,7 +20,7 @@ import { RequestMethod } from "../common/request.method.enum";
 import { ArgumentsHost } from "../common/arguments-host.interface";
 import { GlobalHttpExceptionFilter } from "../common/http-exception.filter";
 import { length } from "../../../../ZRender/src/core/vector";
-import { APP_FILTER } from "./constants";
+import { APP_FILTER, DECORATOR_FACTORY } from "./constants";
 import transform from "../../../../Axios/core/transform";
 
 export class NestApplication {
@@ -460,7 +460,7 @@ export class NestApplication {
           case "Next":
             value = next;
             break;
-          case "DecoratorFactory":
+          case DECORATOR_FACTORY:
             value = factory(data, host);
             break;
           default:
@@ -470,7 +470,8 @@ export class NestApplication {
 
         for (const pipe of pipes) {
           const pipeInstance = this.getPipeInstance(pipe);
-          value = await pipeInstance.transform(value);
+          const type = key === DECORATOR_FACTORY ? "custom" : key.toLowerCase();
+          value = await pipeInstance.transform(value, { type, data });
         }
         return value;
       })

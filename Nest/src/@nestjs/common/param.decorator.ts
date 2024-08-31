@@ -5,6 +5,7 @@
  * @FilePath: \Notebook\Nest\src\@nestjs\common\param.decorator.ts
  */
 import "reflect-metadata";
+import { DECORATOR_FACTORY } from '../core/constants';
 
 export const createParamDecorator = (keyOrFactory: string | Function) => {
   return (data?: any, ...pipes: any[]) =>
@@ -17,17 +18,17 @@ export const createParamDecorator = (keyOrFactory: string | Function) => {
       if (keyOrFactory instanceof Function) {
         existingParameters[parameterIndex] = {
           parameterIndex,
-          key: "DecoratorFactory",
+          key: DECORATOR_FACTORY,
           factory: keyOrFactory,
           data,
-          pipes
+          pipes,
         };
       } else {
         existingParameters[parameterIndex] = {
           parameterIndex,
           key: keyOrFactory,
           data,
-          pipes
+          pipes,
         };
       }
       Reflect.defineMetadata(`params`, existingParameters, target, propertyKey);
