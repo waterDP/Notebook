@@ -429,7 +429,7 @@ export class NestApplication {
     return Promise.all(
       paramsMetadata.map(async (paramMetadata) => {
         const { key, data, factory, pipes } = paramMetadata;
-        let value;
+        let value: any;
         switch (key) {
           case "Request":
           case "Req":
