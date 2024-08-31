@@ -21,6 +21,7 @@
     "express-session": "^1.18.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "tsconfig-paths": "^4.2.0"
+    "tsconfig-paths": "^4.2.0",
+    "zod": "^3.23.8"
   }
 }
