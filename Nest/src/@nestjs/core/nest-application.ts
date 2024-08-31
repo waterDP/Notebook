@@ -108,6 +108,7 @@ export class NestApplication {
         });
       }
     }
+    this.middlewares.length = 0;
     return this;
   }
   private normalizeRouteInfo(route) {
@@ -188,6 +189,7 @@ export class NestApplication {
         }
       }
     }
+    this.initController(module)
   }
   private isModule(exportToken) {
     return (
@@ -258,9 +260,9 @@ export class NestApplication {
     });
   }
   // 配置初始化工作
-  async init() {
+  async initController(module) {
     //取出模块里所有的控制器，然后做好路由配置
-    const controllers = Reflect.getMetadata("controllers", this.module) || [];
+    const controllers = Reflect.getMetadata("controllers", module) || [];
     Logger.log("AppModule dependencies initialized", "InstanceLoader");
     for (const Controller of controllers) {
       // 解析出控制器的依赖
@@ -471,7 +473,7 @@ export class NestApplication {
     await this.initProviders(); // 注入Provider
     await this.initMiddlewares(); // 初始中间件配置
     await this.initGlobalFilters(); // 初始化全局的过滤器
-    await this.init();
+    await this.initController(this.module);
     this.app.listen(port, () => {
       Logger.log(
         `Application is running on http://localhost:${port}`,

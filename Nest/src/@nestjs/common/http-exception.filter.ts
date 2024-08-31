@@ -22,6 +22,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       return response.status(500).json({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: "Internal server error",
+        error: exception.message,
       });
     }
   }
