@@ -20,6 +20,7 @@ import { RequestMethod } from "../common/request.method.enum";
 import { ArgumentsHost } from "../common/arguments-host.interface";
 import { GlobalHttpExceptionFilter } from "../common/http-exception.filter";
 import { length } from "../../../../ZRender/src/core/vector";
+import { APP_FILTER } from "./constants";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -47,6 +48,10 @@ export class NestApplication {
   }
 
   useGlobalFilters(...filters) {
+    defineModule(
+      this.module,
+      filters.filter((filter) => filter instanceof Function)
+    );
     this.globalHttoExceptionFilters.push(...filters);
   }
 
@@ -271,6 +276,8 @@ export class NestApplication {
       const controllerFilters =
         Reflect.getMetadata("filters", Controller) ?? [];
 
+      defineModule(this.module, controllerFilters);
+
       for (const methodName of Object.getOwnPropertyNames(
         controllerPrototype
       )) {
@@ -286,7 +293,7 @@ export class NestApplication {
         const headers = Reflect.getMetadata("headers", method) ?? [];
         // 获取方法上绑定的异常过滤器数组
         const methodFilters = Reflect.getMetadata("filters", method) ?? [];
-
+        defineModule(this.module, methodFilters);
         // 如果方法名不存在，则不处理
         if (!httpMethod) continue;
         const routePath = path.posix.join("/", prefix, pathMetadata);
@@ -446,10 +453,24 @@ export class NestApplication {
       }
     });
   }
+  async initGlobalFilters() {
+    // 获取全局所有的providers
+    const providers = Reflect.getMetadata("providers", this.module) || [];
+    for (let provider of providers) {
+      if (provider.provide === APP_FILTER) {
+        const providerInstance = this.getProviderByToken(
+          APP_FILTER,
+          this.module
+        );
+        this.useGlobalFilters(providerInstance);
+      }
+    }
+  }
   // 启动HTTP服务器
   async listen(port) {
-    await this.initProviders();
-    await this.initMiddlewares();
+    await this.initProviders(); // 注入Provider
+    await this.initMiddlewares(); // 初始中间件配置
+    await this.initGlobalFilters(); // 初始化全局的过滤器
     await this.init();
     this.app.listen(port, () => {
       Logger.log(

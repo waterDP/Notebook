@@ -16,12 +16,18 @@ interface ModuleMetadata {
 // 定义模块装饰器
 export function Module(metadata: ModuleMetadata): ClassDecorator {
   return (target: Function) => {
+    // target就是module
     Reflect.defineMetadata("isModule", true, target);
     // 给模块类添加元数据，AppModule元数据的名字叫controller, 值是controller数组
     defineModule(target, metadata.controllers);
     Reflect.defineMetadata("controllers", metadata.controllers, target);
     // 给模块类添加元数据 providers
-    defineModule(target, metadata.providers ?? []);
+    defineModule(
+      target,
+      (metadata.providers ?? [])
+        .map((provider) => provider.useClass)
+        .filter(Boolean)
+    );
     Reflect.defineMetadata("providers", metadata.providers, target);
     Reflect.defineMetadata("exports", metadata.exports, target);
     Reflect.defineMetadata("imports", metadata.imports, target);
@@ -42,5 +48,5 @@ export function Global() {
 }
 
 export interface DynamicModule extends ModuleMetadata {
-  module: Function
+  module: Function;
 }
