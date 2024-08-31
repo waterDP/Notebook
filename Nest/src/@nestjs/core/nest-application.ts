@@ -201,14 +201,14 @@ export class NestApplication {
       ? this.globalProviders
       : this.providerInstance.get(module) || new Set();
 
+    if (!global) {
+      this.moduleProviders.set(module, providers);
+    }
+
     const injectToken = provider.provide ?? provider;
     if (this.providerInstance.has(injectToken)) {
       providers.add(injectToken);
       return;
-    }
-
-    if (!this.moduleProviders.has(module)) {
-      this.moduleProviders.set(module, providers);
     }
 
     if (provider.provid && provider.useClass) {
