@@ -7,7 +7,7 @@
 import "reflect-metadata";
 
 export const createParamDecorator = (keyOrFactory: string | Function) => {
-  return (data?: any) =>
+  return (data?: any, ...pipes: any[]) =>
     (target: any, propertyKey: string, parameterIndex: number) => {
       // 给控制器类的原型的propertyKey也就是handleRequest方法属性上添加元数据
       // ^ 属性名是params:handleRequest 值是一个数组，数组里的值表示，哪个位置使用哪个头饰器
@@ -20,12 +20,14 @@ export const createParamDecorator = (keyOrFactory: string | Function) => {
           key: "DecoratorFactory",
           factory: keyOrFactory,
           data,
+          pipes
         };
       } else {
         existingParameters[parameterIndex] = {
           parameterIndex,
           key: keyOrFactory,
           data,
+          pipes
         };
       }
       Reflect.defineMetadata(`params`, existingParameters, target, propertyKey);

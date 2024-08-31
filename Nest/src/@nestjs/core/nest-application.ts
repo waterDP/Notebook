@@ -21,6 +21,7 @@ import { ArgumentsHost } from "../common/arguments-host.interface";
 import { GlobalHttpExceptionFilter } from "../common/http-exception.filter";
 import { length } from "../../../../ZRender/src/core/vector";
 import { APP_FILTER } from "./constants";
+import transform from "../../../../Axios/core/transform";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -189,7 +190,7 @@ export class NestApplication {
         }
       }
     }
-    this.initController(module)
+    this.initController(module);
   }
   private isModule(exportToken) {
     return (
@@ -317,7 +318,7 @@ export class NestApplication {
               },
             };
             try {
-              const args = this.resolveParams(
+              const args = await this.resolveParams(
                 controller,
                 methodName,
                 req,
@@ -425,35 +426,62 @@ export class NestApplication {
     // 获取参数的原数据
     const paramsMetadata =
       Reflect.getMetadata("params", instance, methodName) ?? [];
-    return paramsMetadata.map((paramMetadata) => {
-      const { key, data, factory } = paramMetadata;
-      switch (key) {
-        case "Request":
-        case "Req":
-          return req;
-        case "Query":
-          return data ? req.query[data] : req.query;
-        case "Headers":
-          return data ? req.headers[data] : req.headers;
-        case "Session":
-          return data ? req.session[data] : req.session;
-        case "Ip":
-          return req.ip;
-        case "Param":
-          return data ? req.params[data] : req.params;
-        case "Body":
-          return data ? req.body[data] : req.body;
-        case "Response":
-        case "Res":
-          return res;
-        case "Next":
-          return next;
-        case "DecoratorFactory":
-          return factory(data, host);
-        default:
-          return null;
-      }
-    });
+    return Promise.all(
+      paramsMetadata.map(async (paramMetadata) => {
+        const { key, data, factory, pipes } = paramMetadata;
+        let value;
+        switch (key) {
+          case "Request":
+          case "Req":
+            value = req;
+            break;
+          case "Query":
+            value = data ? req.query[data] : req.query;
+            break;
+          case "Headers":
+            value = data ? req.headers[data] : req.headers;
+            break;
+          case "Session":
+            value = data ? req.session[data] : req.session;
+            break;
+          case "Ip":
+            value = req.ip;
+            break;
+          case "Param":
+            value = data ? req.params[data] : req.params;
+            break;
+          case "Body":
+            value = data ? req.body[data] : req.body;
+            break;
+          case "Response":
+          case "Res":
+            value = res;
+            break;
+          case "Next":
+            value = next;
+            break;
+          case "DecoratorFactory":
+            value = factory(data, host);
+            break;
+          default:
+            value = null;
+            break;
+        }
+
+        for (const pipe of pipes) {
+          const pipeInstance = this.getPipeInstance(pipe);
+          value = await pipeInstance.transform(value);
+        }
+        return value;
+      })
+    );
+  }
+  private getPipeInstance(pipe) {
+    if (typeof pipe === "function") {
+      const dependencies = this.resolveDependencies(pipe);
+      return new pipe(...dependencies);
+    }
+    return pipe;
   }
   async initGlobalFilters() {
     // 获取全局所有的providers
