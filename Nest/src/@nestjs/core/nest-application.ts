@@ -19,8 +19,17 @@ import { defineModule } from "../common/module.decorator";
 import { RequestMethod } from "../common/request.method.enum";
 import { ArgumentsHost } from "../common/arguments-host.interface";
 import { GlobalHttpExceptionFilter } from "../common/http-exception.filter";
-import { APP_FILTER, DECORATOR_FACTORY, APP_PIPE } from "./constants";
+import {
+  APP_FILTER,
+  DECORATOR_FACTORY,
+  APP_PIPE,
+  FORBIDDEN_RESOURCE,
+} from "./constants";
 import { PipeTransform } from "../common/pipe-transform.interface";
+import { ExecutionContext } from "../common/execution-context.interface";
+import { CanActivate } from "../common/can-activate.interface";
+import { ForbiddenException } from "../common/http-exception";
+import { Reflector } from './reflector';
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -133,7 +142,11 @@ export class NestApplication {
     routePath = path.posix.join("/", routePath);
     return { routePath, routeMethod };
   }
+  private addDefaultProviders() {
+    this.addProvider(Reflector, this.module, true)
+  }
   async initProviders() {
+    this.addDefaultProviders()
     const imports = Reflect.getMetadata("imports", this.module) ?? [];
     //遍历所有导入的模块
     for (const importModule of imports) {
@@ -266,6 +279,22 @@ export class NestApplication {
       return this.getProviderByToken(injectTokens[index] ?? param, module);
     });
   }
+  private getGuardInstance(guard) {
+    if (typeof guard === "function") {
+      const dependencies = this.resolveDependencies(guard);
+      return new guard(...dependencies);
+    }
+    return guard;
+  }
+  async callGuards(guards: CanActivate[], context: ExecutionContext) {
+    for (const guard of guards) {
+      const guardInstance = this.getGuardInstance(guard);
+      const canActivate = await guardInstance.canActivate(context);
+      if (!canActivate) {
+        throw new ForbiddenException(FORBIDDEN_RESOURCE);
+      }
+    }
+  }
   // 配置初始化工作
   async initController(module) {
     //取出模块里所有的控制器，然后做好路由配置
@@ -287,6 +316,8 @@ export class NestApplication {
 
       // 获取控制器上的管道数组
       const controllerPipes = Reflect.getMetadata("pipes", controller) ?? [];
+      // 获取控制器上的守卫数组
+      const controllerGuards = Reflect.getMetadata("guards", controller) ?? [];
 
       defineModule(this.module, controllerFilters);
 
@@ -307,9 +338,11 @@ export class NestApplication {
         const methodFilters = Reflect.getMetadata("filters", method) ?? [];
         // 获取方法上绑定的管道数组
         const methodPipes = Reflect.getMetadata("pipes", method) ?? [];
-
         const pipes = [...controllerPipes, ...methodPipes];
 
+        // 获取方法的守卫数组
+        const methodGuards = Reflect.getMetadata("guards", method) ?? [];
+        const guards = [...controllerGuards, ...methodGuards];
         defineModule(this.module, methodFilters);
         // 如果方法名不存在，则不处理
         if (!httpMethod) continue;
@@ -331,7 +364,13 @@ export class NestApplication {
                 };
               },
             };
+            const context: ExecutionContext = {
+              ...host,
+              getClass: () => controller,
+              getHandler: () => method,
+            };
             try {
+              await this.callGuards(guards, context);
               const args = await this.resolveParams(
                 controller,
                 methodName,
