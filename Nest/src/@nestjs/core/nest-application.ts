@@ -439,7 +439,7 @@ export class NestApplication {
       Reflect.getMetadata("params", instance, methodName) ?? [];
     return Promise.all(
       paramsMetadata.map(async (paramMetadata) => {
-        const { key, data, factory, pipes: paramPipes } = paramMetadata;
+        const { key, data, factory, pipes: paramPipes, metatype } = paramMetadata;
         let value: any;
         switch (key) {
           case "Request":

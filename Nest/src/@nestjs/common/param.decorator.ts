@@ -5,7 +5,7 @@
  * @FilePath: \Notebook\Nest\src\@nestjs\common\param.decorator.ts
  */
 import "reflect-metadata";
-import { DECORATOR_FACTORY } from '../core/constants';
+import { DECORATOR_FACTORY } from "../core/constants";
 
 export const createParamDecorator = (keyOrFactory: string | Function) => {
   return (data?: any, ...pipes: any[]) =>
@@ -14,6 +14,12 @@ export const createParamDecorator = (keyOrFactory: string | Function) => {
       // ^ 属性名是params:handleRequest 值是一个数组，数组里的值表示，哪个位置使用哪个头饰器
       const existingParameters =
         Reflect.getMetadata("params", target, propertyKey) || [];
+      // 从原型的方法属性上获取参数类型的数组
+      const metatype = Reflect.getMetadata(
+        "design:paramtypes",
+        target,
+        propertyKey
+      )[parameterIndex];
 
       if (keyOrFactory instanceof Function) {
         existingParameters[parameterIndex] = {
@@ -22,6 +28,7 @@ export const createParamDecorator = (keyOrFactory: string | Function) => {
           factory: keyOrFactory,
           data,
           pipes,
+          metatype,
         };
       } else {
         existingParameters[parameterIndex] = {
@@ -29,6 +36,7 @@ export const createParamDecorator = (keyOrFactory: string | Function) => {
           key: keyOrFactory,
           data,
           pipes,
+          metatype,
         };
       }
       Reflect.defineMetadata(`params`, existingParameters, target, propertyKey);

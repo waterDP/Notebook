@@ -9,6 +9,8 @@ import { Body, Controller, Get, Post, UsePipes } from "@nestjs/common";
 import { LoggerService } from "./logger.service";
 import { ZodValidationPipe } from "./zod-validation.pipe";
 import { createCatSchema, CreateCatDto } from "./create-cat";
+import { ClassValidationPipe } from "./class-validation.pipe";
+import { CreateUserDto } from "./create-user.dto";
 
 @Controller()
 export class AppController {
@@ -26,5 +28,11 @@ export class AppController {
   @UsePipes(new ZodValidationPipe(createCatSchema))
   async createCat(@Body() createCatDto: CreateCatDto) {
     return "This action adds a new cat";
+  }
+
+  @Post("user/create")
+  @UsePipes(new ClassValidationPipe())
+  async createUser(@Body() createUserDto: CreateUserDto) {
+    return "This action adds a new user";
   }
 }
