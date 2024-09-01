@@ -6,4 +6,5 @@
  */
 
 export const APP_FILTER = "APP_FILTER";
-export const DECORATOR_FACTORY = 'decoratorFactory'
+export const DECORATOR_FACTORY = "decoratorFactory";
+export const APP_PIPE = "APP_PIPE";

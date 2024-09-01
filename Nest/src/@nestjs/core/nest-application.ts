@@ -19,9 +19,7 @@ import { defineModule } from "../common/module.decorator";
 import { RequestMethod } from "../common/request.method.enum";
 import { ArgumentsHost } from "../common/arguments-host.interface";
 import { GlobalHttpExceptionFilter } from "../common/http-exception.filter";
-import { length } from "../../../../ZRender/src/core/vector";
-import { APP_FILTER, DECORATOR_FACTORY } from "./constants";
-import transform from "../../../../Axios/core/transform";
+import { APP_FILTER, DECORATOR_FACTORY, APP_PIPE } from "./constants";
 import { PipeTransform } from "../common/pipe-transform.interface";
 
 export class NestApplication {
@@ -44,9 +42,16 @@ export class NestApplication {
   // 这里存放着的所有的全局异过滤器
   private readonly globalHttoExceptionFilters = [];
 
+  // 全局管道
+  private readonly globalPipes: PipeTransform[] = [];
+
   constructor(protected readonly module) {
     this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
     this.app.use(express.urlencoded({ extended: true })); // 把form表单格式的请求体对象放在body上
+  }
+
+  useGlobalPipes(...pipes: PipeTransform[]) {
+    this.globalPipes.push(...pipes);
   }
 
   useGlobalFilters(...filters) {
@@ -485,7 +490,7 @@ export class NestApplication {
             break;
         }
 
-        for (const pipe of [...pipes, ...paramPipes]) {
+        for (const pipe of [...this.globalPipes, ...pipes, ...paramPipes]) {
           const pipeInstance = this.getPipeInstance(pipe);
           const type = key === DECORATOR_FACTORY ? "custom" : key.toLowerCase();
           value = await pipeInstance.transform(value, { type, data, metatype });
@@ -514,11 +519,22 @@ export class NestApplication {
       }
     }
   }
+  private async initGlobalPipes() {
+    // 获取全局所有的providers
+    const providers = Reflect.getMetadata("providers", this.module) || [];
+    for (let provider of providers) {
+      if (provider.provide === APP_PIPE) {
+        const providerInstance = this.getProviderByToken(APP_PIPE, this.module);
+        this.useGlobalPipes(providerInstance);
+      }
+    }
+  }
   // 启动HTTP服务器
   async listen(port) {
     await this.initProviders(); // 注入Provider
     await this.initMiddlewares(); // 初始中间件配置
     await this.initGlobalFilters(); // 初始化全局的过滤器
+    await this.initGlobalPipes(); // 初始化全局的管道
     await this.initController(this.module);
     this.app.listen(port, () => {
       Logger.log(
