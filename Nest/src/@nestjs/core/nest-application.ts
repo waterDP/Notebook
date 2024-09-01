@@ -22,6 +22,7 @@ import { GlobalHttpExceptionFilter } from "../common/http-exception.filter";
 import { length } from "../../../../ZRender/src/core/vector";
 import { APP_FILTER, DECORATOR_FACTORY } from "./constants";
 import transform from "../../../../Axios/core/transform";
+import { PipeTransform } from "../common/pipe-transform.interface";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -279,6 +280,9 @@ export class NestApplication {
       const controllerFilters =
         Reflect.getMetadata("filters", Controller) ?? [];
 
+      // 获取控制器上的管道数组
+      const controllerPipes = Reflect.getMetadata("pipes", controller) ?? [];
+
       defineModule(this.module, controllerFilters);
 
       for (const methodName of Object.getOwnPropertyNames(
@@ -296,6 +300,11 @@ export class NestApplication {
         const headers = Reflect.getMetadata("headers", method) ?? [];
         // 获取方法上绑定的异常过滤器数组
         const methodFilters = Reflect.getMetadata("filters", method) ?? [];
+        // 获取方法上绑定的管道数组
+        const methodPipes = Reflect.getMetadata("pipes", method) ?? [];
+
+        const pipes = [...controllerPipes, ...methodPipes];
+
         defineModule(this.module, methodFilters);
         // 如果方法名不存在，则不处理
         if (!httpMethod) continue;
@@ -324,7 +333,8 @@ export class NestApplication {
                 req,
                 res,
                 next,
-                host
+                host,
+                pipes
               );
               const result = method.call(controller, ...args);
               if (result.url) {
@@ -421,14 +431,15 @@ export class NestApplication {
     req: ExpressRequest,
     res: ExpressResponse,
     next: NextFunction,
-    host: ArgumentsHost
+    host: ArgumentsHost,
+    pipes: PipeTransform[]
   ) {
     // 获取参数的原数据
     const paramsMetadata =
       Reflect.getMetadata("params", instance, methodName) ?? [];
     return Promise.all(
       paramsMetadata.map(async (paramMetadata) => {
-        const { key, data, factory, pipes } = paramMetadata;
+        const { key, data, factory, pipes: paramPipes } = paramMetadata;
         let value: any;
         switch (key) {
           case "Request":
@@ -468,7 +479,7 @@ export class NestApplication {
             break;
         }
 
-        for (const pipe of pipes) {
+        for (const pipe of [...pipes, ...paramPipes]) {
           const pipeInstance = this.getPipeInstance(pipe);
           const type = key === DECORATOR_FACTORY ? "custom" : key.toLowerCase();
           value = await pipeInstance.transform(value, { type, data });

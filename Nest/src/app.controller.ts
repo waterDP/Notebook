@@ -5,14 +5,14 @@
  * @FilePath: \Notebook\Nest\src\app.controller.ts
  */
 
-import { Controller, Get } from "@nestjs/common";
-import { LoggerService } from './logger.service';
+import { Body, Controller, Get, Post, UsePipes } from "@nestjs/common";
+import { LoggerService } from "./logger.service";
+import { ZodValidationPipe } from "./zod-validation.pipe";
+import { createCatSchema, CreateCatDto } from "./create-cat";
 
 @Controller()
 export class AppController {
-  constructor (private loggerService: LoggerService) {
-    
-  }
+  constructor(private loggerService: LoggerService) {}
 
   @Get()
   getHello(): string {
@@ -21,5 +21,10 @@ export class AppController {
   @Get("info")
   main() {
     return "info";
+  }
+  @Post("cats")
+  @UsePipes(new ZodValidationPipe(createCatSchema))
+  async createCat(@Body() createCatDto: CreateCatDto) {
+    return "This action adds a new cat";
   }
 }
