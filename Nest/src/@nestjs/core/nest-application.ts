@@ -439,7 +439,13 @@ export class NestApplication {
       Reflect.getMetadata("params", instance, methodName) ?? [];
     return Promise.all(
       paramsMetadata.map(async (paramMetadata) => {
-        const { key, data, factory, pipes: paramPipes, metatype } = paramMetadata;
+        const {
+          key,
+          data,
+          factory,
+          pipes: paramPipes,
+          metatype,
+        } = paramMetadata;
         let value: any;
         switch (key) {
           case "Request":
@@ -482,7 +488,7 @@ export class NestApplication {
         for (const pipe of [...pipes, ...paramPipes]) {
           const pipeInstance = this.getPipeInstance(pipe);
           const type = key === DECORATOR_FACTORY ? "custom" : key.toLowerCase();
-          value = await pipeInstance.transform(value, { type, data });
+          value = await pipeInstance.transform(value, { type, data, metatype });
         }
         return value;
       })
