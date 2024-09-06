@@ -29,7 +29,8 @@ import { PipeTransform } from "../common/pipe-transform.interface";
 import { ExecutionContext } from "../common/execution-context.interface";
 import { CanActivate } from "../common/can-activate.interface";
 import { ForbiddenException } from "../common/http-exception";
-import { Reflector } from './reflector';
+import { Reflector } from "./reflector";
+import { APP_GUARD } from "./constants";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -47,12 +48,12 @@ export class NestApplication {
   // 添加一个默认全局异常过滤器
   private readonly defaultGlobalHttpExceptionFilter =
     new GlobalHttpExceptionFilter();
-
   // 这里存放着的所有的全局异过滤器
   private readonly globalHttoExceptionFilters = [];
-
   // 全局管道
   private readonly globalPipes: PipeTransform[] = [];
+  // 全局守卫
+  private readonly globalGuards: CanActivate[] = [];
 
   constructor(protected readonly module) {
     this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
@@ -143,10 +144,10 @@ export class NestApplication {
     return { routePath, routeMethod };
   }
   private addDefaultProviders() {
-    this.addProvider(Reflector, this.module, true)
+    this.addProvider(Reflector, this.module, true);
   }
   async initProviders() {
-    this.addDefaultProviders()
+    this.addDefaultProviders();
     const imports = Reflect.getMetadata("imports", this.module) ?? [];
     //遍历所有导入的模块
     for (const importModule of imports) {
@@ -342,7 +343,11 @@ export class NestApplication {
 
         // 获取方法的守卫数组
         const methodGuards = Reflect.getMetadata("guards", method) ?? [];
-        const guards = [...controllerGuards, ...methodGuards];
+        const guards = [
+          ...this.globalGuards,
+          ...controllerGuards,
+          ...methodGuards,
+        ];
         defineModule(this.module, methodFilters);
         // 如果方法名不存在，则不处理
         if (!httpMethod) continue;
@@ -568,12 +573,29 @@ export class NestApplication {
       }
     }
   }
+  private async initGlobalGuards() {
+    // 获取全局所有的providers
+    const providers = Reflect.getMetadata("providers", this.module) || [];
+    for (let provider of providers) {
+      if (provider.provide === APP_GUARD) {
+        const providerInstance = this.getProviderByToken(
+          APP_GUARD,
+          this.module
+        );
+        this.useGlobalGuards(providerInstance);
+      }
+    }
+  }
+  public useGlobalGuards(...guards: CanActivate[]) {
+    this.globalGuards.push(...guards);
+  }
   // 启动HTTP服务器
   async listen(port) {
     await this.initProviders(); // 注入Provider
     await this.initMiddlewares(); // 初始中间件配置
     await this.initGlobalFilters(); // 初始化全局的过滤器
     await this.initGlobalPipes(); // 初始化全局的管道
+    await this.initGlobalGuards(); // 初始化全局的守卫
     await this.initController(this.module);
     this.app.listen(port, () => {
       Logger.log(
