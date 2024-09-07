@@ -31,6 +31,7 @@ import { CanActivate } from "../common/can-activate.interface";
 import { ForbiddenException } from "../common/http-exception";
 import { Reflector } from "./reflector";
 import { APP_GUARD } from "./constants";
+import { from, mergeMap, Observable, of } from "rxjs";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -296,6 +297,30 @@ export class NestApplication {
       }
     }
   }
+  private getInterceptorInstance(interceptor) {
+    if (typeof interceptor === "function") {
+      const dependencies = this.resolveDependencies(interceptor);
+      return new interceptor(...dependencies);
+    }
+    return interceptor;
+  }
+  callInterceptors(controller, method, args, interceptors, context) {
+    const nextFn = (i = 0): Observable<any> => {
+      if (i > interceptors.length) {
+        const result = method.call(controller, ...args);
+        return result instanceof Promise ? from(result) : of(result);
+      }
+      const handler = {
+        handle: () => nextFn(i + 1),
+      };
+      const interceptor = this.getInterceptorInstance(interceptors[i]);
+      const result = interceptor.intercept(context, handler);
+      return from(result).pipe(
+        mergeMap((res) => (res instanceof Observable ? res : of(res)))
+      );
+    };
+    return nextFn();
+  }
   // 配置初始化工作
   async initController(module) {
     //取出模块里所有的控制器，然后做好路由配置
@@ -320,6 +345,10 @@ export class NestApplication {
       // 获取控制器上的守卫数组
       const controllerGuards = Reflect.getMetadata("guards", controller) ?? [];
 
+      // 获取控制器上的拦截器数组
+      const controllerInterceptors =
+        Reflect.getMetadata("interceptors", controller) ?? [];
+
       defineModule(this.module, controllerFilters);
 
       for (const methodName of Object.getOwnPropertyNames(
@@ -337,6 +366,8 @@ export class NestApplication {
         const headers = Reflect.getMetadata("headers", method) ?? [];
         // 获取方法上绑定的异常过滤器数组
         const methodFilters = Reflect.getMetadata("filters", method) ?? [];
+        defineModule(this.module, methodFilters);
+
         // 获取方法上绑定的管道数组
         const methodPipes = Reflect.getMetadata("pipes", method) ?? [];
         const pipes = [...controllerPipes, ...methodPipes];
@@ -348,7 +379,12 @@ export class NestApplication {
           ...controllerGuards,
           ...methodGuards,
         ];
-        defineModule(this.module, methodFilters);
+
+        // 获取方法的拦截器数组
+        const methodInterceptors =
+          Reflect.getMetadata("interceptors", method) ?? [];
+        const interceptors = [...controllerInterceptors, ...methodInterceptors];
+
         // 如果方法名不存在，则不处理
         if (!httpMethod) continue;
         const routePath = path.posix.join("/", prefix, pathMetadata);
@@ -379,38 +415,55 @@ export class NestApplication {
               const args = await this.resolveParams(
                 controller,
                 methodName,
-                req,
-                res,
-                next,
+                context,
                 host,
                 pipes
               );
-              const result = method.call(controller, ...args);
-              if (result.url) {
-                return res.redirect(result.redirectCode || 302, result.url);
-              }
-              // 判断如果需要重定向，则直接重定向到指定的redirectUrl地址去
-              if (redirectUrl) {
-                return res.redirect(redirectStatusCode || 302, redirectUrl);
-              }
-
-              if (statusCode) {
-                res.statusCode = statusCode;
-              } else if (httpMethod === "POST") {
-                res.statusCode = 201;
-              }
-
-              const responseMetadata = this.getResponseMetaData(
+              this.callInterceptors(
                 controller,
-                methodName
-              );
-              // 或者没有注入Response装饰器，或者注入了但传入passthrough参数，都会由Nest.js来返回响应
-              if (!responseMetadata || responseMetadata?.data?.passthrough) {
-                headers.forEach(({ name, value }) => {
-                  res.setHeader(name, value);
-                });
-                res.send(result);
-              }
+                method,
+                args,
+                interceptors,
+                context
+              ).subscribe({
+                next: (result) => {
+                  if (result.url) {
+                    return res.redirect(result.redirectCode || 302, result.url);
+                  }
+                  // 判断如果需要重定向，则直接重定向到指定的redirectUrl地址去
+                  if (redirectUrl) {
+                    return res.redirect(redirectStatusCode || 302, redirectUrl);
+                  }
+
+                  if (statusCode) {
+                    res.statusCode = statusCode;
+                  } else if (httpMethod === "POST") {
+                    res.statusCode = 201;
+                  }
+
+                  const responseMetadata = this.getResponseMetaData(
+                    controller,
+                    methodName
+                  );
+                  // 或者没有注入Response装饰器，或者注入了但传入passthrough参数，都会由Nest.js来返回响应
+                  if (
+                    !responseMetadata ||
+                    responseMetadata?.data?.passthrough
+                  ) {
+                    headers.forEach(({ name, value }) => {
+                      res.setHeader(name, value);
+                    });
+                    res.send(result);
+                  }
+                },
+                error: (error) =>
+                  this.callExceptionFilters(
+                    error,
+                    host,
+                    methodFilters,
+                    controllerFilters
+                  ),
+              });
             } catch (error) {
               await this.callExceptionFilters(
                 error,
@@ -477,12 +530,14 @@ export class NestApplication {
   private resolveParams(
     instance: any,
     methodName: string,
-    req: ExpressRequest,
-    res: ExpressResponse,
-    next: NextFunction,
+    context,
     host: ArgumentsHost,
     pipes: PipeTransform[]
   ) {
+    const { getRequest, getResponse, getNext } = context.switchToHttp();
+    const req = getRequest();
+    const res = getResponse();
+    const next = getNext();
     // 获取参数的原数据
     const paramsMetadata =
       Reflect.getMetadata("params", instance, methodName) ?? [];
