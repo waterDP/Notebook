@@ -530,7 +530,7 @@ export class NestApplication {
   private resolveParams(
     instance: any,
     methodName: string,
-    context,
+    context: ExecutionContext,
     host: ArgumentsHost,
     pipes: PipeTransform[]
   ) {
