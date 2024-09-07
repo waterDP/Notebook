@@ -32,6 +32,7 @@ import { ForbiddenException } from "../common/http-exception";
 import { Reflector } from "./reflector";
 import { APP_GUARD } from "./constants";
 import { from, mergeMap, Observable, of } from "rxjs";
+import { NestInterceptor } from "../common/nest-interceptor.interface";
 
 export class NestApplication {
   // 在它的内部私有化一个Express实例
@@ -304,7 +305,13 @@ export class NestApplication {
     }
     return interceptor;
   }
-  callInterceptors(controller, method, args, interceptors, context) {
+  callInterceptors(
+    controller: any,
+    method: Function,
+    args: any[],
+    interceptors: NestInterceptor[],
+    context: ExecutionContext
+  ) {
     const nextFn = (i = 0): Observable<any> => {
       if (i > interceptors.length) {
         const result = method.call(controller, ...args);
