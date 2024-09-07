@@ -10,7 +10,6 @@ import express, {
   Request as ExpressRequest,
   Response as ExpressResponse,
   NextFunction,
-  response,
 } from "express";
 import { Logger } from "./logger";
 import path from "path";
@@ -406,9 +405,9 @@ export class NestApplication {
             const host: ArgumentsHost = {
               switchToHttp: () => {
                 return {
-                  getRequest: () => req as any,
-                  getResponse: () => res as any,
-                  getNext: () => next as any,
+                  getRequest: () => req,
+                  getResponse: () => res,
+                  getNext: () => next,
                 };
               },
             };
