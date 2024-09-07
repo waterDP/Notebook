@@ -10,6 +10,11 @@ import { DECORATOR_FACTORY } from "../core/constants";
 export const createParamDecorator = (keyOrFactory: string | Function) => {
   return (data?: any, ...pipes: any[]) =>
     (target: any, propertyKey: string, parameterIndex: number) => {
+      // 如果data不是字符串，说明它不是一个对象的属性名，而是一个管道
+      if (data && typeof data !== "string") {
+        pipes = [data, ...pipes];
+        data = null;
+      }
       // 给控制器类的原型的propertyKey也就是handleRequest方法属性上添加元数据
       // ^ 属性名是params:handleRequest 值是一个数组，数组里的值表示，哪个位置使用哪个头饰器
       const existingParameters =
@@ -54,3 +59,4 @@ export const Body = createParamDecorator("Body");
 export const Response = createParamDecorator("Response");
 export const Res = createParamDecorator("Res");
 export const Next = createParamDecorator("Next");
+export const UploadedFile = createParamDecorator("UploadedFile");

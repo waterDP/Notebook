@@ -331,14 +331,21 @@ export class NestApplication {
   callInterceptors(
     controller: any,
     method: Function,
-    args: any[],
     interceptors: NestInterceptor[],
-    context: ExecutionContext
+    context: ExecutionContext,
+    host: ArgumentsHost,
+    pipes: PipeTransform[]
   ) {
     const nextFn = (i = 0): Observable<any> => {
       if (i > interceptors.length) {
-        const result = method.call(controller, ...args);
-        return result instanceof Promise ? from(result) : of(result);
+        return from(
+          this.resolveParams(controller, method.name, context, host, pipes)
+        ).pipe(
+          mergeMap((args) => {
+            const result = method.call(controller, ...args);
+            return result instanceof Promise ? from(result) : of(result);
+          })
+        );
       }
       const handler = {
         handle: () => nextFn(i + 1),
@@ -433,9 +440,9 @@ export class NestApplication {
             const host: ArgumentsHost = {
               switchToHttp: () => {
                 return {
-                  getRequest: () => req,
-                  getResponse: () => res,
-                  getNext: () => next,
+                  getRequest: <T>() => req as T,
+                  getResponse: <T>() => res as T,
+                  getNext: <T>() => next as T,
                 };
               },
             };
@@ -446,19 +453,13 @@ export class NestApplication {
             };
             try {
               await this.callGuards(guards, context);
-              const args = await this.resolveParams(
-                controller,
-                methodName,
-                context,
-                host,
-                pipes
-              );
               this.callInterceptors(
                 controller,
                 method,
-                args,
                 interceptors,
-                context
+                context,
+                host,
+                pipes
               ).subscribe({
                 next: (result) => {
                   if (result.url) {
@@ -569,7 +570,7 @@ export class NestApplication {
     pipes: PipeTransform[]
   ) {
     const { getRequest, getResponse, getNext } = context.switchToHttp();
-    const req = getRequest();
+    const req = getRequest<ExpressRequest>();
     const res = getResponse();
     const next = getNext();
     // 获取参数的原数据
@@ -614,6 +615,9 @@ export class NestApplication {
             break;
           case "Next":
             value = next;
+            break;
+          case "UploadedFile":
+            value = req.file;
             break;
           case DECORATOR_FACTORY:
             value = factory(data, host);

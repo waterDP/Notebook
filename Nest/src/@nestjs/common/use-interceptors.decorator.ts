@@ -1,6 +1,6 @@
 import "reflect-metadata";
 
-export function useInterceptors(...interceptors) {
+export function UseInterceptors(...interceptors) {
   return (target, propertyKey?, descriptor?) => {
     if (descriptor) {
       const existingInterceptors =
