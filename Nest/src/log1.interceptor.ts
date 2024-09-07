@@ -7,10 +7,13 @@ export class Logging1Interceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next): Observable<any> {
     console.log("before1...");
     const now = Date.now();
-    return next.handle().pipe(
-      tap(() => {
-        console.log(`after1...${Date.now() - now}ms`);
-      })
-    );
+    return next
+      .handle()
+      .pipe(
+        tap(() => {
+          console.log(`after1...${Date.now() - now}ms`);
+        })
+      )
+      .subscribe((value) => value);
   }
 }
