@@ -23,6 +23,7 @@ import {
   DECORATOR_FACTORY,
   APP_PIPE,
   FORBIDDEN_RESOURCE,
+  APP_INTERCEPTOR,
 } from "./constants";
 import { PipeTransform } from "../common/pipe-transform.interface";
 import { ExecutionContext } from "../common/execution-context.interface";
@@ -55,6 +56,15 @@ export class NestApplication {
   private readonly globalPipes: PipeTransform[] = [];
   // 全局守卫
   private readonly globalGuards: CanActivate[] = [];
+  // 全局拦截器
+  private readonly globalInterceptors: NestInterceptor[] = [];
+
+  private readonly globalProviderMap = new Map([
+    [APP_GUARD, new Map()],
+    [APP_PIPE, new Map()],
+    [APP_FILTER, new Map()],
+    [APP_INTERCEPTOR, new Map()],
+  ]);
 
   constructor(protected readonly module) {
     this.app.use(express.json()); // 用来把json格式的请求体对象，放在req.body上
@@ -188,7 +198,21 @@ export class NestApplication {
     // 获取当前模块提供的元数据
     const providers = Reflect.getMetadata("providers", this.module) ?? [];
     for (const provider of providers) {
-      this.addProvider(provider, this.module);
+      this.processProvider(provider, this.module);
+    }
+  }
+  private processProvider(provider, module) {
+    // 如果这是一个全局的token对应的provider
+    if (this.globalProviderMap.has(provider.provide)) {
+      let instanceMap = this.globalProviderMap.get(provider.provide);
+      const { useClass } = provider;
+      if (!instanceMap.has(useClass)) {
+        const dependencies = this.resolveDependencies(useClass);
+        const instance = new useClass(...dependencies);
+        instanceMap.set(useClass, instance);
+      }
+    } else {
+      this.addProvider(provider, module);
     }
   }
   private registerProviderFromModule(module, ...parentModules) {
@@ -389,7 +413,11 @@ export class NestApplication {
         // 获取方法的拦截器数组
         const methodInterceptors =
           Reflect.getMetadata("interceptors", method) ?? [];
-        const interceptors = [...controllerInterceptors, ...methodInterceptors];
+        const interceptors = [
+          ...this.globalInterceptors,
+          ...controllerInterceptors,
+          ...methodInterceptors,
+        ];
 
         // 如果方法名不存在，则不处理
         if (!httpMethod) continue;
@@ -611,52 +639,35 @@ export class NestApplication {
     }
     return pipe;
   }
-  async initGlobalFilters() {
-    // 获取全局所有的providers
-    const providers = Reflect.getMetadata("providers", this.module) || [];
-    for (let provider of providers) {
-      if (provider.provide === APP_FILTER) {
-        const providerInstance = this.getProviderByToken(
-          APP_FILTER,
-          this.module
-        );
-        this.useGlobalFilters(providerInstance);
-      }
-    }
-  }
-  private async initGlobalPipes() {
-    // 获取全局所有的providers
-    const providers = Reflect.getMetadata("providers", this.module) || [];
-    for (let provider of providers) {
-      if (provider.provide === APP_PIPE) {
-        const providerInstance = this.getProviderByToken(APP_PIPE, this.module);
-        this.useGlobalPipes(providerInstance);
-      }
-    }
-  }
-  private async initGlobalGuards() {
-    // 获取全局所有的providers
-    const providers = Reflect.getMetadata("providers", this.module) || [];
-    for (let provider of providers) {
-      if (provider.provide === APP_GUARD) {
-        const providerInstance = this.getProviderByToken(
-          APP_GUARD,
-          this.module
-        );
-        this.useGlobalGuards(providerInstance);
-      }
-    }
-  }
   public useGlobalGuards(...guards: CanActivate[]) {
     this.globalGuards.push(...guards);
+  }
+  public useGlobalInterceptors(...interceptors: NestInterceptor[]) {
+    this.globalInterceptors.push(...interceptors);
+  }
+  private initGlobalProviders() {
+    for (const [provide, instanceMap] of this.globalProviderMap) {
+      switch (provide) {
+        case APP_INTERCEPTOR:
+          this.useGlobalInterceptors(...instanceMap.values());
+          break;
+        case APP_GUARD:
+          this.useGlobalGuards(...instanceMap.values());
+          break;
+        case APP_PIPE:
+          this.useGlobalPipes(...instanceMap.values());
+          break;
+        case APP_FILTER:
+          this.useGlobalFilters(...instanceMap.values());
+          break;
+      }
+    }
   }
   // 启动HTTP服务器
   async listen(port) {
     await this.initProviders(); // 注入Provider
     await this.initMiddlewares(); // 初始中间件配置
-    await this.initGlobalFilters(); // 初始化全局的过滤器
-    await this.initGlobalPipes(); // 初始化全局的管道
-    await this.initGlobalGuards(); // 初始化全局的守卫
+    await this.initGlobalProviders();
     await this.initController(this.module);
     this.app.listen(port, () => {
       Logger.log(
