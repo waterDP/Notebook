@@ -50,7 +50,7 @@ export class NestApplication {
   private readonly defaultGlobalHttpExceptionFilter =
     new GlobalHttpExceptionFilter();
   // 这里存放着的所有的全局异过滤器
-  private readonly globalHttoExceptionFilters = [];
+  private readonly globalExceptionFilters = [];
   // 全局管道
   private readonly globalPipes: PipeTransform[] = [];
   // 全局守卫
@@ -70,7 +70,7 @@ export class NestApplication {
       this.module,
       filters.filter((filter) => filter instanceof Function)
     );
-    this.globalHttoExceptionFilters.push(...filters);
+    this.globalExceptionFilters.push(...filters);
   }
 
   exclude(...routeInfos): this {
@@ -493,7 +493,7 @@ export class NestApplication {
     const allFilters = [
       ...methodFilters,
       ...controllerFilters,
-      ...this.globalHttoExceptionFilters,
+      ...this.globalExceptionFilters,
       this.defaultGlobalHttpExceptionFilter,
     ];
     for (const filter of allFilters) {
