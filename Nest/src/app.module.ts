@@ -10,6 +10,7 @@ import {
   Module,
   RequestMethod,
   Post,
+  FileTypeValidator,
 } from "@nestjs/common";
 import { AppController } from "./app.controller";
 import { UserController } from "./user.controller";
@@ -21,8 +22,13 @@ import { FileInterceptor } from "./@nestjs/platform-express/file.interceptor";
 import { UploadedFile } from "@nestjs/common";
 import { ParseFilePipe } from "@nestjs/common";
 import { MaxFileSizeValidator } from "@nestjs/common";
-
+import { MulterModule } from "@nest/platform-express"
 @Module({
+  imports: [
+    MulterModule.register({
+      dest: './upload'
+    })
+  ],
   controllers: [AppController, UserController],
   providers: [LoggerService],
 })
@@ -42,7 +48,7 @@ export class AppModule implements NestModule {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 1024 * 400 }),
-          new FileTypeValidator({ fileType: 'image/png' }),
+          new FileTypeValidator({ fileType: "image/png" }),
         ],
       })
     )

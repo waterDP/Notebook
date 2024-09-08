@@ -22,18 +22,22 @@ export function Module(metadata: ModuleMetadata): ClassDecorator {
     defineModule(target, metadata.controllers);
     Reflect.defineMetadata("controllers", metadata.controllers, target);
     // 给模块类添加元数据 providers
-    defineModule(
-      target,
-      (metadata.providers ?? [])
-        .map((provider) => {
-          return provider instanceof Function ? provider : provider.useClass;
-        })
-        .filter(Boolean)
-    );
+    defineProvidersModule(target, metadata.providers)
     Reflect.defineMetadata("providers", metadata.providers, target);
     Reflect.defineMetadata("exports", metadata.exports, target);
     Reflect.defineMetadata("imports", metadata.imports, target);
   };
+}
+
+export function defineProvidersModule(nestModule, providers = []) {
+  defineModule(
+    nestModule,
+    (providers ?? [])
+      .map((provider) => {
+        return provider instanceof Function ? provider : provider.useClass;
+      })
+      .filter(Boolean)
+  );
 }
 
 export function defineModule(nestModule, targets = []) {

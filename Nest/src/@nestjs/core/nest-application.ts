@@ -14,7 +14,10 @@ import express, {
 import { Logger } from "./logger";
 import path from "path";
 import { INJECTED_TOKENS, DESIGN_PARAMTYPES } from "../common/constants";
-import { defineModule } from "../common/module.decorator";
+import {
+  defineModule,
+  defineProvidersModule,
+} from "../common/module.decorator";
 import { RequestMethod } from "../common/request.method.enum";
 import { ArgumentsHost } from "../common/arguments-host.interface";
 import { GlobalHttpExceptionFilter } from "../common/http-exception.filter";
@@ -155,7 +158,7 @@ export class NestApplication {
     return { routePath, routeMethod };
   }
   private addDefaultProviders() {
-    this.addProvider(Reflector, this.module, true);
+    this.addProvider(Reflector, this.module);
   }
   async initProviders() {
     this.addDefaultProviders();
@@ -184,7 +187,7 @@ export class NestApplication {
         const newExports = [...(oldExports ?? []), ...(exports ?? [])];
 
         defineModule(module, newControllers);
-        defineModule(module, newProviders);
+        defineProvidersModule(module, newProviders);
 
         Reflect.defineMetadata("controllers", newControllers, module);
         Reflect.defineMetadata("providers", newProviders, module);
@@ -215,24 +218,28 @@ export class NestApplication {
       this.addProvider(provider, module);
     }
   }
+  /**
+   * 注册模块的providers
+   * @param module
+   * @param parentModules
+   */
   private registerProviderFromModule(module, ...parentModules) {
-    // 获取导入的是不是全局模块
-    const global = Reflect.getMetadata("global", module);
+    // 获取此模块所有的providers
     const importedProviders = Reflect.getMetadata("providers", module) ?? [];
     const exports = Reflect.getMetadata("exports", module) ?? [];
-    for (const exportToken of exports) {
+    for (let importedProvider of importedProviders) {
+      const providerToken = importedProvider.provide ?? importedProvider;
+      if (exports.includes(providerToken)) {
+        [module, ...parentModules].forEach((module) => {
+          this.processProvider(importedProvider, module);
+        });
+      } else {
+        this.processProvider(importedProvider, module);
+      }
+    }
+    for (let exportToken of exports) {
       if (this.isModule(exportToken)) {
         this.registerProviderFromModule(exportToken, module, ...parentModules);
-      } else {
-        const provider = importedProviders.find(
-          (provider) =>
-            provider === exportToken || provider.provide === exportToken
-        );
-        if (provider) {
-          [module, ...parentModules].forEach((module) => {
-            this.addProvider(provider, module, global);
-          });
-        }
       }
     }
     this.initController(module);
@@ -244,7 +251,8 @@ export class NestApplication {
       Reflect.getMetadata("isModule", exportToken)
     );
   }
-  addProvider(provider, module, global = false) {
+  addProvider(provider, module) {
+    const global = Reflect.getMetadata("global", module) ?? false;
     const providers = global
       ? this.globalProviders
       : this.providerInstance.get(module) || new Set();
@@ -425,6 +433,7 @@ export class NestApplication {
           ...controllerInterceptors,
           ...methodInterceptors,
         ];
+        defineModule(this.module, interceptors);
 
         // 如果方法名不存在，则不处理
         if (!httpMethod) continue;
@@ -618,6 +627,9 @@ export class NestApplication {
             break;
           case "UploadedFile":
             value = req.file;
+            break;
+          case "UploadedFiles":
+            value = req.files;
             break;
           case DECORATOR_FACTORY:
             value = factory(data, host);
