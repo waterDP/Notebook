@@ -261,3 +261,22 @@ type F17 = [
   Fibonacci<4>,
   Fibonacci<9>
 ];
+
+// ^ PartialPropsOptional
+export type PartialPropsOptional<T extends object, K extends keyof T> = Partial<
+  Pick<T, K>
+> &
+  Omit<T, K>;
+
+// ^ PickByType
+type PickByType<T extends object, U> = {
+  [K in keyof T as T[K] extends U ? K : never]: T[K];
+};
+
+type p18 = {
+  name: string;
+  age: number;
+  sex: string;
+};
+
+type T18 = PickByType<p18, string>;
