@@ -11,7 +11,7 @@ import session from "express-session";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use(
+  app.use(  
     session({
       secret: "your-secret-key",
       resave: false, // 在每次请求结束后是否强制保存会话，即使它没有改变

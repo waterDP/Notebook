@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2024-06-27 21:10:12
+ * @Description:
+ * @FilePath: \Notebook\Nest\src\@nestjs\core\logger.ts
+ */
 import clc from "cli-color";
 export class Logger {
   private static lastLogTime = Date.now();
@@ -7,7 +13,7 @@ export class Logger {
     const currentTime = Date.now();
     const timeDiff = currentTime - this.lastLogTime;
     console.log(
-      `[${clc.green("Nest")}] ${clc.green(pid.toString)} - ${clc.yellow(
+      `[${clc.green("Nest")}] ${clc.green(pid.toString())} - ${clc.yellow(
         timestamp
       )} ${clc.green("LOG")} [${clc.yellow(context)}] ${clc.green(
         message
