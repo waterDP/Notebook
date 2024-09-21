@@ -396,9 +396,8 @@ export class NestApplication {
 
       defineModule(this.module, controllerFilters);
 
-      for (const methodName of Object.getOwnPropertyNames(
-        controllerPrototype
-      )) {
+      const cpMethods = Object.getOwnPropertyNames(controllerPrototype);
+      for (const methodName of cpMethods) {
         const method = controllerPrototype[methodName];
         const httpMethod = Reflect.getMetadata("method", method);
         const pathMetadata = Reflect.getMetadata("path", method);
