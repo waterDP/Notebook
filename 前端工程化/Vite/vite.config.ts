@@ -16,7 +16,9 @@ export default defineConfig({
   plugins: [
     Vue(),
     AutoImport({
+      imports: ["vue", "vue-router", "pinia"],
       resolvers: [],
+      eslintrc: { enabled: true }, // 给eslint生产的配置，只需要一次生成就可以了
     }),
     Components({
       resolvers: [],
