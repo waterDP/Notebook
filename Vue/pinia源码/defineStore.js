@@ -1,4 +1,4 @@
-import { SymbolPinia } from "./rootStore";
+import { SymbolPinia } from "./rootState";
 import { getCurrentInstance, inject, effectScope, reactive } from "vue";
 /*
  * @Author: water.li
@@ -20,7 +20,7 @@ export function defineStore(idOrOptions, setup) {
   function useStore() {
     const currentInstance = getCurrentInstance();
     const pinia = currentInstance && inject(SymbolPinia);
-    if (!pinia._s.has(id)) {
+    if (!pinia._s.has(id)) { // 没有创建过store
       createOptionsStore(id, options, pinia);
     }
     const store = pinia._s.get(id);
