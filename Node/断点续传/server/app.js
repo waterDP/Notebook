@@ -15,13 +15,13 @@ const app = express()
 
 app.use(logger('dev')) // 日志
 app.use(express.json())
-app.use(express.urlencoded({extended: true}))
+app.use(express.urlencoded({ extended: true }))
 app.use(cors()) // 跨域处理
 app.use(express.static(path.resolve(__dirname, 'public')))
 
 // 文件上传
 app.post('/upload/:filename/:chunk_name/:start', async (req, res) => {
-  let {filename, chunk_name, start} = req.params
+  let { filename, chunk_name, start } = req.params
   start = Number(start)
   let chunk_dir = path.resolve(TEMP_DIR, filename)
   let exist = await fs.pathExists(chunk_dir)
@@ -31,7 +31,7 @@ app.post('/upload/:filename/:chunk_name/:start', async (req, res) => {
   let chunkFilePath = path.resolve(chunk_dir, chunk_name)
   let ws = fs.createWriteStream(chunkFilePath, { start, flags: 'a' })
   req.on('end', () => {
-    res.json({success: true})
+    res.json({ success: true })
   })
   ['end', 'close', 'close'].forEach(event => {
     req.on(event, () => {
@@ -42,8 +42,8 @@ app.post('/upload/:filename/:chunk_name/:start', async (req, res) => {
 })
 
 // 计算hash值
-app.get('/verify/:filename', (req, res) => {
-  let {filename} = req.params
+app.get('/verify/:filename', async (req, res) => {
+  let { filename } = req.params
   let filePath = path.resolve(PUBLIC_DIR, filename)
   let existFile = await fs.pathExists(filePath)
   if (existFile) {
@@ -75,10 +75,10 @@ app.get('/verify/:filename', (req, res) => {
 })
 
 // 组装分片请求
-app.get('/merge/:filename', (req, res) => {
-  let {filename} = req.params
+app.get('/merge/:filename', async (req, res) => {
+  let { filename } = req.params
   await mergeChunks(filename)
-  res.json({success: true})
+  res.json({ success: true })
 })
 
 // 404
