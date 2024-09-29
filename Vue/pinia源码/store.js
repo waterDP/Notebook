@@ -7,6 +7,7 @@
 import { SymbolPinia } from "./rootState";
 import { getCurrentInstance, inject, effectScope, reactive, computed, toRefs, isRef, isReactive, watch } from "vue";
 import { addSubscription, triggerSubscriptions } from "./subscribe"
+import { activePinia, setActivePinia } from "./createPinia";
 
 function isComputed(v) {
   return !!(isRef(v) && v.effect)
@@ -28,7 +29,12 @@ export function defineStore(idOrOptions, setup) {
 
   function useStore() {
     const currentInstance = getCurrentInstance();
-    const pinia = currentInstance && inject(SymbolPinia);
+    let pinia = currentInstance && inject(SymbolPinia);
+    if (pinia) {
+      setActivePinia(pinia)
+    }
+    pinia = activePinia
+
     if (!pinia._s.has(id)) { // 没有创建过store
       if (isSetupStore) {
         createSetupStore(id, setup, pinia)
