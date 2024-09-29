@@ -6,4 +6,4 @@
  */
 
 export { createPinia } from "./createPinia";
-export { defineStore } from "./defineStore";
+export { defineStore } from "./store";

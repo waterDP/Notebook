@@ -12,6 +12,8 @@ export function createPinia() {
 
   const state = scope.run(() => ref({}));
 
+  const _p = []
+
   const pinia = markRaw({
     install(app) {
       pinia._a = app;
@@ -22,6 +24,11 @@ export function createPinia() {
     state,
     _e: scope, // 用来管理这个应用的effectScope
     _s: new Map(), // 记录所有的store
+    use(plugin) {
+      _p.push(plugin)
+      return this
+    },
+    _p
   });
 
   return pinia;
