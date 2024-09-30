@@ -3,6 +3,7 @@ import path from "path";
 import Vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
+import Inspect from "vite-plugin-inspect";
 
 export default defineConfig({
   resolve: {
@@ -15,6 +16,8 @@ export default defineConfig({
   },
   plugins: [
     Vue(),
+    // 按下ctrl+shift，然后点击页面元素会自动打开本地IDE并跳转到对应的代码位置
+    Inspect(),
     AutoImport({
       // 自动导入vue的api
       imports: ["vue", "vue-router", "pinia"],
