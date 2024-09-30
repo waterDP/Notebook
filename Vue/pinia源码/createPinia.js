@@ -7,7 +7,7 @@
 import { markRaw, effectScope, ref } from "vue";
 import { SymbolPinia } from "./rootState";
 export let activePinia
-export const setActivePinia = (pinia) =>  activePinia = pinia
+export const setActivePinia = (pinia) => activePinia = pinia
 export function createPinia() {
   const scope = effectScope(true);
 
@@ -20,7 +20,7 @@ export function createPinia() {
       pinia._a = app;
       setActivePinia(pinia)
       app.provide(SymbolPinia, pinia);
-      app.globalProperties.$pinia = pinia;
+      app.config.globalProperties.$pinia = pinia;
     },
     _a: null,
     state,
