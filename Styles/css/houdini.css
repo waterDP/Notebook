@@ -1,0 +1,24 @@
+/* 一个渐变背景的的旋转 */
+@property --direc {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.card {
+  color: red;
+  font-size: 2rem;
+  background-image: linear-gradient(
+    var(--direc),
+    #5ddccf,
+    #3c67e3 43%,
+    #4e00c2
+  );
+  animation: ratate 3s linear infinite;
+}
+
+@keyframes retate {
+  to {
+    --direc: 360deg;
+  }
+}
