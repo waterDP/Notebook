@@ -113,7 +113,7 @@ type E1 = Extract<string | number, string | number | boolean>;
 type Exclude<T, U> = T extends U ? never : T;
 type E2 = Exclude<string | number | boolean, string | number | symbol>;
 
-// 补集 差集+子类的关系
+// & 补集 差集+子类的关系
 type Complement<T, U extends T> = T extends U ? never : T;
 type E3 = Complement<string | number | boolean, string>;
 
