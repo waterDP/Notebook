@@ -14,6 +14,17 @@ export default defineConfig({
       },
     ],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
+        },
+      },
+    },
+  },
   plugins: [
     Vue(),
     // 按下ctrl+shift，然后点击页面元素会自动打开本地IDE并跳转到对应的代码位置
