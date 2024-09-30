@@ -4,7 +4,7 @@
  * @Description:
  * @FilePath: \Notebook\Vue\pinia源码\store.js
  */
-import { SymbolPinia } from "./rootState";
+import { SymbolPinia } from "./rootStore";
 import { getCurrentInstance, inject, effectScope, reactive, computed, toRefs, isRef, isReactive, watch } from "vue";
 import { addSubscription, triggerSubscriptions } from "./subscribe"
 import { activePinia, setActivePinia } from "./createPinia";

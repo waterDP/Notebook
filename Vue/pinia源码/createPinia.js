@@ -5,7 +5,7 @@
  * @FilePath: \Notebook\Vue\pinia源码\createPinia.js
  */
 import { markRaw, effectScope, ref } from "vue";
-import { SymbolPinia } from "./rootState";
+import { SymbolPinia } from "./rootStore";
 export let activePinia
 export const setActivePinia = (pinia) => activePinia = pinia
 export function createPinia() {
