@@ -78,7 +78,21 @@ type Extract<T, U> = T extends U ? T : never; // 提取
 type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
 type OmitPerson = Omit<Person, "name" | "age">;
 
+function fn(a: string, b: number) {}
+
+type Parameters<T extends (...args: any[]) => any> = T extends (
+  ...args: infer P
+) => any
+  ? P
+  : never;
+type Pfn = Parameters<typeof fn>;
+
 // & Record
+
+type Record<K extends keyof any, T> = {
+  [P in K]: T;
+};
+
 let obj: object = {
   name: "lish",
   age: 23,
@@ -101,6 +115,11 @@ map({ name: "jiw", age: 12 }, (item, key) => {
   return item + key;
 });
 
-type Record<K extends keyof any, T> = {
-  [P in K]: T;
-};
+type ReturnType<T extends (...args: any) => any> = T extends (
+  ...args: any
+) => infer R
+  ? R
+  : any;
+
+type ConstructorParameters<T extends abstract new (...args: any) => any> =
+  T extends abstract new (...args: infer P) => any ? P : never;
