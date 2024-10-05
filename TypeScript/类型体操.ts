@@ -280,3 +280,11 @@ type p18 = {
 };
 
 type T18 = PickByType<p18, string>;
+
+// ^ LastParamaterType
+
+type LastParamaterType<T extends (...args: any[]) => void> =
+  Parameters<T> extends [...any, infer Last] ? Last : never;
+function sum(a: string, b: number, c: number) {}
+
+type T19 = LastParamaterType<typeof sum>;
