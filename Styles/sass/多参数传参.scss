@@ -1,0 +1,13 @@
+/**
+ * 定义线性渐变
+ * @param $direction 方向
+ * @param $gradients 颜色过度的值列表
+ */
+@mixin linear-gradient($direction, $gradients...) {
+  background-color: nth($gradients, 1);
+  background-image: linear-gradient($direction, $gradients);
+}
+
+.container {
+  @include linear-gradient(to right, #f00, orange, yellow )
+}
