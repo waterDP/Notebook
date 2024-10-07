@@ -1,0 +1,39 @@
+@keyframes loading {
+  0% {
+    opacity: 0.1;
+    transform: translateY(0px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-20px);
+    background-color: green;
+  }
+  100% {
+    opacity: 0.3;
+    transform: translateY(0px);
+  }
+}
+
+.loading {
+  position: fixed;
+  top: 200px;
+  left: 40px;
+}
+
+.loading span {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #3498db;
+  opacity: 0.5;
+  border-radius: 50%;
+  animation: loading 1s ease-in-out;
+}
+
+@for $i from 1 through 5 {
+  .loading span:nth-child(#{$i}) {
+    left: 20 * ($i - 1) + px;
+    // animation-delay: 20 * ($i - 1) / 100 + s;
+    animation-delay: unquote("0." + ($i - 1) * 2 + s);
+  }
+}

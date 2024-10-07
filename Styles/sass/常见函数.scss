@@ -1,0 +1,27 @@
+
+$base-color: #5cc729;
+
+.p0 {
+  background-color: $base-color;
+}
+
+.p1 {
+  /**
+   * 变亮 
+   */
+  background-color: lighten($base-color, 30%);
+}
+
+.p2 {
+  /**
+   * 变暗 
+   */
+  background-color: darken($base-color, 30%);
+}
+
+.p3 {
+  /** 
+   * 调整透明度
+   */
+  background-color: opacify($color: rgba($base-color, 0.1), $amount: 0.5);  
+}

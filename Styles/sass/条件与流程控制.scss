@@ -7,3 +7,88 @@
 
 }
 
+%triangle {
+  width: 0;
+  height: 0;
+  display: inline-block;
+}
+@mixin triangle($direction: top, $size: 30px, $border-color: black) {
+  border-width: $size;
+  border-#{$direction}-width: 0;
+  @if ($direction==top) {
+    border-color: transparent transparent $border-color transparent;
+    border-style: dashed dashed solid dashed;
+  }
+  @else if ($direction==right) {
+    border-color: transparent transparent transparent $border-color;
+    border-style: dashed dashed dashed solid;
+  }
+  @else if ($dsirection==bottom) {
+    border-color: $border-color transparent transparent transparent;
+    border-style: solid dashed dashed dashed;
+  }
+  @else if ($direction==left) {
+    border-color: transparent $border-color transparent transparent;
+    border-style: dashed solid dashed dashed;
+  }
+}
+
+.p0 {
+  @extend %triangle;
+  @include triangle()
+}
+.p1 {
+  @extend %triangle;
+  @include triangle(right, 20px, yellow)
+}
+.p3 {
+  @extend %triangle;
+  @include triangle(bottom, 20px, green)
+}
+.p4 {
+  @extend %triangle;
+  @include triangle(left, 20px, lighten(blue, 40%))
+}
+
+// ^ for to 不包含 结束值
+@for $i from 1 to 4 {
+  .p#{$i} {
+    width: 100px * $i;
+    height: 20px;
+    background-color: red;
+  }
+}
+
+// ^ for through 包含 结束值
+@for $i from 1 through 4 {
+  .p#{$i} {
+    width: 100px * $i;
+    height: 20px;
+    background-color: rosybrown;
+  }
+}
+
+// ^ each in 循环
+p {
+  width: 100px;
+  height: 30px;
+  display: inline-block;
+  margin: 10px;
+}
+
+$color-list: red, blue, green, darkmagenta;
+@each $color in $color-list {
+  $index: index($color-list, $color);
+  .p#{$index - 1} {
+    background-color: $color;
+  }
+}
+
+// ^ while 循环
+$column: 12;
+@while $column > 0 {
+  .col-sm-#{$column} {
+    width: $column / 12 * 100%;
+  }
+  $column: $column - 1;
+}
