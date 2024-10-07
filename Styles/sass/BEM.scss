@@ -1,0 +1,26 @@
+.block {
+  width: 100px;
+  @at-root #{&}__element{
+    font-size: 12px;
+    @at-root #{&}--modifier {
+      font-size: 16px;
+    }
+  }
+  @at-root #{&}--modifier {
+    font-size: 14px;
+  }
+}
+
+// & 自带跳出嵌套的功能，以上代码可以改写为：
+.block {
+  width: 100px;
+  &__element{
+    font-size: 12px;
+    &--modifier {
+      font-size: 16px;
+    }
+  }
+  &--modifier {
+    font-size: 14px;
+  }
+}
