@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2021-09-29 22:34:31
  * @Description:
- * @FilePath: \notebook\Monitor\lib\timing.js
+ * @FilePath: \Notebook\Monitor\lib\timing.js
  */
 import tracker from "../utils/tracker";
 import onload from "../utils/onload";
@@ -86,7 +86,11 @@ export function timing() {
        * FP（First Paint），表示渲染出第一个像素点。FP一般在HTML解析完成或者解析一部分时候触发。
        * FCP（First Contentful Paint），表示渲染出第一个内容，这里的“内容”可以是文本、图片、canvas。
        * FMP（First Meaningful Paint），首次渲染有意义的内容的时间，“有意义”没有一个标准的定义，FMP的计算方法也很复杂。
+       * FID （First Input Delay），首次输入延迟。
        * LCP（largest contentful Paint），最大内容渲染时间。
+       * TBT （Time to Backgroud），从用户首次点击页面到页面开始加载的时间。
+       * TTI（Time to Interactive），从用户首次点击页面到页面开始有交互的时间。
+       * TTFB（Time to First Byte），从用户首次点击页面到页面开始加载的时间。
        */
       let FP = performances.getEntriesByName("first-paint")[0];
       let FCP = performances.getEntriesByName("first-contentful-paint")[0];
