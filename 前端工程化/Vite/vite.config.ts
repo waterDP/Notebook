@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2024-09-28 21:53:13
+ * @Description:
+ * @FilePath: \Notebook\前端工程化\Vite\vite.config.ts
+ */
 import { defineConfig } from "vite";
 import path from "path";
 import Vue from "@vitejs/plugin-vue";
@@ -34,6 +40,7 @@ export default defineConfig({
       imports: ["vue", "vue-router", "pinia"],
       resolvers: [],
       eslintrc: { enabled: true }, // 给eslint生产的配置，只需要一次生成就可以了
+      dts: "./src/auto-inputs.d.ts",
     }),
     Components({
       resolvers: [],
