@@ -1,3 +1,4 @@
+import { UnionToIntersection } from "./类型体操";
 /*
  * @Author: water.li
  * @Date: 2023-01-08 22:39:27
@@ -61,3 +62,12 @@ type xx = II<string> extends II<number> ? true : false;
 // 枚举永远不兼容 不能将一个枚举赋予给另一个枚举
 
 export {};
+
+// ^ 联合类型转交叉类型
+type UnionToIntersection<T> = (T extends any ? (x: T) => any : never) extends (
+  x: infer R
+) => any
+  ? R
+  : never;
+
+type A = UnionToIntersection<{ a: 1 } | { b: 2 }>; // {a:1} & {b:2}
