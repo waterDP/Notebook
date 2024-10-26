@@ -1,0 +1,31 @@
+
+$breakPoint: (
+  'phone': (320px, 480px),
+  'pad': (481px, 768px),
+  'pc': (769px, 1024px),
+  'tv': 1201px
+);
+
+@mixin reponseTo($breakName) {
+  $bp: map-get($breakPoint, $breakName);
+  @if type-of($bp) == 'list ' {
+    @media (min-width: nth($bp, 1)) and (max-width: nth($bp, 2)) {
+      @content;
+    }
+  } @else {
+    @media (min-width: $bp) {
+      @content;
+    }
+  }
+
+}
+
+.header {
+  width: 100%;
+  @include responseTo('phone') {
+    height: 20px;
+  }
+  @include responseTo('pad') {
+    height: 40px;
+  }
+}
