@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2020-02-26 13:23:50
  * @Description: event loop
- * @FilePath: \notebook\JavaScript\EventLoop.js
+ * @FilePath: \Notebook\浏览器原理\事件循环.js
  */
  /* *
 	* 在 Node.js 中，eventLoop是基于libuv的。通过查看libuv的文档可以发现整个eventLoop 分为 6 个阶段：
