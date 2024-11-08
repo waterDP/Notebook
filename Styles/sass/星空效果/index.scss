@@ -1,3 +1,5 @@
+@use "sass:math";
+
 body {
   background-color: rgb(0, 0, 30);
 }
@@ -14,8 +16,8 @@ body {
 $duration: 400s;
 $count: 1000;
 @for $i from 1 through 5 {
-  $duration: $duration / 2;
-  $count: floor($count / 2);
+  $duration: math.floor(math.div($duration, 2));
+  $count: math.floor(math.div($count, 2));
 
   .layer#{$i} {
     $size: #{$i}px;
@@ -35,9 +37,9 @@ $count: 1000;
       border-radius: inherit;
       width: inherit;
       height: inherit;
-      box-sizing: inherit;
+      box-shadow: inherit;
     }
-  }
+  } 
 }
 
 
