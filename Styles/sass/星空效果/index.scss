@@ -1,3 +1,6 @@
+body {
+  background-color: rgb(0, 0, 30);
+}
 
 @function getShadows($n) {
   $shadows: '#{random(100)}vw #{random(100)}vh #fff';
