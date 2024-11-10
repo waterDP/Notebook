@@ -1,0 +1,50 @@
+body {
+  background: black;
+}
+
+button {
+  width: 150px;
+  height: 80px;
+  color: #0ebeff;
+  background: #000;
+  border: none;
+  outline: none;
+  z-index: 1;
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  font-size: 22px;
+  overflow: hidden;
+}
+
+button:before {
+  content: "";
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  background: #0ebeff;
+  z-index: -2;
+  left: 50%;
+  top: 50%;
+  transform-origin: left top;
+  animation: rotation 2s linear infinite;
+}
+
+button:after {
+  content: "";
+  position: absolute;
+  --g: 4px;
+  width: calc(100% - 2 * var(--g));
+  height: calc(100% - 2 * var(--g));
+  background: #000;
+  left: var(--g);
+  top: var(--g);
+  border-radius: inherit;
+  z-index: -1;
+}
+
+@keyframes rotation {
+  to {
+    transform: rotate(360deg);
+  }
+}
