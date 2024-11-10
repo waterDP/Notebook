@@ -23,5 +23,5 @@ $base-color: #5cc729;
   /** 
    * 调整透明度
    */
-  background-color: opacify($color: rgba($base-color, 0.1), $amount: 0.5);  
+  background-color: opacity($color: rgba($base-color, 0.1), $amount: 0.5);  
 }
