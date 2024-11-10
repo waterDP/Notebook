@@ -1,0 +1,93 @@
+@charset "UTF-8";
+/*
+ * @Author: water.li
+ * @Date: 2024-11-10 21:28:58
+ * @Description: 
+ * @FilePath: \Notebook\Styles\sass\环形旋转图片\index.scss
+ */
+.container .inner {
+  width: 300px;
+  height: 300px;
+  border: 1px black solid;
+  border-radius: 50%;
+  position: relative;
+  top: 200px;
+  left: 200px;
+}
+.container .inner .item {
+  height: 80px;
+  width: 80px;
+  overflow: hidden;
+  border-radius: 50%;
+  position: absolute;
+  top: -40px;
+  left: 110px;
+  transform-origin: center 190px;
+}
+.container .inner .item:nth-child(1) {
+  transform: rotate(0deg);
+}
+.container .inner .item:nth-child(1) img {
+  --initDeg: 0deg;
+  transform: rotate(0deg);
+  position: absolute;
+  left: -300px;
+  top: -300px;
+  animation: ratation 20s linear infinite reverse;
+}
+.container .inner .item:nth-child(2) {
+  transform: rotate(72deg);
+}
+.container .inner .item:nth-child(2) img {
+  --initDeg: 72deg;
+  transform: rotate(-72deg);
+  position: absolute;
+  left: -300px;
+  top: -300px;
+  animation: ratation 20s linear infinite reverse;
+}
+.container .inner .item:nth-child(3) {
+  transform: rotate(144deg);
+}
+.container .inner .item:nth-child(3) img {
+  --initDeg: 144deg;
+  transform: rotate(-144deg);
+  position: absolute;
+  left: -300px;
+  top: -300px;
+  animation: ratation 20s linear infinite reverse;
+}
+.container .inner .item:nth-child(4) {
+  transform: rotate(216deg);
+}
+.container .inner .item:nth-child(4) img {
+  --initDeg: 216deg;
+  transform: rotate(-216deg);
+  position: absolute;
+  left: -300px;
+  top: -300px;
+  animation: ratation 20s linear infinite reverse;
+}
+.container .inner .item:nth-child(5) {
+  transform: rotate(288deg);
+}
+.container .inner .item:nth-child(5) img {
+  --initDeg: 288deg;
+  transform: rotate(-288deg);
+  position: absolute;
+  left: -300px;
+  top: -300px;
+  animation: ratation 20s linear infinite reverse;
+}
+
+.container .inner {
+  animation: ratation 20s linear infinite;
+}
+
+@keyframes ratation {
+  to {
+    transform: rotate(calc(360deg - var(--initDeg, 0deg)));
+  }
+}
+
+/*# sourceMappingURL=index.css.map */

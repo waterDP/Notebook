@@ -1,0 +1,61 @@
+/*
+ * @Author: water.li
+ * @Date: 2024-11-10 21:28:58
+ * @Description: 
+ * @FilePath: \Notebook\Styles\sass\环形旋转图片\index.scss
+ */
+@use "sass:math";
+
+$size: 300px;
+$imageSize: 80px;
+
+.container {
+  .inner {
+    width: $size;
+    height: $size;
+    border: 1px black solid;
+    border-radius: 50%;
+    position: relative;
+    top: 200px;
+    left: 200px;
+    .item {
+      height: $imageSize;
+      width: $imageSize;
+      overflow: hidden;
+      border-radius: 50%;
+      position: absolute;
+      top: - math.div($imageSize, 2);
+      left: calc(math.div($size, 2) - math.div($imageSize, 2));
+      transform-origin: center calc(math.div($size, 2) + math.div($imageSize, 2));
+      $n: 5;
+      $pDeg: math.div(360deg, $n);
+      @for $i from 1 through $n {
+        &:nth-child(#{$i}) {
+          $deg: $pDeg * ($i - 1);
+          transform: rotate($deg);
+          img {
+            --initDeg: #{$deg};
+            transform: rotate(-$deg);
+            position: absolute;
+            left: -300px;
+            top: -300px;
+            animation: ratation 20s linear infinite reverse;
+          }
+        }
+      }
+    }
+
+  }
+}
+
+.container {
+  .inner {
+    animation: ratation 20s linear infinite;
+  }
+}
+
+@keyframes ratation {
+  to {
+    transform: rotate(calc(360deg - var(--initDeg, 0deg)));
+  }
+}
