@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMS后台管理系统</title>
+  <link rel="stylesheet" href="/style/bootstrap.min.css">
+</head>
+<body>
+  {{> header}}
+  <div class="container-fluid">
+    <div class="row">
+      {{> sidebar}}
+      <div class="col-md-9 col-lg-10">
+        <div class="container mt-4">
+          {{{body}}}
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

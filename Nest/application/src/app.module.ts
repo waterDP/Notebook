@@ -6,7 +6,7 @@ import { SharedModule } from './shared/shared.module';
 import { ApiModule } from './api/api.module';
 
 @Module({
-  imports: [AdminModule, SharedModule, ApiModule],
+  imports: [SharedModule, AdminModule, ApiModule],
   controllers: [AppController],
   providers: [AppService],
 })
