@@ -6,12 +6,14 @@ import { join } from 'path';
 import { engine } from 'express-handlebars';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ExtendedConsoleLogger } from './extended-console-log';
+import { MyLogger } from './my-logger';
 
 async function bootstrap() {
   const app = await NestFactory.create<any>(AppModule, {
-    logger: new ExtendedConsoleLogger()
-  })
+    bufferLogs: true,
+  });
+  
+  app.useLogger(app.get(MyLogger))
   // 配置静态文件根目录
   app.useStaticAssets(join(__dirname, '..', 'public'));
   // 配置模板文件的根目录
@@ -48,7 +50,8 @@ async function bootstrap() {
     .setVersion('1.0')
     .addTag('CMS')
     .addCookieAuth('connect.sid') // 添加cookie认证 cookie的名称为connect.sid
-    .addBearerAuth({ // 添加bearer认证
+    .addBearerAuth({
+      // 添加bearer认证
       name: 'JWT',
       type: 'http',
       scheme: 'bearer',

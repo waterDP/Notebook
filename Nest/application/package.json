@@ -33,9 +33,11 @@
     "express-handlebars": "^8.0.1",
     "express-session": "^1.18.1",
     "mysql2": "^3.11.4",
+    "nest-winston": "^1.9.7",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

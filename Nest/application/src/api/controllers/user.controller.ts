@@ -1,4 +1,5 @@
 import {
+  Logger,
   applyDecorators,
   Body,
   ClassSerializerInterceptor,
@@ -13,6 +14,8 @@ import {
   Put,
   SerializeOptions,
   UseInterceptors,
+  Inject,
+  LoggerService,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -22,6 +25,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CreateUserDto, UpdateUserDto } from 'src/shared/dtos/user.dto';
 import { User } from 'src/shared/entities/user.entities';
 import { UserService } from 'src/shared/services/user.service';
@@ -34,11 +38,15 @@ import { Result } from 'src/shared/vo/result';
 @UseInterceptors(ClassSerializerInterceptor)
 @ApiTags('api/users')
 export class UserController {
+  private readonly logger = new Logger(UserController.name)
+  @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly winstonLogger: LoggerService
   constructor(private readonly userService: UserService) {}
 
   @Get()
   @ApiFindAll()
   async findAll() {
+    this.logger.error('这是Nest内置的日志记录器')
+    this.winstonLogger.error('这是Winston日志记录器')
     return this.userService.findAll();
   }
 
