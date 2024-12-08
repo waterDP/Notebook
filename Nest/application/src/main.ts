@@ -6,8 +6,12 @@ import { join } from 'path';
 import { engine } from 'express-handlebars';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ExtendedConsoleLogger } from './extended-console-log';
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<any>(AppModule, {
+    logger: new ExtendedConsoleLogger()
+  })
   // 配置静态文件根目录
   app.useStaticAssets(join(__dirname, '..', 'public'));
   // 配置模板文件的根目录
@@ -43,10 +47,16 @@ async function bootstrap() {
     .setDescription('CMS API 描述')
     .setVersion('1.0')
     .addTag('CMS')
+    .addCookieAuth('connect.sid') // 添加cookie认证 cookie的名称为connect.sid
+    .addBearerAuth({ // 添加bearer认证
+      name: 'JWT',
+      type: 'http',
+      scheme: 'bearer',
+    })
     .build();
   // 使用配置对象创建Swagger文档
-  const document = SwaggerModule.createDocument(app, config)  
-  SwaggerModule.setup('api-doc', app, document);
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

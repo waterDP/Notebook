@@ -5,11 +5,25 @@
  * @FilePath: \Notebook\Nest\application\src\shared\validators\user-validator.ts
  */
 
-import { applyDecorators, Injectable, Type } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments, ValidationOptions, registerDecorator, IsBoolean, IsEmail, IsNumber, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
-import { Repository } from "typeorm";
-import { User } from "../entities/user.entities";
+import { applyDecorators, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import {
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+  ValidationOptions,
+  registerDecorator,
+  IsBoolean,
+  IsEmail,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import { Repository } from 'typeorm';
+import { User } from '../entities/user.entities';
+import { Type } from 'class-transformer';
 
 @Injectable()
 @ValidatorConstraint({ name: 'startsWith', async: false })
@@ -42,16 +56,22 @@ export function StartsWith(
   };
 }
 
+let userRepository
 @Injectable()
 @ValidatorConstraint({ name: 'startsWith', async: true })
-class IsUsernameUniqueConstraint implements ValidatorConstraintInterface {
-  // ?
-  constructor(@InjectRepository(User) protected repository: Repository<User>) {}
-  async validate(value: any, validationArguments?: ValidationArguments) {
-    // 查询数据库是否存在用户名记录
-    const result = await this.repository.findOneBy({ username: value });
-    return !result;
+export class IsUsernameUniqueConstraint
+  implements ValidatorConstraintInterface
+{
+  constructor(@InjectRepository(User) protected repository: Repository<User>) {
+    if (!userRepository) {
+      userRepository = this.repository
+    }
   }
+  validate = async (value: any, validationArguments?: ValidationArguments) => {
+    // 查询数据库是否存在用户名记录
+    const result = await userRepository.findOneBy({ username: value });
+    return !result;
+  };
   defaultMessage?(validationArguments?: ValidationArguments): string {
     const { property, value } = validationArguments;
     return `${property} ${value} is already exists`;
