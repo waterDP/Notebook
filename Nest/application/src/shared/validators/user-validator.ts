@@ -20,10 +20,12 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  IsNotEmpty,
 } from 'class-validator';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entities';
 import { Type } from 'class-transformer';
+import { i18nValidationMessage } from 'nestjs-i18n';
 
 @Injectable()
 @ValidatorConstraint({ name: 'startsWith', async: false })
@@ -56,7 +58,7 @@ export function StartsWith(
   };
 }
 
-let userRepository
+let userRepository;
 @Injectable()
 @ValidatorConstraint({ name: 'startsWith', async: true })
 export class IsUsernameUniqueConstraint
@@ -64,7 +66,7 @@ export class IsUsernameUniqueConstraint
 {
   constructor(@InjectRepository(User) protected repository: Repository<User>) {
     if (!userRepository) {
-      userRepository = this.repository
+      userRepository = this.repository;
     }
   }
   validate = async (value: any, validationArguments?: ValidationArguments) => {
@@ -91,7 +93,26 @@ export function IsUsernameUnique(validationOptions?: ValidationOptions) {
 }
 
 export function PasswordValidators() {
-  return applyDecorators(IsString(), MinLength(6), MaxLength(8));
+  return applyDecorators(
+    IsString(),
+    IsNotEmpty({
+      message: i18nValidationMessage('validation.isNotEmpty', {
+        field: 'password',
+      }),
+    }),
+    MinLength(6, {
+      message: i18nValidationMessage('validation.minLength', {
+        field: 'password',
+        length: 6,
+      }),
+    }),
+    MaxLength(8, {
+      message: i18nValidationMessage('validation.maxLength', {
+        field: 'password',
+        length: 8,
+      }),
+    }),
+  );
 }
 
 export function MobileValidators() {

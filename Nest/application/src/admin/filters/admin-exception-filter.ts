@@ -12,12 +12,15 @@ import {
   ExceptionFilter,
   HttpException,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
+import { I18nService, I18nValidationException } from 'nestjs-i18n';
 
 @Catch(HttpException)
 export class AdminExceptionFilter implements ExceptionFilter {
+  constructor(private readonly i18n: I18nService) {}
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
+    const request: any = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
     let status = exception.getStatus();
     let message = exception.message;
@@ -27,10 +30,30 @@ export class AdminExceptionFilter implements ExceptionFilter {
       if (typeof exceptionBody === 'object' && exceptionBody.message) {
         message = exceptionBody.message.join(',');
         status = exceptionBody.statusCode;
+      } else if (exception instanceof I18nValidationException) {
+        const errors = exception.errors;
+        message = errors
+          .map((error) => this.formatErrorMessage(error, request.i18nLang))
+          .join(',');
       }
     }
     response.status(status).render('error', {
       message,
     });
+  }
+  formatErrorMessage(error: any, lang): string {
+    const { property, value, constraints } = error;
+    const contraintValues = Object.values(constraints);
+    const formatedMessages = contraintValues.map((constraintValue: string) => {
+      const [key, params] = constraintValue.split('|');
+      if (params) {
+        const parsedParams = JSON.parse(params);
+        return this.i18n.translate(key, {
+          lang,
+          args: parsedParams,
+        });
+      }
+    });
+    return `${property}:${value} ${formatedMessages.join(', ')}`;
   }
 }

@@ -1,19 +1,25 @@
+/*
+ * @Author: water.li
+ * @Date: 2024-11-22 21:27:39
+ * @Description:
+ * @FilePath: \Notebook\Nest\application\src\main.ts
+ */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
 import * as session from 'express-session';
 import { join } from 'path';
 import { engine } from 'express-handlebars';
-import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { MyLogger } from './my-logger';
+import { I18nValidationPipe, I18nValidationExceptionFilter } from 'nestjs-i18n';
 
 async function bootstrap() {
   const app = await NestFactory.create<any>(AppModule, {
     bufferLogs: true,
   });
-  
-  app.useLogger(app.get(MyLogger))
+
+  app.useLogger(app.get(MyLogger));
   // 配置静态文件根目录
   app.useStaticAssets(join(__dirname, '..', 'public'));
   // 配置模板文件的根目录
@@ -42,7 +48,8 @@ async function bootstrap() {
       },
     }),
   );
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalPipes(new I18nValidationPipe({ transform: true }));
+  app.useGlobalFilters(new I18nValidationExceptionFilter({ detailedErrors: true }));
   // 创建一个新的DocumentBuilder实例, 用于配置Swagger文档
   const config = new DocumentBuilder()
     .setTitle('CMS API')
