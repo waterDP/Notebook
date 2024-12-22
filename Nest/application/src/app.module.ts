@@ -9,30 +9,9 @@ import { Module } from '@nestjs/common';
 import { AdminModule } from './admin/admin.module';
 import { SharedModule } from './shared/shared.module';
 import { ApiModule } from './api/api.module';
-import { LoggerModule } from './logger/logger.module';
-import { WinstonModule } from 'nest-winston';
-import * as winston from 'winston';
-const { combine, timestamp, printf } = winston.format;
 
 @Module({
   imports: [
-    WinstonModule.forRoot({
-      transports: [
-        new winston.transports.Console({
-          format: combine(
-            timestamp(),
-            printf(({ level, message, timestamp }) => {
-              return `[Nest] ${process.pid} - ${timestamp} ${level} [] ${message}`;
-            }),
-          ),
-        }),
-        new winston.transports.File({
-          filename: 'error.log',
-          level: 'error',
-        }),
-      ],
-    }),
-    LoggerModule,
     SharedModule,
     AdminModule,
     ApiModule,
