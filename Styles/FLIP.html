@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style lang="style/css">
+      .btn {
+        display:  inline-block;
+        padding: 3px 10px;
+        color: white;
+        background-color: rgb(56, 155, 255);
+        border-radius: 5px;
+      }
+
+      .items {
+        padding: 5px;
+        border: 1px solid gray;
+        border-radius: 5px;
+        margin-top: 10px;
+        display: inline-block;
+      }
+      .item {
+        display: block;
+        margin: 10px;
+        width: 300px;
+        background: rgba(45, 103, 1, 0.918);
+        padding: 10px;
+        padding-left: 20px;
+        color: white;
+        border-radius: 30px;
+      }
+      #first {
+        background-color: rgb(173, 90, 2);
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <span class="btn" id="btn">排序</span>
+      <div class="items" id="container">
+        <span class="item" id="first">html</span>
+        <span class="item">js</span>
+        <span class="item">css</span>
+        <span class="item">nodejs</span>
+      </div>
+    </div>
+    <script>
+      function getLocation() {
+        const rect = first.getBoundingClientRect();
+        return rect.top;
+      }
+      const start = getLocation();
+      console.log("first: ", start);
+      btn.onclick = () => {
+        container.insertBefore(first, null);
+        const end = getLocation();
+        const dis = start - end;
+        first.style.transform = `translateY(${dis}px)`;
+        raf(() => {
+          first.style.transition = 'transform 1s'
+          first.style.removeProperty('transform')
+        })
+      };
+      function raf(callback) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(callback);
+        });
+      }
+    </script>
+  </body>
+</html>
