@@ -58,14 +58,12 @@
         const dis = start - end;
         first.style.transform = `translateY(${dis}px)`;
         raf(() => {
-          first.style.transition = 'transform 1s'
-          first.style.removeProperty('transform')
-        })
+          first.style.transition = "transform 1s";
+          first.style.removeProperty("transform");
+        });
       };
       function raf(callback) {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(callback);
-        });
+        requestAnimationFrame(callback);
       }
     </script>
   </body>
