@@ -13,12 +13,13 @@ import { engine } from 'express-handlebars';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { MyLogger } from './my-logger';
 import { I18nValidationPipe, I18nValidationExceptionFilter } from 'nestjs-i18n';
+import { useContainer } from 'class-validator';
 
 async function bootstrap() {
   const app = await NestFactory.create<any>(AppModule, {
     bufferLogs: true,
   });
-
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
   app.useLogger(app.get(MyLogger));
   // 配置静态文件根目录
   app.useStaticAssets(join(__dirname, '..', 'public'));
@@ -49,7 +50,9 @@ async function bootstrap() {
     }),
   );
   app.useGlobalPipes(new I18nValidationPipe({ transform: true }));
-  app.useGlobalFilters(new I18nValidationExceptionFilter({ detailedErrors: true }));
+  app.useGlobalFilters(
+    new I18nValidationExceptionFilter({ detailedErrors: true }),
+  );
   // 创建一个新的DocumentBuilder实例, 用于配置Swagger文档
   const config = new DocumentBuilder()
     .setTitle('CMS API')

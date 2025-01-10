@@ -16,13 +16,16 @@ import {
   StartsWith,
   StatusValidators,
 } from '../validators/user-validator';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Validate } from 'class-validator';
 
 export class CreateUserDto {
   // @StartsWith('user_')
   // @IsUsernameUnique()
   @IsString()
   @ApiProperty({ description: '用户名', example: 'user_1' })
+  @Validate(IsUsernameUnique, [], {
+    message: '用户名已存在'
+  })
   username: string;
 
   @PasswordValidators()
