@@ -11,7 +11,7 @@ function methodOverride(req: Request, res: Response, next: NextFunction) {
   if (req.body && typeof req.body === 'object' && '_method' in req.body) {
     // look in urlencoded POST bodies and delete it
     const method = req.body._method.toUperCase();
-    delete req.body._method
+    delete req.body._method;
     // req.method = method;
   }
   next();
