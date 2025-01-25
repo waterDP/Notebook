@@ -16,12 +16,16 @@ import {
   Param,
   HttpException,
   Put,
+  Delete,
+  Headers,
+  Res,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation } from '@nestjs/swagger';
 import { CreateUserDto, UpdateUserDto } from 'src/shared/dtos/user.dto';
 import { UserService } from 'src/shared/services/user.service';
 import { AdminExceptionFilter } from '../filters/admin-exception-filter';
 import { UtilityService } from 'src/shared/services/utility.service';
+import { Response } from 'express';
 
 @UseFilters(AdminExceptionFilter)
 @Controller('admin/users')
@@ -67,19 +71,32 @@ export class UserController {
     return user;
   }
 
-  @Put()
-  @Redirect('/admin/users')
+  @Put(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
+    @Res({ passthrough: true }) res: Response,
+    @Headers('accept') accept: string,
   ) {
     if (updateUserDto.password) {
       // 加密密码
       updateUserDto.password = await this.utilityService.hashPassword(
         updateUserDto.password,
       );
+    } else {
+      delete updateUserDto.password;
     }
     await this.userService.update(id, updateUserDto);
+    if (accept === 'application/json') {
+      return { success: true };
+    } else {
+      return res.redirect('/admin/users');
+    }
+  }
+
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    await this.userService.delete(id);
     return { success: true };
   }
 }

@@ -4,7 +4,7 @@
  * @Description:
  * @FilePath: \Notebook\Nest\application\src\app.module.ts
  */
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 
 import { AdminModule } from './admin/admin.module';
 import { SharedModule } from './shared/shared.module';
@@ -15,6 +15,7 @@ import {
   I18nModule
 } from "nestjs-i18n"
 import * as path from 'path'
+import methodOverride from 'src/shared/middlewares/method-override'
 
 @Module({
   imports: [
@@ -36,4 +37,8 @@ import * as path from 'path'
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(methodOverride).forRoutes('*')
+  }
+}
