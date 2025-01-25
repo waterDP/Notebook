@@ -19,13 +19,14 @@ import {
   Delete,
   Headers,
   Res,
+  Query,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation } from '@nestjs/swagger';
 import { CreateUserDto, UpdateUserDto } from 'src/shared/dtos/user.dto';
 import { UserService } from 'src/shared/services/user.service';
 import { AdminExceptionFilter } from '../filters/admin-exception-filter';
 import { UtilityService } from 'src/shared/services/utility.service';
-import { Response } from 'express';
+import { query, Response } from 'express';
 
 @UseFilters(AdminExceptionFilter)
 @Controller('admin/users')
@@ -37,9 +38,9 @@ export class UserController {
 
   @Get()
   @Render('user/user-list')
-  async findAll() {
-    const users = await this.userService.findAll();
-    return { users };
+  async findAll(@Query('keyword') keyword: string = '') {
+    const users = await this.userService.findAll(keyword);
+    return { users, keyword };
   }
 
   @Get('create')
