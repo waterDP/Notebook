@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2025-02-02 21:57:45
+ * @Description: 
+ * @FilePath: \Notebook\Node\Express\application\models\article.js
+ */
 'use strict';
 const {
   Model
@@ -14,7 +20,22 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Article.init({
-    title: DataTypes.STRING,
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notNull: {
+          msg: '文章标题不能为空'
+        },
+        notEmpty: {
+          msg: '文章标题不能为空'
+        },
+        len: {
+          args: [2, 45],
+          msg: '文章标题长度必须在2到45之间'
+        }
+      }
+    },
     content: DataTypes.TEXT
   }, {
     sequelize,
