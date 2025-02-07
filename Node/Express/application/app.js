@@ -29,10 +29,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 // 引入前台路由
 const indexRouter = require('./routes/index');
 const categoriesRouter = require('./routes/categories');
+const coursesRouter = require('./routes/courses');
+const chaptersRouter = require('./routes/chapters');
 const usersRouter = require('./routes/users');
 // 前台路由配置
 app.use('/', indexRouter);
 app.use('/categories', categoriesRouter);
+app.use('/courses', coursesRouter);
+app.use('/chapters', chaptersRouter);
 app.use('/users', usersRouter);
 
 

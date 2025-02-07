@@ -8,6 +8,9 @@
 const {
   Model
 } = require('sequelize');
+const moment = require('moment/moment');
+moment.locale('zh-cn');
+
 module.exports = (sequelize, DataTypes) => {
   class Chapter extends Model {
     /**
@@ -30,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
         async isPresent(value) {
           const course = await sequelize.models.Course.findByPk(value)
           if (!course) {
-            throw new Error(`ID为：${ value } 的课程不存在。`);
+            throw new Error(`ID为：${value} 的课程不存在。`);
           }
         }
       }
@@ -63,6 +66,18 @@ module.exports = (sequelize, DataTypes) => {
             throw new Error('排序必须是正整数。');
           }
         }
+      }
+    },
+    createAt: {
+      type: DataTypes.DATE,
+      get() {
+        return moment(this.getDataValue('createAt')).format('LL');
+      }
+    },
+    updateAt: {
+      type: DataTypes.DATE,
+      get() {
+        return moment(this.getDataValue('updateAt')).format('LL');
       }
     }
   }, {

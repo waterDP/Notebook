@@ -8,6 +8,9 @@
 const {
   Model
 } = require('sequelize');
+const moment = require('moment/moment');
+moment.locale('zh-cn');
+
 module.exports = (sequelize, DataTypes) => {
   class Course extends Model {
     /**
@@ -80,7 +83,19 @@ module.exports = (sequelize, DataTypes) => {
     },
     content: DataTypes.TEXT,
     likesCount: DataTypes.INTEGER,
-    chaptersCount: DataTypes.INTEGER
+    chaptersCount: DataTypes.INTEGER,
+    createAt: {
+      type: DataTypes.DATE,
+      get() {
+        return moment(this.getDataValue('createAt')).format('LL');
+      }
+    },
+    updateAt: {
+      type: DataTypes.DATE,
+      get() {
+        return moment(this.getDataValue('updateAt')).format('LL');
+      }
+    }
   }, {
     sequelize,
     modelName: 'Course',
