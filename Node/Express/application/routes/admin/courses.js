@@ -2,14 +2,14 @@
  * @Author: water.li
  * @Date: 2025-02-02 22:17:05
  * @Description: 
- * @FilePath: \Notebook\Node\Express\application\routes\admin\course.js
+ * @FilePath: \Notebook\Node\Express\application\routes\admin\courses.js
  */
 const express = require('express');
 const router = express.Router();
-const { Course, Category, User } = require('../models');
+const { Course, Category, User, Chapter } = require('../models');
 const { Op } = require('sequelize');
-const { NotFoundError, success, failure } = require('../../utils/response');
-const chapter = require('../../models/chapter');
+const { success, failure } = require('../../utils/responses');
+const { NotFoundError } = require('../../utils/errors');
 
 router.get('/', async (req, res) => {
   try {
@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
         }
       };
     }
-    
+
     if (query.userId) {
       condition.where = {
         userId: {
@@ -41,15 +41,15 @@ router.get('/', async (req, res) => {
         }
       };
     }
-    
+
     if (query.name) {
       condition.where = {
         name: {
-          [Op.like]: `%${ query.name }%`
+          [Op.like]: `%${query.name}%`
         }
       };
     }
-    
+
     if (query.recommended) {
       condition.where = {
         recommended: {
@@ -58,7 +58,7 @@ router.get('/', async (req, res) => {
         }
       };
     }
-    
+
     if (query.introductory) {
       condition.where = {
         introductory: {
@@ -107,7 +107,7 @@ router.post('/', async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const course = await getCourse(req)
-    const count = await chapter.count({
+    const count = await Chapter.count({
       where: {
         courseId: req.params.id
       }

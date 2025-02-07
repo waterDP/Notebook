@@ -20,6 +20,8 @@ const usersRouter = require('./routes/users');
 
 const app = express();
 
+require('dotenv').config()
+
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -36,12 +38,15 @@ const adminUsersRouter = require('./routes/admin/users');
 const adminCoursesRouter = require('./routes/admin/courses');
 const adminChaptersRouter = require('./routes/admin/chapters');
 const adminChartsRouter = require('./routes/admin/charts');
+const adminAuthRouter = require('./routes/admin/auth');
 
 app.use('/admin/articles', adminArticlesRouter);
 app.use('/admin/categories', adminCategorysRouter);
 app.use('/admin/settings', adminSettingsRouter);
 app.use('/admin/users', adminUsersRouter);
 app.use('/admin/courses', adminCoursesRouter);
+app.use('/admin/chapters', adminChaptersRouter);
 app.use('/admin/charts', adminChartsRouter);
+app.use('/admin/auth', adminAuthRouter);
 
 module.exports = app;

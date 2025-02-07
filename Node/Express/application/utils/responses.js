@@ -1,11 +1,10 @@
+/*
+ * @Author: water.li
+ * @Date: 2025-02-02 23:15:33
+ * @Description: 
+ * @FilePath: \Notebook\Node\Express\application\utils\responses.js
+ */
 
-
-class NotFoundError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'NotFoundError';
-  }
-}
 
 function success(res, message, data = {}, code = 200) {
   res.status(code).json({
@@ -16,6 +15,23 @@ function success(res, message, data = {}, code = 200) {
 }
 
 function failure(res, error) {
+
+  if (error.name === 'BadRequestError') {
+    return res.status(400).json({
+      status: false,
+      message: '请求参数错误',
+      errors: [error.message]
+    });
+  }
+
+  if (error.name === 'UnauthorizedError') {
+    return res.status(401).json({
+      status: false,
+      message: '认证失败',
+      errors: [error.message]
+    });
+  }
+
   if (error.name === 'SequelizeValidationError') {
     const errors = error.errors.map(err => err.message)
     return res.status(400).json({
@@ -39,7 +55,6 @@ function failure(res, error) {
 }
 
 module.exports = {
-  NotFoundError,
   success,
   failure
 }
