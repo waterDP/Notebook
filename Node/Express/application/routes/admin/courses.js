@@ -95,6 +95,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const body = filterBody(req)
+    body.userId = req.user.id
     const course = await Course.create(body)
     success(res, '创建课程成功', {
       course
@@ -180,7 +181,6 @@ function getCondition() {
 function filterBody(req) {
   return {
     categoryId: req.body.categoryId,
-    userId: req.body.userId,
     name: req.body.name,
     image: req.body.image,
     recommended: req.body.recommended,

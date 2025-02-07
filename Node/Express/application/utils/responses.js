@@ -32,6 +32,22 @@ function failure(res, error) {
     });
   }
 
+  if (error.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      status: false,
+      message: '认证失败',
+      errors: [error.message]
+    });
+  }
+
+  if (error.name === 'TokenExpiredError') {
+    return res.status(401).json({
+      status: false,
+      message: '认证失败',
+      errors: ['身份令牌已过期'] 
+    }) 
+  }
+
   if (error.name === 'SequelizeValidationError') {
     const errors = error.errors.map(err => err.message)
     return res.status(400).json({
@@ -50,7 +66,7 @@ function failure(res, error) {
   res.status(500).json({
     status: false,
     messagge: '服务器错误',
-    errors: [error.message] 
+    errors: [error.message]
   })
 }
 

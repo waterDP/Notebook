@@ -14,9 +14,7 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-
-const indexRouter = require('./routes/index');
-const usersRouter = require('./routes/users');
+const adminAuth = require('./middlewares/admin-auth');
 
 const app = express();
 
@@ -27,8 +25,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// 引入前台路由
+const indexRouter = require('./routes/index');
+const categoriesRouter = require('./routes/categories');
+const usersRouter = require('./routes/users');
+// 前台路由配置
 app.use('/', indexRouter);
+app.use('/categories', categoriesRouter);
 app.use('/users', usersRouter);
+
 
 // 引入后台路由
 const adminArticlesRouter = require('./routes/admin/articles');
@@ -39,14 +45,14 @@ const adminCoursesRouter = require('./routes/admin/courses');
 const adminChaptersRouter = require('./routes/admin/chapters');
 const adminChartsRouter = require('./routes/admin/charts');
 const adminAuthRouter = require('./routes/admin/auth');
-
-app.use('/admin/articles', adminArticlesRouter);
-app.use('/admin/categories', adminCategorysRouter);
-app.use('/admin/settings', adminSettingsRouter);
-app.use('/admin/users', adminUsersRouter);
-app.use('/admin/courses', adminCoursesRouter);
-app.use('/admin/chapters', adminChaptersRouter);
-app.use('/admin/charts', adminChartsRouter);
+// 后台路由配置
+app.use('/admin/articles', adminAuth, adminArticlesRouter);
+app.use('/admin/categories', adminAuth, adminCategorysRouter);
+app.use('/admin/settings', adminAuth, adminSettingsRouter);
+app.use('/admin/users', adminAuth, adminUsersRouter);
+app.use('/admin/courses', adminAuth, adminCoursesRouter);
+app.use('/admin/chapters', adminAuth, adminChaptersRouter);
+app.use('/admin/charts', adminAuth, adminChartsRouter);
 app.use('/admin/auth', adminAuthRouter);
 
 module.exports = app;
