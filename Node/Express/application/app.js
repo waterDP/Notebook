@@ -31,13 +31,20 @@ const indexRouter = require('./routes/index');
 const categoriesRouter = require('./routes/categories');
 const coursesRouter = require('./routes/courses');
 const chaptersRouter = require('./routes/chapters');
-const usersRouter = require('./routes/users');
+const articlesRouter = require('./routes/articles');
+const settingsRouter = require('./routes/settings');
+const searchRouter = require('./routes/search');
+const authRouter = require('./routes/auth');
+
 // 前台路由配置
 app.use('/', indexRouter);
+app.use('/auth', authRouter);
 app.use('/categories', categoriesRouter);
 app.use('/courses', coursesRouter);
 app.use('/chapters', chaptersRouter);
-app.use('/users', usersRouter);
+app.use('/articles', articlesRouter);
+app.use('/settings', settingsRouter);
+app.use('/search', searchRouter);
 
 
 // 引入后台路由
