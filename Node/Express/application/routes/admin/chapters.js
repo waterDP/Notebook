@@ -2,11 +2,11 @@
  * @Author: water.li
  * @Date: 2025-02-02 22:17:05
  * @Description: 
- * @FilePath: \Notebook\Node\Express\application\routes\admin\categorys.js
+ * @FilePath: \Notebook\Node\Express\application\routes\admin\chapters.js
  */
 const express = require('express');
 const router = express.Router();
-const { Category, Course } = require('../models');
+const { Chapter, Course } = require('../models');
 const { Op } = require('sequelize');
 const { NotFoundError, success, failure } = require('../../utils/response');
 
@@ -18,23 +18,28 @@ router.get('/', async (req, res) => {
     const offset = (currentPage - 1) * pageSize
 
     const query = req.query
+
+    if (!query.courseId) {
+      throw new NotFoundError('课程ID未找到')
+    }
     const condition = {
+      ...getCondition(),
       order: [['rank', 'ASC'], ['id', 'ASC']],
       offset,
       limit: pageSize
     }
 
-    if (query.name) {
+    if (query.title) {
       condition.where = {
-        name: {
-          [Op.like]: `%${query.name}%`
+        title: {
+          [Op.like]: `%${query.title}%`
         }
       }
     }
 
-    const { count, rows } = await Category.findAndCountAll(condition)
-    success(res, '获取分类列表成功', {
-      categorys: rows,
+    const { count, rows } = await Chapter.findAndCountAll(condition)
+    success(res, '获取章节列表成功', {
+      chapters: rows,
       pagination: {
         total: count,
         currentPage,
@@ -48,9 +53,9 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const category = await getCategory(req)
-    success(res, '获取分类成功', {
-      category
+    const chapter = await getChapter(req)
+    success(res, '获取章节成功', {
+      chapter
     })
   } catch (error) {
     failure(res, error)
@@ -60,9 +65,9 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const body = filterBody(req)
-    const category = await Category.create(body)
-    success(res, '创建分类成功', {
-      category
+    const chapter = await Chapter.create(body)
+    success(res, '创建章节成功', {
+      chapter
     }, 201)
   } catch (error) {
     failure(res, error)
@@ -71,17 +76,9 @@ router.post('/', async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
-    const category = await getCategory(req)
-    const count = await Course.count({
-      where: {
-        categoryId: req.params.id
-      }
-    })
-    if (count > 0) {
-      throw new Error('该分类下有课程，无法删除。')
-    }
-    category.destroy()
-    success(res, '删除分类成功')
+    const chapter = await getChapter(req)
+    chapter.destroy()
+    success(res, '删除章节成功')
   } catch (error) {
     failure(res, error)
   }
@@ -89,13 +86,13 @@ router.delete("/:id", async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const category = await getCategory(req)
+    const chapter = await getChapter(req)
     const body = filterBody(req)
-    await category.update(body)
+    await chapter.update(body)
     res.json({
       status: true,
-      messagge: '更新分类成功',
-      data: category
+      messagge: '更新章节成功',
+      data: chapter
     })
   } catch (error) {
     failure(res, error)
@@ -103,17 +100,33 @@ router.put('/:id', async (req, res) => {
 })
 
 /**
- * 公共方法：获取分类
+ * 公共方法：获取章节
  * @param {*} req
  * @returns
  */
-async function getCategory(req) {
+async function getChapter(req) {
   const { id } = req.params
-  const category = await Category.findByPk(id)
-  if (!category) {
-    throw new NotFoundError(`ID: ${id}的分类未找到`)
+  const condition = getCondition()
+  const chapter = await Chapter.findByPk(id, condition)
+  if (!chapter) {
+    throw new NotFoundError(`ID: ${id}的章节未找到`)
   }
-  return category
+  return chapter
+}
+
+function getCondition() {
+  return {
+    attributes: {
+      exclude: ['CourseId']
+    },
+    include: [
+      {
+        model: Course,
+        as: 'course',
+        attributes: ['id', 'name']
+      }
+    ]
+  }
 }
 
 /**
@@ -123,7 +136,10 @@ async function getCategory(req) {
  */
 function filterBody(req) {
   return {
-    name: req.body.name,
+    courseId: req.body.courseId,
+    title: req.body.title,
+    content: req.body.content,
+    video: req.body.video,
     rank: req.body.rank
   }
 }

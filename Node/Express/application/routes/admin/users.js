@@ -9,7 +9,6 @@ const router = express.Router();
 const { User } = require('../models');
 const { Op } = require('sequelize');
 const { NotFoundError, success, failure } = require('../../utils/response');
-const bycrypt = require('bycryptjs')
 
 router.get('/', async (req, res) => {
   try {

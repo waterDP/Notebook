@@ -30,13 +30,18 @@ app.use('/users', usersRouter);
 
 // 引入后台路由
 const adminArticlesRouter = require('./routes/admin/articles');
-const adminCategoryRouter = require('./routes/admin/categorys');
-const adminSettingRouter = require('./routes/admin/settings');
-const adminUserRouter = require('./routes/admin/users');
+const adminCategorysRouter = require('./routes/admin/categorys');
+const adminSettingsRouter = require('./routes/admin/settings');
+const adminUsersRouter = require('./routes/admin/users');
+const adminCoursesRouter = require('./routes/admin/courses');
+const adminChaptersRouter = require('./routes/admin/chapters');
+const adminChartsRouter = require('./routes/admin/charts');
 
 app.use('/admin/articles', adminArticlesRouter);
-app.use('/admin/categories', adminCategoryRouter);
-app.use('/admin/settings', adminSettingRouter);
-app.use('/admin/users', adminUserRouter);
+app.use('/admin/categories', adminCategorysRouter);
+app.use('/admin/settings', adminSettingsRouter);
+app.use('/admin/users', adminUsersRouter);
+app.use('/admin/courses', adminCoursesRouter);
+app.use('/admin/charts', adminChartsRouter);
 
 module.exports = app;
