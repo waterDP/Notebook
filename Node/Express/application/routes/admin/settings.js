@@ -11,7 +11,7 @@ const {
   success,
   failure
 } = require('../../utils/responses');
-const { NotFoundError } = require('../../utils/errors');
+const { NotFound } = require('http-errors');
 
 /**
  * 查询系统设置详情
@@ -48,7 +48,7 @@ router.put('/', async function (req, res) {
 async function getSetting() {
   const setting = await Setting.findOne();
   if (!setting) {
-    throw new NotFoundError('初始系统设置未找到，请运行种子文件。')
+    throw new NotFound('初始系统设置未找到，请运行种子文件。')
   }
 
   return setting;

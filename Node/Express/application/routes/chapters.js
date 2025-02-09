@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
       attributes: { exculde: ['CourseId'] }
     })
     if (!chapter) {
-      throw new NotFoundError('章节不存在。')
+      throw new NotFound('章节不存在。')
     }
 
     const course = await chapter.getCourse({
@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
         CourseId: chapter.CourseId
       },
       order: [['rank', 'ASC'], ['id', 'DESC']]
-    }) 
+    })
     success(res, '获取成功。', { chapter, course, user, chapters })
   } catch (error) {
     failure(res, error)

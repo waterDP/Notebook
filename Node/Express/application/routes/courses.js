@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const { Course, Category, Chapter, User } = require('../models');
 const { success, failure } = require('../utils/responses');
+const { NotFound, BadRequest } = require('http-errors');
 
 router.get('/', async (req, res) => {
   try {
@@ -16,7 +17,7 @@ router.get('/', async (req, res) => {
     const pageSize = Math.abs(Number(query.pageSize)) || 10
     const offset = (currentPage - 1) * pageSize
     if (!query.categoryId) {
-      throw new BadRequestError('分类ID不能为空。')
+      throw new BadRequest('分类ID不能为空。')
     }
     const condition = {
       attribues: { exclude: ['CategoryId', 'UserId', 'content'] },
@@ -67,12 +68,12 @@ router.get('/:id', async (req, res) => {
     }
     const courses = await Course.findByPk(id, condition)
     if (!courses) {
-      throw new NotFoundError('课程不存在。')
+      throw new NotFound('课程不存在。')
     }
     success(res, '获取课程详情成功。', { courses })
   } catch (error) {
-    failure(res, error) 
-  } 
+    failure(res, error)
+  }
 })
 
 module.exports = router;

@@ -9,7 +9,7 @@ const router = express.Router();
 const { Article } = require('../models');
 const { Op } = require('sequelize');
 const { success, failure } = require('../../utils/responses');
-const { NotFoundError } = require('../../utils/errors');
+const { NotFound } = require('http-errors');
 
 router.get('/', async (req, res) => {
   try {
@@ -104,7 +104,7 @@ async function getArticle(req) {
   const { id } = req.params
   const article = await Article.findByPk(id)
   if (!article) {
-    throw new NotFoundError(`ID: ${id}的文章未找到`)
+    throw new NotFound(`ID: ${id}的文章未找到`)
   }
   return article
 }

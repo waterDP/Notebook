@@ -6,7 +6,7 @@
  */
 const jwt = require('jsonwebtoken');
 const { User } = require('../../models');
-const { UnauthorizedError } = require('../../utils/errors');
+const { Unauthorized } = require('http-errors');
 const { failure } = require('../../utils/responses');
 
 /**
@@ -18,13 +18,13 @@ module.exports = async (req, res, next) => {
   try {
     const { token } = req.headers;
     if (!token) {
-      throw new UnauthorizedError('当前接口需要谁才能访问');
+      throw new Unauthorized('当前接口需要谁才能访问');
     }
     const decoded = jwt.verify(token, process.env.SECRET);
     const { userId } = decoded
     const user = await User.findByPk(userId);
     if (!user) {
-      throw new UnauthorizedError('用户不存在');
+      throw new Unauthorized('用户不存在');
     }
     req.userId = userId;
     next()

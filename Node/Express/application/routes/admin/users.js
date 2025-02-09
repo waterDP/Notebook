@@ -9,7 +9,7 @@ const router = express.Router();
 const { User } = require('../models');
 const { Op } = require('sequelize');
 const { success, failure } = require('../../utils/responses');
-const { NotFoundError } = require('../../utils/errors');
+const { NotFound } = require('http-errors');
 
 router.get('/', async (req, res) => {
   try {
@@ -109,7 +109,7 @@ async function getUser(req) {
   const { id } = req.params
   const user = await User.findByPk(id)
   if (!user) {
-    throw new NotFoundError(`ID: ${id}的用户未找到`)
+    throw new NotFound(`ID: ${id}的用户未找到`)
   }
   return user
 }

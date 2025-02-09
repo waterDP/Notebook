@@ -9,7 +9,7 @@ const router = express.Router();
 const { Chapter, Course } = require('../models');
 const { Op } = require('sequelize');
 const { success, failure } = require('../../utils/responses');
-const { NotFoundError } = require('../../utils/errors');
+const { NotFound, BadRequest } = require('http-errors');
 
 router.get('/', async (req, res) => {
   try {
@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
     const query = req.query
 
     if (!query.courseId) {
-      throw new NotFoundError('课程ID未找到')
+      throw new BadRequest('取章节列表失败，课程ID不能为空')
     }
     const condition = {
       ...getCondition(),
@@ -110,7 +110,7 @@ async function getChapter(req) {
   const condition = getCondition()
   const chapter = await Chapter.findByPk(id, condition)
   if (!chapter) {
-    throw new NotFoundError(`ID: ${id}的章节未找到`)
+    throw new NotFound(`ID: ${id}的章节未找到`)
   }
   return chapter
 }

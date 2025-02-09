@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Likes, Course, User } = require('../models');
 const { success, failure } = require('../utils/responses');
-const { NotFoundError } = require("../utils/errors");
+const { NotFound } = require('http-errors');
 
 /**
  * 点赞，取消赞
@@ -14,7 +14,7 @@ router.post('/', async function (req, res) {
     const { courseId } = req.body;
     const course = await Course.findByPk(courseId);
     if (!course) {
-      throw new NotFoundError(`ID: ${courseId}的课程未找到。`)
+      throw new NotFound(`ID: ${courseId}的课程未找到。`)
     }
     const like = await Likes.findOne({
       where: {
@@ -70,9 +70,9 @@ router.get('/', async function (req, res) {
         pageSize
       }
     })
-  } catch(error) {
+  } catch (error) {
     failure(res, error);
-  } 
+  }
 })
 
 module.exports = router;

@@ -9,6 +9,7 @@ const {
   Model
 } = require('sequelize');
 const bycrypt = require('bcryptjs')
+const { BadRequest } = require('http-errors');
 
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
@@ -62,10 +63,13 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: { msg: '密码不能为空。' },
       },
       set(value) {
+        if (!value) {
+          throw new BadRequest('密码不能为空。')
+        }
         if (value.length >= 6 && value.length <= 45) {
           this.setDataValue('password', bycrypt.hashSync(value, 10))
         } else {
-          throw new Error('密码长度必须是6 ~ 45之间。')
+          throw new BadRequest('密码长度必须是6 ~ 45之间。')
         }
       }
     },

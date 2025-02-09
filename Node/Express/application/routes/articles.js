@@ -47,7 +47,7 @@ router.get('/:id', async function (req, res) {
 
     const article = await Article.findByPk(id);
     if (!article) {
-      throw new NotFoundError(`ID: ${ id }的文章未找到。`)
+      throw new NotFound(`ID: ${id}的文章未找到。`)
     }
 
     success(res, '查询文章成功。', { article });

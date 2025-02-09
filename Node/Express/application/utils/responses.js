@@ -4,7 +4,7 @@
  * @Description: 
  * @FilePath: \Notebook\Node\Express\application\utils\responses.js
  */
-
+const createError = require('http-errors')
 
 function success(res, message, data = {}, code = 200) {
   res.status(code).json({
@@ -15,59 +15,26 @@ function success(res, message, data = {}, code = 200) {
 }
 
 function failure(res, error) {
+  // 默认响应为 500，服务器错误
+  let statusCode = 500;
+  let errors = '服务器错误';
 
-  if (error.name === 'BadRequestError') {
-    return res.status(400).json({
-      status: false,
-      message: '请求参数错误',
-      errors: [error.message]
-    });
-  }
-
-  if (error.name === 'UnauthorizedError') {
-    return res.status(401).json({
-      status: false,
-      message: '认证失败',
-      errors: [error.message]
-    });
+  if (error.name === 'SequelizeValidationError') {  // Sequelize 验证错误
+    statusCode = 400;
+    errors = error.errors.map(e => e.message);
+  } else if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {  // Token 验证错误
+    statusCode = 401;
+    errors = '您提交的 token 错误或已过期。';
+  } else if (error instanceof createError.HttpError) {  // http-errors 库创建的错误
+    statusCode = error.status;
+    errors = error.message;
   }
 
-  if (error.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      status: false,
-      message: '认证失败',
-      errors: [error.message]
-    });
-  }
-
-  if (error.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      status: false,
-      message: '认证失败',
-      errors: ['身份令牌已过期'] 
-    }) 
-  }
-
-  if (error.name === 'SequelizeValidationError') {
-    const errors = error.errors.map(err => err.message)
-    return res.status(400).json({
-      status: false,
-      messagge: '请求参数错误',
-      errors
-    })
-  }
-  if (error.name === 'NotFoundError') {
-    return res.status(404).json({
-      status: false,
-      messagge: '资源不存在',
-      errors: [error.message]
-    })
-  }
-  res.status(500).json({
+  res.status(statusCode).json({
     status: false,
-    messagge: '服务器错误',
-    errors: [error.message]
-  })
+    message: `请求失败: ${error.name}`,
+    errors: Array.isArray(errors) ? errors : [errors],
+  });
 }
 
 module.exports = {

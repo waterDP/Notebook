@@ -9,7 +9,7 @@ const router = express.Router();
 const { Category, Course } = require('../models');
 const { Op } = require('sequelize');
 const { success, failure } = require('../../utils/responses');
-const { NotFoundError } = require('../../utils/errors');
+const { NotFound, Conflict } = require('http-errors');
 
 router.get('/', async (req, res) => {
   try {
@@ -79,7 +79,7 @@ router.delete("/:id", async (req, res) => {
       }
     })
     if (count > 0) {
-      throw new Error('该分类下有课程，无法删除。')
+      throw new Conflict('该分类下有课程，无法删除。')
     }
     category.destroy()
     success(res, '删除分类成功')
@@ -112,7 +112,7 @@ async function getCategory(req) {
   const { id } = req.params
   const category = await Category.findByPk(id)
   if (!category) {
-    throw new NotFoundError(`ID: ${id}的分类未找到`)
+    throw new NotFound(`ID: ${id}的分类未找到`)
   }
   return category
 }
