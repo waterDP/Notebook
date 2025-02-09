@@ -15,6 +15,10 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const adminAuth = require('./middlewares/admin-auth');
+const userAuth = require('./middlewares/user-auth');
+const cors = require('cors');
+
+app.use(cors());
 
 const app = express();
 
@@ -35,6 +39,7 @@ const articlesRouter = require('./routes/articles');
 const settingsRouter = require('./routes/settings');
 const searchRouter = require('./routes/search');
 const authRouter = require('./routes/auth');
+const usersRouter = require('./routes/users');
 
 // 前台路由配置
 app.use('/', indexRouter);
@@ -45,6 +50,7 @@ app.use('/chapters', chaptersRouter);
 app.use('/articles', articlesRouter);
 app.use('/settings', settingsRouter);
 app.use('/search', searchRouter);
+app.use('/users', userAuth, usersRouter);
 
 
 // 引入后台路由

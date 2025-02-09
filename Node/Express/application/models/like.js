@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2025-02-03 16:09:22
+ * @Description: 
+ * @FilePath: \Notebook\Node\Express\application\models\ike.js
+ */
 'use strict';
 const {
   Model
