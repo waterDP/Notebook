@@ -40,6 +40,7 @@ const settingsRouter = require('./routes/settings');
 const searchRouter = require('./routes/search');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
+const uploadsRouter = require('./routes/uploads');
 
 // 前台路由配置
 app.use('/', indexRouter);
@@ -51,6 +52,7 @@ app.use('/articles', articlesRouter);
 app.use('/settings', settingsRouter);
 app.use('/search', searchRouter);
 app.use('/users', userAuth, usersRouter);
+app.use('/uploads', userAuth, uploadsRouter);
 
 
 // 引入后台路由

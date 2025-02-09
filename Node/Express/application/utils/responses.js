@@ -5,6 +5,7 @@
  * @FilePath: \Notebook\Node\Express\application\utils\responses.js
  */
 const createError = require('http-errors')
+const multer = require('multer')
 
 function success(res, message, data = {}, code = 200) {
   res.status(code).json({
@@ -28,6 +29,14 @@ function failure(res, error) {
   } else if (error instanceof createError.HttpError) {  // http-errors 库创建的错误
     statusCode = error.status;
     errors = error.message;
+  } else if (error instanceof multer.MulterError) {  // Multer 错误
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      statusCode = 413;
+      errors = '上传文件大小超过限制。'; 
+    } else {
+      statusCode = 400;
+      errors = error.message;
+    }
   }
 
   res.status(statusCode).json({
