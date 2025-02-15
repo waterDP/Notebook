@@ -63,6 +63,7 @@ const adminUsersRouter = require('./routes/admin/users');
 const adminCoursesRouter = require('./routes/admin/courses');
 const adminChaptersRouter = require('./routes/admin/chapters');
 const adminChartsRouter = require('./routes/admin/charts');
+const adminAttachmentsRouter = require('./routes/admin/attachments');
 const adminAuthRouter = require('./routes/admin/auth');
 // 后台路由配置
 app.use('/admin/articles', adminAuth, adminArticlesRouter);
@@ -72,6 +73,7 @@ app.use('/admin/users', adminAuth, adminUsersRouter);
 app.use('/admin/courses', adminAuth, adminCoursesRouter);
 app.use('/admin/chapters', adminAuth, adminChaptersRouter);
 app.use('/admin/charts', adminAuth, adminChartsRouter);
+app.use('/admin/attachments', adminAuth, adminAttachmentsRouter);
 app.use('/admin/auth', adminAuthRouter);
 
 module.exports = app;

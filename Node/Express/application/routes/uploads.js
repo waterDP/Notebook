@@ -9,6 +9,12 @@ const router = express.Router()
 const { BadRequest } = require('http-errors')
 const { success, failure } = require('../utils/response')
 const { config, client, singleFileUpload } = require('../utils/aliyun')
+const { Attachment } = require('../models')
+
+/**
+ * 上传文件
+ * POST /uploads
+ */
 /**
  * 阿里去oss客户端上传
  * POST /uploads/aliyun
@@ -22,7 +28,13 @@ router.post('/aliyun', (req, res) => {
       if (!req.file) {
         return failure(res, new BadRequest('上传文件不能为空。'))
       }
-      success(res, '上传成功。', { file: req.file })
+      // 记录附件信息
+      await Attachment.create({
+        ...req.file,
+        userId: req.user.id,
+        fullPath: req.file.path + '/' + req.file.filename,
+      })
+      success(res, '上传成功。', { file: req.file.url })
     })
   } catch (error) {
     failure(res, error)
