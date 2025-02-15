@@ -9,6 +9,7 @@ const router = express.Router();
 const { Setting } = require('../models');
 const { NotFound } = require('http-errors');
 const { success, failure } = require('../utils/responses');
+const { setKey, getKey } = require('../utils/redis');
 
 /**
  * 查询系统信息
@@ -16,9 +17,17 @@ const { success, failure } = require('../utils/responses');
  */
 router.get('/', async function (req, res) {
   try {
-    const setting = await Setting.findOne();
+    const cacheKey = 'setting';
+
+    let setting = await getKey(cacheKey);
+
     if (!setting) {
-      throw new NotFound('未找到系统设置，请联系管理员。')
+      setting = await Setting.findOne();
+      if (!setting) {
+        throw new NotFound('系统信息不存在。');
+      }
+      // 将设置信息存入缓存
+      await setKey(cacheKey, setting);
     }
 
     success(res, '查询系统信息成功。', { setting });

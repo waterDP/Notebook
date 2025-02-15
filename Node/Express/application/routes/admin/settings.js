@@ -12,6 +12,7 @@ const {
   failure
 } = require('../../utils/responses');
 const { NotFound } = require('http-errors');
+const { delKey } = require('../../utils/redis');
 
 /**
  * 查询系统设置详情
@@ -36,6 +37,8 @@ router.put('/', async function (req, res) {
     const body = filterBody(req);
 
     await setting.update(body);
+    // 清除缓存
+    await delKey('setting');
     success(res, '更新系统设置成功。', { setting });
   } catch (error) {
     failure(res, error);
