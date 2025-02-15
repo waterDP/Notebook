@@ -7,11 +7,11 @@ select
     salary
 from emps;
 
-CREATE VIEW VU_EMP2(EMP_ID, `NAME`, MONTHLY_SAL) AS 
+create view VU_EMP2(EMP_ID, `NAME`, MONTHLY_SAL) as 
 	select employee_id, last_name, salary from emp3 where salary > 
 8000; 
 
-CREATE VIEW VU_EMP_SAL AS 
+create view VU_EMP_SAL as 
 	select
 	    department_id,
 	    avg(salary) avg_sal

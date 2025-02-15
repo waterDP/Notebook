@@ -28,7 +28,7 @@ select @count select avg(salary) into @avg_sal from employees;
 
 delimiter //
 
-CREATE PROCEDURE TEST_VAR() BEGIN 
+create procedure TEST_VAR() begin 
 	#声明局部变量 declare a int default 0;
 	declare b int;
 	declare emp_name varchar(25);
@@ -49,8 +49,8 @@ delimiter;
 
 delimiter //
 
-CREATE PROCEDURE DIFFERENT_SALARY(IN EMP_ID INT, OUT 
-DIFFERENT_SALARY DOUBLE) BEGIN 
+create procedure DIFFERENT_SALARY(in EMP_ID int, out 
+DIFFERENT_SALARY double) begin 
 	declare emp_sal double default 0.0;
 	declare mgr_sal double default 0.0;
 	declare mgr_id int default 0;
@@ -63,7 +63,7 @@ DIFFERENT_SALARY DOUBLE) BEGIN
 	select salary into mgr_sal
 	from employees
 	where employee_id = mgr_id;
-	set different_salary = mgr_sal - emp_sal;
+	set DIFFERENT_SALARY = mgr_sal - emp_sal;
 	end// 
 
 
@@ -73,24 +73,24 @@ delimiter ;
 
 delimiter //
 
-CREATE PROCEDURE TEST_IF() BEGIN 
+create procedure TEST_IF() begin 
 	#声明局部变量
 	declare stu_name varchar(15) if stu_name is null then
 	select
 	    'stu_name is null'
 	end if;
-END; 
+end; 
 
 delimiter ;
 
 delimiter //
 
-CREATE PROCEDURE TEST_IF() BEGIN 
+create procedure TEST_IF() begin 
 	#声明局部变量 declare email varchar(25);
 	if email is null then select 'email is null';
 	else select 'email is not null';
 	end if;
-END; 
+end; 
 
 delimiter ; #elseif
 
@@ -118,8 +118,8 @@ delimiter ;
 
 delimiter //
 
-CREATE PROCEDURE UPDATE_SALARY_BY_EID4(IN EMP_ID INT
-) BEGIN 
+create procedure UPDATE_SALARY_BY_EID4(in EMP_ID int
+) begin 
 	#声明局部变量 declare emp_sal double;
 	# 记录员工的工资 declare bonus double;
 	# 记录员工的资金率
@@ -155,7 +155,7 @@ delimiter ;
 
 delimiter //
 
-CREATE PROCEDURE TEST_LOOP() BEGIN 
+create procedure TEST_LOOP() begin 
 	# 声明局部变量 declare num int default 1;
 	loop_label:
 	loop
@@ -173,7 +173,7 @@ delimiter ;
 
 delimiter //
 
-CREATE PROCEDURE UPDATE_SALARY_LOOP(OUT NUM INT) BEGIN 
+create procedure UPDATE_SALARY_LOOP(out NUM int) begin 
 	#声明局部变量 declare avg_sal double;
 	declare loop_count int default 0;
 	loop_label:loop select avg(salary) into avg_sal from employees;
@@ -192,7 +192,7 @@ delimiter ;
 
 delimiter //
 
-CREATE PROCEDURE UPDATE_SALARY_WHILE(OUT NUM INT) BEGIN 
+create procedure UPDATE_SALARY_WHILE(out NUM int) begin 
 	declare ava_sal double declare while_count int default 0;
 	select avg(salary) into avg_sal from employees;
 	while avg_sal > 5000
@@ -218,8 +218,8 @@ select select_statement;
 
 delimiter //
 
-CREATE PROCEDURE GET_COUNT_BY_LIMIT_TOTAL_SALARY(IN 
-LIMIT_TOTAL_SALARY DOUBLE, OUT TOTAL_COUNT INT) BEGIN 
+create procedure GET_COUNT_BY_LIMIT_TOTAL_SALARY(in 
+LIMIT_TOTAL_SALARY double, out TOTAL_COUNT int) begin 
 	#声明局部变量 declare sum_sal double default 0.0;
 	declare emp_sal double;
 	declare emp_count int default 0;
