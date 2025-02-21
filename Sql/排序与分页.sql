@@ -65,7 +65,7 @@ offset 0;
 select last_name, salary
 from employees
 where
-    salary not BETWEEN 8000 and 17000
+    salary not between 8000 and 17000
 order by salary desc
 limit 20, 20;
 
