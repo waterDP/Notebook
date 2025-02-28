@@ -187,16 +187,6 @@ from departments d
     left join employees e on d.department_id = e.department_id
 where e.department_id is null;
 
-# 子查询
-select department_id
-from departments d
-where not exists (
-        select *
-        from employees e
-        where
-            e.department_id = d.department_id
-    );
-
 # 练习6 查询部门名为Sales或IT的员工信息
 select
     e.employee_id,
@@ -206,6 +196,30 @@ from employees e
     join departments d on e.department_id = d.department_id
 where
     d.department_name in ('Sales', 'IT');
+
+# 练习7 查询哪些部门没有员工
+select d.department_id
+from departments d
+    left join employees e on d.department_id = e.department_id
+    where e.department_id is null;
+
+# 练习8 查询部门名称为Sales和IT的员工信息
+select
+    e.employee_id,
+    e.last_name,
+    e.department_id
+from employees e
+    join departments d on e.department_id = d.department_id
+where d.department_name in ('Sales', 'IT');    
+
+# 方式2 子查询
+select department_id
+from departments
+where not exists (
+    select *
+    from employees
+    where department_id = departments.department_id
+)
 
 # 7种join的实现
 # 1. 交集
