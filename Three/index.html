@@ -2,19 +2,20 @@
  * @Author: water.li
  * @Date: 2025-03-14 22:02:49
  * @Description: 
- * @FilePath: \Notebook\Three\demo\index.html
+ * @FilePath: \Notebook\Three\index.html
 -->
 
 <script type="importmap">
   {
-  "imports": {
-    "three": "./build/three.module.js"
+    "imports": {
+      "three": "./build/three.module.js"
+    }
   }
-}
 </script>
 <script type="module">
-  import * as THREE from 'three';
+  import * as THREE from "three";
   const scene = new THREE.Scene();
   const geometry = new THREE.BoxGeometry(100, 100, 100);
-  
+  const camera = new THREE.PerspectiveCamera();
+  camera.position.set(200, 200, 200);
 </script>
