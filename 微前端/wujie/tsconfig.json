@@ -1,20 +1,23 @@
 {
+  "include": [
+    "./core"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
   "compilerOptions": {
-    "target": "es6", 
-    "rootDirs": ["../src","../unit"],
-  
+    "outDir": "./esm",
+    "rootDir": "./core",
     /* 额外的检查 */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "esModuleInterop": true,
-    "noEmitOnError": true,
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "moduleResolution": "node",
     "downlevelIteration": true,
-    "experimentalDecorators": true,
     "declaration": true,
+    "emitDeclarationOnly": true,
+    "isolatedModules": true
   }
 }
