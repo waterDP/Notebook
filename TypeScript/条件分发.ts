@@ -72,6 +72,14 @@ type SelectType<T> = T extends Fish ? Water : Sky;
 type F7 = SelectType<Bird | Fish>;
 type F8 = Bird | Fish extends Fish ? Water : Sky;
 
+// 产生条件分发
+/**
+ * 1.如果条件类型是联合类型，会将联合类型拆开
+ * 2.如果条件类型是交叉类型，会将交叉类型合并
+ */
+type Condition<T> = T extends Fish ? Water : Sky;
+type F9 = Condition<Bird | Fish>;
+
 /**
  * & 分发机制
  * 1.通过泛型传入的方式来比较的时候会出现分发
