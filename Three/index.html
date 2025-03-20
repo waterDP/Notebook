@@ -8,14 +8,9 @@
 <script type="importmap">
   {
     "imports": {
-      "three": "./build/three.module.js"
+      "three": "./build/three.module.js",
+      "three/addons/": "./examples/jsm/"
     }
   }
 </script>
-<script type="module">
-  import * as THREE from "three";
-  const scene = new THREE.Scene();
-  const geometry = new THREE.BoxGeometry(100, 100, 100);
-  const camera = new THREE.PerspectiveCamera();
-  camera.position.set(200, 200, 200);
-</script>
+<script type="module" src="./src/main.js"></script>
