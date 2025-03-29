@@ -48,7 +48,7 @@
       render();
 
       let isRending = false;
-      app.addEventListener("scoll", () => {
+      app.addEventListener("scroll", () => {
         if (!isRending) {
           requestAnimationFrame(() => {
             render();
