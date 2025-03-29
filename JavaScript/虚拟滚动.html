@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>虚拟滚动</title>
+  </head>
+  <body>
+    <div id="app" style="height: 400px; overflow: auto; border: 1px solid #ccc">
+      <div id="phantom" style="position: relative"></div>
+    </div>
+    <script>
+      const totalItems = 1000000;
+      const itemHeight = 40;
+      const data = Array.from({ length: totalItems }, (_, i) => `item#${i}`);
+      const app = document.getElementById("app");
+      const phantom = document.getElementById("phantom");
+      // 设置点位容器总高度
+      phantom.style.height = `${totalItems * itemHeight}px`;
+
+      // 可视区域渲染函数
+      function render() {
+        const { scrollTop, clientHeight } = app;
+        const startIndex = Math.floor(scrollTop / itemHeight);
+        const endIndex = Math.min(
+          startIndex + Math.ceil(clientHeight / itemHeight) + 5, // 预加载五项
+          totalItems - 1
+        );
+        const fragment = document.createDocumentFragment();
+        for (let i = startIndex; i <= endIndex; i++) {
+          const item = document.createElement("div");
+          item.style.cssText = `
+            position: absolute;
+            top: ${i * itemHeight}px;
+            height: ${itemHeight}px;
+            width: 100%;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+          `;
+          item.textContent = data[i];
+          fragment.appendChild(item);
+        }
+        // 清空并更新可视频区域
+        phantom.innerHTML = "";
+        phantom.appendChild(fragment);
+      }
+      render();
+
+      let isRending = false;
+      app.addEventListener("scoll", () => {
+        if (!isRending) {
+          requestAnimationFrame(() => {
+            render();
+            isRending = false;
+          });
+          isRending = true;
+        }
+      });
+    </script>
+  </body>
+</html>
