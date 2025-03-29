@@ -57,14 +57,11 @@
         const end = getLocation();
         const dis = start - end;
         first.style.transform = `translateY(${dis}px)`;
-        raf(() => {
+        requestAnimationFrame(() => {
           first.style.transition = "transform 1s";
           first.style.removeProperty("transform");
         });
       };
-      function raf(callback) {
-        requestAnimationFrame(callback);
-      }
     </script>
   </body>
 </html>
