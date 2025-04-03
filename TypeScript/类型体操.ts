@@ -301,14 +301,14 @@ type JSTypeMap = {
   null: null;
 };
 
-type JSTypeNames = keyof JSTypeMap;
+type JSTypes = keyof JSTypeMap;
 
-type ArgsType<T extends JSTypeNames[]> = {
+type Transfer<T extends JSTypes[]> = {
   [I in keyof T]: JSTypeMap[T[I]];
 };
 
-declare function addImpl<T extends JSTypeNames[]>(
-  ...args: [...T, (...args: ArgsType<T>) => any]
+declare function addImpl<T extends JSTypes[]>(
+  ...args: [...T, (...args: Transfer<T>) => any]
 ): void;
 
 addImpl("boolean", "string", "number", (a, b, c) => {});
