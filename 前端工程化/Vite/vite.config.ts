@@ -47,4 +47,4 @@ export default defineConfig({
       dirs: ["src/components", "src/layout/components"],
     }),
   ],
-});
+})
