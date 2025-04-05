@@ -1,8 +1,13 @@
 {
-	"dependencies": {
-		"@vitejs/plugin-vue": "^5.1.4",
-		"unplugin-auto-import": "^0.18.3",
-		"unplugin-vue-components": "^0.27.4",
-		"vite": "^5.4.8"
-	}
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vite --mode test"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "unplugin-auto-import": "^0.18.3",
+    "unplugin-vue-components": "^0.27.4",
+    "vite": "^5.4.8"
+  }
 }

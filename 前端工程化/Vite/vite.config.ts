@@ -28,8 +28,13 @@ export default defineConfig({
             return "vendor";
           }
         },
+        assetFileNames: "[name].[hash].[ext]",
       },
     },
+    assetsInlineLimit: 4043, // 小于这个值的文件会被内联为base64格式
+    outDir: "dist", // 打包输出目录
+    assetsDir: "static", // 静态资源目录
+    emptyOutDir: true, // 打包前清空输出目录
   },
   plugins: [
     Vue(),
@@ -47,4 +52,4 @@ export default defineConfig({
       dirs: ["src/components", "src/layout/components"],
     }),
   ],
-})
+});
