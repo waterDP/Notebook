@@ -1,4 +1,4 @@
-{
+module.exports = {
   "semi": false, // 是否在语句末尾加分号
   "singleQuoter": true, // 是否使用单引号
   "tabWidth": 2, // 缩进的空格数
