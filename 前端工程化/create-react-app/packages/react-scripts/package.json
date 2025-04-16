@@ -1,0 +1,29 @@
+{
+  "name": "react-scripts",
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "water.li <289002199@qq.com>",
+  "homepage": "https://github.com/waterDP/Notebook#readme",
+  "license": "ISC",
+  "main": "lib/react-scripts.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmmirror.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/waterDP/Notebook.git"
+  },
+  "scripts": {
+    "test": "node ./__tests__/react-scripts.test.js"
+  },
+  "bugs": {
+    "url": "https://github.com/waterDP/Notebook/issues"
+  }
+}
