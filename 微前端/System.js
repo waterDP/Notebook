@@ -40,6 +40,7 @@ function saveGlobalProperty() {
     set.add(k);
   }
 }
+// window属性快照
 saveGlobalProperty();
 function getLastGlobalProperty() {
   for (let k in window) {
@@ -68,7 +69,7 @@ export class SystemJs {
           .then((register) => {
             // execute 是真正的渲染逻辑
             // setters 是用来保存加载后的资源 加载资源调用setters
-            let { setters, execute: exe } = register[1](() => {});
+            let { setters, execute: exe } = register[1](() => { });
             execute = exe;
             return [register[0], setters];
           })
