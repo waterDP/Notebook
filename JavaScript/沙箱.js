@@ -68,7 +68,7 @@ function createSandbox(src, obj) {
 // node 使用沙箱很简单，只需要利用原生的vm模块，便可以快速创建沙箱，同时指定上下文
 const vm = require('vm')
 const x = 1
-const sandbox = {x: 2}
+const sandbox = { x: 2 }
 vm.createContext(sandbox)
 
 const code = `x += 40; var y =17`
@@ -79,7 +79,7 @@ console.log(sandbox.y) // 17
 
 // vm 中提供了runNewContext, runInThisContent, runInContext三个方法
 // 为了避免通过原型链逃逸，我们需要切断原型链
-let ctx = Object.create(null) 
+let ctx = Object.create(null)
 ctx.a = 1  // ctx不能包含引用类型的属性
 vm.runInNewContext('this.constructor.constructor("return process")().exit()', ctx)
 
@@ -136,18 +136,68 @@ class SnapshotSandbox {
 }
 const sandbox = new SnapshotSandbox()
 
-// test
-((window) => {
-  window.name = '张三'
-  window.age = 18
-  console.log(window.name, window.age) // 张三， 18
-  sandbox.inactive()  // 还原
-  console.log(window.name, window.age) // undefined, undefined
-  sandbox.active()
-  console.log(window.name, window.age) // 张三， 18 
-})(sandbox.proxy)
+  // test
+  ((window) => {
+    window.name = '张三'
+    window.age = 18
+    console.log(window.name, window.age) // 张三， 18
+    sandbox.inactive()  // 还原
+    console.log(window.name, window.age) // undefined, undefined
+    sandbox.active()
+    console.log(window.name, window.age) // 张三， 18 
+  })(sandbox.proxy)
 
 // todo legacy Sandbox
+
+class LegacySandbox {
+  constructor() {
+    // 1 修改的内容 2. 新增的内容 3 不管修改还是新
+    this.modifyPropsMap = new Map()
+    this.addedPropsMap = new Map()
+    this.currentUpdatedPropsValueMap = new Map()
+
+    const fakeWindow = Object.create(null)
+    const proxy = new Proxy(fakeWindow, {
+      get(target, key) {
+        return window[key]
+      },
+      set(target, key, value) {
+        if (!this.addedPropsMap.has(key)) {
+          this.addedPropsMap.set(key, value)
+        } else if (!this.modifyPropsMap.has(key)) {
+          // 保存修改前的属性
+          this.modifyPropsMap.set(key, window[key])
+        }
+        this.currentUpdatedPropsValueMap.set(key, value)
+        window[key] = value
+      }
+    })
+
+    this.proxy = proxy
+  }
+  setWindowProp(key, value) {
+    if (value === undefined) {
+      delete window[key] 
+    } else {
+      window[key] = value
+    }
+  }
+  active() {
+    this.currentUpdatedPropsValueMap.forEach((value, key) => {
+      this.setWindowProp(key, value)
+    })
+  }
+  inactive() {
+    this.modifyPropsMap.forEach((value, key) => {
+      this.setWindowProp(key, value)
+    })
+    this.addedPropsMap.forEach((_, key) => {
+      this.setWindowProp(key, undefined)
+    })
+  }
+}
+
+
 const callableFnCacheMap = new WeakMap()
 
 function isCallable(fn) {
@@ -155,8 +205,8 @@ function isCallable(fn) {
     return true
   }
   const naughtySafari = typeof document.all == 'function' && typeof document.add === 'undefined'
-  const callable = naughtySafari 
-    ? typeof fn == 'function' && typeof fn !== 'undefined' 
+  const callable = naughtySafari
+    ? typeof fn == 'function' && typeof fn !== 'undefined'
     : typeof fn == 'function'
 
   if (callable) {
