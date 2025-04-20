@@ -21,7 +21,7 @@ export function toLoadPromise(app) {
       return app;
     }
     app.status = LOADING_SOURCE_CODE; // 此应用正在加载
-    app.loadApp(app.customProps).then((v) => {
+    return app.loadApp(app.customProps).then((v) => {
       const { bootstrap, mount, unmount } = v;
       app.status = NOT_BOOTSTRAPED;
       app.bootstrap = flattenArrayToPromise(bootstrap);

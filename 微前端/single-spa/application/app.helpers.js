@@ -18,22 +18,28 @@ export const BOOTSTRAPING = "BOOTSTRAPING"; // 启动中
 export const NOT_MOUNTED = "NOT_MOUNTED"; // 没有被挂载
 
 // 挂载流程
-export const MOUNTING = "MOUNTING";
-export const MOUNTED = "MOUNTED";
+export const MOUNTING = "MOUNTING"; // 挂载中
+export const MOUNTED = "MOUNTED";  // 挂载完成
 
 // 卸载流程
-export const UNMOUNTING = "UNMOUNTING";
+export const UNMOUNTING = "UNMOUNTING"; // 卸载中
 
 // 看一下这个应用是否正在被激活
+/** @return { boolean } */
 export function isActive(app) {
   return app.status === MOUNTED; // 此应用正在被激活
 }
 
 // 看一下此应用是否被激活
+/** @return { boolean } */
 export function shouldBeActive(app) {
   return app.activeWhen(window.location);
 }
 
+/**
+ * 获取需要加载、挂载和卸载的应用列表
+ * @returns {Object} 包含三个数组的对象，分别为需要加载的应用列表、需要挂载的应用列表和需要卸载的应用列表
+ */
 export function getAppChanges() {
   const appsToLoad = [];
   const appsToMount = [];
@@ -57,7 +63,7 @@ export function getAppChanges() {
         break;
       case MOUNTED:
         if (!appShouldBeActive) {
-          appsToUnmount.push(app);
+          appsToUnmount.push(app); 
         }
         break;
       default:

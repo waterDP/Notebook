@@ -1,3 +1,9 @@
+/*
+ * @Author: water.li
+ * @Date: 2023-06-09 20:58:05
+ * @Description: 
+ * @FilePath: \Notebook\微前端\single-spa\navigation\navigation-events.js
+ */
 // 对用户的路径切换 进行劫持  劫持后 重新调用reroute方法 进行计算应用的加载
 
 import { reroute } from "./reroute";
@@ -55,7 +61,7 @@ export function callCaptureEventListeners(e) {
 }
 
 function patchFn(updateState, methodName) {
-  return function() {
+  return function () {
     const urlBefore = window.location.href
     const r = updateState.apply(this, arguments)
     const urlAfter = window.location.href
@@ -69,9 +75,8 @@ function patchFn(updateState, methodName) {
   }
 }
 
-window.history.pushState = patchFn(window.history.pushState, "pushState");
+window.history.pushState =
+  patchFn(window.history.pushState, "pushState");
 
-window.history.replaceState = patchFn(
-  window.history.replaceState,
-  "replaceState"
-);
+window.history.replaceState =
+  patchFn(window.history.replaceState, "replaceState");
