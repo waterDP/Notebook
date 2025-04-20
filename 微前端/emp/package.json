@@ -1,0 +1,31 @@
+{
+  "name": "emp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "emp": ".bin/emp.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
+    "axios": "^1.8.4",
+    "babel-loader": "^10.0.0",
+    "commander": "^13.1.0",
+    "fs-extra": "^11.3.0",
+    "git-promise": "^1.0.0",
+    "html-webpack-plugin": "^5.6.3",
+    "inquirer": "^12.5.2",
+    "nanospinner": "^1.2.2",
+    "webpack-chain": "^6.5.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.1"
+  }
+}
