@@ -177,7 +177,7 @@ class LegacySandbox {
   }
   setWindowProp(key, value) {
     if (value === undefined) {
-      delete window[key] 
+      delete window[key]
     } else {
       window[key] = value
     }
@@ -341,4 +341,30 @@ class SingularProxySandbox {
   }
 }
 
-let sandbox = new SingularProxySandbox()
+
+// todo ProxySandbox
+class ProxySandbox {
+  constructor() {
+    this.running = false
+    const fakeWindow = Object.create(null)
+    this.proxy = new Proxy(fakeWindow, {
+      get(target, key) {
+        return key in target ? target[key] : window[key]
+      },
+      set(target, key, value) {
+        if (running) {
+          target[key] = value
+        }
+        return true
+      }
+    })
+  }
+  active() {
+    if (!this.running) {
+      this.running = true
+    }
+  }
+  inactive() {
+    this.running = false
+  }
+}
