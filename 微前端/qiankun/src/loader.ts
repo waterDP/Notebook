@@ -74,6 +74,8 @@ function createElement(
   containerElement.innerHTML = appContent;
   // appContent always wrapped with a singular div
   const appElement = containerElement.firstChild as HTMLElement;
+
+  // ^ 对于严格样式隔离，就是增加影子DOM来对隔离
   if (strictStyleIsolation) {
     if (!supportShadowDOM) {
       console.warn(
@@ -94,6 +96,7 @@ function createElement(
     }
   }
 
+  // ^ 作用域CSS 就是拿到所有的style标签，对css添加css前缀
   if (scopedCSS) {
     const attr = appElement.getAttribute(css.QiankunCSSRewriteAttr);
     if (!attr) {
@@ -343,7 +346,8 @@ export async function loadApp<T extends ObjectType>(
 
   await execHooksChain(toArray(beforeLoad), app, global);
 
-  // get the lifecycle hooks from module exports
+  // get the lifecycle hooks from module exports\
+  // ^ 根据指定的沙箱环境执行脚本
   const scriptExports: any = await execScripts(global, sandbox && !useLooseSandbox, {
     scopedGlobalVariables: speedySandbox ? cachedGlobals : [],
   });
@@ -353,7 +357,7 @@ export async function loadApp<T extends ObjectType>(
     global,
     sandboxContainer?.instance?.latestSetProp,
   );
-
+  // ^ 获取到应用导出的接入协议，可以使用了
   const { onGlobalStateChange, setGlobalState, offGlobalStateChange }: Record<string, CallableFunction> =
     getMicroAppStateActions(appInstanceId);
 
