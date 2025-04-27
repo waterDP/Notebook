@@ -8,9 +8,9 @@ import type {
   lifeCyclesType,
   MicroAppConfig,
   GetActiveAppsParam,
-} from '@micro-app/types'
-import { defineElement } from './micro_app_element'
-import preFetch, { getGlobalAssets } from './prefetch'
+} from "@micro-app/types";
+import { defineElement } from "./micro_app_element";
+import preFetch, { getGlobalAssets } from "./prefetch";
 import {
   logError,
   logWarn,
@@ -22,12 +22,12 @@ import {
   pureCreateElement,
   isElement,
   isFunction,
-} from './libs/utils'
-import { EventCenterForBaseApp } from './interact'
-import { initGlobalEnv } from './libs/global_env'
-import { appInstanceMap } from './create_app'
-import { lifeCycles } from './constants'
-import { router } from './sandbox/router'
+} from "./libs/utils";
+import { EventCenterForBaseApp } from "./interact";
+import { initGlobalEnv } from "./libs/global_env";
+import { appInstanceMap } from "./create_app";
+import { lifeCycles } from "./constants";
+import { router } from "./sandbox/router";
 
 /**
  * if app not prefetch & not unmount, then app is active
@@ -35,41 +35,34 @@ import { router } from './sandbox/router'
  * @param excludePreRender exclude pre render app
  * @returns active apps
  */
-export function getActiveApps ({
+export function getActiveApps({
   excludeHiddenApp = false,
   excludePreRender = false,
 }: GetActiveAppsParam = {}): AppName[] {
-  const activeApps: AppName[] = []
+  const activeApps: AppName[] = [];
   appInstanceMap.forEach((app: AppInterface, appName: AppName) => {
     if (
       !app.isUnmounted() &&
-      (
-        !app.isPrefetch || (
-          app.isPrerender && !excludePreRender
-        )
-      ) &&
-      (
-        !excludeHiddenApp ||
-        !app.isHidden()
-      )
+      (!app.isPrefetch || (app.isPrerender && !excludePreRender)) &&
+      (!excludeHiddenApp || !app.isHidden())
     ) {
-      activeApps.push(appName)
+      activeApps.push(appName);
     }
-  })
+  });
 
-  return activeApps
+  return activeApps;
 }
 
 // get all registered apps
-export function getAllApps (): string[] {
-  return Array.from(appInstanceMap.keys())
+export function getAllApps(): string[] {
+  return Array.from(appInstanceMap.keys());
 }
 
 type unmountAppOptions = {
-  destroy?: boolean // destroy app, default is false
-  clearAliveState?: boolean // clear keep-alive app state, default is false
-  clearData?: boolean // clear data from base app & child app
-}
+  destroy?: boolean; // destroy app, default is false
+  clearAliveState?: boolean; // clear keep-alive app state, default is false
+  clearData?: boolean; // clear data from base app & child app
+};
 
 /**
  * unmount app by appName
@@ -77,8 +70,11 @@ type unmountAppOptions = {
  * @param options unmountAppOptions
  * @returns Promise<void>
  */
-export function unmountApp (appName: string, options?: unmountAppOptions): Promise<boolean> {
-  const app = appInstanceMap.get(formatAppName(appName))
+export function unmountApp(
+  appName: string,
+  options?: unmountAppOptions
+): Promise<boolean> {
+  const app = appInstanceMap.get(formatAppName(appName));
   return new Promise((resolve) => {
     if (app) {
       if (app.isUnmounted() || app.isPrefetch) {
@@ -87,11 +83,11 @@ export function unmountApp (appName: string, options?: unmountAppOptions): Promi
             destroy: !!options?.destroy,
             clearData: !!options?.clearData,
             keepRouteState: false,
-            unmountcb: resolve.bind(null, true)
-          })
+            unmountcb: resolve.bind(null, true),
+          });
         } else {
-          if (options?.destroy) app.actionsForCompletelyDestroy()
-          resolve(true)
+          if (options?.destroy) app.actionsForCompletelyDestroy();
+          resolve(true);
         }
       } else if (app.isHidden()) {
         if (options?.destroy) {
@@ -99,83 +95,101 @@ export function unmountApp (appName: string, options?: unmountAppOptions): Promi
             destroy: true,
             clearData: true,
             keepRouteState: true,
-            unmountcb: resolve.bind(null, true)
-          })
+            unmountcb: resolve.bind(null, true),
+          });
         } else if (options?.clearAliveState) {
           app.unmount({
             destroy: false,
             clearData: !!options.clearData,
             keepRouteState: true,
-            unmountcb: resolve.bind(null, true)
-          })
+            unmountcb: resolve.bind(null, true),
+          });
         } else {
-          resolve(true)
+          resolve(true);
         }
       } else {
-        const container = getRootContainer(app.container!)
+        const container = getRootContainer(app.container!);
         const unmountHandler = () => {
-          container.removeEventListener(lifeCycles.UNMOUNT, unmountHandler)
-          container.removeEventListener(lifeCycles.AFTERHIDDEN, afterhiddenHandler)
-          resolve(true)
-        }
+          container.removeEventListener(lifeCycles.UNMOUNT, unmountHandler);
+          container.removeEventListener(
+            lifeCycles.AFTERHIDDEN,
+            afterhiddenHandler
+          );
+          resolve(true);
+        };
 
         const afterhiddenHandler = () => {
-          container.removeEventListener(lifeCycles.UNMOUNT, unmountHandler)
-          container.removeEventListener(lifeCycles.AFTERHIDDEN, afterhiddenHandler)
-          resolve(true)
-        }
+          container.removeEventListener(lifeCycles.UNMOUNT, unmountHandler);
+          container.removeEventListener(
+            lifeCycles.AFTERHIDDEN,
+            afterhiddenHandler
+          );
+          resolve(true);
+        };
 
-        container.addEventListener(lifeCycles.UNMOUNT, unmountHandler)
-        container.addEventListener(lifeCycles.AFTERHIDDEN, afterhiddenHandler)
+        container.addEventListener(lifeCycles.UNMOUNT, unmountHandler);
+        container.addEventListener(lifeCycles.AFTERHIDDEN, afterhiddenHandler);
 
         if (options?.destroy) {
-          let destroyAttrValue, destoryAttrValue
-          container.hasAttribute('destroy') && (destroyAttrValue = container.getAttribute('destroy'))
-          container.hasAttribute('destory') && (destoryAttrValue = container.getAttribute('destory'))
+          let destroyAttrValue, destoryAttrValue;
+          container.hasAttribute("destroy") &&
+            (destroyAttrValue = container.getAttribute("destroy"));
+          container.hasAttribute("destory") &&
+            (destoryAttrValue = container.getAttribute("destory"));
 
-          container.setAttribute('destroy', 'true')
-          container.parentNode!.removeChild(container)
+          container.setAttribute("destroy", "true");
+          container.parentNode!.removeChild(container);
 
-          container.removeAttribute('destroy')
+          container.removeAttribute("destroy");
 
-          isString(destroyAttrValue) && container.setAttribute('destroy', destroyAttrValue)
-          isString(destoryAttrValue) && container.setAttribute('destory', destoryAttrValue)
-        } else if (options?.clearAliveState && container.hasAttribute('keep-alive')) {
-          const keepAliveAttrValue = container.getAttribute('keep-alive')!
-          container.removeAttribute('keep-alive')
+          isString(destroyAttrValue) &&
+            container.setAttribute("destroy", destroyAttrValue);
+          isString(destoryAttrValue) &&
+            container.setAttribute("destory", destoryAttrValue);
+        } else if (
+          options?.clearAliveState &&
+          container.hasAttribute("keep-alive")
+        ) {
+          const keepAliveAttrValue = container.getAttribute("keep-alive")!;
+          container.removeAttribute("keep-alive");
 
-          let clearDataAttrValue = null
+          let clearDataAttrValue = null;
           if (options.clearData) {
-            clearDataAttrValue = container.getAttribute('clear-data')
-            container.setAttribute('clear-data', 'true')
+            clearDataAttrValue = container.getAttribute("clear-data");
+            container.setAttribute("clear-data", "true");
           }
 
-          container.parentNode!.removeChild(container)
+          container.parentNode!.removeChild(container);
 
-          container.setAttribute('keep-alive', keepAliveAttrValue)
-          isString(clearDataAttrValue) && container.setAttribute('clear-data', clearDataAttrValue)
+          container.setAttribute("keep-alive", keepAliveAttrValue);
+          isString(clearDataAttrValue) &&
+            container.setAttribute("clear-data", clearDataAttrValue);
         } else {
-          let clearDataAttrValue = null
+          let clearDataAttrValue = null;
           if (options?.clearData) {
-            clearDataAttrValue = container.getAttribute('clear-data')
-            container.setAttribute('clear-data', 'true')
+            clearDataAttrValue = container.getAttribute("clear-data");
+            container.setAttribute("clear-data", "true");
           }
 
-          container.parentNode!.removeChild(container)
+          container.parentNode!.removeChild(container);
 
-          isString(clearDataAttrValue) && container.setAttribute('clear-data', clearDataAttrValue)
+          isString(clearDataAttrValue) &&
+            container.setAttribute("clear-data", clearDataAttrValue);
         }
       }
     } else {
-      logWarn(`app ${appName} does not exist when unmountApp`)
-      resolve(false)
+      logWarn(`app ${appName} does not exist when unmountApp`);
+      resolve(false);
     }
-  })
+  });
 }
 
 // unmount all apps in turn
-export function unmountAllApps (options?: unmountAppOptions): Promise<boolean> {
-  return Array.from(appInstanceMap.keys()).reduce((pre, next) => pre.then(() => unmountApp(next, options)), Promise.resolve(true))
+export function unmountAllApps(options?: unmountAppOptions): Promise<boolean> {
+  return Array.from(appInstanceMap.keys()).reduce(
+    (pre, next) => pre.then(() => unmountApp(next, options)),
+    Promise.resolve(true)
+  );
 }
 
 /**
@@ -185,42 +199,42 @@ export function unmountAllApps (options?: unmountAppOptions): Promise<boolean> {
  * @param destroy unmount app with destroy mode
  * @returns Promise<boolean>
  */
-export function reload (appName: string, destroy?: boolean): Promise<boolean> {
+export function reload(appName: string, destroy?: boolean): Promise<boolean> {
   return new Promise((resolve) => {
-    const app = appInstanceMap.get(formatAppName(appName))
+    const app = appInstanceMap.get(formatAppName(appName));
     if (app) {
-      const rootContainer = app.container && getRootContainer(app.container)
+      const rootContainer = app.container && getRootContainer(app.container);
       if (rootContainer) {
-        const currentData = microApp.getData(appName)
-        app.isReloading = true
+        const currentData = microApp.getData(appName);
+        app.isReloading = true;
         rootContainer.reload(destroy).then(() => {
           if (currentData) {
-            microApp.setData(appName, currentData)
+            microApp.setData(appName, currentData);
           }
-          app.isReloading = false
-          resolve(true)
-        })
+          app.isReloading = false;
+          resolve(true);
+        });
       } else {
-        logWarn(`app ${appName} is not rendered, cannot use reload`)
-        resolve(false)
+        logWarn(`app ${appName} is not rendered, cannot use reload`);
+        resolve(false);
       }
     } else {
-      logWarn(`app ${appName} does not exist when reload app`)
-      resolve(false)
+      logWarn(`app ${appName} does not exist when reload app`);
+      resolve(false);
     }
-  })
+  });
 }
 
 interface RenderAppOptions extends MicroAppConfig {
-  name: string,
-  url: string,
-  container: string | Element,
-  baseroute?: string,
-  'default-page'?: string,
-  data?: Record<PropertyKey, unknown>,
-  onDataChange?: Func,
-  lifeCycles?: lifeCyclesType,
-  [key: string]: unknown,
+  name: string;
+  url: string;
+  container: string | Element;
+  baseroute?: string;
+  "default-page"?: string;
+  data?: Record<PropertyKey, unknown>;
+  onDataChange?: Func;
+  lifeCycles?: lifeCyclesType;
+  [key: string]: unknown;
 }
 
 /**
@@ -228,70 +242,86 @@ interface RenderAppOptions extends MicroAppConfig {
  * @param options RenderAppOptions
  * @returns Promise<boolean>
  */
-export function renderApp (options: RenderAppOptions): Promise<boolean> {
+export function renderApp(options: RenderAppOptions): Promise<boolean> {
   return new Promise((resolve) => {
-    if (!isPlainObject<RenderAppOptions>(options)) return logError('renderApp options must be an object')
-    const container: Element | null = isElement(options.container) ? options.container : isString(options.container) ? document.querySelector(options.container) : null
-    if (!isElement(container)) return logError('Target container is not a DOM element.')
+    if (!isPlainObject<RenderAppOptions>(options))
+      return logError("renderApp options must be an object");
+    const container: Element | null = isElement(options.container)
+      ? options.container
+      : isString(options.container)
+      ? document.querySelector(options.container)
+      : null;
+    if (!isElement(container))
+      return logError("Target container is not a DOM element.");
 
-    const microAppElement = pureCreateElement<any>(microApp.tagName)
+    const microAppElement = pureCreateElement<any>(microApp.tagName);
 
     for (const attr in options) {
-      if (attr === 'onDataChange') {
+      if (attr === "onDataChange") {
         if (isFunction(options[attr])) {
-          microAppElement.addEventListener('datachange', options[attr])
+          microAppElement.addEventListener("datachange", options[attr]);
         }
-      } else if (attr === 'lifeCycles') {
-        const lifeCycleConfig = options[attr]
+      } else if (attr === "lifeCycles") {
+        const lifeCycleConfig = options[attr];
         if (isPlainObject(lifeCycleConfig)) {
           for (const lifeName in lifeCycleConfig) {
-            if (lifeName.toUpperCase() in lifeCycles && isFunction(lifeCycleConfig[lifeName])) {
-              microAppElement.addEventListener(lifeName.toLowerCase(), lifeCycleConfig[lifeName])
+            if (
+              lifeName.toUpperCase() in lifeCycles &&
+              isFunction(lifeCycleConfig[lifeName])
+            ) {
+              microAppElement.addEventListener(
+                lifeName.toLowerCase(),
+                lifeCycleConfig[lifeName]
+              );
             }
           }
         }
-      } else if (attr !== 'container') {
-        microAppElement.setAttribute(attr, options[attr])
+      } else if (attr !== "container") {
+        microAppElement.setAttribute(attr, options[attr]);
       }
     }
 
     const handleMount = () => {
-      releaseListener()
-      resolve(true)
-    }
+      releaseListener();
+      resolve(true);
+    };
 
     const handleError = () => {
-      releaseListener()
-      resolve(false)
-    }
+      releaseListener();
+      resolve(false);
+    };
 
     const releaseListener = () => {
-      microAppElement.removeEventListener(lifeCycles.MOUNTED, handleMount)
-      microAppElement.removeEventListener(lifeCycles.ERROR, handleError)
-    }
+      microAppElement.removeEventListener(lifeCycles.MOUNTED, handleMount);
+      microAppElement.removeEventListener(lifeCycles.ERROR, handleError);
+    };
 
-    microAppElement.addEventListener(lifeCycles.MOUNTED, handleMount)
-    microAppElement.addEventListener(lifeCycles.ERROR, handleError)
+    microAppElement.addEventListener(lifeCycles.MOUNTED, handleMount);
+    microAppElement.addEventListener(lifeCycles.ERROR, handleError);
 
-    container.appendChild(microAppElement)
-  })
+    container.appendChild(microAppElement);
+  });
 }
 
-export class MicroApp extends EventCenterForBaseApp implements MicroAppBaseType {
-  tagName = 'micro-app'
-  hasInit = false
-  options: OptionsType = {}
-  router: Router = router
-  preFetch = preFetch
-  unmountApp = unmountApp
-  unmountAllApps = unmountAllApps
-  getActiveApps = getActiveApps
-  getAllApps = getAllApps
-  reload = reload
-  renderApp = renderApp
-  start (options?: OptionsType): void {
+export class MicroApp
+  extends EventCenterForBaseApp
+  implements MicroAppBaseType
+{
+  tagName = "micro-app";
+  hasInit = false;
+  options: OptionsType = {};
+  router: Router = router;
+  preFetch = preFetch;
+  unmountApp = unmountApp;
+  unmountAllApps = unmountAllApps;
+  getActiveApps = getActiveApps;
+  getAllApps = getAllApps;
+  reload = reload;
+  renderApp = renderApp;
+  // 是否支持webCompnent，不兼容低版本的浏览器
+  start(options?: OptionsType): void {
     if (!isBrowser || !window.customElements) {
-      return logError('micro-app is not supported in this environment')
+      return logError("micro-app is not supported in this environment");
     }
 
     /**
@@ -300,44 +330,47 @@ export class MicroApp extends EventCenterForBaseApp implements MicroAppBaseType 
      *  2、判断逻辑是否放在initGlobalEnv中合适？--- 不合适
      */
     if (this.hasInit) {
-      return logError('microApp.start executed repeatedly')
+      return logError("microApp.start executed repeatedly");
     }
 
-    this.hasInit = true
+    this.hasInit = true;
 
     if (options?.tagName) {
+      // 自定义标签名
       if (/^micro-app(-\S+)?/.test(options.tagName)) {
-        this.tagName = options.tagName
+        this.tagName = options.tagName;
       } else {
-        return logError(`${options.tagName} is invalid tagName`)
+        return logError(`${options.tagName} is invalid tagName`);
       }
     }
 
-    initGlobalEnv()
+    initGlobalEnv();
 
     if (window.customElements.get(this.tagName)) {
-      return logWarn(`element ${this.tagName} is already defined`)
+      return logWarn(`element ${this.tagName} is already defined`);
     }
 
     if (isPlainObject<OptionsType>(options)) {
-      this.options = options
-      options['disable-scopecss'] = options['disable-scopecss'] ?? options.disableScopecss
-      options['disable-sandbox'] = options['disable-sandbox'] ?? options.disableSandbox
+      this.options = options;
+      options["disable-scopecss"] =
+        options["disable-scopecss"] ?? options.disableScopecss;
+      options["disable-sandbox"] =
+        options["disable-sandbox"] ?? options.disableSandbox;
 
       // load app assets when browser is idle
-      options.preFetchApps && preFetch(options.preFetchApps)
+      options.preFetchApps && preFetch(options.preFetchApps);
 
       // load global assets when browser is idle
-      options.globalAssets && getGlobalAssets(options.globalAssets)
+      options.globalAssets && getGlobalAssets(options.globalAssets);
 
       if (isPlainObject(options.plugins)) {
-        const modules = options.plugins.modules
+        const modules = options.plugins.modules;
         if (isPlainObject(modules)) {
           for (const appName in modules) {
-            const formattedAppName = formatAppName(appName)
+            const formattedAppName = formatAppName(appName);
             if (formattedAppName && appName !== formattedAppName) {
-              modules[formattedAppName] = modules[appName]
-              delete modules[appName]
+              modules[formattedAppName] = modules[appName];
+              delete modules[appName];
             }
           }
         }
@@ -345,10 +378,10 @@ export class MicroApp extends EventCenterForBaseApp implements MicroAppBaseType 
     }
 
     // define customElement after init
-    defineElement(this.tagName)
+    defineElement(this.tagName);
   }
 }
 
-const microApp = new MicroApp()
+const microApp = new MicroApp();
 
-export default microApp
+export default microApp;
