@@ -13,10 +13,6 @@ const path = require('path')
 
 class Init {
   templates = {}
-  async checkTemplate(url) {
-    const { data } = await axios.get(url)
-    return data
-  }
   async setup(options) {
     if (typeof options.template === 'string') {
       const templates = await this.checkTemplate(options.template)
@@ -26,6 +22,12 @@ class Init {
     }
     await this.selectTemplate(this.templates)
   }
+
+  async checkTemplate(url) {
+    const { data } = await axios.get(url)
+    return data
+  }
+
   async selectTemplate(templates) {
     const inquirer = (await import('inquirer')).default
     const anwsers = await inquirer.prompt([
