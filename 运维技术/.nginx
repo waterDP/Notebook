@@ -81,8 +81,8 @@ http {
   limit_conn_zone $binary_remote_addr zone=conn_zone:10m;
 
   server {
-    listen 192.168.17.129:80; # 监听的端口号
-    server_name www.baidu.com; #域名
+    listen 80; # 监听的端口号
+    server_name www.baidu.com; #域名或ip地址
     charset charset | off; # 指定字符集
 
     # 限制请求体的大小，若超过所设定的大小，返回413错误
