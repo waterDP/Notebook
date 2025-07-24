@@ -1,7 +1,7 @@
-import {observe, set, del} from './observer'
-import Dep from './observer/dep'
-import {proxy, isObject, noop} from './shared/utils'
-import Watcher from './observer/watcher'
+import { observe, set, del } from '../observer'
+import Dep from '../observer/dep'
+import { proxy, isObject, noop } from '../shared/utils'
+import Watcher from '../observer/watcher'
 
 // 此方法在init中调用
 export function initState(vm) {
@@ -23,11 +23,11 @@ export function initState(vm) {
   }
 }
 
-function initProps(vm, props) {}
+function initProps(vm, props) { }
 
 function initMethods(vm) {
   for (const key in methods) {
-    vm[key] = typeof methods[key] !== 'function' ? noop : methods[key].bind(vm) 
+    vm[key] = typeof methods[key] !== 'function' ? noop : methods[key].bind(vm)
   }
 }
 
@@ -47,7 +47,7 @@ function initComputed(vm, computed) {
     const userDef = computed[key]
     const getter = typeof userDef === 'function' ? userDef : userDef.get
 
-    watchers[key] = new Watcher(vm, getter, noop, {lazy: true})
+    watchers[key] = new Watcher(vm, getter, noop, { lazy: true })
 
     defineComputed(vm, key, userDef)
   }
@@ -62,7 +62,7 @@ const sharedPropertyDefinition = {
 
 function defineComputed(target, key, userDef) {
   // 这里需要添加缓存效果
-  if (typeof userDef === 'function') {  
+  if (typeof userDef === 'function') {
     sharedPropertyDefinition.get = createComputedGetter(key)
   } else {
     sharedPropertyDefinition.get = createComputedGetter(key)
@@ -72,12 +72,12 @@ function defineComputed(target, key, userDef) {
 }
 
 function createComputedGetter(key) {
-  return function() { // 做缓存
+  return function () { // 做缓存
     let watcher = this._computedWatchers[key] // this = vm
     if (watcher.dirty) { // 如果dirty为true, 就调用用户的方法
       watcher.evaluate()
     }
-    if (Dep.target) { 
+    if (Dep.target) {
       // 计算属性出栈后 还要渲染watcher 我应该让计算属性watcher里面的属性也要收集上一层的watcher
       watcher.depend()
     }
@@ -118,7 +118,7 @@ function createWatcher(vm, key, handler, options) {
 export function stateMixin(Vue) {
   Vue.prototype.$set = set
   Vue.prototype.$del = del
-  Vue.prototype.$watch = function(exprOrFn, cb, options) {
+  Vue.prototype.$watch = function (exprOrFn, cb, options) {
     const vm = this
     // ! 用户自己写的watcher
     options.user = true

@@ -2,14 +2,14 @@
  * @Author: water.li
  * @Date: 2022-10-05 20:19:26
  * @Description: 
- * @FilePath: \note\Vue\vue源码\instance\lifecycle.js
+ * @FilePath: \Notebook\Vue\vue源码\instance\lifecycle.js
  */
-import Watcher from './observer/watcher'
-import {noop} from './shared/utils'
-import {patch} from './vnode/patch'
+import Watcher from '../observer/watcher'
+import { noop } from '../shared/utils'
+import { patch } from '../vdom/patch'
 
 export function lifecycleMixin(Vue) {
-  Vue.prototype._update = function(vnode) {
+  Vue.prototype._update = function (vnode) {
     let vm = this
     const prevVnode = vm._vnode
     // 第一次默认不需要diff算法
@@ -20,7 +20,7 @@ export function lifecycleMixin(Vue) {
     } else {
       vm.$el = patch(prevVnode, vnode)
     }
- 
+
   }
 
   Vue.prototype.$forceUpdate = function () {
@@ -39,7 +39,7 @@ export function mountComponent(vm, el) {
   // 无论是渲染还是更新，都会调用此方法
   // vm._render 通过解析的render方法 渲染出虚拟dom
   // vm._update 通过虚拟dom创建真实的dom
-  let updateComponent = function() {  
+  let updateComponent = function () {
     // 返回的是虚拟dom
     vm._update(vm._render())
   }

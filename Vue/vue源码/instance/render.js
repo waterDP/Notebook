@@ -2,12 +2,12 @@
  * @Author: water.li
  * @Date: 2022-04-16 20:38:06
  * @Description: 
- * @FilePath: \note\Vue\vue源码\instance\render.js
+ * @FilePath: \Notebook\Vue\vue源码\instance\render.js
  */
 
 import { createElement } from '../vdom/create-element'
 import { installRenderHelpers } from './render-helpers'
-import {nextTick} from './util/next-tick'
+import {nextTick} from '../util/next-tick'
 
 export function initRender(vm) {
   vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
