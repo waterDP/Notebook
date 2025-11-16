@@ -122,8 +122,7 @@ deterministic contains sql reads sql data begin
 	            last_name = 'Abel'
 	    )
 	end
-/
-/
+//
 
 delimiter $
 
