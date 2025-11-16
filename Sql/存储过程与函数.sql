@@ -30,7 +30,8 @@ call
     # 举例 创建存储过程show_min_salary 查看emps表的最低薪资值。并将最低薪资通过OUT参数'ms'输出
     desc employees
 
-delimiter / /
+delimiter /
+/
 
 create procedure SHOW_MIN_SALARY(out MS double) begin 
 	select min(salary) into ms from emps;
@@ -65,7 +66,8 @@ call
     # 举例 创建存储过程show_someone_salary2(),查看emps表的某个员工的薪资
     # 并用in 参数empname输入员工姓名，用out参数empslary输出员工薪资
 
-delimiter / /
+delimiter /
+/
 
 create procedure SHOW_SOMEONE_SALARY(in EMPNAME varchar
 (2), out EMPSALARY double) begin 
@@ -97,7 +99,7 @@ create procedure SHOW_MGR_NAME(inout EMPNAME varchar(25)) begin
 	        where
 	            last_name = empname
 	    );
-	end ;
+	end;
 
 delimiter;
 
