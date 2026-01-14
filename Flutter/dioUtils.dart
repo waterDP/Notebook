@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2026-01-14 20:39:28
  * @Description: 
- * @FilePath: \flutter_web_demo\lib\dioUtils.dart
+ * @FilePath: \Notebook\Flutter\dioUtils.dart
  */
 
 import 'package:dio/dio.dart';
@@ -12,7 +12,7 @@ class DioUtils {
 
   DioUtils() {
     _dio.options
-      ..baseUrl = 'https://geek.itheima.net/v1_0'
+      ..baseUrl = 'https://geek.itheima.net/v1_0/'
       ..connectTimeout = const Duration(seconds: 5)
       ..connectTimeout = const Duration(seconds: 5)
       ..receiveTimeout = const Duration(seconds: 5);
@@ -38,9 +38,9 @@ class DioUtils {
         handler.reject(context);
       },
     ));
+  }
 
-    get(String url, {Map<String, dynamic>? params}) {
-      return _dio.get(url, queryParameters: params);
-    }
+  Future<Response<dynamic>> get(String url, {Map<String, dynamic>? params}) {
+    return _dio.get(url, queryParameters: params);
   }
 }
