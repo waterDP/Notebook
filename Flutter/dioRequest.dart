@@ -46,3 +46,5 @@ class DioRequest {
     return _dio.get(url, queryParameters: params);
   }
 }
+
+final dioRequest = DioRequest(); // 单例对象
