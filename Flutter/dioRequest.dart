@@ -46,7 +46,7 @@ class DioRequest {
     return _handleResponse(_dio.get(url, queryParameters: params));
   }
 
-  _handleResponse(Future<Response<dynamic>> task) async {
+  Future<dynamic> _handleResponse(Future<Response<dynamic>> task) async {
     try {
       Response<dynamic> res = await task;
       final data = res.data as Map<String, dynamic>;
