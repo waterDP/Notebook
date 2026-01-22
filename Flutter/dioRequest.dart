@@ -14,7 +14,7 @@ class DioRequest {
     _dio.options
       ..baseUrl = 'https://geek.itheima.net/v1_0/'
       ..connectTimeout = const Duration(seconds: 5)
-      ..connectTimeout = const Duration(seconds: 5)
+      ..sendTimeout = const Duration(seconds: 5)
       ..receiveTimeout = const Duration(seconds: 5);
 
     // 拦截器
