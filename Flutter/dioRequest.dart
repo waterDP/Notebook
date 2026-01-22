@@ -2,7 +2,7 @@
  * @Author: water.li
  * @Date: 2026-01-14 20:39:28
  * @Description: 
- * @FilePath: \Notebook\Flutter\dioUtils.dart
+ * @FilePath: \Notebook\Flutter\dioRequest.dart
  */
 
 import 'package:dio/dio.dart';
@@ -42,8 +42,21 @@ class DioRequest {
     );
   }
 
-  Future<Response<dynamic>> get(String url, {Map<String, dynamic>? params}) {
-    return _dio.get(url, queryParameters: params);
+  get(String url, {Map<String, dynamic>? params}) {
+    return _handleResponse(_dio.get(url, queryParameters: params));
+  }
+
+  _handleResponse(Future<Response<dynamic>> task) async {
+    try {
+      Response<dynamic> res = await task;
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] == '1') {
+        return data['result'];
+      }
+      throw Exception(data['message']);
+    } catch (e) {
+      throw Exception(e);
+    }
   }
 }
 
