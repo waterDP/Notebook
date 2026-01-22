@@ -42,7 +42,7 @@ class DioRequest {
     );
   }
 
-  get(String url, {Map<String, dynamic>? params}) {
+  Future<dynamic> get(String url, {Map<String, dynamic>? params}) {
     return _handleResponse(_dio.get(url, queryParameters: params));
   }
 
