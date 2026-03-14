@@ -30,7 +30,7 @@ export default function Index() {
   });
 
   useReachBottom(() => {
-    // 滚动到底部触发，用于加载理多数数据
+    // 滚动到底部触发，用于加载更多数据
   });
 
   usePageScroll(() => {
