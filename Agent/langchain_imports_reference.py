@@ -38,6 +38,16 @@ from langchain_classic.output_parsers import (
     ResponseSchema              # 响应架构
 )
 
+# ===== Memory（记忆）=====
+from langchain_classic.memory import (
+    ConversationBufferMemory,       # 对话缓冲记忆
+    ConversationBufferWindowMemory, # 窗口对话缓冲记忆
+    ConversationTokenBufferMemory,  # Token对话缓冲记忆
+    ConversationSummaryMemory,      # 对话摘要记忆
+    ConversationSummaryBufferMemory,# 混合摘要缓冲记忆
+    VectorStoreRetrieverMemory      # 向量存储检索记忆
+)
+
 # ===== Chains（链）=====
 from langchain_classic.chains import (
     LLMChain,              # LLM链
