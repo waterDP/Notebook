@@ -37,5 +37,12 @@
   },
   "compile-hero.disable-compile-files-on-did-save-code": false,
   "trae.tab.enableRename": false,
-  "trae.tab.enableAutoImport": false
+  "trae.tab.enableAutoImport": false,
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+  }
 }
