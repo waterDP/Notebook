@@ -6,7 +6,7 @@
 - Reward Model 奖励模型
 - PPO (Proximal Policy Optimization) 无监督的强化学习
 - RLHF (Reward Learning from Human Feedback) 基于人类反馈的强化学习
-
+- 余弦相似度: $\operatorname{Cosine Similarity}(A, B) = \frac{\sum_{i = 1}^{n} a_{i} b_{i}}{\sqrt{\sum_{i = 1}^{n} a_{i}^{2}} \times \sqrt{\sum_{i = 1}^{n} b_{i}^{2}}}$
 
 ## RAG (Retrieval-Augmented Generation)
 - 基于检索的增强生成 
@@ -19,3 +19,9 @@
 - Agent 平台
 - 模型提供智能，Agent保证结果
 - 思维链 （Chain of Thoughts）
+
+
+## 多模态
+- 传统视觉识别模型 Yolo UNet Yolo 目标物体识别 UNet 具体区域的分割
+- 优势：模型小、部署和使用成本低、识别数度高
+- 劣质：需要单独标注数据、训练模型
