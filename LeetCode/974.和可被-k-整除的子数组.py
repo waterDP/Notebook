@@ -59,17 +59,17 @@ FilePath: \note\\LeetCode\\974.和可被-k-整除的子数组.py
 
 
 class Solution:
-  def subarraysDivByK(self, nums: List[int], k: int) -> int:
-    record = {0: 1}
-    total = 0
-    for elem in nums:
-      total += elem
-      modulus = total % k
-      record[modulus] = record.get(modulus, 0) + 1
+    def subarraysDivByK(self, nums: List[int], k: int) -> int:
+        record = {0: 1}
+        total = 0
+        for elem in nums:
+            total += elem
+            modulus = total % k
+            record[modulus] = record.get(modulus, 0) + 1
 
-    ans = 0
-    for x, cx in record.items():
-      ans += cx * (cx - 1) // 2
-    return ans
+        ans = 0
+        for x, cx in record.items():
+            ans += cx * (cx - 1) // 2
+        return ans
 
 # @lc code=end

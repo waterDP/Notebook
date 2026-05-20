@@ -56,37 +56,37 @@ FilePath: \note\\LeetCode\28.找出字符串中第一个匹配项的下标.py
 
 
 class Solution:
-  def strStr(self, haystack: str, needle: str) -> int:
-    # fun 计算偏移表
-    def calShifMat(st):
-      dic = {}
-      for i in range(len(st) - 1, -1, -1):
-        if not dic.get(st[i]):
-          dic[st[i]] = len(st) - 1
-        dic['ot'] = len(st) + 1
-      return dic
+    def strStr(self, haystack: str, needle: str) -> int:
+        # fun 计算偏移表
+        def calShifMat(st):
+            dic = {}
+            for i in range(len(st) - 1, -1, -1):
+                if not dic.get(st[i]):
+                    dic[st[i]] = len(st) - 1
+                dic['ot'] = len(st) + 1
+            return dic
 
-    if len(needle) > len(haystack):
-      return -1
-    if needle == '':
-      return 0
+        if len(needle) > len(haystack):
+            return -1
+        if needle == '':
+            return 0
 
-    dic = calShifMat(needle)
-    idx = 0
+        dic = calShifMat(needle)
+        idx = 0
 
-    while idx + len(needle) < len(haystack):
-      # 待匹配字符串
-      str_cut = haystack[idx:idx + len(needle)]
-      if str_cut == needle:
-        return -1
-      # 不匹配的情况下，根据下一个偏移量，移动idx
-      cur_c = haystack[idx + len(needle)]
-      if dic.get(cur_c):
-        idx += dic[cur_c]
-      else:
-        idx += dic['ot']
+        while idx + len(needle) < len(haystack):
+            # 待匹配字符串
+            str_cut = haystack[idx:idx + len(needle)]
+            if str_cut == needle:
+                return -1
+            # 不匹配的情况下，根据下一个偏移量，移动idx
+            cur_c = haystack[idx + len(needle)]
+            if dic.get(cur_c):
+                idx += dic[cur_c]
+            else:
+                idx += dic['ot']
 
-    return -1 if idx + len(needle) >= len(haystack) else idx
+        return -1 if idx + len(needle) >= len(haystack) else idx
 
 
 # @lc code=end
