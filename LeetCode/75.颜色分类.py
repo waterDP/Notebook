@@ -2,7 +2,7 @@
 Author: water.li
 Date: 2022-09-28 22:17:52
 Description:
-FilePath: \note\LeetCode\75.颜色分类.py
+FilePath: \note\\LeetCode\75.颜色分类.py
 '''
 #
 # @lc app=leetcode.cn id=75 lang=python3
@@ -69,16 +69,16 @@ FilePath: \note\LeetCode\75.颜色分类.py
 
 
 class Solution:
-  def sortColors(self, nums: List[int]) -> None:
-    n = len(nums)
-    ptr = 0
-    for i in range(n):
-      if nums[i] == 0:
-        nums[i], nums[ptr] = nums[ptr], nums[i]
-        ptr += 1
-    for i in range(ptr, n):
-      if nums[i] == 1:
-        nums[i], nums[ptr] = nums[ptr], nums[i]
-        ptr += 1
+    def sortColors(self, nums: List[int]) -> None:
+        n = len(nums)
+        ptr = 0
+        for i in range(n):
+            if nums[i] == 0:
+                nums[i], nums[ptr] = nums[ptr], nums[i]
+                ptr += 1
+        for i in range(ptr, n):
+            if nums[i] == 1:
+                nums[i], nums[ptr] = nums[ptr], nums[i]
+                ptr += 1
 
 # @lc code=end

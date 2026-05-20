@@ -1,8 +1,8 @@
 '''
 Author: water.li
 Date: 2022-09-28 21:36:10
-Description: 
-FilePath: \note\LeetCode\1.两数之和.py
+Description:
+FilePath: \note\\LeetCode\1.两数之和.py
 '''
 #
 # @lc app=leetcode.cn id=1 lang=python3
@@ -68,12 +68,11 @@ FilePath: \note\LeetCode\1.两数之和.py
 
 
 class Solution:
-  def twoSum(self, nums, target: int):
-    hashtable = dict()
-    for i, num in enumerate(nums):
-      if target - num in hashtable:
-        return [hashtable[target - num], i]
-      hashtable[nums[i]] = i
-    return []
-
+    def twoSum(self, nums, target: int):
+        hashtable = {}
+        for i, num in enumerate(nums):
+            if target - num in hashtable:
+                return [hashtable[target - num], i]
+            hashtable[num] = i
+        return []
 # @lc code=end

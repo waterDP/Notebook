@@ -41,10 +41,10 @@ from langchain_classic.output_parsers import (
 # ===== Memory（记忆）=====
 from langchain_classic.memory import (
     ConversationBufferMemory,       # 对话缓冲记忆
-    ConversationBufferWindowMemory, # 窗口对话缓冲记忆
+    ConversationBufferWindowMemory,  # 窗口对话缓冲记忆
     ConversationTokenBufferMemory,  # Token对话缓冲记忆
     ConversationSummaryMemory,      # 对话摘要记忆
-    ConversationSummaryBufferMemory,# 混合摘要缓冲记忆
+    ConversationSummaryBufferMemory,  # 混合摘要缓冲记忆
     VectorStoreRetrieverMemory      # 向量存储检索记忆
 )
 
@@ -52,7 +52,7 @@ from langchain_classic.memory import (
 from langchain_classic.chains import (
     LLMChain,              # LLM链
     SequentialChain,       # 顺序链
-    SimpleSequentialChain, # 简单顺序链
+    SimpleSequentialChain,  # 简单顺序链
     TransformChain,        # 转换链
     ConversationChain      # 对话链
 )
@@ -113,7 +113,7 @@ from langchain_core.utils import (
 # ===== Runnables（可运行对象）=====
 from langchain_core.runnables import (
     RunnableLambda,      # Lambda可运行对象
-    RunnablePassthrough, # 透传可运行对象
+    RunnablePassthrough,  # 透传可运行对象
     RunnableParallel,    # 并行可运行对象
     RunnableSequence,    # 序列可运行对象
     # 其他可运行对象...

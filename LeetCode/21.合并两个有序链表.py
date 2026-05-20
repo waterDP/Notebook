@@ -2,7 +2,7 @@
 Author: water.li
 Date: 2022-10-10 21:54:33
 Description: 利用递归 简化代码
-FilePath: \note\LeetCode\21.合并两个有序链表.py
+FilePath: \note\\LeetCode\21.合并两个有序链表.py
 '''
 #
 # @lc app=leetcode.cn id=21 lang=python3
@@ -65,16 +65,19 @@ FilePath: \note\LeetCode\21.合并两个有序链表.py
 
 
 class Solution:
-  def mergeTwoLists(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:
-    if l1 is None:
-      return l2
-    elif l2 is None:
-      return l1
-    elif l1.val < l2.val:
-      l1.next = self.mergeTwoLists(l1.next, l2)
-      return l1
-    else:
-      l2.next = self.mergeTwoLists(l1, l2.next)
-      return l2
+    def mergeTwoLists(
+            self,
+            l1: Optional[ListNode],
+            l2: Optional[ListNode]) -> Optional[ListNode]:
+        if l1 is None:
+            return l2
+        elif l2 is None:
+            return l1
+        elif l1.val < l2.val:
+            l1.next = self.mergeTwoLists(l1.next, l2)
+            return l1
+        else:
+            l2.next = self.mergeTwoLists(l1, l2.next)
+            return l2
 
-    # @lc code=end
+        # @lc code=end
