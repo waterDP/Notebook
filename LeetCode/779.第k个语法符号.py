@@ -72,8 +72,8 @@ FilePath: \Notebook\\LeetCode\779.第k个语法符号.py
 
 
 class Solution:
-    def kthGrammar(self, n: int, k: int) -> int:
-        if n == 1:
-            return 0
-        return (k & 1) ^ 1 ^ self.kthGrammar(n - 1, (k + 1) // 2)  # 模2向下取整
-        # @lc code=end
+  def kthGrammar(self, n: int, k: int) -> int:
+    if n == 1:
+      return 0
+    return (k & 1) ^ 1 ^ self.kthGrammar(n - 1, (k + 1) // 2)  # 模2向下取整
+    # @lc code=end

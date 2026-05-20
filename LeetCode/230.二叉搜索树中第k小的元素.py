@@ -21,15 +21,15 @@ FilePath: \note\\LeetCode\230.二叉搜索树中第k小的元素.py
 
 
 class Solution:
-    def kthSmallest(self, root: TreeNode, k: int) -> int:
-        stack = []
-        while root or stack:
-            while root:
-                stack.append(root)
-                root = root.left
-            root = stack.pop()
-            k -= 1
-            if k == 0:
-                return root.val
-            root = root.right
+  def kthSmallest(self, root: TreeNode, k: int) -> int:
+    stack = []
+    while root or stack:
+      while root:
+        stack.append(root)
+        root = root.left
+      root = stack.pop()
+      k -= 1
+      if k == 0:
+        return root.val
+      root = root.right
 # @lc code=end

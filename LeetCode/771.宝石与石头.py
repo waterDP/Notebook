@@ -48,7 +48,7 @@
 
 # @lc code=start
 class Solution:
-    def numJewelsInStones(self, jewels: str, stones: str) -> int:
-        jewelsSet = set(jewels)
-        return sum(s in jewelsSet for s in stones)
+  def numJewelsInStones(self, jewels: str, stones: str) -> int:
+    jewelsSet = set(jewels)
+    return sum(s in jewelsSet for s in stones)
 # @lc code=end

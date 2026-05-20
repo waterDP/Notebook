@@ -58,10 +58,10 @@ FilePath: \note\\LeetCode\2240.买钢笔和铅笔的方案数.py
 
 
 class Solution:
-    def waysToBuyPensPencils(self, total: int, cost1: int, cost2: int) -> int:
-        a = int(total / cost1) + 1
-        b = 0
-        for n in range(a):
-            b += int((total - cost1 * n) / cost2) + 1
-        return b
+  def waysToBuyPensPencils(self, total: int, cost1: int, cost2: int) -> int:
+    a = int(total / cost1) + 1
+    b = 0
+    for n in range(a):
+      b += int((total - cost1 * n) / cost2) + 1
+    return b
 # @lc code=end
