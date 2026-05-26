@@ -1,5 +1,6 @@
 # 谁的工资比Abel的高
 # 方式1 自连接
+use atguigudb;
 select e1.last_name
 from employees e1, employees e2
 where
