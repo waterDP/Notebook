@@ -14,3 +14,4 @@ completion = client.embeddings.create(
 )
 
 print(completion.model_dump_json())
+ 
