@@ -17,6 +17,7 @@ chroma_db/
 
 # Environment
 .env
+.env.local
 *.env
 
 # IDE
