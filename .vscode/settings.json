@@ -28,10 +28,11 @@
     "xsrf"
   ],
   "cSpell.words": [
+    "deepagents",
     "numberic",
     "tapable",
     "typeof"
-  ],
+],
   "files.exclude": {
     "desktop.ini": true
   },
