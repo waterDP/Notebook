@@ -34,7 +34,8 @@
     "typeof"
 ],
   "files.exclude": {
-    "desktop.ini": true
+    "desktop.ini": true,
+    ".gitignore": true
   },
   "compile-hero.disable-compile-files-on-did-save-code": false,
   "trae.tab.enableRename": false,
