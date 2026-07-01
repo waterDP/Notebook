@@ -36,6 +36,6 @@ Thumbs.db
 # Conda
 miniconda3/
 
-note.py
 temp.py
 lib.py
+note.py
