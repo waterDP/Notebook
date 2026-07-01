@@ -1,0 +1,12121 @@
+# 📚 RAG
+# ====================================================================================================================================
+
+    """
+    unstructrued安装
+    1. 包含本地推理能力（支持PDF/图片OCR等）
+    pip install "unstructured[local-inference]"
+    2. 支持所有文档类型（不含本地推理，需依赖外部API）
+    pip install unstructured[all-docs]
+    """
+
+    # UnstructuredIO核心组件 
+    from unstructured.partition.auto import partition
+    from typing import List
+    from unstructured.documents.elements import Element
+
+    element: List[Element] = partition(filename="rag.md", strategy="auto")
+
+    print(element[0].category) # 元素类型
+    print(element[0].metadata.__dict__) # 元素的元数据
+
+    """
+    partition通用参数：
+        encoding: 指定输入文本/文档读取时使用的字符编码。对于非UTF-8文档非常有用。
+        include_page_breaks: 如果设置为True，当文档支持“分页”时，输出中包含PageBreak元素，以标识不同页的边界
+        strategy: 指定解析策略，尤其对PDF/Image文档，控制“快速vs 高保真 vs OCR”方式
+        ocr_languages/languages：当文档含有图像文字或扫描件时，可指定OCR语言包("eng", "deu")
+        skip_infer_table_types: 可指定路过表格类型推断时的文档类型，减少表格识别的错误
+        fields_include: 控制输出JSON中包含哪些字段。可用于减小输出大小或过滤敏感字段['element_id', 'text', 'type']
+        metadata_include|metadata_exclude: 用于控制在输出元素的metadata字段中，保留哪些键或者排除哪些键，默认全部输出
+        content_type: 在使用URL或文件流时，指定MIME类型提示，提高文件类型识别准确性
+        starting_page_number: 当处理文档是某个较大文档的一部分时，可以指定起始页号，用于metadata   
+    """
+
+    from llama_index.core import SimpleDirectoryReader
+    from llama_parse import LlamaParse
+
+    # 如果文档结构复杂，优化使用LlamaParse
+    parser = LlamaParse(api_key="you key")
+    documents = parser.load_data('smple.pdf')
+
+    # 或者更简单的读取器
+    documents = SimpleDirectoryReader(input_files=["RAG评优.md"]).load_data()
+
+
+    # 🚀 最佳加载方案
+    from llama_index.readers.file.unstructured import UnstructuredReader
+    from unstructured.partition.auto import partition
+    from llama_index.core import Document
+    from pathlib import Path
+
+    def smart_load(file_path):
+        """
+        智能文档加载器：根据文件类型选择最佳解析策略
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            解析后的Document对象列表
+        """
+        file_path = Path(file_path)
+        file_ext = file_path.suffix.lower()
+
+        # 定义复杂文件类型（需要高精度解析）
+        complex_types = {
+            '.pdf',     # PDF文档（可能包含表格、图像、复杂布局）
+            '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff',  # 图片文件（需要OCR）
+            '.docx', '.doc',  # Word文档（可能包含复杂格式）
+            '.pptx', '.ppt',  # PowerPoint（复杂布局）
+            '.xlsx', '.xls'   # Excel（表格结构）
+        }
+
+        # 简单文件类型（可以用Reader直接处理）
+        simple_types = {
+            '.txt', '.md', '.csv', '.html', '.xml', '.json'
+        }
+
+        if file_ext in complex_types:
+            # 复杂文件使用底层解析，获得更好的结构识别
+            print(f"检测到复杂文件类型 {file_ext}，使用partition高精度解析")
+            try:
+                elements = partition(
+                    filename=str(file_path),
+                    # 使用hi_res模式进行高精度解析
+                    strategy="hi_res",
+                    # 支持中文、英文
+                    languages=["eng", "chi_sim"],
+                    # 推断表格结构
+                    infer_table_structure=True
+                )
+                # 将解析元素转换为Document对象
+                return [Document(text=e.text, metadata={
+                    "source": str(file_path),
+                    "element_type": type(e).__name__,
+                    "file_type": file_ext
+                }) for e in elements if e.text.strip()]  # 过滤空文本
+            except Exception as e:
+                print(f"高精度解析失败，回退到Reader: {e}")
+                # 回退到Reader
+                reader = UnstructuredReader()
+                return reader.load_data(file=file_path)
+
+        else:
+            # 简单文件或未知类型优先使用Reader
+            print(f"检测到简单文件类型 {file_ext}，使用Reader解析")
+            try:
+                # 直接使用Reader进行简单解析
+                reader = UnstructuredReader()
+                # 加载解析后的文档，返回 Document 对象列表
+                docs = reader.load_data(file=file_path)
+                return docs
+            except Exception as e:
+                print(f"Reader解析失败，回退到partition: {e}")
+                # 回退到底层解析
+                elements = partition(filename=str(file_path), strategy="auto")
+                return [Document(text=e.text, metadata={"source": str(file_path)}) for e in elements]
+
+
+    # 🚂 基础索引案例实现
+    #! pip install llama-index-embeddings-openai llama-index-llms-openai
+
+    from llama_index.core import VectorStoreIndex
+    from llama_index.embeddings.openai import OpenAIEmbedding
+    from llama_index.llms.openai import OpenAI          # 导入OpenAI LLM类
+    from llama_index.core.settings import Settings
+    from dotenv import load_dotenv
+    # 加载环境变量
+    load_dotenv()
+
+    # 设置为全局默认Embedding模型
+    Settings.embed_model = OpenAIEmbedding(
+        model="text-embedding-3-small",
+        api_key=os.getenv("OPENAI_API_KEY"),
+        api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    )
+
+    # 设置为全局默认 LLM 
+    Settings.llm = OpenAI(
+        model="gpt-3.5-turbo",
+        api_key=os.getenv("OPENAI_API_KEY"),
+        api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    )
+
+    # 解析pdf文档
+    documents = smart_load("工段施工指南.pdf")
+    # 构建索引
+    index = VectrorStoreIndex.from_documents(documents)
+    # 生成查询引擎
+    query_engine = index.as_query_engine()
+
+    # 测试提问
+    response = query_engine.query("A标段水泥标号？")
+    print(response)
+
+
+
+    # 🚀 Text Splitters 文本分割器
+
+    # 🍊 TokenTextSplitter token切分器
+    # TokenTextSplitter按照token长度进行切分，适用于需要精确控制token数量的场景，特别是在严格token限制的嵌入模型或语言模型中使用。
+
+    from llaman_index.core.node_parser import TokenTextSplitter
+
+    # 初始化TokenTextSplitter
+    token_splitter = TokenTextSplitter(
+        chunk_size=512,     # 每chunk 目标token数（可调）
+        chunk_overlap=64,   # 重叠token数（可调）
+        separator=" "       # 分隔符（一般用空格）
+    )
+
+    # 测试文本
+    text = """我很荣幸加入这个团队, 这里一般是很长的文本"""
+
+    nodes_from_tokens = token_splitter.split_text(text)
+
+
+    # 🍊 SentenceSplitter句子切分器
+    """
+    参数
+        chunk_size int 每个文本的目标最大Token数 默认值1024
+        chunk_overlap int 相邻文本块之间重叠的token数 默认值200
+        separator: str 用于分割的主要分隔符 默认为 " "
+        paragraph_separator str 用于识别段落的分隔符 默认为"\n\n\n"
+    """
+
+    from llama_index.core.node_parser import SentenceSplitter
+
+    sentence_splitter = SentenceSplitter(
+        chunk_size=512,
+        chunk_overlap=64
+    )
+
+    # 🍊 CodeSplitter代码切分器
+
+    from llama_index.core.node_parser import CodeSplitter
+    from llama_index.core.schema import Document
+
+    code_splitter = CodeSplitter(
+        language="python",    # 指定编程语言
+        chunk_lines=10,       # 每块大约行数
+        chunk_lines_overlap=2, # 块之间重叠行数
+        max_chars=600        # 每块最大字符数
+    )
+
+    nodes_from_tokens = token_splitter.split_text(text)
+
+
+
+
+    # 🚀 File-Based Node Parser 文本型节点切分器
+
+    # 🍎 MarkdownNodeParser markdown切分器
+    from llama_index.core.node_parser import MarkdownNodeParser
+    from llama_index.core.readers import SimpleDirectoryReader
+
+    markdown_docs = SimpleDirectoryReader(input_files=["扩展调用.md"]).loda_data()
+
+    # 创建Markdown解析器
+    parser = MarkdownNodeParser()
+
+    nodes = parser.get_nodes_from_documents(markdown_docs)
+
+    for i, node in enumerate(nodes):
+        print(f"节点 {i+1} (字符数: {len(node.text)}):")
+        print("-" * 30)
+        print(node.text)
+        print("\n" + "="*50 + "\n")
+
+    # 🍎 JSONNodeParser Json切分器
+    from llama_index.core.node_parser import JSONNodeParser
+    from llama_index.core.schema import Document
+
+    json = """
+    {
+        "id_": "0a1eee9a-635a-4391-8b74-75bf3c648f0e",
+        "embedding": null,
+        "metadata": {
+            "document_id": "FULadzkWmovlfkxSgLPcE4oWnPf"
+        },
+        "excluded_embed_metadata_keys": [],
+        "excluded_llm_metadata_keys": [],
+        "mimetype": "text/plain"
+    }
+    """
+
+    # 创建JSON解析器
+    parser = JSONNodeParser()
+    json_docs = [Document(text=json)]
+    # 从JSON文件创建节点
+    nodes = parser.get_nodes_from_documents(json_docs)
+
+    # 显示切分结果
+    for i, node in enumerate(nodes):
+        print(f"节点 {i+1} (字符数: {len(node.text)}):")
+        print("-" * 30)
+        print(node.text)
+        print("\n" + "="*50 + "\n")
+
+
+    # 🍎 SemanticSplitterNodeParser语义切分器
+
+    from llama_index.core import Document
+    from llama_index.embeddings.openai import OpenAIEmbedding
+
+    import os
+    from llama_index.core.settings import Settings
+    from dotenv import load_dotenv
+    # 加载环境变量
+    load_dotenv()
+
+    # 设置为全局默认Embedding模型
+    Settings.embed_model = OpenAIEmbedding(
+        model="text-embedding-3-small",
+        api_key=os.getenv("OPENAI_API_KEY"),
+        api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    )
+
+
+    from llama_index.core.node_parser import SemanticSplitterNodeParser
+    from typing import List
+
+    # 1) 中文拆句器（更鲁棒）
+    def split_chinese_sentences(text: str) -> List[str]:
+        """
+        将中文文本按常见句末标点拆分，尽量保留标点并去除多余空白。
+        处理省略号、连续标点和英文句点等。
+        """
+        if not text:
+            return []
+        # 将长省略号统一处理
+        text = text.replace("……", "…")
+        # 在常见句末标点后断句（保留标点）
+        pieces = re.split(r'(?<=[。！？…\?\!\.])\s*', text)
+        # 清理空白与空串
+        sentences = [p.strip() for p in pieces if p and p.strip()]
+        return sentences
+
+    # SemanticChunker 会使用嵌入相似度来决定是否将句子合并到同一 chunk 中。
+    splitter = SemanticSplitterNodeParser(
+        buffer_size=2,                        # buffer_size 用于把多少句子为一组做相似度计算。
+        breakpoint_percentile_threshold=80,   # 相似度阈值，低于该阈值的相似度会被视为断点。
+        embed_model=Settings.embed_model,     # embed_model 表示用于计算嵌入的模型。
+        sentence_splitter=split_chinese_sentences, # 自定义中文拆句器
+        include_metadata=True,                # 是否包含 metadata
+        include_prev_next_rel=True,           # 是否包含上一句与下一句的关系
+    )
+
+    long_chinese_text = (
+        "本季度公司财务表现良好，营收增长15%，净利润同比提升10%。"
+        "在产品方面，我们完成了新一代搜索引擎的内测，搜索精度和召回率都有明显提升。"
+        "同时，基础设施团队迁移到新的集群架构，缩短了部署时间并降低了成本。"
+        "关于市场推广，最近在北京与上海分别举办了两场线下用户交流会，"
+        "收集到了大量用户反馈，尤其是对移动端体验的改进建议。"
+        "另一方面，我们正在探索与第三方数据提供商的合作，"
+        "以期在广告定向和推荐系统上获得更准确的信号。"
+        "此外，法律合规团队提醒需关注新的隐私合规要求，"
+        "包括数据最小化和用户可解释性方面的合规文档准备。"
+        "最后，团队在招聘方面也有所动作，已开放多个后端与算法岗位。"
+    )
+
+    # 创建Document
+    doc = Document(text=long_chinese_text, metadata={"doc_id": "示例文档1"})
+
+    nodes_from_semantic = splitter.get_nodes_from_documents([doc])
+
+    print("=== 切割后（chunks） ===")
+    for idx, node in enumerate(nodes_from_semantic):
+        print(f"--- chunk {idx} ---")
+        # node.text: chunk 的主文本（通常是若干句子合并）
+        print("chunk.text:", node.text)
+        # 如果 include_metadata=True，会有一些 metadata（例如原始句子索引、chunk_type等）
+        print("metadata keys:", list(node.metadata.keys()))
+        # 如果有 prev/next 关系或 chunk 索引，可一并查看
+        # 例如：node.metadata.get('chunk_index'), node.metadata.get('chunk_type')
+        print("metadata (sample):", {k: node.metadata.get(k) for k in ['chunk_index','chunk_type'] if k in node.metadata})
+        print()
+
+
+    # 🍎 SentenceWindowNodeParser 句子窗口切分器
+
+    from llama_index.core.node_parser import SentenceWindowNodeParser
+
+    # 使用一个简短的文本进行测试
+    text = "I love programming. Python is my most favorite language. I love LLMs. I love LlamaIndex."
+
+    node_parser = SentenceWindowNodeParser.from_defaults(
+        # how many sentences on either side to capture
+        window_size=1,
+        # the metadata key that holds the window of surrounding sentences
+        window_metadata_key="window",
+        # the metadata key that holds the original sentence
+        original_text_metadata_key="original_sentence",
+        include_metadata=True,
+        #sentence_splitter=custom_splitter  # 传入自定义的分割器
+    )
+
+    nodes = node_parser.get_nodes_from_documents([Document(text=text)])
+
+    # 打印所有节点的文本
+    print("所有节点文本:")
+    for i, node in enumerate(nodes):
+        print(f"Node {i}: {node.text}")
+
+    # 查看第二个节点周围的窗口文本
+    print("\n第二个节点周围的窗口文本:")
+    print(nodes[1].metadata["window"])
+    print("=" * 80)
+    print(nodes[1].relationships)
+
+
+    """
+    输出：
+        所有节点文本:
+        Node 0: I love programming. 
+        Node 1: Python is my most favorite language. 
+        Node 2: I love LLMs. 
+        Node 3: I love LlamaIndex.
+
+        第二个节点周围的窗口文本:
+        I love programming.  Python is my most favorite language.  I love LLMs.  
+    """
+
+    # 🍎 HierarchicalNodeParser 结构切分器
+    from llama_index.core.node_parser.relational.hierarchical import HierarchicalNodeParser
+
+    node_parser = HierarchicalNodeParser.from_defaults(
+        chunk_sizes=[300, 120],   # 例：300字符/120字符级别
+        chunk_overlap=30,         # 重叠区域大小
+        include_metadata=True,      # 是否包含metadata
+        include_prev_next_rel=True  # 是否包含前后关系
+    )
+
+    nodes = node_parser.get_nodes_from_documents([Document(text=text, metadata={"doc_id":"示例文档"})])
+
+
+
+    import json
+    from llama_index.core.schema import Document
+
+    llamaindex_documents = []
+
+    for chunk in chunked_elements:
+        # 提取metadata并清理不需要的字段
+        metadata = chunk.metadata.to_dict()
+
+        # 增强metadata: 添加元素类型信息
+        metadata['element_type'] = type(chunk).__name__
+
+        # 如果有原始元素,可以提取更多信息
+        if hasattr(chunk.metadata, 'orig_elements') and chunk.metadata.orig_elements:
+            # 提取所有原始元素的类型
+            metadata['orig_element_types'] = [type(e).__name__ for e in chunk.metadata.orig_elements]
+            # 标记是否包含Title
+            metadata['contains_title'] = any(
+                type(e).__name__ == 'Title' for e in chunk.metadata.orig_elements
+            )
+
+        # 移除一些序列化时可能有问题的字段
+        metadata.pop('languages', None)
+        metadata.pop('orig_elements', None)  # 太大,不适合存储在向量数据库
+
+        # 创建Document对象
+        doc = Document(
+            text=chunk.text,
+            metadata=metadata,
+        )
+        llamaindex_documents.append(doc)
+
+
+    for i, doc in enumerate(llamaindex_documents[:3]):
+        print(f"\n--- Document {i+1} ---")
+        print(f"文本长度: {len(doc.text)} 字符")
+        print(f"文本预览: {doc.text[:80]}...")
+        print(f"Metadata keys: {list(doc.metadata.keys())}")
+        print(f"Metadata: {json.dumps(doc.metadata, ensure_ascii=False, indent=2)}")
+
+
+    # 🚀 Unstructured的chunk_by_title
+    """
+    核心思想: 利用Title元素作为分段标志,将Title与其后的内容组合成语义完整的chunk
+
+    * 优势:
+       - 保留文档结构边界
+       - 自动合并小段落
+       - 保留元数据层级信息
+       - 避免跨章节混合
+    """
+
+    # 导入unstructured的chunk_by_title切分方法
+    from unstructured.chunking.title import chunk_by_title
+
+    # 文档切分
+    chunked_elements = chunk_by_title(
+        elements,                       # 读取的元素列表
+        max_characters=800,             # 每个chunk的最大字符数
+        combine_text_under_n_chars=150, # 小于该字符数的文本块会合并
+    )
+
+    # 🚀  HierarchicalNodeParser 结合 SemanticSplitterNodeParser语义切分
+    """
+    核心思想: 创建多层级的chunk结构,对长文本再进一步使用SemanticSplitterNodeParser或其他切分器进行切分
+
+    * 优势:
+        - 提供多粒度检索
+        - 自动保留父子关系
+        - 适合长文档
+    """
+    from llama_index.readers.file.unstructured import UnstructuredReader
+    from unstructured.partition.auto import partition
+    from llama_index.core import Document
+    from pathlib import Path
+
+    def smart_load(file_path):
+        """
+        智能文档加载器：根据文件类型选择最佳解析策略
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            解析后的Document对象列表
+        """
+        file_path = Path(file_path)
+        file_ext = file_path.suffix.lower()
+
+        # 定义复杂文件类型（需要高精度解析）
+        complex_types = {
+            '.pdf',     # PDF文档（可能包含表格、图像、复杂布局）
+            '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff',  # 图片文件（需要OCR）
+            '.docx', '.doc',  # Word文档（可能包含复杂格式）
+            '.pptx', '.ppt',  # PowerPoint（复杂布局）
+            '.xlsx', '.xls'   # Excel（表格结构）
+        }
+
+        # 简单文件类型（可以用Reader直接处理）
+        simple_types = {
+            '.txt', '.md', '.csv', '.html', '.xml', '.json'
+        }
+
+        if file_ext in complex_types:
+            # 复杂文件使用底层解析，获得更好的结构识别
+            print(f"检测到复杂文件类型 {file_ext}，使用partition高精度解析")
+            try:
+                elements = partition(
+                    filename=str(file_path),
+                    # 使用hi_res模式进行高精度解析
+                    strategy="hi_res",
+                    # 支持中文、英文
+                    languages=["eng", "chi_sim"],
+                    # 推断表格结构
+                    infer_table_structure=True
+                )
+                # 将解析元素转换为Document对象
+                return [Document(text=e.text, metadata={
+                    "source": str(file_path),
+                    "element_type": type(e).__name__,
+                    "file_type": file_ext
+                }) for e in elements if e.text.strip()]  # 过滤空文本
+            except Exception as e:
+                print(f"高精度解析失败，回退到Reader: {e}")
+                # 回退到Reader
+                reader = UnstructuredReader()
+                return reader.load_data(file=file_path)
+
+        else:
+            # 简单文件或未知类型优先使用Reader
+            print(f"检测到简单文件类型 {file_ext}，使用Reader解析")
+            try:
+                # 直接使用Reader进行简单解析
+                reader = UnstructuredReader()
+                # 加载解析后的文档，返回 Document 对象列表
+                docs = reader.load_data(file=file_path)
+                return docs
+            except Exception as e:
+                print(f"Reader解析失败，回退到partition: {e}")
+                # 回退到底层解析
+                elements = partition(filename=str(file_path), strategy="auto")
+                return [Document(text=e.text, metadata={"source": str(file_path)}) for e in elements]
+
+
+
+
+    from llama_index.core.node_parser import (
+        SentenceSplitter,
+        SemanticSplitterNodeParser,
+        HierarchicalNodeParser
+    )
+    from llama_index.embeddings.openai import OpenAIEmbedding
+
+
+
+    # 创建嵌入模型
+    embed_model = OpenAIEmbedding(model="text-embedding-ada-002")
+
+    # 创建层次化解析器
+    hierarchical_parser = HierarchicalNodeParser.from_defaults(
+        chunk_sizes=[512, 256, 128]  # 父段落、子段落、孙段落
+    )
+
+    # 创建语义分割器
+    semantic_splitter = SemanticSplitterNodeParser(
+        buffer_size=1,                      # 用于把多少句子为一组做相似度计算。
+        breakpoint_percentile_threshold=90, # 相似度阈值，低于该阈值的相似度会被视为断点。
+        embed_model=Settings.embed_model             # 嵌入模型
+    )
+
+    # 创建句子分割器作为后备
+    sentence_splitter = SentenceSplitter(
+        chunk_size=500,
+        chunk_overlap=50
+    )
+
+    # 混合策略：先使用层次化解析器，再对过大的块使用语义分割器
+    def hybrid_chunking(documents):
+        # 第一阶段：层次化解析
+        nodes = hierarchical_parser.get_nodes_from_documents(documents)
+
+        # 第二阶段：对过大的节点进行语义分割
+        final_nodes = []
+        for node in nodes:
+            if len(node.text) > 500:  # 对过大的节点进行二次分割
+                sub_nodes = semantic_splitter.get_nodes_from_documents([node])
+                final_nodes.extend(sub_nodes)
+            else:
+                final_nodes.append(node)
+
+        return final_nodes
+
+    # 应用混合策略
+    nodes = hybrid_chunking(documents)
+     
+
+
+    # 💯 评估器 
+
+    from llama_index.core.evaluation import (
+        SemanticSimilarityEvaluator,
+        FaithfulnessEvaluator,
+        RelevancyEvaluator
+    )
+
+    def quick_evaluation_demo():
+        """快速评估演示"""
+
+        print("=== LlamaIndex文档切片质量评估器演示 ===\n")
+
+        # 1. 配置API密钥（请替换为您的实际密钥）
+        print("1. 配置API密钥...")
+        if not os.getenv("OPENAI_API_KEY"):
+            print("请设置环境变量 OPENAI_API_KEY")
+            print("例如: export OPENAI_API_KEY='your-api-key-here'")
+            return
+
+        # 2. 初始化模型和评估器
+        print("2. 初始化模型和评估器...")
+        # embed_model = OpenAIEmbedding(model="text-embedding-3-large")
+        # llm = OpenAI(model="gpt-4")
+
+        # 创建语义相似度评估器，通过比较生成的答案与参考答案，两者在语义上的接近程度。（答案 vs 参考答案）
+        semantic_evaluator = SemanticSimilarityEvaluator(
+            embed_model=Settings.embed_model,
+            similarity_threshold=0.8
+        )
+        # 创建忠实度评估器，检测幻觉，确保答案源于给定上下文（答案 vs 上下文）
+        faithfulness_evaluator = FaithfulnessEvaluator(llm=Settings.llm)
+
+        # 创建相关性评估器，评估答案与问题的匹配度及上下文的辅助作用（问题 vs 答案 vs 上下文）
+        relevancy_evaluator = RelevancyEvaluator(llm=Settings.llm)
+
+        # 3. 准备测试数据
+        print("3. 准备测试数据...")
+        sample_document = """
+        人工智能（Artificial Intelligence，AI）是计算机科学的一个分支，
+        它企图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。
+
+        机器学习是人工智能的一个核心研究领域，它使计算机有能力在不被明确编程的情况下进行学习。
+        机器学习专注于计算机程序的开发，这些程序可以访问数据并使用它学习为自己。
+
+        深度学习是机器学习的子集，它基于人工神经网络的表征学习方法。
+        深度学习在图像、语音、文本等感知任务上取得了突破性进展。
+        """
+
+        # 切分文档
+        splitter = SentenceSplitter(chunk_size=200, chunk_overlap=30)
+        chunks = splitter.split_text(sample_document)
+
+        print(f"文档已切分为 {len(chunks)} 个片段:")
+        for i, chunk in enumerate(chunks):
+            print(f"  片段 {i+1}: {chunk[:50]}...")
+
+        # 4. 执行各项评估
+        print("\n4. 执行质量评估...")
+
+        # 测试查询和响应
+        test_query = "什么是人工智能？"
+        test_response = "人工智能是计算机科学的一个分支，研究如何让机器表现出智能行为。"
+        test_reference = "人工智能是计算机科学的一个分支，企图了解智能的实质"
+
+        # 语义相似度评估
+        print("\n--- 语义相似度评估 ---")
+        semantic_result = semantic_evaluator.evaluate(
+            query=test_query,
+            response=test_response,
+            reference=test_reference,
+            contexts=[chunks[0]]
+        )
+        print(f"相似度分数: {semantic_result.score:.3f}")
+        print(f"是否通过: {semantic_result.passing}")
+        print(f"反馈: {semantic_result.feedback}")
+
+        # 忠实度评估
+        print("\n--- 忠实度评估 ---")
+        faithfulness_result = faithfulness_evaluator.evaluate(
+            query=test_query,
+            response=test_response,
+            contexts=[chunks[0]]
+        )
+        print(f"忠实度分数: {faithfulness_result.score:.3f}")
+        print(f"是否通过: {faithfulness_result.passing}")
+        print(f"反馈: {faithfulness_result.feedback}")
+
+        # 相关性评估
+        print("\n--- 相关性评估 ---")
+        relevancy_result = relevancy_evaluator.evaluate(
+            query=test_query,
+            response=test_response,
+            contexts=[chunks[0]]
+        )
+        print(f"相关性分数: {relevancy_result.score:.3f}")
+        print(f"是否通过: {relevancy_result.passing}")
+        print(f"反馈: {relevancy_result.feedback}")
+
+        # 5. 综合评估结果
+        print("\n=== 评估总结 ===")
+        metrics = {
+            '语义相似度': semantic_result.score,
+            '忠实度': faithfulness_result.score,
+            '相关性': relevancy_result.score
+        }
+
+        for metric, score in metrics.items():
+            status = "✓ 通过" if score >= 0.7 else "✗ 未通过"
+            print(f"{metric}: {score:.3f} {status}")
+
+        avg_score = sum(metrics.values()) / len(metrics)
+        print(f"\n平均分数: {avg_score:.3f}")
+        overall_status = "✓ 整体通过" if avg_score >= 0.7 else "✗ 整体未通过"
+        print(f"整体评估: {overall_status}")
+
+        return "评估完成！"
+
+
+    quick_evaluation_demo() 
+
+
+    # 🔥 Embedding
+    # ! pip install llama_index llama-index-embeddings-openai
+
+    from llama_index.core.settings import Settings
+    import os
+    from llama_index.embeddings.openai import OpenAIEmbedding
+    from dotenv import load_dotenv
+
+    # 加载环境变量
+    load_dotenv()
+
+    # 设置为全局默认Embedding模型
+    Settings.embed_model = OpenAIEmbedding(
+        model="text-embedding-3-small",   # 模型的维度是1536
+        api_key=os.getenv("OPENAI_API_KEY"),
+        api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+        dimensions=1536,        # 可控制返回向量的维度
+        embed_batch_size=100,   # 控制批量处理文本时每个批次包含的文本数量，提高吞吐量，减少API的调用量
+        timeout=60,             # 配合batch size设置合理超时
+        max_retries=3           # 批量失败时的重试机制
+    )
+
+    # 将文本进行向量化
+    embeddings = Settings.embed_model.get_query_embedding("hello world")
+    print(len(embeddings))
+
+
+
+
+
+    # 🚀 评估指标定义与计算逻辑
+
+    """
+    `HitRate @k`：
+        前 k 条检索结果包含正确答案的查询是否命中，它只关心“有”或“没有”，不关心排名位置，是否存在至少一个相关（即能用来正确回答问题）的文档
+
+        - Hit Rate = 命中查询数 / 总查询数
+        - 存在则得分为1；否则为0。 
+        - K值的选择：
+            - Hit Rate @ 1：非常严格，要求最相关的文档必须排在第一位。这衡量了系统的“精准度”。 
+            - Hit Rate @ 5/10：更宽松，更侧重于衡量“召回率”。只要正确答案出现在前5或前10，就算成功。
+                这在实践中更常用，因为后续的LLM可以从多个片段中综合信息。
+        - 特点：简单、快速，能宏观反映检索的可靠性。
+        - 衡量“能否找到”,适合召回充分性的对比
+
+
+    `MRR @k`：
+        正确答案首次出现位置的倒数，在前 k 条内的平均值，即平均倒数排名。它不仅关心是否检索到了相关文档，还关心相关文档的排名位置。排名越靠前，
+        得分越高。
+
+        -  MRR = (1/rank_i)之和 / 总查询数,其中rank_i为第i个查询的正确答案首次排名
+        - 它比Hit Rate更精细，能反映出排序模型的质量。
+        - 对于单个问题，找出排名最高的相关文档所在的位置（排名）。例如，第一个相关文档排在第2位，则其排名为2。
+        - 计算这个排名的倒数。在上例中，倒数就是 1/2 = 0.5。如果没有任何相关文档，则倒数为0。
+        - 对所有问题的倒数得分取平均值。
+        - 强调“找得准”,适合首条答案质量敏感的业务
+    """
+
+    # RetrieverEvaluator
+    from llama_index.core.evaluation import RetrieverEvaluator, generate_question_context_pairs
+    from llama_index.core.schema import TextNode
+
+    # 自定义测试数据
+    nodes = [
+            TextNode(text="""在检索增强生成（RAG）系统中，文档切分与 Node 转换作为连接原始数据与语言模型的关键预处理环节，直接决定了系统的检索精度、生成质量及整体性能。行业实践数据表明，90% 的 RAG 效果问题源于元数据与分块策略不当，而通过优化分块策略可使检索准确率提升 30 - 50%，语义分块较固定分块的准确率优势可达 27%。这一技术环节的重要性体现在：分块过大易引入冗余噪音，增加语言模型理解负担；分块过小或切分不当则可能破坏语义连贯性，导致完整知识点被拆分；未能适配文档结构的机械分块方式还会忽视标题、列表等结构化信息，影响信息提取完整性。"""),
+            TextNode(text="""LlamaIndex 作为连接自定义数据与大语言模型（LLMs）的核心框架，通过将文档（如 PDF、文本文件）分解为包含文本内容、向量嵌入和元数据的 Node 组件，构建了结构化文档管理的技术范式。其核心抽象在于将原始文档转换为语义连贯的 Node 集合，向量存储仅保留 Node 内容的嵌入向量与文本信息，这一机制简化了索引构建流程并提升了检索相关性。文档切分与 Node 转换的质量不仅影响向量检索的效率，更决定了上下文增强（Context Augmentation）这一 RAG 核心能力的实现效果。"""),
+            TextNode(text="""本文聚焦文档切分与 Node 转换的技术实践，结合 LlamaIndex 框架的实现机制，系统调研分块策略设计、元数据管理及 Node 组件化等关键技术点。通过分析行业最佳实践与典型案例，旨在为 RAG 系统开发者提供可落地的优化方案，解决分块噪音、语义断裂、结构信息丢失等核心痛点，为构建高性能检索增强生成应用奠定技术基础。"""),
+        ]
+
+    def load_corpus_and_queries():
+        # 示例:从文件加载语料与查询(实际实现需按企业数据格式适配)
+        index = VectorStoreIndex(nodes,embed_model=Settings.embed_model)
+        
+        # 模拟用户提出的问题
+        queries = ["在RAG系统中，文档切分与节点转换不当可能导致哪些具体问题？",
+                   "在LlamaIndex框架中，一个Node组件通常包含哪些核心元素？",
+                   "通过研究文档切分与Node转换，帮助RAG系统开发者解决哪些核心痛点？"]
+        
+        # 模拟正确答案的node_id
+        qrels = ['7c4ee258-36fa-4907-afe3-a7e3e894562a',
+                 '67b2fe9b-1a76-4ab2-9fb9-6b6581b1d440',
+                 '26fff0e9-2ecf-40ad-af7c-779e43c75762']
+        return index, queries, qrels
+
+    index,queries,qrels = load_corpus_and_queries()
+
+    # 构建Retriever(设置top_k=5返回前5个最相关节点)
+    retriever = index.as_retriever(similarity_top_k=5)
+
+    # 对查询进行检索
+    results = retriever.retrieve("在RAG系统中，文档切分与节点转换不当可能导致哪些具体问题？")
+    for i, r in enumerate(results):
+        print(r.score, r.node.node_id, r.node.get_text()[:150])
+        print("=" * 60)
+
+
+    # 创建评估Retriever
+    evaluator = RetrieverEvaluator.from_metric_names(
+        metric_names=["hit_rate", "mrr"],
+        retriever=retriever
+    )
+
+    # 针对查询问题评估Retriever
+    res1 = evaluator.evaluate(
+        "在RAG系统中，文档切分与节点转换不当可能导致哪些具体问题？",
+        expected_ids = ["7c4ee258-36fa-4907-afe3-a7e3e894562a"]
+    )
+    print(res1)
+
+    res2 = evaluator.evaluate(
+        "在RAG系统中，文档切分与节点转换不当可能导致哪些具体问题？",
+        expected_ids = ["67b2fe9b-1a76-4ab2-9fb9-6b6581b1d440"]
+    )
+    print(res2)
+
+    res3 = evaluator.evaluate(
+        "在RAG系统中，文档切分与节点转换不当可能导致哪些具体问题？",
+        expected_ids = ["26fff0e9-2ecf-40ad-af7c-779e43c75762"]
+    )
+    print(res3) 
+
+    """
+    输出：
+        Query: 在RAG系统中，文档切分与节点转换不当可能导致哪些具体问题？
+        Metrics: {'hit_rate': 1.0, 'mrr': 1.0}
+
+        Query: 在RAG系统中，文档切分与节点转换不当可能导致哪些具体问题？
+        Metrics: {'hit_rate': 1.0, 'mrr': 0.5}
+
+        Query: 在RAG系统中，文档切分与节点转换不当可能导致哪些具体问题？
+        Metrics: {'hit_rate': 1.0, 'mrr': 0.3333333333333333}
+    """ 
+
+
+    # 🍌 在实际RAG评估中的应用建议
+    """
+    * **结合使用**：这两个指标是互补的，而不是互斥的。一个优秀的RAG检索系统应该同时拥有高Hit Rate和高MRR。
+
+        - 高Hit Rate + 低MRR：系统能找到答案，但经常把它们藏在后面。你需要优化排序模型/重排器。
+
+        - 低Hit Rate + 高MRR（较少见）：系统排在前面的东西质量很高，但经常完全漏掉正确答案。你需要优化召回，比如调整分块策略或使用更强大的嵌入模型。
+
+    * **与生成指标结合**：Hit Rate和MRR是检索器指标。要全面评估RAG，还需要将它们与生成器指标结合，例如：
+
+        - Faithfulness：答案是否基于检索到的上下文，没有胡编乱造？
+
+        - Answer Relevance：答案是否直接回答了问题？
+
+        - Context Relevance：检索到的上下文是否精炼且相关？
+    """  
+
+
+    # 🔍 元数据建模与过滤
+    from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters, FilterCondition
+    from llama_index.core.schema import TextNode
+
+    # 建立测试集数据
+    nodes = [
+            TextNode(
+                text=(
+                    "HR年假政策：员工入职未满一年按入职月数按比例计算年假。"
+                ),
+                metadata={
+                    "department": "HR",
+                    "lang": "zh",
+                    "source": "policy_hr_2024.md",
+                    "section": "leave_policy",
+                    "page": 1,
+                    "updated_at": "2024-08-01",
+                },
+            ),
+            TextNode(
+                text=(
+                    "年假计算口径：以自然年为周期，离职结算时按实际在岗月份折算。"
+                ),
+                metadata={
+                    "department": "HR",
+                    "lang": "en",
+                    "source": "policy_hr_2024.md",
+                    "section": "leave_policy",
+                    "page": 2,
+                    "updated_at": "2024-08-01",
+                },
+            )
+        ]
+
+    # 构建索引
+    index = VectorStoreIndex(nodes)
+
+    # 定义过滤器
+    filters = MetadataFilters(
+        filters=[
+            ExactMatchFilter(key="department", value="HR"),
+            ExactMatchFilter(key="lang", value="zh"),
+        ],
+        condition=FilterCondition.AND
+    )
+
+    # 应用过滤器
+    qe = index.as_query_engine(similarity_top_k=3, filters=filters)
+    print(qe.query("年假政策的计算口径？"))
+
+
+    # 🚀 基于内容的推荐
+    retriever = index.as_retriever(similarity_top_k=10)
+    similar_items = retriever.retrieve("用户偏好内容")
+
+
+
+
+
+    # ================================================================================
+    # 🚂 数据入库实现方式
+    documents = smart_noad("完成情况.pdf")
+
+    # 创建 SentenceSplitter句子切分器
+    from llama_index.core.text_splitter import SentenceSplitter
+
+    # 初始化 TokenTextSplitter
+    splitter = SentenceSplitter(chunk_size=512, chunk_overlap=64,separator=" ")
+    nodes = splitter.get_nodes_from_documents(documents) 
+
+    # 🌰 基于内存的向量数据库实现
+    from llama_index.core import VectorStoreIndex, StorageContext
+
+    # 1. 构建 VectorStoreIndex（内存）基于documents
+    index = VectorStoreIndex.from_documents(elements, text_splitter=splitter)
+
+    # 直接基于nodes构建索引
+    # index = VectorStoreIndex(nodes)
+
+    # 2. 索引持久化
+    index.storage_context.vector_store.persist("vector_store.json")
+
+    # 3. 加载缓存过的向量索引
+    ctx = StorageContext.from_defaults(persist_dir="vector_store.json")
+    index = VectorStoreIndex.from_documents(documents, storage_context=ctx)
+
+    # 4. 查询（QueryEngine 由 index.build_query_engine() 提供）
+    query_engine = index.as_query_engine()
+    resp = query_engine.query("请用中文总结这些文档的主要内容")
+    print(resp)
+
+    # 🌰 LlamaIndex+Chroma (持久化、可扩展)
+    # ! pip install llama-index-vector-stores-chroma llama-index-vector-stores-milvus chromadb
+    import chromadb
+    from llama_index.vector_stores.chroma import ChromaVectorStore
+    from llama_index.core import VectorStoreIndex, StorageContext
+    import os
+
+    # 1. 创建数据库目录并初始化Chroma客户端
+    db_path = "./chroma_db"  # 指定数据库路径
+    os.makedirs(db_path, exist_ok=True)  # 确保目录存在
+
+    try:
+        # 数据库层级持久化,构建索引后 - 数据会自动持久化
+        chroma_client = chromadb.PersistentClient(path=db_path)  # 指定路径的持久化客户端
+        print(f"ChromaDB客户端初始化成功，数据库路径: {db_path}")
+    except Exception as e:
+        print(f"ChromaDB客户端初始化失败: {e}")
+        # 如果持久化客户端失败，尝试使用内存客户端
+        print("尝试使用内存客户端...")
+        chroma_client = chromadb.Client()
+
+    # 2. 创建或获取集合（处理集合已存在的情况）
+    collection_name = "my_collection"
+    try:
+        chroma_collection = chroma_client.get_or_create_collection(collection_name)
+        print(f"成功创建或获取到集合: {collection_name}")
+    except Exception as e:
+        print(f"获取集合失败: {e}")
+        # 尝试删除并重新创建
+        try:
+            chroma_client.delete_collection(collection_name)
+            chroma_collection = chroma_client.create_collection(collection_name)
+            print(f"删除旧集合并重新创建: {collection_name}")
+        except Exception as e2:
+            print(f"重新创建集合失败: {e2}")
+            raise e2
+
+    # 3. 创建ChromaVectorStore实例
+    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+
+    # 4. 配置存储上下文
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    print("ChromaDB向量存储配置完成！")
+
+    # 5. 构建索引并查询,基于向量相似度进行召回
+    # index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+    index = VectorStoreIndex(nodes, storage_context=storage_context)
+
+    # 6. 持久化（Chroma 会在内部 persist）需要手动调用persist来保存数据
+    vector_store.persist(persist_path=db_path)
+    # 保存 index metadata（可选）
+    # index.storage_context.persist(persist_dir="./index_storage")
+
+    query_engine = index.as_query_engine()
+    response = query_engine.query("请用中文总结这些文档的主要内容")
+    print(f"模型回答：{response}")
+
+
+
+    # 🚀 MetadataFilter元数据过滤器
+    from llama_index.core import VectorStoreIndex, StorageContext
+    from llama_index.vector_stores.chroma import ChromaVectorStore
+    from llama_index.core.vector_stores import MetadataFilter, MetadataFilters, FilterCondition, FilterOperator
+
+    import chromadb
+
+    # 1. 加载 Chroma 向量数据库
+    client = chromadb.PersistentClient(path="./chroma_db")
+    collection = client.get_collection("my_collection")
+    vector_store = ChromaVectorStore(chroma_collection=collection)
+
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    # 2. 加载文档并构建索引
+    index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+
+    # 3. 单个过滤：只看 element_type = Text
+    filters = MetadataFilters(
+        filters=[
+            MetadataFilter(key="element_type", value="Text", operator=FilterOperator.EQ),
+        ],
+        condition=FilterCondition.AND
+    )
+    # 4. 应用过滤后的查询引擎
+    query_engine = index.as_query_engine(filters=filters)
+    resp = query_engine.query("AI海外企业有哪些巨头巨头企业？")
+    print(resp)
+
+
+    # 🚀 Milvus数据库本地部署存储
+    from llama_index.vector_stores.milvus import MilvusVectorStore
+    from llama_index.core import  VectorStoreIndex, StorageContext
+
+    # 1. 加载文档并构建索引
+    vector_store = MilvusVectorStore(
+        dim=1536,
+        collection_name="milvus_collection",
+        uri="http://localhost:19530",
+        overwrite=True
+    )
+    # 2. 从向量数据库构建索引
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+    # 3. 构建索引
+    # index = VectorStoreIndex.from_documents(documents,  storage_context=storage_context)
+    index = VectorStoreIndex(nodes,  storage_context=storage_context)
+
+    # 4. 查询
+    milvus_response = index.as_query_engine().query("请用中文总结这些文档的主要内容")
+    milvus_response.response
+
+    # 使用MetadataFilter进行过滤查询
+    from llama_index.core.vector_stores import MetadataFilter, MetadataFilters, FilterOperator
+
+    # 定义 MetadataFilter 进行过滤查询
+    filters = MetadataFilters(filters=[
+        MetadataFilter(key="element_type", value="Text", operator=FilterOperator.EQ)
+    ])
+    # 执行过滤查询
+    retriever = index.as_retriever(filters=filters, similarity_top_k=5)
+
+    # 输入检索文本
+    results = retriever.retrieve("龙头公司中报业绩")
+
+    # 打印查询结果
+    for node in results:
+        print(node.metadata)
+        print(node.text)
+        print("=" * 60)
+
+
+
+    # 🚀 Faiss 本地高效检索，不存储文本
+    # ! pip install faiss-cpu llama-index-vector-stores-faiss
+    import faiss
+    from llama_index.vector_stores.faiss import FaissVectorStore
+    from llama_index.core import VectorStoreIndex, StorageContext
+
+    # 1) 创建 Faiss 索引(此处为 L2 距离的 Flat Index)
+    d = 1536
+    faiss_index = faiss.IndexFlatL2(d)
+    vector_store = FaissVectorStore(faiss_index=faiss_index)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+    # 2) 构建索引(注意:Faiss 不存储文本,文本需由 Docstore 管理)
+    index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+
+    # 3) 持久化向量索引到本地文件
+    vector_store.persist("./faiss_index.bin")
+
+    # 4) 查询
+    query_engine = index.as_query_engine()
+    response = query_engine.query("请用中文总结这些文档的主要内容")
+    print(response)
+
+
+
+    # 🚀 MongoDB Docstore + IndexStore(多索引共享节点)
+    """
+    * MongoDocumentStore：把文档/节点（node text、metadata）存到 MongoDB；文档仓库（docstore）。
+
+    * MongoIndexStore：索引结构/索引元数据（index_struct、index metadata）存到 MongoDB。
+
+    * Chroma（本地 PersistentClient）作为 vector_store：实际向量（embeddings）与向量索引/检索由 Chroma 存储并负责。
+
+    * StorageContext.from_defaults(docstore=..., index_store=..., vector_store=...)：把三者组合在一起，多个索引（SummaryIndex/VectorStoreIndex/TreeIndex）共享相同 storage_context。
+
+    结论：你已把文档/索引元数据放在 Mongo，本地 Chroma 负责向量。这是一种常见组合（Mongo 负责结构化数据 & metadata，专用向量 DB 负责 ANN 检索）。
+    """
+    # #!pip install pymongo llama-index-storage-docstore-mongodb llama-index-storage-index-store-mongodb
+
+    import os
+    from llama_index.core import StorageContext, SummaryIndex, VectorStoreIndex,TreeIndex
+    from llama_index.storage.docstore.mongodb import MongoDocumentStore
+    from llama_index.storage.index_store.mongodb import MongoIndexStore
+
+    # 1) 连接 MongoDB(通过 MONGO_URI)
+    # MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
+
+    # 设置MongoDB连接参数
+    MONGO_HOST = os.environ.get("MONGO_HOST", "localhost")
+    MONGO_PORT = os.environ.get("MONGO_PORT", "27017")
+    MONGO_USERNAME = os.environ.get("MONGO_USERNAME", "root")
+    MONGO_PASSWORD = os.environ.get("MONGO_PASSWORD", "example123")
+    MONGO_DATABASE = os.environ.get("MONGO_DATABASE", "my_database")
+
+    # 构建带认证的连接字符串
+    MONGO_URI = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE}?authSource=admin"
+
+    # 连接 MongoDB
+    docstore = MongoDocumentStore.from_uri(uri=MONGO_URI)
+    index_store = MongoIndexStore.from_uri(uri=MONGO_URI)
+
+    # 向量存储使用Chroma
+    chroma_client = chromadb.PersistentClient(path="./chroma_db")
+    vector_store = ChromaVectorStore(chroma_collection=chroma_client.get_or_create_collection("docs"))
+    storage_context = StorageContext.from_defaults(
+        docstore=docstore,         # 文档存储
+        index_store=index_store,   # 索引元数据存储
+        vector_store=vector_store  # 向量存储
+    )
+
+    # 2) 构建多索引(共享同一组节点)
+    summary_index = SummaryIndex(nodes, storage_context=storage_context)
+    vector_index = VectorStoreIndex(nodes, storage_context=storage_context)
+
+    # 摘要索引
+    summary_index = SummaryIndex.from_documents(documents, storage_context=storage_context)
+
+    # 向量索引
+    vector_index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+
+    # 树索引
+    tree_index = TreeIndex.from_documents(documents, storage_context=storage_context)
+
+    # 3) 查询
+    summary_engine = summary_index.as_query_engine()
+    vector_engine = vector_index.as_query_engine()
+    tree_engine = tree_index.as_query_engine()
+
+    s = summary_engine.query("请用中文总结这些文档的主要内容")
+    v = vector_engine.query("请用中文总结这些文档的主要内容")
+    t = tree_engine.query("请用中文总结这些文档的主要内容")
+
+    print(s.response)
+    print("=" * 60)
+    print(v.response)
+    print("=" * 60)
+    print(t.response)
+
+
+    #===========================================================
+    # 🚂 向量检索工具封装
+
+    #!pip install llama-index-tools-vector-db llama-index-vector-stores-milvus
+
+    from llama_index.core import VectorStoreIndex
+    from llama_index.core.agent import ReActAgent
+    from llama_index.core.tools import QueryEngineTool
+    from llama_index.core.workflow import Context
+    from llama_index.vector_stores.milvus import MilvusVectorStore
+
+    # 1. 加载已有 Milvus / Mongo 向量数据库
+    milvus_vector_store = MilvusVectorStore(
+        dim=1536,
+        collection_name="milvus_collection",
+        uri="http://localhost:19530",
+        overwrite=True
+    )
+
+    # 2. 从向量数据库构建索引
+    storage_context = StorageContext.from_defaults(vector_store=milvus_vector_store)
+    vector_index = VectorStoreIndex(nodes, storage_context=storage_context)
+
+    # 3. 构建查询引擎
+    query_engine = vector_index.as_query_engine(similarity_top_k=4)
+
+    # 4. 封装为向量数据库检索tool工具
+    vector_tool = QueryEngineTool.from_defaults(
+        query_engine=query_engine,  # 简化示例:将其封装为查询引擎工具
+        name="vector_auto_retrieve",
+        description="对向量数据库进行自动检索并应用元数据过滤"
+    )
+
+    # 5. 创建 Agent(ReActAgent 演示)，异步执行，可以使用asyncio.run()来执行
+    agent = ReActAgent(tools=[vector_tool],llm=Settings.llm)
+    ctx = Context(agent)
+
+    # 6. 调用示例
+    handler = agent.run("请检索向量数据库中关于海外AI龙头企业有哪几家？", ctx=ctx)
+
+
+    # 🚀 RetriverTool检索器工具
+
+    from llama_index.core.tools import RetrieverTool
+    from llama_index.core.agent import ReActAgent
+    from llama_index.llms.openai import OpenAI
+
+    # 1. 构建检索器
+    retriever = vector_index.as_retriever(similarity_top_k=5)
+
+    # 2. 封装为检索工具
+    retr_tool = RetrieverTool.from_defaults(
+        retriever=retriever,
+        name="文档片段检索",
+        description="直接检索相关文档片段"
+    )
+
+    # 3. 创建 Agent
+    agent = ReActAgent(tools=[retr_tool], llm=Settings.llm, verbose=True)
+
+    # 4. 异步运行（ReActAgent 的 run 为 async）
+    response = agent.run("筛选包含 Title 的片段并返回内容")
+
+
+    # 🚀 显式创建Retriver
+    from llama_index.core.retrievers import VectorIndexRetriever
+
+    # 4. 显式创建VectorIndexRetriever以获得更多控制
+    vector_retriever = VectorIndexRetriever(
+        index=index,
+        similarity_top_k=5,
+        # filters=MetadataFilters(...) # 可选的元数据过滤
+    )
+
+    query = "B200A 芯片的存储器规格和预计何时被原始设备制造商拿到是什么？"
+    retriever_nodes = vector_retriever.retrieve(query)
+
+
+
+    # 🚀 BM25检索策略
+    # !pip install rank-bm25 llama-index-retrievers-bm25
+
+    # 关键词策略检索
+    from llama_index.retrievers.bm25 import BM25Retriever
+    # 1.BM25检索器
+    bm25_retriever = BM25Retriever.from_defaults(
+        nodes=nodes,
+        similarity_top_k=5
+    )
+    # 2. 执行BM25检索
+    query = "B200A 的存储器规格"
+    results = bm25_retriever.retrieve(query)
+
+
+
+
+    # 🚀 混合检索策略QueryFusionRetriever
+    from llama_index.core.retrievers import QueryFusionRetriever
+    # 1. 创建QueryFusionRetriever
+    retriever = QueryFusionRetriever(
+        retrievers=[vector_retriever, bm25_retriever],  # 集成不同的检索器
+        similarity_top_k=5,                 # 最终返回的文档数量
+        num_queries=1,                      # 为原始查询生成的变体数量，（默认为1，不生成变体）
+        mode="reciprocal_rerank",           # 结果融合模式，'reciprocal_rerank'是常用且效果好的模式
+        use_async=True,                     # 是否异步执行
+        verbose=True,                       # 是否打印调试信息
+        retriever_weights=[0.6,0.4]         # 检索器权重，用于加权融合
+    )
+
+    # 2. 执行检索
+    query = "B200A 芯片的存储器规格和预计何时被原始设备制造商拿到是什么？"
+    query_nodes = retriever.retrieve(query)
+
+
+    # 🚀 本地Rerank模型
+    #!pip install huggingface_hub modelscope
+    # modelscope download --model BAAI/bge-reranker-base  --local_dir ./
+    from llama_index.core.postprocessor import SentenceTransformerRerank
+    from llama_index.core.query_engine import RetrieverQueryEngine
+
+    # 模型本地路径
+    local_model_path = "/root/autodl-tmp/bge-reranker-base"
+
+    # 1.定义精排序器 (Reranker)
+    reranker = SentenceTransformerRerank(
+        model=local_model_path,
+        top_n=3, # 精选出最相关的4个文档送给LLM,
+    )
+    # 2.构建QueryEngine
+    query_engine = RetrieverQueryEngine.from_args(
+        retriever=retriever,
+        node_postprocessors=[reranker]
+    )
+    # 3. 执行查询
+    query = "B200A 芯片的存储器规格和预计何时被原始设备制造商拿到是什么？"
+    response = query_engine.query(query)
+
+
+    # 🚂 生成查询阶段组件
+
+    # 🚀 as_query_engine 端到端的问答引擎
+    # 基础查询
+    query_engine = index.as_query_engine(
+        similarity_top_k=3,
+        response_mode="refine",  # 对多个检索结果进行精炼
+        streaming=True  # 流式输出
+    )
+
+    # 正常响应
+    response = query_engine.query("B200A 芯片的存储器规格和预计何时被原始设备制造商拿到是什么？")
+    print(response)
+
+    # 流式响应处理
+    # streaming_response = query_engine.query("B200A 芯片的存储器规格和预计何时被原始设备制造商拿到是什么？")
+    # for token in streaming_response.response_gen:
+    #     print(token, end=" ", flush=True)
+
+
+    """
+    **响应模式（Response Modes）**：`Response Synthesizer`支持多种响应模式，如：
+      - `refine`：逐块迭代优化答案，细节丰富但调用成本高。
+      - `compact`：在生成前压缩上下文，平衡成本与质量。
+      - `tree_summarize`：以树状结构递归总结，适合长文档摘要。
+      - `simple_summarize`：快速拼接与总结，可能丢失细节。
+      - no_text — 不调用 LLM 生成答案，仅返回检索出的 source_nodes（用于检索查看或调试）。
+      - accumulate — 给定若干 chunk，分别对每个 chunk 与 query 运行 LLM，结果按顺序累积（而不是合并为一个 prompt）再返回拼接字符串。
+      - compact_accumulate — 类似 accumulate，但在每次对 chunk 做 prompt 时先“压缩”上下文（像 compact 模式）以减少代价。
+    """
+
+    from llama_index.core.query_engine import RetrieverQueryEngine
+    from llama_index.core.retrievers import VectorIndexRetriever
+
+    # 1. 从已有的 index 创建 retriever
+    retriever = VectorIndexRetriever(
+        index=index,
+        similarity_top_k=3
+    )
+    # 2. 构造 QueryEngine
+    query_engine = RetrieverQueryEngine(   
+        retriever=retriever,          # 传入检索器
+        response_synthesizer=None,    # 可以自定义响应合成器
+        node_postprocessors=None     # 可传入 reranker、过滤器
+    )
+
+    # 3. 直接查询
+    response = query_engine.query("B200A 芯片的存储器规格和预计何时被原始设备制造商拿到是什么？")
+    print(response)
+
+
+    # 🚀 带momery记忆的对话
+    from llama_index.core.memory import ChatMemoryBuffer
+    # 创建对话记忆
+    memory = ChatMemoryBuffer.from_defaults(token_limit=3000)
+
+    chat_engine = index.as_chat_engine(
+        chat_mode="context",  # "context", "condense_question", "react", "openai"
+        system_prompt="你是一个关于LlamaIndex的问答助手。请基于提供的上下文回答问题。",  # 系统提示词
+        memory=memory          # 对话记忆管理
+    )
+    # 多轮对话
+    response1 = chat_engine.chat("文章主要讲述了哪几家海外AI巨头？")
+    print(f"AI: {response1}")
+    print("=" * 60)
+         
+    response2 = chat_engine.chat("这几家AI巨头都研发了哪些产品？")
+    print(f"AI: {response2}")  # 能理解这是基于前一个问题的后续
+
+    # 重置对话历史
+    chat_engine.reset()
+
+
+
+    # 🦁 一个完整的案件 
+    from llama_index.core import VectorStoreIndex
+    from llama_index.retrievers.bm25 import BM25Retriever
+    from llama_index.core.postprocessor import SentenceTransformerRerank
+    from llama_index.core.retrievers import QueryFusionRetriever
+    from llama_index.core.query_engine import RetrieverQueryEngine
+    from llama_index.core.response_synthesizers import get_response_synthesizer
+
+    # 1. 加载向量索引
+    index = VectorStoreIndex(nodes=nodes)
+
+    # 2. 向量检索器 (粗召回)
+    vector_retriever = index.as_retriever(
+        similarity_top_k=5 # 扩大召回范围，为Reranker提供充足的候选
+    )
+    # 3. BM25检索器 (关键词补充)
+    bm25_retriever = BM25Retriever.from_defaults(
+        nodes=nodes,
+        similarity_top_k=5
+    )
+    # 4. 混合检索器 (融合结果)
+    hybrid_retriever = QueryFusionRetriever(
+        retrievers=[vector_retriever, bm25_retriever],
+        similarity_top_k=5,         # 融合后保留的候选数量
+        num_queries=1,              # 保持简单，不生成子查询
+        mode="reciprocal_rerank",   # 使用RRF融合策略
+        use_async=True              # 必须开启异步
+    )
+
+    from llama_index.core.postprocessor import SentenceTransformerRerank
+    # 模型本地路径
+    local_model_path = "/root/autodl-tmp/bge-reranker-base"
+    # 5.定义精排序器 (Reranker)
+    reranker = SentenceTransformerRerank(
+        model=local_model_path,
+        top_n=3, # 精选出最相关的4个文档送给LLM,
+    )
+    # 6. 创建响应合成，用大模型（LLM）根据 top-K 文档 + 用户问题，生成一个最终的回答。
+    response_synthesizer = get_response_synthesizer(
+        response_mode="compact", 
+        streaming=True
+    )
+    # 7.构建QueryEngine
+    query_engine = RetrieverQueryEngine.from_args(
+        retriever=hybrid_retriever,
+        node_postprocessors=[reranker],
+        response_synthesizer=response_synthesizer
+    )
+    # 8. 执行查询
+    query = "B200A 芯片的存储器规格和预计何时被原始设备制造商拿到是什么？"
+    response = query_engine.query(query)
+
+    print("大模型回复内容：")
+    print(response)
+    print("=" * 60)
+
+    # 打印最终被送入LLM的Source Nodes
+    print("\n--- Final Source Nodes (after Reranking) ---")
+    for node in response.source_nodes:
+        print(f"Score: {node.score:.4f}, File: {node.text}")
+        print("=" * 60)
+
+
+
+    # 🚂 检索生成评估体系
+    # todo 
+
+
+    """
+    ============================================================
+    # ✈ GraphRAG 
+    ============================================================
+    """
+    """
+    linux
+        conda --version
+        conda create --name graprag python==3.11
+        conda activate graphrag
+        pip install graphrag
+        graphrag --help
+        graphrag init --root ./
+        mkdir input 把文件放在这个文件夹中
+        graphrag index --root ./   构建索引   
+    """
+    """
+    源码
+        python -m venv venv
+        .\venv\Scripts\activate
+        pip install poetry   # 包管理
+        poetry install
+        poetry run poe init --root ./
+        poetry run poe index --root ./
+
+
+        "create_base_text_units",
+        "create_final_documents",
+        "extract_graph",
+        "finalize_graph",
+        # # *(["extract_covariates"] if config.extract_claims.enabled else []),
+        "create_communities",
+        "create_final_text_units",
+        "create_community_reports",
+        "generate_text_embeddings",    
+    """
+
+
+# ⚖ Ragas: 智能体与RAG系统的评估框架 
+# ====================================================================================================================================
+
+    Ragas（RAG Assessment）是评估 RAG 系统的最主流框架，不是 RAG 框架，而是给 RAG 系统打分的框架。
+
+    它能自动评估 RAG 的检索质量和生成质量，不依赖参考答案也能评（reference-free），
+    评分结果可复现、可对比、可持续追踪。支持用你自己的 LLM 当裁判，更省钱、更可控。
+
+    跟 Langfuse Score 的区别：Ragas 是评估框架，自动算分；Langfuse 是可观测性平台，手动/程序打自定义分。
+    两者配合使用：Ragas 负责算分，算完后把分打到 Langfuse 的 trace 上。
+
+
+    # ========== 安装 ==========
+    pip install ragas
+
+    # 设置环境变量
+    # export OPENAI_API_KEY="***"
+    # export OPENAI_BASE_URL="https://api.openai.com/v1"
+
+
+    # ====================================================================
+    # 1. 核心评估指标详解
+    # ====================================================================
+    #
+    # 检索质量（Retrieval Quality）：
+    #
+    #   context_precision（上下文精准度 0~1）：检索到的文档里有多少是有用的。
+    #     算法：对每个检索到的 chunk，用它和 question 一起问 LLM "有用吗？"
+    #     排在前面的 chunk 如果没用，扣分更重。不需要 ground_truth。
+    #
+    #   context_recall（上下文召回率 0~1）：答案需要的信息，检索到了多少。
+    #     算法：把 ground_truth 拆成若干 claims，判断每个 claim 是否能在 context 中找到。
+    #     需要 ground_truth。
+    #
+    # 生成质量（Generation Quality）：
+    #
+    #   faithfulness（忠实度 0~1，核心指标，防幻觉检测）：答案是否基于 context 没有瞎编。
+    #     算法：把 answer 拆成若干 statements，逐一问 LLM 能否从 context 推断出来。
+    #     不需要 ground_truth。
+    #     例：问题"Python 是谁创建的？" Context="Python 由 Guido 创建"
+    #        答案"Python 由 Guido 创建" → faithfulness ≈ 1.0
+    #        答案"Python 由 Guido 创建，他还创造了 Java" → faithfulness ≈ 0.5
+    #
+    #   answer_relevance（答案相关性 0~1）：答案在多大程度上回答了你问的问题。
+    #     算法：从 answer 反向生成若干候选问题，计算与原始问题的余弦相似度。
+    #     注意：这个指标通常偏低，0.6~0.8 就算不错了。不需要 ground_truth。
+    #
+    #   answer_correctness（答案正确性 0~1）：综合语义相似度 + 事实重叠度。
+    #     需要 ground_truth。
+    #
+    #   answer_similarity（语义相似度 0~1）：直接用 embedding 算余弦相似度。
+    #     需要 ground_truth。
+    #
+
+    from ragas.metrics import (
+        faithfulness,
+        answer_relevancy,
+        context_precision,
+        context_recall,
+        answer_correctness,
+        answer_similarity,
+    )
+
+    # 全量评估
+    result = evaluate(dataset, metrics=[
+        context_precision, context_recall,
+        faithfulness, answer_relevancy, answer_correctness,
+    ])
+
+
+    # ====================================================================
+    # 2. 单条评估：最简单用法
+    # ====================================================================
+
+    from ragas import evaluate
+    from datasets import Dataset
+
+    data = {
+        "question": ["Langfuse 和 Ragas 有什么区别？"],
+        "answer": ["Langfuse 是可观测性平台，Ragas 是评估框架。两者可以配合使用。"],
+        "contexts": [[
+            "Langfuse 是一个 LLM 可观测性平台，支持 trace、打分、数据集管理。",
+            "Ragas 是一个 RAG 评估框架，专注检索和生成质量的自动评分。"
+        ]],
+        "ground_truth": ["Langfuse 提供观测和监控能力，Ragas 提供评估指标计算能力，两者互补。"],
+    }
+
+    dataset = Dataset.from_dict(data)
+
+    result = evaluate(dataset, metrics=[faithfulness, answer_relevancy, context_recall])
+
+    print(f"Faithfulness:     {result['faithfulness']:.3f}")
+    print(f"Answer Relevancy: {result['answer_relevancy']:.3f}")
+    print(f"Context Recall:   {result['context_recall']:.3f}")
+    # 结果大概长这样：
+    # Faithfulness:     0.900
+    # Answer Relevancy: 0.750
+    # Context Recall:   0.800
+
+    # 注意事项：
+    # - contexts 必须是列表的列表 [[...]]，即使只有一个 chunk
+    # - ground_truth 只在需要 answer_correctness 时才必须
+    # - faithfulness 和 answer_relevancy 不需要 ground_truth
+
+
+    # ====================================================================
+    # 3. 数据集批量评估
+    # ====================================================================
+
+    # 3.1 从 CSV 读取
+    import pandas as pd
+    import ast
+
+    df = pd.read_csv("eval_data.csv")
+    # CSV 格式: question,answer,contexts,ground_truth
+    df["contexts"] = df["contexts"].apply(ast.literal_eval)
+    dataset = Dataset.from_pandas(df)
+    result = evaluate(dataset, metrics=[faithfulness, answer_relevancy])
+
+
+    # 3.2 从 Dict 批量
+    batch_data = {
+        "question": [
+            "什么是 RAG？",
+            "Python 的 GIL 是什么？",
+            "什么是微服务架构？",
+        ],
+        "answer": [
+            "检索增强生成，是一种结合检索和生成的 AI 架构。",
+            "全局解释器锁，保证同一时刻只有一个线程执行字节码。",
+            "将应用拆分为多个独立部署的小服务。",
+        ],
+        "contexts": [
+            ["RAG = Retrieval-Augmented Generation，最流行的 RAG 架构..."],
+            ["GIL 全称 Global Interpreter Lock，是 CPython 的机制..."],
+            ["微服务是一种架构风格，将单一应用程序划分为一组小服务..."],
+        ],
+        "ground_truth": [
+            "RAG（检索增强生成）结合检索系统和生成模型来回答问题。",
+            "GIL 是 CPython 解释器中的一个互斥锁，防止多线程并发执行。",
+            "微服务架构将应用拆分成松耦合的独立服务。",
+        ],
+    }
+
+    batch_dataset = Dataset.from_dict(batch_data)
+    result = evaluate(batch_dataset, metrics=[
+        faithfulness, answer_relevancy, context_precision, answer_correctness,
+    ])
+
+    # 批量结果
+    df_result = result.to_pandas()
+    print(df_result)
+    #    faithfulness  answer_relevancy  context_precision  answer_correctness
+    # 0         0.850            0.720              0.800              0.780
+    # 1         0.920            0.880              0.950              0.900
+    # 2         0.780            0.650              0.700              0.710
+
+
+    # 3.3 汇总统计
+    import numpy as np
+
+    for metric, scores in result.items():
+        scores_list = scores if isinstance(scores, list) else [scores]
+        print(f"{metric}:")
+        print(f"  Mean:    {np.mean(scores_list):.3f}")
+        print(f"  Std:     {np.std(scores_list):.3f}")
+        print(f"  Min:     {np.min(scores_list):.3f}")
+        print(f"  Max:     {np.max(scores_list):.3f}")
+
+
+    # ====================================================================
+    # 4. 用你自己的 LLM 做审判官
+    # ====================================================================
+    #
+    # Ragas 默认用 OpenAI。可以切到国产模型或本地模型，省钱 + 数据不出域。
+    #
+
+    from ragas.llms import llm_factory
+
+    # ========== DeepSeek ==========
+    deepseek_llm = llm_factory(
+        model="deepseek-chat",
+        base_url="https://api.deepseek.com/v1",
+        api_key="***",
+    )
+
+    # ========== 阿里通义千问 ==========
+    qwen_llm = llm_factory(
+        model="qwen-plus",
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        api_key="***",
+    )
+
+    # ========== 本地 ollama ==========
+    # 先 ollama pull qwen2.5:7b && ollama serve
+    local_llm = llm_factory(
+        model="qwen2.5:7b",
+        base_url="http://localhost:11434/v1",
+        api_key="***",  # ollama 不校验 key
+    )
+
+    # 赋值给指标
+    for metric in [faithfulness, answer_relevancy, context_precision]:
+        metric.llm = deepseek_llm
+
+    result = evaluate(dataset, metrics=[faithfulness, answer_relevancy])
+
+
+    # ========== 用多个 LLM 投票取平均 ==========
+    llms = [deepseek_llm, qwen_llm, local_llm]
+
+    all_scores = []
+    for llm in llms:
+        faithfulness.llm = llm
+        result = evaluate(batch_dataset, metrics=[faithfulness])
+        all_scores.append(result["faithfulness"])
+
+    mean_score = np.mean(all_scores, axis=0)
+    std_score = np.std(all_scores, axis=0)
+    print(f"Faithfulness: {mean_score[0]:.3f} ± {std_score[0]:.3f}")
+
+
+    # ====================================================================
+    # 5. 自定义指标
+    # ====================================================================
+
+    # 5.1 规则型自定义指标
+    from ragas.metrics.base import Metric
+
+    class LengthChecker(Metric):
+        """检查答案长度是否合理"""
+        def __init__(self):
+            super().__init__(name="length_checker", requires_ground_truth=False)
+
+        async def _ascore(self, row: dict, callbacks=None) -> float:
+            answer = row["answer"]
+            question = row.get("question", "")
+            ratio = len(answer) / max(len(question), 1)
+            if 5 <= ratio <= 50:
+                return 1.0
+            elif 2 <= ratio < 5 or 50 < ratio <= 100:
+                return 0.5
+            else:
+                return 0.0
+
+    length_checker = LengthChecker()
+    result = evaluate(batch_dataset, metrics=[length_checker])
+
+
+    # 5.2 LLM Judge 型自定义指标
+    from ragas.metrics.base import MetricWithLLM
+
+    class ToxicityChecker(MetricWithLLM):
+        """检测回答是否包含有害内容"""
+        def __init__(self, llm=None):
+            super().__init__(name="toxicity_check", requires_ground_truth=False)
+            if llm:
+                self.llm = llm
+
+        async def _ascore(self, row: dict, callbacks=None) -> float:
+            answer = row["answer"]
+            prompt = f"""Is the following answer toxic or harmful?
+    Only answer with a single number 0 (not toxic) or 1 (toxic).
+
+    Answer: {answer}
+
+    Score (0 or 1):"""
+            response = await self.llm.agenerate([[prompt]], callbacks=callbacks)
+            text = response.generations[0][0].text.strip()
+            try:
+                return 1.0 - int(text)
+            except:
+                return 0.5
+
+
+    # 5.3 关键词覆盖率检查
+    class KeywordCoverage(Metric):
+        def __init__(self, required_keywords: dict):
+            super().__init__(name="keyword_coverage", requires_ground_truth=False)
+            self.keyword_map = required_keywords
+
+        async def _ascore(self, row: dict, callbacks=None) -> float:
+            question = row["question"]
+            answer = row["answer"]
+            keywords = self.keyword_map.get(question, [])
+            if not keywords:
+                return 1.0
+            found = sum(1 for kw in keywords if kw.lower() in answer.lower())
+            return found / len(keywords)
+
+
+    # ====================================================================
+    # 6. Ragas + Langfuse 集成（黄金搭配）
+    # ====================================================================
+    #
+    # 思路：Ragas 负责算分，分数打到 Langfuse trace 上，形成完整的 eval + observe 方案。
+    #
+
+    from langfuse import Langfuse
+
+    langfuse = Langfuse(
+        public_key="pk-xxx",
+        secret_key="sk-xxx",
+        host="https://cloud.langfuse.com"
+    )
+
+
+    def my_rag(question: str) -> dict:
+        """模拟一个 RAG pipeline"""
+        trace = langfuse.trace(name="rag_eval", input=question)
+        contexts = ["Langfuse 是一个可观测性平台。", "Ragas 是评估框架。"]
+        answer = "Langfuse 和 Ragas 是互补的工具。"
+
+        retrieval = trace.retrieval(name="retrieval", input=question)
+        retrieval.end(output=contexts)
+
+        generation = trace.generation(
+            name="generation", model="gpt-4o",
+            input=str({"question": question, "contexts": contexts}),
+            output=answer
+        )
+        return trace, {"question": question, "answer": answer, "contexts": contexts, "trace_id": trace.id}
+
+
+    # 跑一次完整的 RAG + Ragas 评估 + Langfuse 记录
+    trace, data = my_rag("Langfuse 和 Ragas 有什么区别？")
+
+    ds = Dataset.from_dict({
+        "question": [data["question"]],
+        "answer": [data["answer"]],
+        "contexts": [data["contexts"]],
+    })
+
+    ragas_result = evaluate(ds, metrics=[faithfulness, answer_relevancy])
+
+    # 分数打到 Langfuse trace
+    trace.score(name="ragas_faithfulness", value=float(ragas_result["faithfulness"][0]), comment="Ragas 忠实度")
+    trace.score(name="ragas_answer_relevancy", value=float(ragas_result["answer_relevancy"][0]), comment="Ragas 相关性")
+    langfuse.flush()
+
+    print(f"✅ Faithfulness: {ragas_result['faithfulness'][0]:.3f}")
+    print(f"✅ Relevancy: {ragas_result['answer_relevancy'][0]:.3f}")
+    print("✅ Langfuse trace 里有分，去看看")
+
+
+    # 批量集成
+
+    def batch_eval_and_log(questions, rag_func):
+        for q in questions:
+            trace, data = rag_func(q)
+            ds = Dataset.from_dict({
+                "question": [data["question"]],
+                "answer": [data["answer"]],
+                "contexts": [data["contexts"]],
+            })
+            result = evaluate(ds, metrics=[faithfulness])
+            trace.score(name="ragas_faithfulness", value=float(result["faithfulness"][0]))
+            langfuse.flush()
+        print(f"✅ 完成 {len(questions)} 条评估")
+
+
+    # ====================================================================
+    # 7. CI/CD 自动化评估
+    # ====================================================================
+    #
+    # 把 Ragas 塞进 CI 流程，每次改 Prompt 或换模型自动跑分。
+    #
+    # 在 .github/workflows/rag-eval.yml 中配置：
+    #
+    # name: RAG Evaluation
+    # on:
+    #   pull_request:
+    #     paths:
+    #       - "app/prompts/**"
+    #       - "app/rag/**"
+    # jobs:
+    #   evaluate:
+    #     runs-on: ubuntu-latest
+    #     steps:
+    #       - uses: actions/checkout@v4
+    #       - uses: actions/setup-python@v5
+    #         with:
+    #           python-version: "3.11"
+    #       - run: pip install ragas openai datasets pandas
+    #       - run: python eval_ci.py
+    #         env:
+    #           OPENAI_API_KEY: *** secrets.OPENAI_API_KEY }}
+    #       - uses: actions/upload-artifact@v4
+    #         with:
+    #           name: eval-results
+    #           path: eval_results.json
+    #
+
+    # eval_ci.py 脚本示例：
+    #
+    import json
+
+
+    def load_test_set() -> Dataset:
+        data = {
+            "question": [...],
+            "answer": [...],
+            "contexts": [[...], ...],
+            "ground_truth": [...],
+        }
+        return Dataset.from_dict(data)
+
+
+    def check_regression(old_scores, new_scores, threshold=0.05):
+        """检查评分有没有回退"""
+        regressions = []
+        for metric in new_scores:
+            old = np.mean(old_scores.get(metric, [0]))
+            new = np.mean(new_scores[metric])
+            if new < old - threshold:
+                regressions.append({
+                    "metric": metric,
+                    "old": round(old, 3),
+                    "new": round(new, 3),
+                    "diff": round(new - old, 3),
+                })
+        return regressions
+
+
+    if __name__ == "__main__":
+        dataset = load_test_set()
+        result = evaluate(dataset, metrics=[faithfulness, answer_relevancy, context_recall])
+
+        scores = {k: [float(v) for v in vals] for k, vals in result.items()}
+
+        try:
+            with open("baseline.json", "r") as f:
+                baseline = json.load(f)
+            regressions = check_regression(baseline, scores)
+            if regressions:
+                print("❌ 指标回退！")
+                for r in regressions:
+                    print(f"  {r['metric']}: {r['old']} → {r['new']} ({r['diff']})")
+                exit(1)
+            else:
+                print("✅ 所有指标达标或提升")
+        except FileNotFoundError:
+            print("⚠️ 无 baseline，保存当前结果为新 baseline")
+
+        with open("eval_results.json", "w") as f:
+            json.dump(scores, f, indent=2)
+
+        for metric, vals in scores.items():
+            print(f"{metric}: mean={np.mean(vals):.3f} | std={np.std(vals):.3f}")
+
+
+    # ====================================================================
+    # 8. 常见问题与排查
+    # ====================================================================
+    #
+    # ❓ 指标跑不动 / 超时
+    #    原因：每个指标要跟 LLM 交互好几轮。
+    #    解决：只选必要指标，用便宜的模型做 judge
+    #    result = evaluate(dataset, metrics=[faithfulness])
+    #    faithfulness.llm = cheap_llm
+    #
+    # ❓ answer_relevancy 一直很低（0.3~0.5）
+    #    正常。Ragas 从 answer 反推 question，很难精确命中。0.6+ 就算不错。
+    #    结合 faithfulness 和 correctness 一起看。
+    #
+    # ❓ 批量跑太慢
+    #    解决：
+    #    import nest_asyncio
+    #    nest_asyncio.apply()
+    #    或者分批跑
+    #
+    # ❓ 版本冲突（langchain）
+    #    解决：用虚拟环境隔离
+    #    python -m venv ragas_env
+    #    source ragas_env/bin/activate
+    #    pip install ragas
+    #
+    # ❓ AttributeError: 'Chart' object has no attribute 'show'
+    #    解决：pip install ragas==0.1.0
+    #    或者直接用 pandas 自己画图：
+    #    import matplotlib.pyplot as plt
+    #    df_result = result.to_pandas()
+    #    df_result.mean().plot(kind="bar")
+    #    plt.show()
+    #
+
+
+    # ====================================================================
+    # 总结：Ragas 评估的最佳实践
+    # ====================================================================
+    #
+    # 1. 先清楚你要测什么
+    #    只测检索质量 → context_precision + context_recall
+    #    只测生成质量 → faithfulness + answer_relevancy
+    #    全面评估     → 以上 + answer_correctness
+    #
+    # 2. 固定好测试集（50~100 条就够了）
+    #    覆盖常见场景 + 边缘场景 + 对抗性测试
+    #
+    # 3. 固定好 Judge LLM
+    #    gpt-4o-mini 性价比最好
+    #    国产模型省钱，但一致性略差
+    #    每次换模型要重新跑 baseline
+    #
+    # 4. 建 baseline + CI
+    #    第一次跑的结果存下来当 baseline
+    #    每次改 prompt/模型/PR上自动跑
+    #    设阈值，回退就 block
+    #
+    # 5. 结果可视化
+    #    打回 Langfuse 看趋势
+    #    或直接 pandas 出报表
+    #
+    # 一句话：Ragas 就是你的 RAG 质检员。faithfulness 防幻觉，
+    # context_recall 看检索，answer_relevancy 看生成对不对路。
+    # 配上 Langfuse 就是完整的 eval + observe 方案。
+    """
+    ============================================================
+    # 📈 Langfuse：AI应用的链路追踪与观测体系
+    ============================================================
+    """
+    from langfuse import get_client, propagate_attributes
+    from langfuse.callback import CallbackHandler
+    import os
+
+    # 🚀 配置langfuse连接信息
+    os.environ['LANGFUSE_PUBLIC_KEY']="..."
+    os.environ['LANGFUSE_SECRET_KEY']="..."
+    os.environ['LANGFUSE_HOST']="localhost:3000"
+    os.environ['LANGFUSE_TRAING_ENVIRONMENT']="production" # 可选，标识环境
+    # 未配置 LangSmith 时关闭 tracing，避免 403 报错
+    os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
+
+    # 最简接入
+    from langchain_deepseek import ChatDeepSeek
+    from langchain.agents import create_agent
+    from langfuse import Langfuse
+    from langfuse.langchain import CallbackHandler
+    import os
+
+
+    # --- 模型 ---
+    model = ChatDeepSeek(
+        model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+        api_key='sk-08b1f9a1961e4b13a4d7ca9060e7cf4a',
+        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+        temperature=0.3,
+    )
+
+    langfuse = Langfuse()
+    langfuse_handler = CallbackHandler()
+
+    # --- Prompt ---
+    ec_agent_prompt = langfuse.get_prompt("default_prompt")
+
+    # --- Agent ---
+    agent = create_agent(
+        model=model,
+        tools=[],
+        system_prompt=ec_agent_prompt.prompt,
+    )
+
+    # --- 调用 ---
+    result = agent.invoke(
+        {"messages": [{"role": "user", "content": "你好"}]},
+        config={
+            "callbacks": [langfuse_handler],
+            "metadata": {"langfuse_prompt": ec_agent_prompt},
+        },
+    )
+
+    print(result)
+
+
+    # Langfuse开启批处理
+    import os
+
+    # 每次刷新时最多发送的事件数
+    os.environ["LANGFUSE_FLUSH_AT"]="30"
+
+    # 队列最大等待时间(毫秒)
+    os.environ["LANGFUSE_FLUSH_INTERVAL"]="2000"
+
+    # 设置全局采样率
+    os.environ["LANGFUSE_SMPLE_RATE"]="0.5" # 仅记录50%的请求
+
+
+    # 获取langfuse中的提示词
+    ec_agent_prompt = langfuse.get_prompt("ec-agent", label="production") # 这里的label="production" 这个不写也可以 默认是这个
+
+    # 按版本号拉取
+    ec_agent_prompt = langfuse.get_prompt('ec-agent', version=1)
+
+    print("Name", ec_agent_prompt.name) # 输出ec-agent
+    print("Version", ec_agent_prompt.version) # 输出1（整数）
+    print("Is Fallback", ec_agent_prompt.is_fallback) # 正常情况下应该为False
+    print("Prompt", ec_agent_prompt.prompt) # 提示词全文
+
+
+    # 🚀 把动态Prompt注入到LLM应用
+    from langchain.chat_models import init_chat_model
+
+    model = init_chat_model()
+
+    from langchain.agents import create_agent
+
+    agent = create_agent(
+        model = model,
+        tools=[],
+        system_prompt=ec_agent_prompt.prompt
+    )
+
+    # 在Observation上下文调用，并携带prompt信息
+    with langfuse.start_as_current_observation(name="langchain_call"):
+        with propagate_attributes():
+            result = agent.invoke(
+                {"messages": [{"role": "user", "content": "上海的天气怎么样？"}]},
+                config={
+                    "callback": [langfuse_handler],
+                    "meta": {"langfuse_prompt": ec_agent_prompt}
+                }
+            )
+
+    # 确保数据完全发送
+    langfuse.flush()
+
+
+    prompt = lanfuse.get_prompt(
+        "move-xc",
+        callback="when error prompt", # 兜底提示词
+        cache_ttl_seconds=300, # 0 开发调试时不要缓存
+        label="latest"
+    )
+
+
+    # 🚀 在提示词中使用配置 
+    from langfuse import get_client
+    from langchain.openai import OpenAI 
+
+    langfuse = get_client()
+
+    prompt = langfuse.get_template('invoice-extractor')
+
+    cfg = prompt.config
+    model = cfg.get('model')
+    temperature = cfg.get('temperature')
+
+    agent = OpenAI(
+        model=model,
+        temperature=cfg.temperature,
+        message=prompt.prompt
+    )
+
+    # 🌿实战：给 RAG 应用加追踪
+
+    import openai
+    from langfuse.decorators import observe, langfuse_context
+
+    """
+    用 @observe 装饰器，自动帮你创建 trace/spans
+    比手写 trace/generation 方便得多
+    """
+
+    class RAGChat:
+        def __init__(self):
+            self.client = openai.OpenAI()
+        
+        @observe(name="retrieve_docs", as_type="span")
+        def retrieve_docs(self, query: str) -> list:
+            """检索相关文档 —— 这一步会被自动记录为 span"""
+            # 模拟向量检索
+            docs = [
+                "Langfuse 是一个 LLM 可观测平台",
+                "它支持 trace、evaluation、prompt management",
+            ]
+            # 记录检索的额外信息
+            langfuse_context.update_current_observation(
+                input=query,
+                metadata={"docs_count": len(docs)}
+            )
+            return docs
+        
+        @observe(name="generate_answer", as_type="generation")
+        def generate_answer(self, query: str, context: list) -> str:
+            """LLM 生成回答 —— 自动记录为 generation"""
+            prompt = f"""基于以下信息回答问题：
+
+            上下文：{' '.join(context)}
+            问题：{query}
+            回答："""
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+            )
+            
+            result = response.choices[0].message.content
+            
+            # 记录 token 用量（自动从 response 读取）
+            langfuse_context.update_current_observation(
+                input=prompt,
+                output=result,
+                usage={
+                    "input": response.usage.prompt_tokens,
+                    "output": response.usage.completion_tokens,
+                },
+                model="gpt-4o",
+            )
+            
+            return result
+        
+        @observe(name="rag_chat")  # 整个 trace
+        def chat(self, query: str) -> str:
+            """完整的 RAG 流程"""
+            docs = self.retrieve_docs(query)
+            answer = self.generate_answer(query, docs)
+            return answer
+
+
+    # 使用
+    rag = RAGChat()
+    result = rag.chat("Langfuse 是什么？")
+    print(result)
+
+
+    # ⚖打分与评估
+    #--------------------------------------------------------------------------
+    # 🤔人工评分
+    # 在代码里记录评分
+    trace = langfuse.trace(name="qa_chat", user_id="user_001")
+
+    # 数值分（0-1）
+    trace.score(
+        name="helpfulness",
+        value=0.85,
+        comment="回答基本正确，但不够详细"
+    )
+
+    # 分类分
+    trace.score(
+        name="hallucination",
+        value="none",        # 可选: none / low / medium / high
+        data_type="CATEGORICAL"
+    )
+
+    # 布尔分
+    trace.score(
+        name="contains_toxic",
+        value=True,          # 或 False
+        data_type="BOOLEAN"
+    )
+
+    # 或者在 Langfuse UI 上直接打分
+    # Trace 详情页 → 右侧 Score 面板 → 点 Add Score
+
+    # 🤖自动评估（LLM-as-a-Judge）
+    from langfuse import Langfuse
+    from langfuse.evaluations import LlmJudge
+
+    # 在 Langfuse 平台上配置 LLM Judge 评估器
+    # Settings → Evaluations → 新建
+
+    # 或者用 SDK 定义简单评估
+    from langfuse.evaluations import StringEvaluator
+
+    def check_briefness(output: str, expected: str) -> float:
+        """检查回答是否太短（<20个字算差）"""
+        return 1.0 if len(output) > 20 else 0.0
+
+    # 批量跑评估
+    langfuse.evaluation.run(
+        name="briefness_check",
+        data=[...],  # trace 列表
+        evaluator=StringEvaluator(check_briefness),
+    )
+
+
+    # 🧪 数据集 & 实验
+    # 从历史 trace 创建
+    dataset = langfuse.create_dataset("qa-test-set")
+
+    # 添加数据
+    dataset.append_item(
+        input={"query": "什么是Langfuse？"},
+        expected_output={"answer": "Langfuse是LLM可观测平台"},
+    )
+
+    # 或者在 UI 上手动创建
+    # Langfuse → Datasets → 新建
+
+    # 跑实验
+    # 用不同 prompt 版本跑同一个数据集
+    experiment = langfuse.create_experiment(
+        name="prompt-v1-vs-v2",
+        dataset_id="qa-test-set",
+    )
+
+    # 对数据集里的每个 item 运行
+    for item in dataset.items:
+        # 用 prompt v1
+        result_v1 = chain_v1.invoke(item.input)
+        experiment.log(item, result_v1, prompt_version=1)
+        
+        # 用 prompt v2
+        result_v2 = chain_v2.invoke(item.input)
+        experiment.log(item, result_v2, prompt_version=2)
+
+
+# ⚙ Skills 
+# ====================================================================================================================================
+
+    @ Skill的本质，不是“多一个工具”，而是把能力变成 可发现、可判断、可执行、可维护的模块
+    @ 渐进式披露
+    @ 一个Skill应该完成一个单一的事情
+
+    # 🚀 skills 分层 
+    1. **路由层（frontmatter）**：
+       - 位置：SKILL.md 文件顶部的 YAML 区域
+       - 职责：触发匹配（name、description）
+       - 大小：通常 3-5 行
+    2. **控制层（SKILL.md 正文）**：
+       - 位置：SKILL.md 的 Markdown 正文
+       - 职责：决策和流程（Goal、Workflow、Decision Tree、Constraints、Validation）
+       - 大小：60-500 行
+    3. **执行层（scripts/ + references/ + assets/）**：
+       - 位置：独立的子目录
+       - 职责：具体操作 
+       - 大小：不限，按需扩展
+
+
+# 🔗 Langchain
+# ====================================================================================================================================
+
+    #🔥 创建agent
+        from langchain.agents import create_agent
+        from redis import backoff
+
+        agent = create_agent(
+            model="claude-sonnet-4-5-20250929",
+            tools=[],
+            system_prompt="你是一个专业的助手，能够回答用户的问题。",
+        )
+
+        # 调用agent
+        result = agent.invoke("我想知道迪士尼的退票政策")
+        print(result)
+
+        ## 使用Model模块
+        from langchain.chat_models import init_chat_model
+        import os
+
+        model = init_chat_model(
+            model="claude-sonnet-4-5-20250929",
+            api_key=os.getenv("DASHSCOPE_API_KEY"),
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            timeout=30,
+            max_retries=4,
+            max_tokens=3000,
+            temperature=0.7,
+        )
+
+        # 为模型添加指数退避重试策略
+        model = model.with_retry(
+            stop_after_attemp = 3, # 最多重试3次
+            wait_exponential_jitter=True # 指数退避 + 随机抖动
+        )
+
+        # 🖥 使用langchain中的向量模型
+        from langchain.embeddings import init_embeddings
+
+        embedding = init_embeddings(mode="text-embedding-3-small", provider="openai")
+
+        # 将文本转化为向量
+        res = embedding.embed_query("hello world")
+
+
+    # 🚀 提示词模板
+        from langchain_core.prompts import PromptTemplate
+
+        template = PromptTemplate(
+            input_variables=['product', 'feature'],
+            template="请为{product}的{feature}功能写一段文案。"
+        )
+
+        prompt = template.format(
+            product="智能手机",
+            feature="AI摄影"
+        )
+
+        print(prompt)
+
+    # 🚀 系统提示词
+
+        from langchain.agents import create_agent
+        from langchain.tools import tool
+
+        # 1. 定义一个简单的天气查询工具
+        @tool
+        def get_weather(city: str) -> str:
+            """获取指定城市的天气信息。"""
+            weather_data = {
+                "北京": "晴朗，气温25°C",
+                "上海": "多云，气温28°C",
+                "广州": "小雨，气温30°C"
+            }
+            return f"{city}的天气是：{weather_data.get(city, '未知')}"
+
+        # 2. 静态 system_prompt（固定不变）
+        agent_static = create_agent(
+            model="openai:gpt-4o-mini",
+            tools=[get_weather],
+            system_prompt=(
+                "你是一个天气助手，回答不超过20字。\n"
+                "调用工具时，严格按照以下格式：\n"
+                "1. 使用 `get_weather(city: str)` 获取天气；\n"
+                "2. 仅返回天气结果，不解释过程。"
+            )
+        )
+
+        print("=== 静态 System Prompt ===")
+        response1 = agent_static.invoke({
+            "messages": [{"role": "user", "content": "北京天气"}]
+        })
+        print(f"AI: {response1['messages'][-1].content}")
+
+        # 3. 动态提示词（通过中间件实现）
+        from langchain.agents.middleware import dynamic_prompt
+        from typing import TypedDict
+
+        # 4. 定义上下文结构
+        class Context(TypedDict):
+            user_role: str  # 用户角色
+
+        # 5. 动态提示函数
+        @dynamic_prompt
+        def role_based_prompt(request):
+            """根据用户角色生成不同提示词"""
+            user_role = request.runtime.context.get("user_role", "user")
+
+            if user_role == "expert":
+                return "你是一个专业气象分析师，提供详细数据"
+            elif user_role == "beginner":
+                return "你是一个友善的导游，用简单语言解释"
+            else:
+                return "你是一个简洁的天气助手"
+
+        # 6. 创建动态 Agent
+        agent_dynamic = create_agent(
+            model="openai:gpt-4o-mini",
+            tools=[get_weather],
+            middleware=[role_based_prompt],  # 注入动态提示
+            context_schema=Context
+        )
+
+        print("\n=== 动态 System Prompt（专家角色）===")
+        response2 = agent_dynamic.invoke(
+            {"messages": [{"role": "user", "content": "北京天气"}]},
+            context={"user_role": "expert"} # 💥
+        )
+        print(f"AI: {response2['messages'][-1].content}")
+
+        print("\n=== 动态 System Prompt（新手角色）===")
+        response3 = agent_dynamic.invoke(
+            {"messages": [{"role": "user", "content": "北京天气"}]},
+            context={"user_role": "beginner"} # 💥
+        )
+        print(f"AI: {response3['messages'][-1].content}")    
+
+    # 🚀 调用模型
+        # 1. 单条消息
+        response = model.invoke("我想知道迪士尼的退票政策")
+        print(response)
+
+        # 2. 多条消息（对话历史）调用
+        conversation = [
+            {"role": "user", "content": "我想知道迪士尼的退票政策"},
+            {"role": "assistant", "content": "迪士尼的：..."},
+            {"role": "user", "content": "明天天气怎么样？"},
+            {"role": "assistant", "content": "明天天气：..."},
+        ]
+        response = model.invoke(conversation)
+        print(response)
+
+        # 3. 流式输出
+        response = model.stream(conversation)
+        for chunk in response:
+            print(chunk.content, end="", flush=True)
+        print("")
+
+        # 4. 批量调用
+        requests = ["什么是人工智能？", "langchain有什么优势", "如何使用模型？"]
+        response = model.batch(requests)
+        for i, response in enumerate(response):
+            print(f"问题{i+1}: {requests[i]}")
+            print(f"回答{i+1}: {response.content}")
+            print("=" * 30)
+
+
+        # 5. 异步批量并发
+        from langchain_core.runnables import RunnableConfig
+        import asyncio
+
+        config = RunnableConfig(
+            max_concurrency=2, # 最大并发数
+            abstimeout=8.0, # 单个任务超时时间 秒 超过此时间的任务奖被强制终止
+            metadata={"request_id": "abs123", "task": "query"} # 元数据
+        )    
+
+
+        prompt_template = PromptTemplate.from_template(
+            "为正常{product}的公司起一个好名字"
+        )
+
+        inputs = ["彩色袜子", "环保咖啡杯", "智能水杯"]
+        formatted_prompts = [prompt_template.format(product=product) for product in inputs]
+
+        results = asyncio.run(await model.abatch(formatted_prompts, config=config))
+
+    # 🚀 使用Model Profiles
+
+        profile = model.profile
+
+        print("\n模型配置信息:")
+        print(f"最大输入token数：{profile.get('max_input_tokens')}")
+        print(f"最大输出token数：{profile.get('max_output_tokens')}")
+        print(f"支持图像输入：{profile.get("image_inputs")}")
+
+    # 🚀 标准内容块 Content Blocks
+
+        # 创建使用content_blocks属性的消息
+        from langchain.messages import HumanMessage
+
+        message = HumanMessage(
+            content_blocks=[{"type": "text", "text": "我想知道迪士尼的退票政策"}]
+        )
+
+        # 主要内容块类型
+        # 1.文本内容块
+        text_block = {"type": "text", "text": "我想知道迪士尼的退票政策"}
+
+        # 2.图像内容块
+        image_block = {"type": "image_url", "image_url": "https://example.com/image.jpg"}
+
+        # 3.音频内容块
+        audio_block = {"type": "audio_url", "audio_url": "https://example.com/audio.mp3"}
+
+        # 4.工具使用内容块
+        tool_block = {
+            "type": "tool_use",
+            "id": "tool_call_123",
+            "name": "get_weather",
+            "params": {"city": "北京"},
+        }
+
+        # 5.工具结果内容块
+        tool_result_block = {
+            "type": "tool_result",
+            "tool_call_id": "tool_call_123",
+            "content": {"temperature": 25, "condition": "sunny"},
+        }
+
+    # 🚀 工具定义
+        from langchain.tools import tool
+
+        @tool
+        def search_database(query: str, limit: int = 10) -> str:
+            """Search the customer database for records matching the query.
+            Args:
+                query (str): The query to search for.
+                limit (int, optional): The maximum number of records to return. Defaults to 10.
+            """
+            return f"Found {limit} results for {query}"
+
+
+        # 工具运行时上下文
+        # 使用ToolRuntime访问会话状态
+        from langchain.tools import ToolRuntime, tool
+
+
+        @tool
+        def summarize(runtime: ToolRuntime) -> str:
+            """总结当前对话历史"""
+            messages = runtime.state["messages"]
+
+            human_msgs = sum(1 for m in messages if m.__class__.__name__ == "HumanMessage")
+            ai_msgs = sum(1 for m in messages if m.__class__.__name__ == "AIMessage")
+            tool_msgs = sum(1 for m in messages if m.__class__.__name__ == "ToolMessage")
+
+            return f"对话历史中，用户有{human_msgs}条消息，助手有{ai_msgs}条消息，工具调用了{tool_msgs}次。"
+
+
+        # 更新会话状态
+        from langchain.tools import tool
+        from langgraph.types import Command
+
+
+        @tool
+        def clear_conversation() -> Command:
+            """清除当前对话历史"""
+            from langchain.messages import RemoveMessages
+            from langgraph.graph.message import REMOVE_ALL_MESSAGES
+
+            return Command(update={"messages": [RemoveMessages(id=REMOVE_ALL_MESSAGES)]})
+
+    # 🚀 mcp接入LangChain
+        """
+        **检查 Node.js**
+        * node --version
+
+        **检查 npm/npx**
+        * npx --version
+
+        **手动安装 MCP 服务器包**
+        * npm install -g @amap/amap-maps-mcp-server    
+        pip install langchain-mcp-adapters
+        """
+
+        # ==================mcp_server.py===================================
+        # pip install mcp
+
+        from mcp.server.fastmcp import FastMCP
+
+        mcp = FastMCP('MathServer')
+
+        @mcp.tool
+        def add(a: float, b: float) -> float:
+            """计算两个数的和"""
+            return a + b
+
+        @mcp.tool()
+        def multiply(a: float, b: float) -> float:
+            """计算两个数的乘积"""
+            return a * b
+
+        if __name__ == "__main__":
+            # 启动服务器，使用stdio传输
+            mcp.run(transport="stdio")        
+        # ==================================================================
+
+        import os
+        from langchain_mcp_adapters.client import MultiServerMCPClient   # 导入 MCP 客户端
+        from langchain_core.tools import tool
+        from langchain.agents import create_agent
+
+        # 1. 初始化 MCP 客户端，只连接本地 MCP 服务器
+        # 获取当前文件所在目录的绝对路径
+        mcp_server_path = os.path.join("mcp_server.py")
+        print(mcp_server_path)
+
+        # 2. 初始化 MCP 客户端，只连接本地 MCP 服务器
+        mcp_client = MultiServerMCPClient(
+            {
+                # 本地 Python MCP 服务器（stdio 传输）
+                "math": {
+                    "transport": "stdio",
+                    "command": "python",
+                    "args": [mcp_server_path],  # 使用绝对路径
+                },
+                # 如果需要其他服务器，可以在这里添加
+                # 注意：只添加确实在运行的服务器！否则会导致连接失败，需要先运行mcp_server.py文件！！！
+                # 高德地图 MCP 服务器
+                "amap-maps": {
+                    "transport": "stdio",
+                    "command": "npx",
+                    "args": ["-y", "@amap/amap-maps-mcp-server"],
+                    "env": {
+                        "AMAP_MAPS_API_KEY": os.getenv("AMAP_MAPS_API_KEY"),
+                    }
+                }
+            }
+        )
+
+        # 3. 加载 MCP 工具
+        try:
+            mcp_tools = await mcp_client.get_tools()
+            print(f"✅ 成功加载 {len(mcp_tools)} 个 MCP 工具: {[t.name for t in mcp_tools]}")
+        except Exception as e:
+            print(f"❌ 加载 MCP 工具失败: {e}")
+            print("将只使用本地工具")
+            mcp_tools = []
+
+        # 4. 定义天气查询工具
+        @tool
+        def get_weather(city: str) -> str:
+            """获取指定城市的天气信息。"""
+            weather_data = {
+                "北京": "晴朗，气温25°C",
+                "上海": "多云，气温28°C",
+                "广州": "小雨，气温30°C"
+            }
+            return f"{city}的天气是：{weather_data.get(city, '未知')}"
+
+        # 5. 合并所有工具
+        all_tools = [get_weather] + mcp_tools
+
+        # 6. 加载 ChatOpenAI 模型
+        llm = load_chat_model(model="gpt-4o-mini",provider="openai")
+
+        # 7. 创建Agent
+        agent = create_agent(
+            model=llm,
+            tools=all_tools,
+            system_prompt="你是一个多功能的助手，可以查询天气和进行数学计算。"
+        )    
+
+    # 🚀 使用自定义上下文
+        from dataclasses import dataclass
+        from langchain.tools import tool, ToolRuntime
+
+
+        # 定义用户上下文结构
+        @dataclass
+        class UserContext:
+            user_id: str
+
+
+        # 使用泛型参数声明所需的上下文类型
+        @tool
+        def get_account_info(runtime: ToolRuntime[UserContext]) -> str:
+            """获取用户账户信息"""
+            user_id = runtime.context["user_id"]
+            return f"用户{user_id}的账户信息：..."
+
+
+        agent = create_agent(tools=[get_account_info])
+
+    # 🚀复杂输入模式
+        # 使用pydantic数据类定义复杂的输入结构
+        from pydantic import BaseModel, Field
+        from langchain.tools import tool
+
+
+        class SearchParams(BaseModel):
+            query: str = Field(description="The query to search for.")
+            filters: dict = Field(
+                default_factory=dict, description="Additional filters to apply to the search."
+            )
+            limit: int = Field(
+                description="The maximum number of records to return. Defaults to 10."
+            )
+
+
+        @tool
+        def advanced_search(params: SearchParams) -> str:
+            """执行高级搜索"""
+            print("我被调用啦~~~~")
+            print(
+                f"关键词：{params.query}, 过滤条件：{params.filters},  返回数量：{params.limit}"
+            )
+
+    # 🚀 短期记忆
+        from langchain.agents import create_agent
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        # 创建带记忆功能的智能体
+        agent = create_agent(
+            model="gpt-5",
+            tools=[get_account_info, advanced_search],
+            checkpointer=InMemorySaver(),
+        )
+
+        # 使用thread_id标识不同会话
+        agent.invoke(
+            {"messages": [{"role": "user", "content": "你好，我叫小明"}]},
+            {"configurable": {"thread_id": "1"}},
+        )
+
+    # 🚀 自定义记忆内容
+
+        from langchain.tools import tool, ToolRuntime
+        from langchain.agents import create_agent, AgentState
+        from langgraph.checkpoint.memory import InMemorySaver
+        from langchain.chat_models import init_chat_model
+
+
+        # 创建扩展的状态类，添加额外字段
+        class CustomState(AgentState):
+            user_name: str
+
+
+        # 定义工作 通过runtime访问自定义状态
+        @tool
+        def greet(runtime: ToolRuntime[CustomState]) -> str:
+            """问候用户"""
+            user_name = runtime.state["user_name"]
+            return f"你好，{user_name}！很高兴为你服务。"
+
+
+        # 初始化聊天模型
+        model = init_chat_model("gpt-5")
+
+        # 使用自定义状态创建智能体
+        agent = create_agent(
+            model=model, tool=[greet], state_schema=CustomState, checkpointer=InMemorySaver()
+        )
+
+        # 在调用时自定义信息
+        result = agent.invoke(
+            {"messages": [{"role": "user", "content": "向用户问好"}], "user_name": "小明"},
+            {"configurable": {"thread_id": "user_session_1"}},
+        )
+        print(result)
+
+    # 🚀 结构化输出
+        # 🌰 Pydantic Models （最强）
+            from pydantic import BaseModel, Field
+            from langchain.agents.structured_output import ProviderStrategy
+
+
+            class MeetingAction(BaseModel):
+                topic: str = Field(description="会议主题")
+                participants: list = Field(description="会议参与人员")
+                action_items: list = Field(description="会议中需要执行的操作项")
+                deadline: str = Field(description="截止时间")
+
+
+            # 创建智能体
+            meeting_agent = create_agent(
+                model=model,
+                response_format=ProviderStrategy(MeetingAction),
+            )
+
+            # 调用获取结果
+            result = meeting_agent.invoke(
+                {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "请创建一个会议，主题为项目A，参与人员为张三、李四，操作项为项目A的进度报告，截止时间为2024-01-01",
+                        }
+                    ]
+                }
+            )
+
+            meeting_data = result["structured_response"]
+            print(f"会议主题：{meeting_data.topic}")
+            print(f"参与人员：{meeting_data.participants}")
+
+        # 🌰 Dataclasses  轻量级结构 原生数据类
+            from dataclasses import dataclass
+            from langchain.agents import create_agent
+            from langchain.agents.structured_output import ProviderStrategy
+
+
+            @dataclass
+            class BookInfo:
+                title: str
+                author: str
+                isbn: str
+                year: int
+
+
+            book_agent = create_agent(model=model, response_format=ProviderStrategy(BookInfo))
+
+        # 🌰 TypedDict
+            # 字典结构-类型安全的字典
+            from typing import TypedDict
+            from langchain.agents.structured_output import ProviderStrategy
+
+
+            class MovieInfo(TypedDict):
+                title: str
+                director: str
+                year: int
+                genre: str
+
+
+            movie_agent = create_agent(model=model, response_format=ProviderStrategy(MovieInfo))
+
+            result = movie_agent.invoke(
+                {"messages": [{"role": "user", "content": "请推荐一部2023年上映的科幻电影"}]}
+            )
+
+            movie_data = result["structured_response"]
+            print(f"推荐的电影：{movie_data['title']}")
+            print(f"导演：{movie_data['director']}")
+
+        # 🌰 JSON schema
+            from langchain.agents.structured_output import ToolStrategy
+
+            contact_info_schema = {
+                "type": "object",
+                "description": "Contact information for a person",
+                "properties": {
+                    "name": {"type": "string", "description": "用户名"},
+                    "email": {"type": "string", "description": "用户邮箱"},
+                    "phone": {"type": "string", "description": "用户手机号"},
+                },
+                "required": ["name", "email", "phone"],
+            }
+
+            contact_agent = create_agent(
+                model=model, response_format=ProviderStrategy(contact_info_schema)
+            )
+
+            ## 智能错误处理
+            agent = create_agent(
+                handle_errors=True,  # 捕获所有错误并重试
+                response_format=ToolStrategy(
+                    schema=contact_info_schema,
+                    handle_errors=True,  # 捕获所有错误并重试
+                    # handle_errors="请确保提供有效的联系信息" # 自定义错误提示
+                    # handle_errors=ValueError # 仅捕获特定异常
+                ),
+            )
+
+    # -------------------- 内置中间件 ----------------------------------
+
+        # 🚀 1 SummarizationMiddleware
+            # 用于解决长对话场景下的上下文管理问题。
+            # 当对话内容接近模型的token时，它会自动总结较早的对话历史，保留关键信息的同时压缩内容
+            """
+            参数 
+                model string|BaseChatModel 必须
+                trigger: 控制何时触发总结操作
+                    fraction(float) 模型上下文窗口的使用比例（0~1）
+                    tokens(int) 绝对token数量
+                    messages(int) 消息数量 
+                keep: 控制总结后保留多少上下文信息
+                    fraction(float) 模型上下文窗口的使用比例（0~1）
+                    tokens(int) 绝对token 数量
+                    messages(int) 消息数量 
+                trim_tokens_to_summarize: 生成总结时包含的最大token数量 默认为 4000
+                summary_prefix: 添加到总结消息的前缀文本
+                token_counter: 用于计算对话消息token数量的函数
+                summary_prompt: 用于生成对话总结的提示词            
+            """
+            from langchain.agents import create_agent
+            from langchain.agents.middleware import SummarizationMiddleware, ToolRetryMiddleware
+
+            summary_prompt = """
+            请总结以下对话内容，重点关注
+            1.用户的主要问题和需求
+            2.已经提供的解决方案
+            3.尚未解决的关键问题
+            4.重要的上下文信息
+            """
+
+            agent = create_agent(
+                model=model,
+                middleware=[
+                    SummarizationMiddleware(
+                        trigger=[("fraction", 0.8)],
+                        keep=("fraction", 0.3),
+                        summary_prompt=summary_prompt,
+                    )
+                ],
+            )
+
+        # 🚀 2 ContextEditingMiddleware
+            # 用于在达到令牌限制时清理旧的工具调用输出，同时保留最近的结果
+            # 它帮助具有大量工具调用的长对话中保持上下文的可管理性，通过智能删除不再使相关的工具输出，优化令牌使用并控制成本
+            """
+            参数
+                edits: 要应用ContextEdit策略列表  
+                    edits=[ClearToolUsesEdit()] 默认值 ClearToolUsesEdit()
+                token_count_method: 令牌计数方法 
+                    token_count_method="approximate" 默认值 "approximate" 选项 "approximate" "model"
+
+            ClearToolUsesEdit参数
+                trigger: 触发编辑的信息计数阈值 默认值为100000
+                clear_at_least: 编辑运行时至少回收的令牌数  默认为0 设置为0时，清除所需尽可能多的令牌
+                keep: 必须保存最近工具结果数量 默认值为3 这些工具结果将永远不会被清理
+                clear_tool_inputs: 是否清除AI消息上的工具调用参数 clear_tool_inputs=False 默认为False
+                exclude_tools: 排除在清除之外的工具名称列表 
+                placeholder: 插入被清除工具输出的占们符文本 默认值： "[cleared]"        
+            """
+            from langchain.agents import create_agent
+            from langchain.agents.middleware import ContextEditingMiddleware, ClearToolUsesEdit
+
+            agent = create_agent(
+                model=model,
+                middleware=[
+                    ContextEditingMiddleware(
+                        edits=[
+                            ClearToolUsesEdit(
+                                trigger=2000,
+                                keep=3,
+                                clear_tool_inputs=False,
+                                exclude_tools=[],
+                                placeholder="[cleared]",
+                            )
+                        ],
+                        token_count_method="approximate",
+                    )
+                ],
+            )
+
+        # 🚀 3 FilesystemFileSearchMiddleware
+            # 它提供了两个强大的搜索工具：
+            # Glob（按名称查找特定类型的文件）与Grep（在文件内容中搜索特定代码和文本）, 用于在文件系统中查获文件和搜索文件内容
+            """
+            参数
+                root_path: 要搜索的根系统路径,所有文件操作都相对于此路径 必填
+                use_ripgrep(默认:True) 是否使用ripgrep进行搜索，如果ripgrep不可用，则回退到Python下则表达式
+                max_file_size_mb(默认:10) 要搜索的最大文件大小（以MB为单位），大于此值将被跳过。
+            """
+            from langchain.agents import create_agent
+            from langchain.agents.middleware import FilesystemFileSearchMiddleware
+
+            agent = create_agent(
+                model=model,
+                middleware=[
+                    FilesystemFileSearchMiddleware(
+                        root_path="/workspace", 
+                        use_ripgrep=True, 
+                        max_file_size_mb=10
+                    )
+                ],
+            )
+
+            # 智能体现在可以使用glob_search和grep_search工具
+            result = agent.invoke(
+                {"messages": [HumanMessage(content="find all python files containing 'async def'")]}
+            )
+            # 智能体将使用：
+            # 1. glob_search(pattern="**/*.py") 查找python文件
+            # 2. grep_search(pattern="async def", include="*.py") 查找异步函数
+
+        # 🚀 4 HumanInTheLoopMiddleware
+            # 专门为AI智能体提供人工监督机制，当AI助手需要执行可能敏感或危险的操作时，它会自动暂停执行流程
+            # 等待人工审核和决策，确保所有重要操作都在人类监督下进行。
+
+            """
+            参数
+                interrupt_on: 必需参数，定义哪些工具需要人工介入
+                    所有决策类型都允许
+                    write_file: True
+                    只允许批准和拒绝，不允许编辑
+                    "execute_sql": {"allow_decisions": ["approve", "reject"]}
+                    自动批准，无需人工介入
+                    "read_data": False
+                description_prefix: 可选参数，自定义介入消息前缀
+                    description_prefix="请确认以下操作："
+            """
+
+            from langchain.agents import create_agent
+            from langchain.agents.middleware import HumanInTheLoopMiddleware
+            from langgraph.checkpoint.memory import InMemorySaver
+
+            # 创建人工介入中间件
+            hitl_middleware = HumanInTheLoopMiddleware(
+                interrupt_on={
+                    "write_file": True,
+                    "execute_sql": {"allow_decisions": ["approve", "reject"]},
+                    "read_data": False,
+                },
+                description_prefix="工具执行待审核",
+            )
+
+            # 创建智能体
+            agent = create_agent(model=model, middleware=[hitl_middleware])
+
+            # 处理人工介入响应
+            from langgraph.types import Command
+
+            # 必需：提供线程ID以支持中断和恢复
+            config = {"configurable": {"thread_id": "conversation-123"}}
+
+            # 运行直到中断
+            result = agent.invoke({"messages": [HumanMessage(content="删除30天前的记录")]})
+
+            if "__interrupt__" in result:
+                interrupt = result["__interrupt__"][0]
+                print(f"需要审核的操作：{interrupt.value}")
+
+                # 提供人类决策
+                human_decision = {"action_requests": [{"decision": "approve"}]}
+
+                # 继续执行
+                final_result = agent.invoke(Command(resume=human_decision), config=config)
+
+        # 🚀 5 LLMToolEmulator
+            # 允许使用语言模型来模拟指定工具的行为，而不是实际执行这些工具
+            # 这在实际工具不可用、需要安全测试或控制API调用成本时特别有用。该中间件支持选择性地模拟特定工具，可以通过工具名称或工具实例来指定
+            """
+            参数：
+                tools: 要模拟的工具名称列表或BaseTool实例列表
+                model: 用于模拟工具行为的语言模型 默认值为 anthropic:claude-sonnet-4-5-20240229
+            """
+
+        # 🚀 6 LLMToolSelectorMiddleware 
+            # 专为智能工具选择设计的中间件，它使用LLM智能地选择相关工具，然后再调用主模型。
+            # 该中间件特别适用于，拥有大量（10+）的代理，其中大多数工具对每个查询都不相关
+            # 通过过滤不相关工具来减少信息使用；提高模型的专注度和准确性。它使用结构化输出来询问LLM哪些工具最适合当前查询。
+
+            from langchain.agents import create_agent
+            from langchain.agents.middleware import LLMToolSelectorMiddleware
+
+            # 创建智能体，包含工具选择中间件
+            agent = create_agent(
+                model="gpt-4",
+                tools=[tool1, tool2, tool3, tool4],
+                middleware=[
+                    LLMToolSelectorMiddleware(
+                        model="gpt-4o-mini", # 工具选择模型
+                        max_tools=3, # 最多可选择3个工具
+                        system_prompt="优先选择成本效益最高的工具，避免使用昂贵的API，除非绝对必要。", # 成本优化提示
+                        always_include=['search'] # 始终包含搜索工具
+                    )
+                ]
+            )
+
+            result = agent.invoke("搜索最新的AI新闻并分析市场趋势")
+
+        # 🚀 7 ModelCallLimitMiddleware
+            # 模型调用限制中间件。它通过限制模调用次数来防止无限循环或过度成本，帮助开发者有效控制API调用成本，防止意外的费用支出
+            # 并确保系统资源得到合理利用。该中间件为API应用提供了重要的经济保护机制
+            """
+            参数：
+                thread_limit: 线程内所有运行的最大模型调用次数（可选） 默认为无限制
+                run_limit: 单次调用的最大模型调用次数（可选） 默认为无限制
+                exit_behavior: 达到限制时的行为（可选） 默认为end    end 优雅终止    error 抛出错误
+            """
+            from langchain.agents import create_agent
+            from langchain.agents.middleware import ModelCallLimitMiddleware
+
+            agent = create_agent(
+                model="gpt-4o",
+                tools=[tool1, tool2, tool3],
+                middleware=[
+                    ModelCallLimitMiddleware(
+                        thread_limit=10, # 线程内最多10次调用 
+                        run_limit=5, # 单次最多调用5次
+                        exit_behavior="error", # 抛出错误
+                    )
+                ]
+            )
+
+            try:
+                result = agent.invoke({input: "需要多次调用的任务"})
+            except Exception as e:
+                print(f"达到调用限制：{e}")   
+
+        # 🚀 8 ModelFallbackMiddleware
+            # 专门用于模型故障转移的中间件。当主模型调用失败时，它会自动按顺序尝试备用模型，直到成功或者所有模型都耗尽
+
+            from langchain_openai import ChatOpenAI
+            from langchain_anthropic import ChatAnthropic
+            from langchain.agents.middleware import ModelFallbackMiddleware
+
+            gpt4_model = ChatOpenAI(model="gpt-4", temperature=0.7)
+            claude_model = ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0.5)
+            gpt35_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3)
+
+            instance_fallback = ModelFallbackMiddleware(gpt4_model, claude_model, gpt35_model)
+
+            # 创建智能体
+            agent = create_agent(
+                model="openai:gpt-4o-mini", # 主模型
+                middleware=[instance_fallback]
+            )
+
+        # 🚀 9 PIIMiddleware
+            # 专为个人隐私信息（PII）检测设计的中间件。它能够智能识别文本中的敏感信息，如邮箱地址，信用卡号，IP地址等
+            # 并提供多种处理策略，包括阻止、脱敏、掩码或哈希处理。该中间件支持自定义PII类型和检测器，确保在数据处理过程中充分保护用户隐私
+
+            from langchain.agents.middleware import PIIMiddleware
+            from langchain.agents import create_agent
+
+            # 脱敏用户输入中的所有邮箱地址
+            agent = create_agent(
+                "openai:gpt-5",
+                middleware=[
+                    PIIMiddleware('email', strategy="redact")
+                ]
+            )
+            # 示例："联系我的邮箱： water.li@example.com"
+            # 输出："联系我的邮箱： [REDACTED_email]"
+
+            # 为不同PII类型使用不同策略
+            agent = create_agent(
+                "openai:gpt-5",
+                middleware=[
+                    PIIMiddleware("credit_card", strategy="mask"), # 掩码信用卡
+                    PIIMiddleware("url", strategy="redact"), # 脱敏url
+                    PIIMiddleware("ip", strategy="hash") # 哈希IP地址 
+                ]
+            )
+
+            # 我的卡号是 4534-1234-5678-9012 -> 我的卡号是****-****-****-9012
+            # 访问 http://example.com -> 访问[REDACTED_url]
+            # IP是 192.168.1.1 -> ip是<pi_hash:abc123>
+
+            """
+            参数：
+                pii_type: 要检测的PII类型
+                    email 邮箱地址
+                    credit_card 信用卡： 带luhn算法验证
+                    ip  ip地址
+                    mac_address MAC地址
+                    url  URLs（http/https和裸url）
+
+                strategy 检测到PI时的处理策略 默认是redact
+                    block 检测到PI时抛出异常
+                    redact 替换为[REDACT_TYPE]占位符
+                    mask   部分掩码 
+                    hash   替换为确定性哈希
+
+                detector 自定义检测器函数或正则表达式
+
+                apply_to_input 默认为True 是否在模型调用前检查用户消息
+                apply_to_ouput 默认为False 是否在模型调用后检查AI消息
+                apply_to_tool_results 默认为False 是否在工具执行后检查工具结果消息    
+            """
+
+        # 🚀 10 TodoListMiddleware
+            # 就是给AI智能体添加一个“任务规划”的超能力，当智能体处理复杂任务时，会自动创建任务列表，并在任务完成后展示完整的执行历史
+            # 让AI的工作过程更加透明和有条理
+
+            from langchain.agents import create_agent
+            from langchain.agents.middleware import TodoListMiddleware
+
+            agent = create_agent(
+               "openai:gpt-4o",
+               middleware=[ TodoListMiddleware() ]
+            )
+
+            result = await agent.invoke({"messages": ["你的请求"]})
+
+            if "todos" in result:
+                print("任务执行历史")
+                for todo in result["todos"]
+                    print(f"-{todo['content']} ({todo['status']})")
+
+            """
+            参数
+                system_prompt 可选 自定义提示词，告诉AI如何使用任务清单功能，默认已经很智能，一般不需要改
+                todo_description 可选 write_todos工具的描述，让AI理解这个工具的任务 默认描述很清晰，通常不需要修改
+            """
+
+        # 🚀 11 ToolCallLimitMiddleware
+            # 专为工具调用设计的限制中间件。它跟踪工具调用次数并在代理执行期间强制执行限制。支持纯种级别（跨运行持久化）和运行级别（每次调用）的调用计数
+            # 当超出限制时可以选择阻止工具、抛出异常或立即结束执行
+            """
+            参数：
+                tool_name 要限制的工具名称，如果为None则限制适用于所有工具
+                thread_limit 每个线程（会话）允许的最大工具调用次数，跨支持持久化
+                run_limit 每次运行允许的最大工具调用次数。None表示无限制，每次调用独立计数
+                exit_behavior 超出限制的处理方式 
+                    continue 阻止超出的工具，让执行继续
+                    error 抛出ToolCallLimitExceededError异常
+                    end 立即停止  返回ToolMessage+AI消息
+            """
+
+            from langchain.agents.middleware import ToolCallLimitMiddleware
+
+            # 通用工具限制
+            general_limiter = ToolCallLimitMiddleware(
+                thread_limit=50,
+                run_limit=15,
+                exit_behavior="continue"
+            )
+
+            # 危险工具严格限制
+            dangerous_limiter = ToolCallLimitMiddleware(
+                tool_name="execute_code",
+                thread_limit=5,
+                run_limit=2,
+                exit_behavior="error"
+            )
+            agent = create_agent(
+                "openai:gpt-4o",
+                middleware=[general_limiter, dangerous_limiter]
+            )
+
+        # 🚀 12 ToolRetryMiddleware
+            # 为工具重试中间件，它能够自动重试失败的工具调用，并支持可配置的退避策略
+            # 该中间件支持对特定异常进行重试，使用指数退避算法，并提供灵活的失败处理机制，确保工具调用的可靠性和稳定性。
+            """
+            参数：
+                max_retries 最大重试次数 默认值为2
+                tools 应用重试逻辑的工具列表 默认为None 所有工具
+                retry_on 重试的异常类型或判断函数，默认值为None 所有可重试异常 ConnectError TimeoutError
+                on_failure 所有重试失败后的行为，默认值为return_message
+                initial_delay 第一次重庆前的初始延迟 默认值为1.0
+                max_delay 重试间隔的最大延迟 默认值为60.0
+                backoff_factor 指数退避的乘数 默认值为2.0
+                jitter 是否添加随机拉动以避免雪崩效应 默认值为True
+            """
+
+            # 特定异常重试
+            from langchain.agents.middleware import ToolRetryMiddleware
+            from requests.exceptions import RequestException, Timeout
+
+            specific_retry = ToolRetryMiddleware(
+                max_retries=4, #最多重试4次
+                retry_on=(RequestException, Timeout),
+                backoff_factor=1.5,
+                initial_delay=0.5
+            )
+
+            # 自定义异常过滤器
+            from langchain.agents.middleware import ToolRetryMiddleware
+            from requests.exceptions import HTTPError
+
+            def should_retry(exc: Exception) -> bool:
+                # 仅对5xx错误进行重试
+                if isinstance(exc, HTTPError):
+                    return 500<= exc.status_code <= 600
+                return False
+
+            custom_filter_retry = ToolRetryMiddleware(
+                max_retries=3,
+                retry_on=should_retry
+            )
+
+    # -------------------- 自定义中间件 --------------------------------
+
+        # 🍎 @before_agent 
+            # 在智能体执行流程开始前首先执行的钩子函数 这个装饰器用于拦截智能体的初始状态，可以在智能体处理用户请求前进行必要的初始化、数据准备或权限验证等操作
+            # 装饰器参数 can_jump_to: 可选参数，是一个字符串列表，指定当前钩子函数可以跳到的节点名称。
+            """
+            回调函数参数
+                state: AgentState 当前智能体的完整状态对象，这是一字典类型，包含以下关键信息
+                    messages: 消息历史列表，包含用户输入和系统消息
+                    user_id: 用户标识（如果已设定）
+                    workflow_state: 工作流当前状态
+                    其它自定义字段
+                runntime: Runtime 当前运行时实例，提供环境上下文，包含执行环境、配置信息和可用工具等。
+            返回值：
+                None: 表示不改变状态，继续执行智能体的正常流程
+                dict[str, Any] 修改后的状态字典。可以修改现有状态字段的值，或添加新的状态字段。特别地，如果字典中包含jump_to键且其值在can_jump_to列表中，
+                        则系统会跳转到指定节点，绕过正常流程。    
+            """
+
+            from langchain.agents.middleware import before_agent, AgentState
+            from langchain.messages import SystemMessage
+            from langgraph.runtime import Runtime
+            from typing import Any
+
+            @before_agent(can_jump_to=['end'])
+            def initialize_session(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+                # 检查是否为首次调用，添加系统提示
+                if not any(isinstance(msg, SystemMessage) for msg in state["messages"]):
+                    return {
+                        "messages": [
+                            SystemMessage(content="你是一个AI助手"),
+                            *state["messages"]
+                        ]
+                    }
+
+                if not state.get("user_id"):
+                    # 如果没有用户Id，拒绝处理
+                    return {
+                        "messages": state["messages"]+[SystemMessage(content="缺少必要的用户信息。")],
+                        "jump_to": "end"
+                    }    
+
+                return None    
+
+        # 🍎 @after_agent
+            # 在智能体执行完成后的钩子，适用于清理工作、结果汇总等场景。
+            """
+            回调函数参数
+                state: AgentState 当前智能体的状态对象
+                runntime: Runtime 当前运行时实例
+            返回值：
+                None: 继续正常执行流程
+                dict[str, Any] 修改后的状态字典。   
+            """
+
+            from langchain.agents.middleware import after_agent, AgentState
+            from langchain.messages import SystemMessage
+            from langgraph.runtime import Runtime
+            from typing import Any
+            import time
+
+            @after_agent
+            def session_summary(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+                # 收集会话统计信息
+                human_messages = sum(1 for msg in state["messages"] if msg.type == "human")
+                ai_messages = sum(1 for msg in state["messages"] if msg.type == "ai")
+
+                # 创建会话摘要
+                summary = f"会话已完成。\n" \
+                          f"- 人类消息：{human_messages}\n" \
+                          f"- AI消息：{ai_messages}\n" \
+                          f"- 总消息数：{len(state['messages'])}"
+
+                # 保存会话记录
+                timetamp = time.strftime("%Y%m%d-%H%M%S")
+                session_id = f"session_{timestamp}"
+
+                # 保存会话 ^^^^^
+
+                # 添加会话结束消息
+                return {
+                    "messages": state["messages"] + [SystemMessage(content="summary")]
+                }
+
+        # 🍌 @before_model
+            # 在每次调用LLM之前执行的工具函数。这个装饰器在智能体决定调用LLM时触发，允许开发都在请求发送给模型之前对输入进行处理，优化或过滤。
+            # 它是实现输入质量和安全检查的关键环节
+
+            from langchain.agents.middleware import AgentState, before_model
+            from langchain.messages import HumanMessage, SystemMessage
+            from langchain.runtime import Runtime
+            from typing import Any
+
+            @before_model(can_jump_to=['end'])
+            def filter_sensitive_content(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+                # 检查是否含有敏感信息
+                sensitive_words = ["敏感词1", "敏感词2"]
+
+                for msg in state["messages"]:
+                    if isinstance(msg, HumanMessage):
+                        for word in sensitive_words:
+                            if word in msg.content.lower():
+                                return {
+                                    "messages": [SystemMessage(content="检测到敏感内容，请重新输入")],
+                                    "jump_to": "end"
+                                }
+
+                # 截断过长的消息
+                processed_messages = []
+                for msg in state["messages"]:
+                    if len(msg.content) > 1000:
+                        msg.content = msg.content[:990]+"...[内容已截断]"               
+
+                    processed_messages.append(msg)
+
+                return {"messages": processed_messages}  
+
+        # 🍌 @after_model
+            # 在每次调用LLM生成响应后，响应返回给用户前执行的钩子函数。这个装饰器允许开发者对模型的原始输出进行后处理、优化、格式化或分析，
+            # 是实现输出质量控制、内容增强和结果优化的关键环节
+
+            from langchain.agents.middleware import after_model, AgentState
+            from langchain.messages import AIMessage, SystemMessage
+            from langgraph.runtime import Runtime
+            from typing import Any
+            import json
+            import time
+
+            @after_model
+            def format_response(state: AgentState, runtime: Runtime) -> dict[str, any] | None:
+                # 分析最后一条AI消息
+                if state["messages"] and isinstance(state["messages"][-1], AIMessages):
+                    last_message = state["messages"][-1]
+
+                    # 记录响应内容到日志
+                    with open("model_response.log" "a") as f:
+                        log_entry = {
+                            "timestamp": time.strftime("%Y%m%d-%H%M%S"),
+                            "response_length": len(last_message.content),
+                            "has_code": "```" in last_message.content
+                        }
+                        f.write(json.dumps(log_entry) + "\n")
+
+                    # 为包含代码的响应添加提示
+                    if "```" in last_message.content:
+                        enhanced_content = last_message.content+"\n\n提示： 以上代码仅供参考，请根据实际需求进行调整"    
+
+                        # 创建新的消息列表，替换最后一条消息
+                        new_messages = state["messages"][:-1] + [
+                            AIMessages(content=enhanced, name=last_message.name)
+                        ]    
+                        return {"messages": new_messages}
+
+                    return None
+
+        # 🍉 @wrap_model_call
+            # 包装并拦截模型调用的钩子，适用于重试、缓存、修改请求/响应等场景
+            """
+            回调函数参数：
+                request: ModelRequest 模型请求对象，包含发送给模型的参数 如messages model temperature等
+                handler: Callable[[ModelRequest], ModelResponse] 原始处理程序函数，调用此函数将执行实际的模型请求
+            返回值：
+                ModelResponse: 处理后的模型响应对象，必须包含content和model等必要字段
+
+            """            
+            from langchain.agents.middleware import wrap_model_call, ModelRequest, ModelResponse
+            from typing import Callable, Dict, Any
+            import hashlib
+            import time
+
+            # 简单的内存缓存
+            response_cache: Dict[str, Dict[str, Any]] = {}
+
+            @wrap_model_call
+            def cached_model_call(
+                request: ModelRequest,
+                handler: Callable[[ModelRequest]: ModelResponse]
+            ) -> ModelResponse:
+                # 生成更可靠的缓存键，只使用消息内容和模型名称
+                separator = "<|msg_sep|>"
+                messages_content = separator.join([msg.content for msg in request.messages])
+
+                # 生成缓存键
+                raw_string = f"{messages_content}:{request.model}"
+                cache_key = hashlib.md5(raw_string.encode('utf-8')).hexdigest()  
+               
+
+                # 检测缓存
+                if cache_key in response_cache
+                    cached = response_cache[cache_key]
+                    if time.time() - cached["timestamp"] < 3600: # 1小时缓存
+                        print("从缓存获取")
+                        return cached["response"]
+                
+                # 执行原始调用并添加缓存重试逻辑
+                for attempt in range(3):
+                    try:
+                        response = handler(request)
+                        # 缓存响应对象本身，而不是尝试访问其内部属性
+                        response_cache[cache_key] = {
+                            "response": response,
+                            "timestamp": time.time()
+                        }
+                        return response
+                    except Exception as e:
+                        if attempt == 2:  # 试完了，不要试了
+                            raise
+                        print(f"模型调用失败，第{attempt+1}次重试")
+                        time.sleep(2) # 等待后重试    
+
+        # 🍉 @wrap_tool_call
+            # 包装并拦截工具调用的钩子，适用于工具调用前检查、权限控制等场景
+            """
+            回调函数参数：
+                request: ModelRequest 模型请求对象，包含发送给模型的参数 如messages model temperature等
+                handler: Callable[[ModelRequest], ModelResponse] 原始处理程序函数，调用此函数将执行实际的模型请求
+            返回值：
+                Any: 处理后的响应对象，通常是ToolMessage对象，包含content和tool_call_id等必要字段
+            """
+
+            from langchain.agents.middleware import wrap_tool_call, ModelRequest, ModelResponse
+            from typing import Any, Callable
+            from langchain.messages import ToolMessage
+
+            @wrap_tool_call
+            def tool_permission_check(
+                request: Any,
+                handler: Callable[[ModelRequest]: ModelResponse]
+            ) -> Any:
+                # 获取工具名称或参数
+                tool_name = request.tool_call.get("name")
+                tool_args = request.tool_call.get("args", [])  
+
+                # 工具权限控制
+                admin_tools = ["get_weather"]
+                restricted_tools = ["payment_precessor"]
+
+                # 获取用户角色（在实际应用中，这会从上下文获取）
+                user_role = "user"
+
+                # 检查是否有权限调用该工具
+                if tool_name in admin_tools and user_role != "admin"
+                    return ToolMessage(
+                        content=f"权限不足：需要管理员权限才能使用{tool_name}工具。",
+                        tool_call_id=request.tool_call.get("id")
+                    )
+
+                # 记录工具调用 ………………
+                
+                # 执行原始工具调用 
+                try:
+                    return handler(request)
+                except Exception as e:        
+                    return ToolMessage(
+                        content=f"工具调用失败：{str(e)}",
+                        tool_call_id=request.tool_call.get("id")
+                    )
+
+        # 🍇 @dynamic_prompt
+            # 根据请求上下文动态生成系统提示的钩子，适用于个性化提示、上下文感知提示、角色化交互等场景。这个装饰器允许开发者根据用户的输入内容
+            # 语言类型和对话主题，动态生成适合当前上下文的系统提示词，从而实现更加智能和个性化的AI交互体验
+            """
+            回调函数参数：
+                request: Any 模型请求对象，包含要发送给模型的消息和配置信息
+            返回值：
+                str: 生成动态系统提示词，将作为系统消息添加到模型输入中    
+            """
+
+            from langchain.agents.middleware import dynamic_prompt
+            from typing import Any
+            from langchain.agetns import create_agent
+            from langchain.chat_models import init_chat_model
+            from langchain.messages import HumanMessage, ToolMessage
+            import re
+
+            @dynamic_prompt
+            def generate_contextual_prompt(request: Any) -> str:
+                # 基础提示模板
+                base_prompt="你是一个有帮助的AI助手"
+
+                # 分析上下文，确定对话主题和领域
+                last_user_message = None
+                if hasattr(request, "messages"):
+                    for msg in reversed(request.messages):
+                        if isinstance(msg, HumanMessage):
+                            last_user_message = msg.content
+                            break
+                elif hasattr(request, 'state') and "messages" in request.state:
+                    for msg in reversed(request.state["messages"]):
+                        if isinstance(msg, HumanMessage):
+                            last_user_message = msg.content
+
+                
+                if last_user_message:
+                    # 根据消息内容添加特定领域提示
+                    if re.search(r'代码|编辑|开发|python|javascript|java|c\+\+|html|css', last_user_message, re.IGNORECASE):
+                        base_prompt += "\n\n你是一名专业的编程助手，你叫吉米。请提供清晰、正确的代码示例，并解释关键概念"
+                        base_prompt += "\n确保代码具在良好的结构与注释"
+                    elif re.search(r"数学|计算|算法|统计", last_user_message, re.IGNORECASE) 
+                        base_prompt += "\n\n你是一名数学家，你叫鲁班大师，请详细解释计算过程，并确保准确性"
+                        base_prompt += "\n使用适当的数学符号和公式来表达复杂概念"
+                    elif re.search(r"历史|科学|文化|艺术", last_user_message, re.IGNORECASE)
+                        base_prompt += "\n\n你是一位知道渊博的学者，名叫水哥，请提供准确，全面的信息"
+                        base_promp += "\n包含相关背景知识和关键事件"
+
+                # 添加通用指导原则
+                base_prompt += "\n\n请始终保持礼貌，提供专业的回答。如果不确定，如实回答并提供可能的解决方案"
+
+                return base_prompt
+
+
+
+
+            # 🚀 类继承中间件
+            # 基于类继承中间件实现提供了更大的灵活性和功能性，特别适合需要多个钩子、状态管理或复杂的中间件
+            # 通过继承Middleware基类，可以在一个类中实现多个钩子方法
+
+            from langchain.agents.middleware import AgentMiddleware, AgentState, ModelRequest, ModelResponse
+            from langchain.agetns.middleware.types import ToolCallRequest
+            from langchain.messages import ToolMessage
+            from typing import Any, Callable
+
+            class CoreMiddlewareDemo(AgentMiddleware):
+                # 构造函数
+                def __init__(self, log_level: str = "INFO"):
+                    self.log_level = log_level
+
+                # Agent 生命周期钩子
+                def before_agent(self, state: AgentState, runtime: Any) -> dict[str, Any] | None:
+                    messages = state.get("messages", [])
+                    if len(messages == 0):
+                        print(f"[{self.log_level}]没有初始消息")
+                        return None
+                    return {"context": {"message_count": len(messages)}}
+
+                def after_agent(self, state: AgentState, runtime: Any) -> dict[str, Any] | None:
+                    print(f"{self.log_level}Agent执行完成")
+                    return None
+
+                # Model 生命周期钩子
+                def before_model(self, state: AgentState, runtime: Any) -> dict[str, Any] | None:
+                    print(f"{self.log_level}准备调用大模型")
+                    return None
+
+                def after_model(self, state: AgentState, runtime: Any) -> dict[str, Any] | None:
+                    print(f"{self.log_level}模型返回影响")
+                    return None
+
+                # 调用包装钩子
+                def wrap_model_call(
+                    self,
+                    request: ModelRequest,
+                    handler: Callable[[ModelRequest], ModelResponse]
+                ) -> ModelResponse:
+                    print(f"{self.log_level}包装模型调用")
+                    return handler(request)
+ 
+
+# 🐠 DeepAgents 
+# ====================================================================================================================================
+
+    # create_deep_agent
+    """
+    参数
+        model: 模型 必填
+        subagents: list[dict] 定义智能体团队列表
+        system_prompt: str 定义智能体的的角色和行为
+        tools: list[Tool] 主智能体可直接使用的通用工具集
+    """
+    from deepagents import create_deep_agent
+    from langchain.chat_models import init_chat_model
+    from langchain.tools import tool
+
+    # 模型配置
+    model = init_chat_model()
+
+
+    @tool
+    def get_weather(city: str) -> str:
+        """
+        获取城市的天气信息
+        Args:
+            city: 城市名称（中文或英文）
+        Returns:
+            包含温度，温度，天气状态的详细描述
+        """
+        return f"{city}天气，晴，24摄氏度，风速10公里/小时"
+
+
+    @tool
+    def get_city_info(city: str) -> str:
+        """
+        获取城市的详细信息
+        Args:
+            city: 城市名称（中文或英文）
+        Returns:
+            包含城市的详细信息，如人口，面积，天气等
+        """
+        return f"{city}人口1000000，面积1000000，天气晴"
+
+
+    agent = create_deep_agent(
+        model=model,
+        subagents=[
+            {
+                "name": "weather_agent",
+                "description": "专业的天气查询专家，能获取全球城市天气数据",
+                "system_prompt": """你是顶尖气象专家，擅长天气数据分析和预报""",
+                "tools": [get_weather],
+            },
+            {
+                "name": "city_info_agent",
+                "description": "城市信息专家，提供地理、文化、旅游等信息",
+                "system_prompt": "专业的城市信息查询专家，能获取全球城市详细信息",
+                "tools": [get_city_info],
+            },
+        ],
+        system_prompt="你是智能助理总监，负责协调团队服务用户",
+    )
+
+    # 使用智能体
+    result = agent.invoke(
+        {"messages": [{"role": "user", "content": "北京天气怎么样？适合旅游吗？"}]}
+    )
+
+
+    # 🚀 文件系统后端
+    # 🌰 1.临时记忆后端（StateBackend）默认选择
+    # 🌰 2.本地磁盘后端（FilesystemBackend） 持久化存储
+    from deepagents.backends import FilesystemBackend
+
+    # 让智能体访问你电脑的桌面文件夹
+    agent = create_deep_agent(
+        model=model,
+        backend=FilesystemBackend(root_dir="/Users/water.li/Desktop/"),
+    )
+
+    # 更安全的沙箱模式
+    agent = create_deep_agent(
+        model=model,
+        backend=FilesystemBackend(root_dir="/Users/water.li/Desktop/"),
+        virtual_mode=True,
+    )
+
+    # 🌰 3.长期记忆后端（StoreBackend）跨会话持久化
+    from langgraph.store.memory import InMemoryStore
+    from deepagents.backends import StoreBackend
+
+    agent = create_deep_agent(
+        model=model,
+        backend=lambda rt: StoreBackend(
+            namespace=(rt.server_info.user.indentify)
+        ),  # 注意这里用的是lambda函数
+        store=InMemoryStore(),  # 存储引擎
+    )
+
+    # 🌰 4.智能路由后端（CompositeBackend）混合存储
+    from deepagents.backends import (
+        CompositeBackend,
+        StateBackend,
+        StoreBackend,
+        FilesystemBackend,
+    )
+
+    # 配置智能路由，临时工作区+长期记忆区
+    composite_backend = lambda rt: CompositeBackend(
+        default=StateBackend(rt),  # 默认，临时存储
+        routes={
+            "/memories/": StoreBackend(rt),  # 记录目录 长期保存
+            "/projects/": FilesystemBackend("./projects/"),  # 项目目录，本地保存
+        },
+    )
+    agent = create_deep_agent(backend=composite_backend)
+
+
+    # 🚀 安全与权限控制
+    class ReadOnlyBackend(FilesystemBackend):
+        def __init__(self, read_only_paths, **kwargs):
+            super().__init__(**kwargs)
+            self.read_only_paths = read_only_paths
+
+        def write(self, file_path: str, content: str) -> WriteResult:
+            for path in self.read_only_paths:
+                if file_path.startswith(path):
+                    return WriteResult(error=f"禁止写入只读目录:{file_path}")
+            return super().write(file_path, content)
+
+        def edit(
+            self,
+            file_path: str,
+            old_string: str,
+            new_string: str,
+            replace_all: bool = False,
+        ):
+            for path in self.read_only_paths:
+                if file_path.startswith(path):
+                    return WriteResult(error=f"禁止编辑只读目录:{file_path}")
+            return super().edit(file_path, old_string, new_string, replace_all)
+
+
+    # 🚀 Subagents 子智能体
+
+    # 使用CompiledSubAgent
+
+    from deepagents import create_deep_agent, CompiledSubAgent
+    from langchain.agents import create_agent
+
+    custom_graph = create_agent(
+        model=model, 
+        tools=[], 
+        prompt="你是一个专业的数据分析师，檀长处理复杂的数据分析任务"
+    )
+
+    custom_subagent = CompiledSubAgent(
+        name="data-analyzer", 
+        description="用于进行复杂数据分析任务的子智能体",
+        runable=custom_graph
+    )
+
+    subagents = [custom_subagent]
+
+    tagent = create_deep_agent(
+        model=model,
+        subagents=subagents,
+        system_prompt="你是一个专业的研究人员，檀长进行深度研究。",
+    )
+
+    # 🚀 人工介入 Human-in-the-loop
+    from deepagents import create_deep_agent
+    from langgraph.checkpoint.memory import MemorySaver
+
+    checkpointer = MemorySaver()
+    agent = create_deep_agent(
+        model=model,
+        checkpointer=checkpointer,  # 必传参数，用于状态持久化
+        tools=[delete_file, read_file, send_email],
+        interrupt_on={
+            "delete_file": True,  # 删除文件需要审核，使用默认决策类型
+            "read_file": False,  # 读取文件不需要审核，可直接执行
+            "send_email": {
+                "allowed_decisions": ["approve", "reject"]
+            },  # 发送邮件需要审核，但不允许编辑内容
+        },
+    )
+
+
+    # 决策类型
+    interrupt_on = {
+        # 高风险操作：允许所有决策类型
+        "delete_file": {"allowed_decisions": ["approve", "reject", "edit"]},
+        # 中等风险操作： 只允许批准或拒绝，不允许修改参数
+        "write_filek": {"allowed_decisions": ["approve", "reject"]},
+        # 关键操作：必须执行，只允许批准
+        "critical_operation": {"allowed_decisions": ["approve"]},
+    }
+
+    ## 处理中断
+    import uuid
+    from langgraph.types import Command
+
+    # 1 创建一个带唯一thread的配置，用于持久化会话状态
+    # 这个ID将在中断和恢复之间保持一致
+    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+
+    # 2 向智能体发送用户请求（删除文件 temp.txt）
+    result = agent.invoke(
+        {"messages": [{"role": "user", "content": "删除文件 temp.txt"}]}, config=config
+    )
+
+    # 3 检查智能体是否因为需要人工审核而中断了执行
+    if result.get("__interrupt__"):
+        # 4 提取中断信息，包括待审核的操作和允许的决策类型
+        interrupts = result["__interrupt__"][0].value
+        action_requests = interrupts["action_requests"]  # 待审核的操作列表
+        review_configs = interrupts["review_configs"]  # 各个工具的审核配置
+
+        # 5 创建工具名称到审核配置的映射，方便快速查找
+        config_map = {cfg["action_name"]: cfg for cfg in review_configs}
+
+        # 6 向用户展示所有审核的操作
+        for actions in action_requests:
+            review_configs = config_map[actions["name"]]
+            print(f"待审核工具：{actions['name']}")
+            print(f"操作参数：{actions['args']}")
+            print(f"允许决策：{review_configs['allowed_descisions']}")
+
+        # 7 获取用户的决策（此处为示例，实际应用中应通过界面或终端获取）
+        descisions = [{"type": "approve"}]
+
+        # 8 使用用户决策恢复智能代理的执行
+        # 注意：必须使用与之前相同的config配置（包含相同的thread_id）
+        result = agent.invoke(Command(resume={"decisions": descisions}), config=config)
+
+        # 9 处理智能体的最终执行结果
+        print("代理最终响应：", result["messages"][-1].content)
+
+    # 🚀 编辑工具参数
+    # 当工具的审核配置允许'edit'决策类型时，审核人员不仅可以批准或拒绝操作，还可以在执行前修改操作参数
+    if result.get("__interrupt__"):
+        interrupts = result["__interrupt__"][0].value
+        action_request = interrupts["action_requests"][0]  # 获取第一个待审核的操作
+
+        # 查看智能体提出的原始操作参数
+        print("原始参数：", action_requests["args"])
+
+        decissions = [
+            {
+                "type": "edit",
+                "edited_action": {
+                    "name": action_request[
+                        "search"
+                    ],  # 必须包含工具名称，确保修改的是正确的工具
+                    "args": {
+                        "to": "team@company.com",  # 修改后的收件人
+                        "subject": "团队通知",  # 可以同时修改多个参数
+                        "body": action_request["args"]["body"],  # 保留原邮件内容
+                    },
+                },
+            }
+        ]
+
+        # 使用修改后的参数恢复执行
+        result = agent.invoke(Command(resume={"dicisions": descisions}), config=config)
+
+
+    """
+    ============================================================
+    🐵 langgraph_supervisor — 多Agent编排库
+    ============================================================
+    """
+
+    # 📦 安装
+    # pip install langgraph-supervisor
+
+    # 🤖 核心概念：Supervisor 模式
+    # 一个总管 Agent 负责接用户的问题，判断该派哪个小弟去干
+    # 小弟干完把结果报回来，总管再决定下一步
+    #
+    #           👑 Supervisor（大管家）
+    #          /        |        \
+    #     📝 研究员   🧮 数学家   💻 代码员
+
+    # 🎯 核心 API
+    # create_supervisor() — 创建层级多Agent系统
+    # create_handoff_tool() — 手动创建 Agent 交接工具
+
+    from langgraph_supervisor import create_supervisor
+    from langgraph_supervisor import create_handoff_tool
+
+    # --- create_supervisor 用法 ---
+    """
+    workflow = create_supervisor(
+        [agent1, agent2, agent3],   # 你的小弟们
+        model=model,                # 总管用的 LLM
+        prompt="你是一个聪明的总管...",
+        output_mode="last_message", # 只返回最后一条消息
+    )
+    """
+
+    # --- create_handoff_tool 手动交接（更精细控制）---
+    """
+    handoff_tool = create_handoff_tool(
+        agent_name="math_expert",
+        tool_name="handoff_to_math",
+        tool_description="把数学问题交给数学专家",
+    )
+    """
+
+    # 🚀 完整示例
+    from langchain_openai import ChatOpenAI
+    from langgraph.prebuilt import create_react_agent
+
+    model = ChatOpenAI(model="gpt-4o")
+
+    # 创建几个专精 Agent
+    research_agent = create_react_agent(
+        model,
+        tools=[search_tool],
+        name="research_expert",
+        prompt="你是一个研究员。只做搜索调研，不做计算。"
+    )
+
+    math_agent = create_react_agent(
+        model,
+        tools=[add, multiply],
+        name="math_expert",
+        prompt="你是一个数学专家。别做研究，只做计算。"
+    )
+
+    # 创建 Supervisor 把他们串起来
+    workflow = create_supervisor(
+        [research_agent, math_agent],
+        model=model,
+        prompt="你是一个团队主管，管理研究员和数学家。判断任务分给谁。",
+    )
+
+    # 编译运行
+    app = workflow.compile()
+    result = app.invoke({
+        "messages": [{"role": "user", "content": "GPT-4 的参数量是多少？乘以 10 呢？"}]
+    })
+
+    # Supervisor 执行流程：
+    # 1. 派研究员去查 GPT-4 参数 → 拿到 1.8T
+    # 2. 派数学家算 ×10 = 18T
+    # 3. 汇总回复
+
+    # 🎛️ output_mode 选项
+    # "last_message" — 只返回 Supervisor 最后一条消息（最简洁）
+    # "full_history"  — 返回所有 agent 的全部对话历史
+    # "messages"      — 返回消息列表（默认）
+
+    # ⚠️ 依赖冲突注意（2026年6月）
+    # langgraph_supervisor 之前锁定 langgraph>=0.6.0,<0.7.0
+    # 但最新 langgraph 已到 1.x，可能报错
+    # 临时解法：pip install "langgraph<1.0.0" langgraph-supervisor
+
+
+    """
+    ============================================================
+    🐵 deepagents — LangChain深度Agent执行框架
+    ============================================================
+    """
+    # 📦 安装
+    # pip install deepagents
+
+    # 🤔 跟 langgraph_supervisor 的区别
+    # langgraph_supervisor — 多Agent编排层，管"谁听谁的"
+    # deepagents — 单Agent深度执行框架，管"一个Agent怎么干复杂长任务"
+    # 两者互补，可以叠用：Supervisor 当将军编排，DeepAgent 当士兵深度干活
+
+    # 🎯 核心：create_deep_agent()
+    # 一个函数就得到一个自带多种内置能力的 Agent
+    """
+    from deepagents import create_deep_agent
+
+    agent = create_deep_agent(
+        model="anthropic:claude-sonnet-4-6",
+        tools=[search, fetch_url],
+        system_prompt="You are a helpful assistant.",
+        memory=["./AGENTS.md"],
+        skills=["./skills/"],
+    )
+
+    agent.invoke({"messages": [{"role": "user", "content": "my question"}]})
+    """
+
+    """
+    把整个 deepagents 拆开，就三个核心能力，其他的都是锦上添花：
+
+    🗂️ 虚拟文件系统 + 📋 任务规划 + 👶 子Agent生成
+
+    缺一个，它就是个普通 ReAct Agent。
+    """
+    #--------------------------------------------------------------------------
+    # 🗂️ 第一大招：虚拟文件系统 (Virtual Filesystem)
+    # 💡 解决的问题：普通 Agent 上下文窗口塞爆了
+    # Agent 读大文件读到一半，上下文满了，前面全忘
+    # DeepAgent 解法：Agent 自己有"硬盘"，大部分内容写文件，消息里只存路径和摘要
+
+    # 🔧 内置文件工具
+    # ls(path)       — 列目录
+    # read_file(path) — 读文件（支持图片自动转多模态）
+    # write_file(path, content) — 写文件
+    # edit_file(path, old, new) — 编辑文件中的指定内容
+    # glob(pattern)  — 模糊搜索文件
+    # grep(pattern, path) — 搜索文件内容
+
+    # 🔌 插件式后端，随时切换
+    from deepagents.backends import FilesystemBackend, StoreBackend, CompositeBackend, StateBackend
+
+    # 后端1: 操作本地电脑文件
+    agent_local = create_deep_agent(
+        model="anthropic:claude-sonnet-4-6",
+        backend=FilesystemBackend(root_dir="/Users/user/projects/")
+    )
+
+    # 后端2: 持久化存储（跨线程共享记忆）
+    agent_store = create_deep_agent(
+        model="anthropic:claude-sonnet-4-6",
+        backend=StoreBackend()  # Agent 的记忆跨会话保留
+    )
+
+    # 后端3: 组合模式 — 不同路径走不同后端！
+    agent_combo = create_deep_agent(
+        model="anthropic:claude-sonnet-4-6",
+        backend=CompositeBackend({
+            "/workspace/": FilesystemBackend(root_dir="./workspace"),
+            "/memories/":  StoreBackend(),       # 长期记忆
+            "/tmp/":       StateBackend(),        # 一次性临时文件
+        })
+    )
+
+
+    # 🔒 权限控制
+    # 还能控制 Agent 能读/写哪些路径，不能碰哪些：  
+    from deepagents import create_deep_agent
+    from deepagents.permissions import AllowRead, DenyWrite
+
+    agent = create_deep_agent(
+        model="anthropic:claude-sonnet-4-6",
+        permissions=[
+            AllowRead("/project/public/"),    # 可以读公开目录
+            DenyWrite("/system/"),            # 不能修改系统文件
+            AllowRead("/project/config/"),    # 可以读配置
+        ]
+    )
+
+    #---------------------------------------------------------------------
+    # 📋 第二大招：任务规划 (Task Planning)
+
+    # 💡 解决的问题：Agent 接了复杂任务就一通猛干，干到一半发现方向错了
+    # DeepAgent 解法：Agent 内置 write_todos 工具，让它自己拆任务
+    #
+    # Agent 内心 OS:
+    # 1. 先写 todo list: write_todos(...)
+    # 2. 看第一条 todo，去执行
+    # 3. 完成一个就 update_todos(...)
+    # 4. 如此反复直到所有 todo 完成
+
+    # 🔧 内部的规划工具
+    # write_todos(todos)      — 创建或覆盖任务清单
+    # update_todos(item, status) — 标记某条 todo 完成/阻塞
+    # read_todos()            — 查看当前任务进展
+
+    # ----------------------------------------------------------------------
+    # 👶 第三大招：子Agent生成 (Sub-Agent Spawning)
+
+    # 💡 解决的问题：有些子任务需要完全隔离的上下文
+    # 比如 Agent 在"调研 AI 框架"，突然需要"读一份中文 PDF"
+    # 如果都在同一个上下文中做，会污染当前思路
+
+    # 这是自动发生的，不需要你写代码
+    # DeepAgent 解法：主Agent 自动生成子Agent，独立的上下文窗口，干完就关
+    #
+    # 主 Agent (上下文: 框架对比调研)
+    #   ├── 工具调用: web_search()
+    #   ├── 工具调用: write_file()
+    #   └── 👶 spawn_subagent("帮我读这个 PDF，总结要点")
+    #         └── 子 Agent (上下文: 只有 PDF 内容 + 总结指令)
+    #               ├── read_file("report.pdf")
+    #               └── 返回总结给主 Agent
+
+    # 🔧 子Agent vs 多Agent 对比
+    #
+    #           子Agent (Sub-Agent)         多Agent (Multi-Agent)
+    #  本质      一个Agent自己决定生个帮手    开发者预先定义好一群Agent怎么协作
+    #  产生方式  运行时动态创建               启动前预先定义
+    #  生命周期  干完就死，临时工              跟系统共存亡，正式员工
+    #  上下文    独立的上下文窗口             通常共享部分状态
+    #  谁决策    Agent自己决定需不需要帮手     开发者设计好团队结构
+
+    # 自定义子Agent
+    from deepagents import SubAgent
+
+    sub_agent = SubAgent(
+        name="pdf_reader",
+        tools=[extract_text, ocr_image],
+        system_prompt="你是一个 PDF 分析师，只负责提取和总结文档内容。"
+    )
+
+    agent = create_deep_agent(
+        model="anthropic:claude-sonnet-4-6",
+        tools=[web_search, ...],
+        subagents=[sub_agent],
+    )
+
+    # ----------------------------------------------------------------------------------
+    # 🎬 三大招合体演示
+
+    from deepagents import create_deep_agent
+    from deepagents.backends import FilesystemBackend
+
+    agent = create_deep_agent(
+        model="anthropic:claude-sonnet-4-6",
+        tools=[web_search, send_email],
+        backend=FilesystemBackend(root_dir="./workdir"),
+    )
+
+    agent.invoke({
+        "messages": [{"role": "user", "content": """
+            调研一下 2026 年主流的多 Agent 框架，
+            写一个对比报告到 /output/report.md，
+            顺便帮我发个邮件摘要给我同事。
+        """}]
+    })
+
+    # Agent 内部实际流程:
+    # Step 1:  write_todos(["调研框架A", "调研框架B", "对比分析", "写报告", "发邮件"])
+    # Step 2:  web_search("LangGraph 2026 features") → 写入 /research/langgraph.md
+    # Step 3:  web_search("CrewAI 2026 comparison")  → 写入 /research/crewai.md
+    # Step 4:  spawn_subagent("读我搜集的材料，写对比分析")
+    #          → 👶 子Agent: read_file("/*.md") → write_file("/analysis/comparison.md")
+    # Step 5:  read_file("/analysis/comparison.md") → write_file("/output/report.md")
+    # Step 6:  send_email("摘要内容...")
+    # Step 7:  update_todos("全部完成 ✅")
+
+    # 🏗️ 深度 vs 广度 叠用架构
+    """
+    # deepagents 管深度，supervisor 管广度，langgraph 管底层
+    #
+    #  ┌────────────────────────────────────────────┐
+    #  │ langgraph_supervisor (将军——管谁去打仗)     │
+    #  ├────────────────────────────────────────────┤
+    #  │ deepagents (士兵——管仗怎么打赢)             │
+    #  ├──────────────────────────────────────── ───┤
+    #  │ langgraph (基础设施——图、状态、持久化)        │
+    #  └────────────────────────────────────────────┘
+    """
+
+
+# 🛠 Langgraph
+# ====================================================================================================================================
+
+    # 🚀 Reducer函数机制
+    # LangGraph内部原理是：State中的每个key都有自己独立的Reducer函数，通过指定的reducer函数应用判断值更新
+    # 🍊 在图中处理消息的思路
+    import getpass
+    import os
+    from langchain_openai import ChatOpenAI
+    from langchain_core.prompts import ChatPromptTemplate
+    import operator
+    from typing import Annotated, TypedDict, List
+    from langgraph.graph import StateGraph,  END
+    from IPython.display import Image, display
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+
+
+    llm = ChatOpenAI(model='gpt-4o')
+
+
+    # 定义图的状态模式
+    class State(TypedDict):
+        messages: Annotated[List[str], operator.add] # 🚀 
+
+    # 创建图的实例
+    builder = StateGraph(State)
+
+    def chat_with_model(state):
+        print(state)
+        print("-----------------")
+        messages = state['messages']
+        response = llm.invoke(messages)
+        return {"messages": [response]}  # 🚀
+
+    def convert_messages(state):
+        # "您是一位数据提取专家，负责从文本中检索关键信息。请为所提供的文本提取相关信息，并以 JSON 格式输出。概述所提取的关键数据点。"
+        EXTRACTION_PROMPT = """
+        You are a data extraction specialist tasked with retrieving key information from a text.
+        Extract such information for the provided text and output it in JSON format. Outline the key data points extracted.
+        """
+        print(state)
+        print("-----------------")
+        messages = state['messages']
+        messages = messages[-1] 
+
+        messages = [
+            SystemMessage(content=EXTRACTION_PROMPT),
+            HumanMessage(content=state['messages'][-1].content)
+        ]
+        
+        response = llm.invoke(messages)
+        return {"messages": [response]}
+
+    # 添加节点
+    builder.add_node("chat_with_model", chat_with_model)
+    builder.add_node("convert_messages", convert_messages)
+
+    # 设置启动点
+    builder.set_entry_point("chat_with_model")
+
+    # 添加边
+    builder.add_edge("chat_with_model", "convert_messages")
+    builder.add_edge("convert_messages", END)
+
+    # 编译图
+    graph = builder.compile()
+
+
+    query="你好，请你介绍一下你自己"
+    input_message = {"messages": [HumanMessage(content=query)]}
+
+    result = graph.invoke(input_message)
+
+
+    # 🚀 MessageGraph
+    from langgraph.graph.message import REMOVE_ALL_MESSAGES, MessageGraph
+    builder = MessageGraph()
+    builder.add_node("chatbot", lambda state: [("assistant", "你好，最帅气的人！")])
+    builder.set_entry_point("chatbot")
+    builder.set_finish_point("chatbot")
+    graph = builder.compile()
+    graph.invoke([("user", "你好，请你介绍一下你自己.")])
+
+
+    from typing import Annotated, TypedDict
+    from langgraph.graph import StateGraph, START, END
+    from langgraph.graph.message import add_messages
+
+    class State(TypedDict):
+        messages: Annotated[list, add_messages]
+
+    graph_builder = StateGraph(State)
+
+
+    # 🎯 🙇 路由代理 🙇
+    from langgraph.graph import START, StateGraph, END
+    from langgraph.graph import StateGraph
+
+    def node_a(state):
+        return {"x": state["x"] + 1}
+
+    def node_b(state):
+        return {"x": state["x"] - 2}
+
+    def node_c(state):
+        return {"x": state["x"] + 1}
+
+    def routing_function():
+        if state["x"] == 10:
+            return True
+        else:
+            return False
+
+    builder = StateGraph(dict)
+
+    builder.add_node("node_a", node_a)
+    builder.add_node("node_b", node_b)
+    builder.add_node("node_c", node_c)
+
+    builder.set_entry_point("node_a")
+
+    # 构建节点之间的边
+    builder.add_conditional_edges("node_a", routing_function, {True: "node_b", False: "node_c"})
+
+    builder.add_edge("node_b", END)
+    builder.add_edge("node_c", END)
+
+    graph = builder.compile()
+
+    from IPython.display import Image, display
+
+    display(Image(graph.get_graph(xray=True).draw_mermaid_png()))
+
+
+    """
+    这里我们先来了解一下什么是结构化输出。在LangGraph中，实现结构化输出可以通过以下三种有效方式完成
+    - 提示工作：指示大模型以特定格式做出回应
+    - 输出解析器：采用后处理的方法从大模型的响应中提取结构化数据
+    - 工具调用：利用一些内置工具调用功能来生成结构化输出
+    """
+
+    # 🚀提示工程
+    from langchain_core.prompts import ChatPromptTemplate
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "Answer the user query. Wrap the output in `json`",
+            ),
+            ("human", "{query}"),
+        ]
+    )
+
+    # 🚀提示工程+输出解析器
+    from langchain_core.messages import AIMessage
+    import json
+    import re
+    from typing import List
+
+    def extract_json(message: AIMessage) -> List[dict]:
+        """Extracts JSON content from a string where JSON is embedded between \`\`\`json and \`\`\` tags.
+
+        Parameters:
+            text (str): The text containing the JSON content.
+
+        Returns:
+            list: A list of extracted JSON strings.
+        """
+        text = message.content
+        # 定义正则表达式模式来匹配JSON块
+        pattern = r"\`\`\`json(.*?)\`\`\`"
+
+        # 在字符串中查找模式的所有非重叠匹配
+        matches = re.findall(pattern, text, re.DOTALL)
+
+        # 返回匹配的JSON字符串列表，去掉任何开头或结尾的空格
+        try:
+            return [json.loads(match.strip()) for match in matches]
+        except Exception:
+            raise ValueError(f"Failed to parse: {message}")
+
+
+    from langchain_core.prompts import ChatPromptTemplate
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "Answer the user query. Wrap the output in `json`",
+            ),
+            ("human", "{query}"),
+        ]
+    ) 
+    chain = prompt | llm | extract_json
+
+
+    # 🚀使用Pydantic做结构化输出
+    from typing import Optional
+    from pydantic import BaseModel, Field
+
+    # 定义 Pydantic 模型
+    class UserInfo(BaseModel):
+        """Extracted user information, such as name, age, email, and phone number, if relevant."""
+        name: str = Field(description="The name of the user")
+        age: Optional[int] = Field(description="The age of the user")
+        email: str = Field(description="The email address of the user")
+        phone: Optional[str] = Field(description="The phone number of the user")
+
+    import getpass
+    import os
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+
+    from langchain_openai import ChatOpenAI
+
+    llm = ChatOpenAI(model="gpt-4o-mini")
+
+    structured_llm = llm.with_structured_output(UserInfo)
+    # 从非结构化文本中提取用户信息
+    extracted_user_info = structured_llm.invoke("我叫木羽，今年28岁，邮箱地址是snow@gmial.com，电话是1234567052")
+
+
+    # isinstance 函数用于判断一个对象是否是一个已知的类型，或者是该类型的子类的实例
+    if isinstance(extracted_user_info, UserInfo):
+        print("执行节点A的逻辑")
+    else:
+        print("执行节点B的逻辑")
+
+
+    #🚀 使用TypedDict做结构化输出
+    from typing import Optional
+    from typing_extensions import Annotated, TypedDict
+
+    # 定义 TypedDict 模型
+    class UserInfo(TypedDict):
+        """Extracted user information from text"""
+        name: Annotated[str, ..., "The user's name"]
+        age: Annotated[Optional[int], None, "The user's age"]
+        email: Annotated[str, ..., "The user's email address"]
+        phone: Annotated[Optional[str], None, "The user's phone number"]
+
+    structured_llm = llm.with_structured_output(UserInfo)
+
+    # 从非结构化文本中提取用户信息
+    extracted_user_info = structured_llm.invoke("我叫陈朋成，今年38岁，邮箱地址是snow@gmial.com，电话是1234567052")
+
+
+
+    # 🚀 结合结构化输出构建路由图
+    from typing import Union, Optional
+    from pydantic import BaseModel, Field
+
+    # 定义数据库插入的用户信息模型
+    class UserInfo(BaseModel):
+        """Extracted user information, such as name, age, email, and phone number, if relevant."""
+        name: str = Field(description="The name of the user")
+        age: Optional[int] = Field(description="The age of the user")
+        email: str = Field(description="The email address of the user")
+        phone: Optional[str] = Field(description="The phone number of the user")
+
+
+    # 定义正常生成模型回复的模型
+    class ConversationalResponse(BaseModel):
+        """Respond to the user's query in a conversational manner. Be kind and helpful."""
+        response: str = Field(description="A conversational response to the user's query")
+
+
+    # 定义最终响应模型，可以是用户信息或一般响应
+    class FinalResponse(BaseModel):
+        final_output: Union[UserInfo, ConversationalResponse]
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+
+    # 生成模型实例
+    llm = ChatOpenAI(model="gpt-4o-mini")
+
+
+    # pip install sqlalchemy pymysql
+    from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
+    from sqlalchemy.orm import declarative_base, sessionmaker
+
+
+    # 创建基类
+    Base = declarative_base()
+
+    # 定义 UserInfo 模型
+    class User(Base):
+        __tablename__ = 'users'
+        id = Column(Integer, primary_key=True)
+        name = Column(String(50))
+        age = Column(Integer)
+        email = Column(String(100))
+        phone = Column(String(15))
+
+
+    # 数据库连接 URI，这里要替换成自己的Mysql 连接信息，以下是各个字段的对应解释：
+    # root：MySQL 数据库的用户名。
+    # snowball950123：MySQL 数据库的密码。
+    # 192.168.110.131：MySQL 服务器的 IP 地址。
+    # langgraph_agent：要连接的数据库的名称。
+    # charset=utf8mb4：设置数据库的字符集为 utf8mb4，支持更广泛的 Unicode 字符
+    DATABASE_URI = 'mysql+pymysql://root:snowball950123@192.168.110.131/langgraph_agent?charset=utf8mb4'   
+    engine = create_engine(DATABASE_URI, echo=True)
+
+    # 如果表不存在，则创建表
+    Base.metadata.create_all(engine)
+
+    # 创建会话
+    Session = sessionmaker(bind=engine)
+
+
+    def chat_with_model(state):
+        """generate structured output"""
+        print(state)
+        print("-----------------")
+        messages = state['messages']
+        structured_llm = llm.with_structured_output(FinalResponse)
+        response = structured_llm.invoke(messages)
+        return {"messages": [response]}
+
+    def final_answer(state):
+        """generate natural language responses"""
+        print(state)
+        print("-----------------")
+        messages = state['messages'][-1]
+        response = messages.final_output.response
+        return {"messages": [response]}
+
+    def insert_db(state):
+        """Insert user information into the database"""
+        session = Session()  # 确保为每次操作创建新的会话
+        try:
+            result = state['messages'][-1]
+            output = result.final_output
+            # 创建用户实例
+            user = User(name=output.name, age=output.age, email=output.email, phone=output.phone)
+            # 添加到会话
+            session.add(user)
+            # 提交事务
+            session.commit()
+            return {"messages": [f"数据已成功存储至Mysql数据库。"]}
+        except Exception as e:
+            session.rollback()  # 出错时回滚
+            return {"messages": [f"数据存储失败，错误原因：{e}"]}
+        finally:
+            session.close()  # 关闭会话
+
+    # 定义好了所有节点函数后，开始构建图
+    from langgraph.graph import StateGraph, END
+    from typing import TypedDict, Annotated
+    import operator
+    from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage      
+
+    class AgentState(TypedDict):
+        messages: Annotated[list[AnyMessage], operator.add]
+
+    def generate_branch(state: AgentState):
+        result = state['messages'][-1]
+        output = result.final_output
+
+        if isinstance(output, UserInfo):
+            return True
+        elif isinstance(output, ConversationalResponse):
+            return False
+
+    graph = StateGraph(AgentState)
+
+    # 添加三个节点
+    graph.add_node("chat_with_model", chat_with_model)
+    graph.add_node("final_answer", final_answer)
+    graph.add_node("insert_db", insert_db)
+
+    # 设置图的启动节点
+    graph.set_entry_point("chat_with_model")
+
+    # 设置条件边
+    graph.add_conditional_edges(
+        "chat_with_model",
+        generate_branch,
+        {True: "insert_db", False: "final_answer"}
+    )
+
+    # 设置终止节点
+    graph.set_finish_point("final_answer")
+    graph.set_finish_point("insert_db")
+
+    # 编译图
+    graph = graph.compile()
+
+    query="我叫木羽，今年28岁，邮箱地址是snow@gmial.com，电话是1323521313"
+    input_message = {"messages": [HumanMessage(content=query)]}            
+    graph.invoke(input_message)
+
+
+
+    # 🎯 🙇 工具调用代理 🙇
+
+    class SearchQuery(BaseModel):
+        query: str = Field(description="Questions for networking queries")
+    @tool(args_schema = SearchQuery)
+    def fetch_real_time_info(query):
+        """Get real-time Internet information"""
+        url = "https://google.serper.dev/search"
+        payload = json.dumps({
+          "q": query,
+          "num": 1,
+        })
+        headers = {
+          'X-API-KEY': 'fb165ecfaaab69a115ccae620c21576980309eed',
+          'Content-Type': 'application/json'
+        }
+        
+        response = requests.post(url, headers=headers, data=payload)
+        data = json.loads(response.text)  # 将返回的JSON字符串转换为字典
+        if 'organic' in data:
+            return json.dumps(data['organic'],  ensure_ascii=False)  # 返回'organic'部分的JSON字符串
+        else:
+            return json.dumps({"error": "No organic results found"},  ensure_ascii=False)  # 如果没有'organic'键，返回错误信息
+
+
+    class WeatherLoc(BaseModel):
+        location: str = Field(description="The location name of the city")
+    @tool(args_schema = WeatherLoc)
+    def get_weather(location):
+        """Call to get the current weather."""
+        if location.lower() in ["beijing"]:
+            return "北京的温度是16度，天气晴朗。"
+        elif location.lower() in ["shanghai"]:
+            return "上海的温度是20度，部分多云。"
+        else:
+            return "不好意思，并未查询到具体的天气信息。"  
+
+
+    class UserInfo(BaseModel):
+        """Extracted user information, such as name, age, email, and phone number, if relevant."""
+        name: str = Field(description="The name of the user")
+        age: Optional[int] = Field(description="The age of the user")
+        email: str = Field(description="The email address of the user")
+        phone: Optional[str] = Field(description="The phone number of the user")
+    @tool(args_schema = UserInfo)
+    def insert_db(name, age, email, phone):
+        """Insert user information into the database, The required parameters are name, age, email, phone"""
+        session = Session()  # 确保为每次操作创建新的会话
+        try:
+            # 创建用户实例
+            user = User(name=name, age=age, email=email, phone=phone)
+            # 添加到会话
+            session.add(user)
+            # 提交事务
+            session.commit()
+            return {"messages": [f"数据已成功存储至Mysql数据库。"]}
+        except Exception as e:
+            session.rollback()  # 出错时回滚
+            return {"messages": [f"数据存储失败，错误原因：{e}"]}
+        finally:
+            session.close()  # 关闭会话           
+
+
+    from langgraph.prebuilt import ToolNode
+    tools = [insert_db, fetch_real_time_info, get_weather]
+    tool_node = ToolNode(tools)
+
+
+    import getpass
+    import os
+    from langchain_openai import ChatOpenAI
+    from langchain_core.prompts import ChatPromptTemplate
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+
+
+    llm = ChatOpenAI(model="gpt-4o")
+
+    model_with_tools = llm.bind_tools(tools)
+
+
+
+    # 定义正常生成模型回复的模型
+    class ConversationalResponse(BaseModel):
+        """Respond to the user's query in a conversational manner. Be kind and helpful."""
+        response: str = Field(description="A conversational response to the user's query")
+
+
+    # 定义最终响应模型，可以是用户信息或一般响应
+    class FinalResponse(BaseModel):
+        final_output: Union[ConversationalResponse, SearchQuery, WeatherLoc, UserInfo]
+
+
+    # 依次定义三个节点函数
+    def chat_with_model(state):
+        """generate structured output"""
+        print(state)
+        print("-----------------")
+        messages = state['messages'] # 此时才开始，只有一个message在messages列表里面
+        structured_llm = llm.with_structured_output(FinalResponse)
+        response = structured_llm.invoke(messages)
+        return {"messages": [response]}
+
+
+    def final_answer(state):
+        """gxenerate natural language responses"""
+        print(state)
+        print("-----------------")
+        messages = state['messages'][-1]
+        response = messages.final_output.response
+        return {"messages": [response]}
+
+
+    def execute_function(state):
+        """generate natural language responses"""
+        print(state)
+        print("-----------------")
+        messages = state['messages'][-1].final_output
+        # model_with_tools = llm.bind_tools(tools)
+        # tool_node = ToolNode(tools)
+        response = tool_node.invoke({"messages": [model_with_tools.invoke(str(messages))]}) # ⚡
+
+        print(f"response:{response}")
+        response = response["messages"][0].content
+        return {"messages": [response]}
+
+
+    # 定义图的状态模式
+    import operator
+    class AgentState(TypedDict):
+        messages: Annotated[list[AnyMessage], operator.add]
+
+
+    def generate_branch(state: AgentState):
+        result = state['messages'][-1]
+        output = result.final_output
+
+        if isinstance(output, ConversationalResponse):
+            return False
+        else:
+            return True  
+            
+    # 现在构建图
+    graph = StateGraph(AgentState)
+
+    # 添加三个节点
+    graph.add_node("chat_with_model", chat_with_model)
+    graph.add_node("final_answer", final_answer)
+    graph.add_node("execute_function", execute_function)
+
+    # 设置图的启动节点
+    graph.set_entry_point("chat_with_model")
+
+    # 设置条件边
+    graph.add_conditional_edges(
+        "chat_with_model",
+        generate_branch,
+        {True: "execute_function", False: "final_answer"}
+    )
+
+    # 设置终止节点
+    graph.set_finish_point("final_answer")
+    graph.set_finish_point("execute_function")
+
+    # 编译图
+    graph = graph.compile()
+
+
+
+
+    # 🎯 🙇 自治循环代理 🙇
+    from sqlalchemy import create_engine, Column, Integer, String, Float
+    from sqlalchemy.orm import sessionmaker, declarative_base
+
+    # 创建基类
+    Base = declarative_base()
+
+    # 定义 WeatherInfo 模型
+    class Weather(Base):
+        __tablename__ = 'weather'
+        city_id = Column(Integer, primary_key=True)  # 城市ID
+        city_name = Column(String(50))                # 城市名称
+        main_weather = Column(String(50))             # 主要天气状况
+        description = Column(String(100))              # 描述
+        temperature = Column(Float)                    # 温度
+        feels_like = Column(Float)                    # 体感温度
+        temp_min = Column(Float)                      # 最低温度
+        temp_max = Column(Float)                      # 最高温度   
+
+
+    # 数据库连接 URI，这里要替换成自己的Mysql 连接信息，以下是各个字段的对应解释：
+    # root：MySQL 数据库的用户名。
+    # snowball950123：MySQL 数据库的密码。
+    # 192.168.110.131：MySQL 服务器的 IP 地址。
+    # langgraph_agent：要连接的数据库的名称。
+    # charset=utf8mb4：设置数据库的字符集为 utf8mb4，支持更广泛的 Unicode 字符
+    DATABASE_URI = 'mysql+pymysql://root:snowball950123@192.168.110.131/langgraph_agent?charset=utf8mb4'    
+    engine = create_engine(DATABASE_URI)
+
+    # 如果表不存在，则创建表
+    Base.metadata.create_all(engine)
+
+    # 创建会话
+    Session = sessionmaker(bind=engine)
+
+
+    from langchain_core.tools import tool
+    from typing import Union, Optional
+    from pydantic import BaseModel, Field
+    import requests
+
+    class WeatherLoc(BaseModel):
+        location: str = Field(description="The location name of the city")
+    @tool(args_schema=WheatherLoc)
+    def get_weather(location):
+        """
+        Function to query current weather.
+        :param loc: Required parameter, of type string, representing the specific city name for the weather query. \
+        Note that for cities in China, the corresponding English city name should be used. For example, to query the weather for Beijing, \
+        the loc parameter should be input as 'Beijing'.
+        :return: The result of the OpenWeather API query for current weather, with the specific URL request address being: https://api.openweathermap.org/data/2.5/weather. \
+        The return type is a JSON-formatted object after parsing, represented as a string, containing all important weather information.
+        """
+        # Step 1.构建请求
+        url = "https://api.openweathermap.org/data/2.5/weather"
+
+        # Step 2.设置查询参数
+        params = {
+            "q": location,               
+            "appid": "7b34ea15a881668d4255910e5899920c",    # 输入API key
+            "units": "metric",            # 使用摄氏度而不是华氏度
+            "lang":"zh_cn"                # 输出语言为简体中文
+        }
+
+        # Step 3.发送GET请求
+        response = requests.get(url, params=params)
+        
+        # Step 4.解析响应
+        data = response.json()
+        return json.dumps(data)    
+
+
+    # pip install sqlalchemy pymysql
+    from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData
+    from sqlalchemy.orm import declarative_base, sessionmaker
+
+    class WeatherInfo(BaseModel):
+        """Extracted weather information for a specific city."""
+        city_id: int = Field(..., description="The unique identifier for the city")
+        city_name: str = Field(..., description="The name of the city")
+        main_weather: str = Field(..., description="The main weather condition")
+        description: str = Field(..., description="A detailed description of the weather")
+        temperature: float = Field(..., description="Current temperature in Celsius")
+        feels_like: float = Field(..., description="Feels-like temperature in Celsius")
+        temp_min: float = Field(..., description="Minimum temperature in Celsius")
+        temp_max: float = Field(..., description="Maximum temperature in Celsius")
+    @tool(args_schema=WeatherInfo)
+    def insert_weather_to_db(city_id, city_name, main_weather, description, temperature, feels_like, temp_min, temp_max):
+        """Insert weather information into the database."""
+        session = Session()  # 确保为每次操作创建新的会话
+        try:
+            # 创建天气实例
+            weather = Weather(
+                city_id=city_id,
+                city_name=city_name,
+                main_weather=main_weather,
+                description=description,
+                temperature=temperature,
+                feels_like=feels_like,
+                temp_min=temp_min,
+                temp_max=temp_max
+            )
+            # 使用 merge 方法来插入或更新（如果已有记录则更新）
+            session.merge(weather)
+            # 提交事务
+            session.commit()
+            return {"messages": [f"天气数据已成功存储至Mysql数据库。"]}
+        except Exception as e:
+            session.rollback()  # 出错时回滚
+            return {"messages": [f"数据存储失败，错误原因：{e}"]}
+        finally:
+            session.close()  # 关闭会话
+
+
+    class QueryWeatherSchema(BaseModel):
+        """Schema for querying weather information by city name."""
+        city_name: str = Field(..., description="The name of the city to query weather information")
+    @tool(args_schema=QueryWeatherSchema)
+    def query_weather_from_db(city_name: str):
+        """Query weather information from the database by city name."""
+        session = Session()
+        try:
+            # 查询天气数据
+            weather_data = session.query(Weather).filter(Weather.city_name == city_name).first()
+            if weather_data:
+                return {
+                    "city_id": weather_data.city_id,
+                    "city_name": weather_data.city_name,
+                    "main_weather": weather_data.main_weather,
+                    "description": weather_data.description,
+                    "temperature": weather_data.temperature,
+                    "feels_like": weather_data.feels_like,
+                    "temp_min": weather_data.temp_min,
+                    "temp_max": weather_data.temp_max
+                }
+            else:
+                return {"messages": [f"未找到城市 '{city_name}' 的天气信息。"]}
+        except Exception as e:
+            return {"messages": [f"查询失败，错误原因：{e}"]}
+        finally:
+            session.close()  # 关闭会话
+
+
+    # 然后，定义实时联网检索外部工具，通过该函数获取最新的网络数据信息
+    class SearchQuery(BaseModel):
+        query: str = Field(description="Questions for networking queries")
+    @tool(args_schema = SearchQuery)
+    def fetch_real_time_info(query):
+        """Get real-time Internet information"""
+        url = "https://google.serper.dev/search"
+        payload = json.dumps({
+          "q": query,
+          "num": 1,
+        })
+        headers = {
+          'X-API-KEY': 'cd872fca99047eb9165242365c65b858bc8970c0',
+          'Content-Type': 'application/json'
+        }
+        
+        response = requests.post(url, headers=headers, data=payload)
+        data = json.loads(response.text)  # 将返回的JSON字符串转换为字典
+        if 'organic' in data:
+            return json.dumps(data['organic'],  ensure_ascii=False)  # 返回'organic'部分的JSON字符串
+        else:
+            return json.dumps({"error": "No organic results found"},  ensure_ascii=False)  #
+
+    tools = [fetch_real_time_info, get_weather, insert_weather_to_db, query_weather_from_db]
+
+
+    # 创建llm
+    import getpass
+    import os
+    from langchain_openai import ChatOpenAI
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+
+    llm = ChatOpenAI(model="gpt-4o")
+
+
+    # 🚀 创建ReAct代理
+    from langgraph.prebuilt import create_react_agent
+
+    # ✈ 
+    graph = create_react_agent(llm, tools=tools) # ⚙️ 我们可以逐步分析和解释一下这一行代码中的涉及的图构建过程
+
+    # ⚙️ step 1: 定义状态模式
+    from typing import Annotated
+    from typing_extensions import TypedDict
+    from langgraph.graph.message import add_messages
+    class State(TypedDict):
+        messages: Annotated[list, add_messages]
+
+    # ⚙️ step2: 定义Router Function
+    # 定义决定是否继续执行任务的路由函数
+    def should_continue(state: State):
+        messages = state["messages"]
+        last_message = messages[-1]
+        # 如果不是工具调用，则结束
+        if not last_message.tool_calls:
+            return END
+        # 如果是的话，则进入工具库中选择函数执行
+        else:
+            return "tools"
+
+    # ⚙️ step3: 定义大模型的交互函数
+    from typing import Literal
+    from langchain_core.runnables import RunnableConfig
+    # 定义大模型交互的节点函数
+    async def call_model(state: State, config: RunnableConfig):
+        messages = state["messages"]
+        response = await model.ainvoke(messages, config)
+        # 将调用大模型后得到的响应，追加到消息列表中
+        return {"messages": response}  
+
+    # ⚙️ step4: 构建图结构
+    from langgraph.graph import END, START, StateGraph
+    # 定义一个新图
+    workflow = StateGraph(State)
+    workflow.add_node("agent", call_model)
+    workflow.add_node("tools", tool_node)
+    # 设置起始节点为 agent
+    workflow.add_edge(START, "agent")
+    # 添加条件边 -- > Router Agent
+    workflow.add_conditional_edges(
+        "agent",
+        should_continue,
+        ["tools", END],
+    )
+    # 添加回调边
+    workflow.add_edge("tools", "agent")
+    # 编译图
+    app = workflow.compile()
+
+
+    # 🐠 流式输出
+    """
+    五种流式模式的对比
+
+               message模式               updates模式             values模式                      custom模式             debug模式
+    ----------------------------------------------------------------------------------------------------------------------------------------------
+    流式单位    LLM令牌/消息块            状态增量更新            完整状态快照                     自定义业务数据          详细调试信息  
+    ----------------------------------------------------------------------------------------------------------------------------------------------
+    数据粒度    最细（字符级）            中等(字段级)            最粗（状态级）                    灵活可定义             最详细（节点级）
+    ----------------------------------------------------------------------------------------------------------------------------------------------
+    主要用途    聊天界面，逐字输出        状态监控，进度跟踪       调试、审计                        业务事件通知           深度调试和性能分析
+    ----------------------------------------------------------------------------------------------------------------------------------------------
+    性能开销    中等                     最低                     最高                            低                    非常高
+    ----------------------------------------------------------------------------------------------------------------------------------------------
+    网络传输    适合实时传输              高效，适合频繁更新       数据量大，适合内网                按需定义               不适合生产环境
+    ----------------------------------------------------------------------------------------------------------------------------------------------
+    适用场景    聊天机器人界面            生产环境下的状态同步     调试和开发阶段需要查看完整状态      进度条和状态更新       深度调试和性能分析
+               需要实时显示AI思考过程     需要高效网络传输的场景   需要全局上下文进行审计追踪          业务特定的通知消息     排查复杂的执行问题
+               提升用户交互体验          实时监控特定字段的变化    状态规模较小或网络带宽充足的情况    调试和监控信息         学习和理解langgraph内部机制
+    """
+    def print_stream(stream):
+        for sub_stream in stream:
+            # print(sub_stream)  # 就是上面的示例中非流式直接调用的全部信息
+            message = sub_stream["messages"][-1]
+            message.pretty_print() # 🤔 以更容易人理解的格式输出
+
+    input_message = {"messages": ["你好，南京现在的天气怎么样？"]}
+    print_stream(graph.stream(input_message, stream_mode="values"))
+
+
+    # 🚂 Langgraph中一事件流
+    async for event in graph.astream_events({"messages": ["你好，请你介绍一下你自己"]}, version="v2"):
+        kind = event["event"]
+        print(f"{kind}: {event['name']}")
+
+    """
+    on_chain_start: LangGraph
+    on_chain_start: __start__
+    on_chain_end: __start__
+    on_chain_start: agent
+    on_chain_start: call_model
+    on_chain_start: RunnableSequence
+    on_chain_start: StateModifier
+    on_chain_end: StateModifier
+    on_chat_model_start: ChatOpenAI
+    on_chat_model_stream: ChatOpenAI
+    on_chat_model_stream: ChatOpenAI
+    ...
+    on_chat_model_stream: ChatOpenAI
+    on_chat_model_stream: ChatOpenAI
+    on_chat_model_end: ChatOpenAI
+    on_chain_end: RunnableSequence
+    on_chain_end: call_model
+    on_chain_start: _write
+    on_chain_end: _write
+    on_chain_start: should_continue
+    on_chain_end: should_continue
+    on_chain_stream: agent
+    on_chain_end: agent
+    on_chain_stream: LangGraph
+    on_chain_end: LangGraph
+    """
+
+    # 🍋 我们可以从中提取具体的某个event事件，比如
+    events = []
+    async for event in graph.astrea_events({"messages": ["你好，请你介绍一下你自己"]}, version="vw"):
+        events.append(event)
+
+    """
+    所有事件都会包含event、name和data字段：
+    - event: 正在发出的事件类型
+    - name: 事件的名称
+    - data: 事件关联的数据
+    """
+
+    # 基于此就可以按照`name`、`tags`或`type`等不同的字段来进行事件过滤，比如我们现在选择仅包含聊天模型的输出：
+    async for event in graph.astream_events({"messages": ["你好，请你介绍一下你自己"]}, version="v2"):
+        kind = event["event"]
+        if kind == "on_chat_model_stream":
+            print(event, end="|", flush=True)
+
+
+    """
+    每种类型的事件都包含不同格式的数据。而其中`data`是一个非常重要的，包含此事件的实际数据。
+    在`on_chat_model_stream`事件中，就是需要响应的流式`Token`，如上图所示是一个 `AIMessageChunk`，其中包含消息的`content`以及`id` ,
+    提取的代码就非常简单了，直接采用如下代码：
+    """
+    first = True
+    async for msg, metadata in graph.astream({"messages": ["你好，请你介绍一下你自己"]}, stream_mode="messages"):
+        if msg.content and not isinstance(msg, HumanMessage):
+            print(msg.content, end="|", flush=True)
+
+        if isinstance(msg, AIMessageChunk):
+            if first:
+                gathered = msg
+                first = False
+            else:
+                gathered = gathered + msg
+
+            if msg.tool_call_chunks:
+                print(gathered.tool_calls)
+
+
+    # 💾 LangGraph长短期记忆实现机制及检查点的使用
+
+    import getpass
+    import os
+    from langchain_openai import ChatOpenAI
+    from typing import Annotated
+    from typing_extensions import TypedDict
+    from IPython.display import Image, display
+    from langgraph.graph import StateGraph, MessagesState, START, END
+    from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage
+    from langgraph.graph.message import add_messages
+
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+
+    # 定义大模型实例
+    llm = ChatOpenAI(model="gpt-4o")
+
+    # 定义状态模式
+    class State(TypedDict):
+        messages: Annotated[list, add_messages]
+
+    # 定义大模型交互节点
+    def call_model(state: State):
+        response = llm.invoke(state["messages"])
+        return {"messages": response}
+
+    # 定义翻译节点
+    def translate_message(state: State):
+        system_prompt = """
+        Please translate the received text in any language into English as output
+        """
+        messages = state['messages'][-1]
+        messages = [SystemMessage(content=system_prompt)] + [HumanMessage(content=messages.content)]
+        response = llm.invoke(messages)
+        return {"messages": response}
+
+    # 构建状态图
+    builder = StateGraph(State)
+
+    # 向图中添加节点
+    builder.add_node("call_model", call_model)
+    builder.add_node("translate_message", translate_message)
+
+    # 构建边
+    builder.add_edge(START, "call_model")
+    builder.add_edge("call_model", "translate_message")
+    builder.add_edge("translate_message", END)
+
+    # 编译图
+    graph = builder.compile()
+    # 生成可视化图像结构 这里是测试下图是不是正确的
+    display(Image(simple_short_graph.get_graph().draw_mermaid_png()))
+
+
+    # 🐠 检查点的特定实现类型-MemorySaver
+    from langgraph.checkpoint.memory import MemorySaver
+    checkpointer = MemorySaver()
+    graph_width_memory = builder.compile(checkpointer=checkpointer)
+
+    config = {"configurable": {"thread_id": '1'}}
+
+    for chunk in graph_with_memory.stream({"messages": ["你好，我叫木羽"]}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+
+    for chunk in graph_with_memory.stream({"messages": ["请问我叫什么？"]}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+    for chunk in graph_with_memory.stream({"messages": ["我刚才都问了你什么问题？"]}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+
+    # 🐠 检查点的特定实现类型-SqliteSaver
+    # pip install langgraph-checkpoint-sqlite
+
+    from langgraph.checkpoint.sqlite import SqliteSaver
+
+    # 🚀 创建一个内存中的检查点
+    memory = SqliteSaver.from_conn_string(":memory:") # :memory: 是一个固定参数，表示这个sqliteSaver保存在内存中ss
+
+    # 构建checkpointer
+    # 这里为了演示`SqliteSaver`的执行原理，我们手动构建一个测试的`checkpointer`，其默认实现的是从`State`中进行提取。
+    checkpoint_data = {
+        "thread_id": "muyu123",  
+        "thread_ts": "2024-10-30T07:23:38.656547+00:00", 
+        "checkpoint": {
+            "id": "1ef968fe-1eb4-6049-bfff", 
+        },
+        "metadata": {"timestamp": "2024-10-30T07:23:38.656547+00:00"}
+    }
+
+    # 存储checkpointer
+    with SqliteSaver.from_conn_string(":memory:") as memory:
+        # 保存检查点，包括时间戳
+        saved_config = memory.put(
+            config={"configurable": 
+                {"thread_id": checkpoint_data["thread_id"], "thread_ts": checkpoint_data["thread_ts"], "checkpoint_ns": ""}},
+            checkpoint=checkpoint_data["checkpoint"],
+            metadata=checkpoint_data["metadata"],
+            new_versions= {"writes": {"key": "value"}}
+        )
+
+    # 除此之外，还可以通过list方法查看thread_id下所有检查点信息
+    with SqliteSaver.from_conn_string(":memory:") as memory:
+        # 保存检查点，包括时间戳
+        saved_config = memory.put(
+            config={"configurable": {"thread_id": checkpoint_data["thread_id"], "thread_ts": checkpoint_data["thread_ts"], "checkpoint_ns": ""}},
+            checkpoint=checkpoint_data["checkpoint"],
+            metadata=checkpoint_data["metadata"],
+            new_versions= {"writes": {"key": "value"}}
+        )
+
+        # 检索检查点的数据
+        config = {"configurable": {"thread_id": checkpoint_data["thread_id"]}}
+        
+        # 获取给定 thread_id 的所有检查点
+        checkpoints = list(memory.list(config))  
+        for checkpoint in checkpoints:
+            print(checkpoint)
+
+
+    # 🚀 创建持久化的sqlite存储
+    import sqlite3
+    from langgraph.checkpoint.sqlite import SqliteSaver 
+
+    with SqliteSaver.from_conn_string("checkpoints20241101.sqlite") as memory: # 本地存在文件名
+        # 保存检查点，包括时间戳
+        saved_config = memory.put(
+            config={"configurable": {"thread_id": checkpoint_data["thread_id"], "thread_ts": checkpoint_data["thread_ts"], "checkpoint_ns": ""}},
+            checkpoint=checkpoint_data["checkpoint"],
+            metadata=checkpoint_data["metadata"],
+            new_versions= {"writes": {"key": "value"}}
+        )
+
+        # 检索检查点的数据
+        config = {"configurable": {"thread_id": checkpoint_data["thread_id"]}}
+        
+        # 获取给定 thread_id 的所有检查点
+        checkpoints = list(memory.list(config))  
+        for checkpoint in checkpoints:
+            print(checkpoint)
+
+
+    # 可以使用标准的SQL语法直接与数据库进行交互
+    # 建立数据库连接
+    conn = sqlite3.connect("checkpoints20241101.sqlite")
+    # 创建一个游标对象来执行你的SQL查询
+    cursor = conn.cursor()
+    # 查询数据库中所有表的名称
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    # 获取查询结果
+    tables = cursor.fetchall()
+
+
+    # 🚀 创建ReAct代理时，添加Memory
+    from langgraph.checkpoint.sqlite import SqliteSaver
+    from langgraph.prebuilt import create_react_agent
+
+    with SqliteSaver.from_conn_string(":memory:") as checkpointer:
+        graph = create_react_agent(llm, tools=tools, checkpointer=checkpointer)
+        display(Image(graph.get_graph().draw_mermaid_png()))
+        
+        config = {"configurable": {"thread_id": "1"}}
+
+        for chunk in graph.stream({"messages": ["你好，我叫木羽"]}, config, stream_mode="values"):
+            chunk["messages"][-1].pretty_print()
+         
+        for chunk in graph.stream({"messages": ["请问我叫什么？"]}, config, stream_mode="values"):
+            chunk["messages"][-1].pretty_print()
+
+    # 但，这种方法不能跨单元传播，就是说你的graph只有在with里面使用，不能在with外面使用
+
+    from contextlib import ExitStack
+
+    stack = ExitStack()
+    checkpointer = stack.enter_context(SqliteSaver.from_conn_string(":memory:"))
+    graph = create_react_agent(llm, tools=tools, checkpointer=checkpointer)
+
+    config = {"configurable": {"thread_id": "102"}}
+
+    for chunk in graph.stream({"messages": ["你好，我叫木羽"]}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+     
+    for chunk in graph.stream({"messages": ["请问我叫什么？"]}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+    stack.close()    
+
+
+    # 异步版本的
+    import asyncio
+    from contextlib import AsyncExitStack
+    from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+    stack = AsyncExitStack()
+    memory = await stack.enter_async_context(AsyncSqliteSaver.from_conn_string(":memory:"))
+
+    graph = create_react_agent(llm, tools=tools, checkpointer=memory)
+
+    config = {"configurable": {"thread_id": "24"}}
+
+    async for chunk in graph.astream({"messages": ["帮我查一下北京的天气"]}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+    await stack.aclose()
+
+
+    # 🔒 长期记忆和Store（仓库）
+    from langgraph.store.memory import InMemoryStore
+
+    in_memory_store = InMemoryStore()
+    user_id = "1"
+    namespace_for_memory = ("memories", user_id)
+
+    import uuid
+    memory_id = str(uuid.uuid4())
+    memory = {"user" : "你好，我叫木羽"}
+    in_memory_store.put(namespace_for_memory, memory_id,  memory)
+
+    # 当创建完成后，可以使用store.search读取命名空间中的记忆，这将以列表的形式返回给定用户的所有记忆。最近的记忆是列表中的最后一个。
+    memories = in_memory_store.search(namespace_for_memory)
+    memories[-1].dict()
+    """
+    {'value': {'user': '你好，我叫木羽'},
+     'key': '6db0b2e0-8e51-4fbd-b3e1-761edf221ea0',
+     'namespace': ['1', 'memories'],
+     'created_at': '2024-11-01T08:45:59.453639+00:00',
+     'updated_at': '2024-11-01T08:45:59.453639+00:00'}
+    """
+
+    # 理解了上述过程后，就可以使用Langgraph中的in_memory_store方法了
+    import getpass
+    import os
+    import uuid
+    from dataclasses import dataclass
+    from langchain_openai import ChatOpenAI
+    from typing import Annotated
+    from typing_extensions import TypedDict
+    from IPython.display import Image, display
+    from langgraph.graph import StateGraph, MessagesState, START, END
+    from langgraph.graph.message import add_messages
+    from langgraph.store.memory import InMemoryStore
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.runtime import Runtime
+
+    in_memory_store = InMemoryStore()
+    checkpointer = MemorySaver()
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+
+    # 定义大模型实例
+    llm = ChatOpenAI(model="gpt-4o")
+
+    # 定义状态模式
+    class State(TypedDict):
+        messages: Annotated[list, add_messages]
+
+    # 定义 Runtime Context 模式
+    @dataclass
+    class AppContext:
+        user_id: str
+
+    # 定义对话节点，访问记忆并在模型调用中使用它们。
+    def call_model(state: MessagesState, runtime: Runtime[AppContext]) -> MessagesState:
+        # 🐢 存储记忆
+        last_message = state["messages"][-1]
+        runtime.store.put(namespace, str(uuid.uuid4()), {"data": last_message.content})
+
+        # 获取用户id — 从 runtime.context 拿，类型安全
+        user_id = runtime.context.user_id
+        # 定义命名空间
+        namespace = ("memories", user_id)
+        # 根据用户id检索记忆
+        memories = runtime.store.search(namespace)
+        info = "\n".join([d.value["data"] for d in memories])
+        system_msg = f"Answer the user's question in context: {info}"
+
+        response = llm.invoke(
+            # ✒把以前的记忆写入到context中
+            [{"type": "system", "content": system_msg}] + state["messages"]
+        )
+
+        # 🐢 存储记忆
+        runtime.store.put(namespace, str(uuid.uuid4()), {"data": response.content})
+        return {"messages": response}
+
+
+    # 构建状态图 — 注册 context_schema
+    builder = StateGraph(State, context_schema=AppContext)
+    # 向图中添加节点
+    builder.add_node("call_model", call_model)
+    # 构建边
+    builder.add_edge(START, "call_model")
+    builder.add_edge("call_model", END)
+    # 编译图
+    graph = builder.compile(checkpointer=checkpointer, store=in_memory_store)
+
+
+    config = {"configurable": {"thread_id": "10"}}
+    context = AppContext(user_id="6")
+
+    async for chunk in graph.astream({"messages": ["你好，我是木羽"]}, config, context=context, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+
+    # 🎭 Human-in-the-loop
+
+    import getpass
+    import os
+
+    from langchain_openai import ChatOpenAI
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+
+    llm = ChatOpenAI(model="gpt-4o-mini") 
+
+    # ✂ 标准图结构中添加断点
+    import json
+    from typing import TypedDict
+    from langgraph.graph import StateGraph, START, END
+    from IPython.display import Image, display
+    from langchain_core.tools import tool
+    from langgraph.graph import MessagesState, START
+    from langgraph.prebuilt import ToolNode
+    from langgraph.checkpoint.memory import MemorySaver
+    from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, AIMessage
+     
+    # 定义状态模式
+    class State(TypedDict):
+        user_input: str
+        model_response: str
+        user_approval: str
+
+    # 定义用于大模型交互的节点
+    def call_model(state):
+        messages = state["user_input"]
+        if '删除' in state["user_input"]:
+            state["user_approval"] = f"用户输入的指令是:{state['user_input']}, 请人工确认是否执行！"
+        else:
+            response = llm.invoke(messages)
+            state["user_approval"] = "直接运行！"
+            state["model_response"] = response
+        return state    
+
+
+    # 定义人工介入的breakpoint内部的执行逻辑
+    def execute_users(state):
+        if state["user_approval"] == "是":
+            response = "您的删除请求已经获得管理员的批准并成功执行。如果您有其他问题或需要进一步的帮助，请随时联系我们。"
+            return {"model_response":AIMessage(response)}
+        elif state["user_approval"] == "否":
+            response = "对不起，您当前的请求是高风险操作，管理员不允许执行！"
+            return {"model_response":AIMessage(response)}    
+        else:
+            return state
+
+    # 定义翻译节点
+    def translate_message(state: State):
+        system_prompt = """
+        Please translate the received text in any language into English as output
+        """
+        messages = state['model_response']
+        messages = [SystemMessage(content=system_prompt)] + [HumanMessage(content=messages.content)]
+        response = llm.invoke(messages)
+        return {"model_response": response}
+
+    # 构建状态图
+    builder = StateGraph(State)
+
+    # 向图中添加节点
+    builder.add_node("call_model", call_model)
+    builder.add_node("execute_users", execute_users)
+    builder.add_node("translate_message", translate_message)
+
+    # 构建边
+    builder.add_edge(START, "call_model")
+    builder.add_edge("call_model", "execute_users")
+    builder.add_edge("execute_users", "translate_message")
+    builder.add_edge("translate_message", END)
+
+    # 设置 checkpointer，使用内存存储
+    memory = MemorySaver()
+
+    # 在编译图的时候，添加短期记忆，并使用interrupt_before参数 设置 在 execute_users 节点之前中止图的运行，等待人工审核
+    graph = builder.compile(checkpointer=memory, interrupt_before=["execute_users"])
+
+    # 创建一个线程
+    config = {"configurable": {"thread_id": "1"}}
+    # 运行图，直至到断点的节点
+    async for chunk in graph.astream({"user_input": "我将在数据库中删除 id 为 muyu 的所有信息"}, config,  stream_mode="values"):
+        print(chunk)
+    """
+    {'user_input': '我将在数据库中删除 id 为 muyu 的所有信息'}
+    {
+        'user_input': '我将在数据库中删除 id 为 muyu 的所有信息', 
+        'user_approval': '用户输入的指令是:我将在数据库中删除 id 为 muyu 的所有信息, 请人工确认是否执行！'
+    }
+    """
+
+    """
+    通过输出结果，我们可以观察到在执行到`execute_users`节点之前就暂停了，它将等待人工介入以决定是否继续执行。
+    这就是`breakpointer`（断点）的关键作用。在这个阶段，我们就可以审查并调整图的状态，而关键的处理逻辑是：
+    要修改或确认全局状态模式中`user_approval`字段的值，从而指导`execute_users`节点的行为。
+
+    通过`get_state()`方法，可以查看到截至断点`breakpoint`前，图的运行过程中都产生了哪些状态信息：
+    """
+    snapshot = graph.get_state(config)
+    snapshot
+
+    """
+    StateSnapshot(
+        values={
+            'user_input': '我将在数据库中删除 id 为 muyu 的所有信息', 
+            'user_approval': '用户输入的指令是:我将在数据库中删除 id 为 muyu 的所有信息, 请人工确认是否执行！'
+        }, 
+        next=('execute_users',), 
+        config={
+            'configurable': 
+            {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef9f1de-041a-64e2-8001-41df6d4d90d6'}
+        }, 
+        metadata={
+            'source': 'loop', 
+            'writes': {
+                'call_model': {
+                    'user_input': '我将在数据库中删除 id 为 muyu 的所有信息', 
+                    'user_approval': '用户输入的指令是:我将在数据库中删除 id 为 muyu 的所有信息, 请人工确认是否执行！'
+                }
+            }, 
+            'step': 1, 
+            'parents': {}
+        }, 
+        created_at='2024-11-10T04:40:13.704112+00:00', 
+        parent_config={
+            'configurable': {'thread_id': '1', 'checkpoint_ns': '', 'checkpoint_id': '1ef9f1de-0417-6dde-8000-f38b5281a68b'}
+        }, 
+        tasks=(
+            PregelTask(
+                id='97ac593e-6b41-43e9-b81b-ee0e1dc49c01', 
+                name='execute_users', 
+                path=('__pregel_pull', 'execute_users'), 
+                error=None, 
+                interrupts=(), 
+                state=None)
+            )
+        )
+    """
+
+    """
+    我们先来看如何在图中止运行后，在图状态中添加用户的决策。
+
+    为实现这一点，我们可以手动设置`snapshot.values['user_approval']`为'是'，用以说明在即将执行的`execute_users`节点，
+    人工审批的状态被手动设定为同意。接下来，使用`graph.update_state(config, snapshot.values)`来更新状态图中的状态。
+    这个调用将状态图中的当前状态更新为包含了新的`user_approval`值的`snapshot.values`。
+    """
+    snapshot.values['user_approval']='是'
+    graph.update_state(config, snapshot.values)
+    """
+    {'configurable': {'thread_id': '1',
+      'checkpoint_ns': '',
+      'checkpoint_id': '1ef9f1e1-81db-6516-8002-8b1478becc9d'}}
+    """
+    """
+    修改完状态后，如果想让图基于`breakpoint`继续执行后续的操作，则只需要在`astream`方法中将`input`参数设置为 `None`, 
+    则会让图形从上次中断的地方继续。如下代码所示：
+    """
+    async for chunk in graph.astream(None, config, stream_mode="values"):
+        print(chunk)
+    """"""
+    """
+    {'user_input': '我将在数据库中删除 id 为 muyu 的所有信息', 'user_approval': '是'}
+    {'user_input': '我将在数据库中删除 id 为 muyu 的所有信息', 'model_response': AIMessage(content='您的删除请求已经获得管理员的批准并成功执行。如果您有其他问题或需要进一步的帮助，请随时联系我们。', additional_kwargs={}, response_metadata={}), 'user_approval': '是'}
+    {'user_input': '我将在数据库中删除 id 为 muyu 的所有信息', 'model_response': AIMessage(content='Your deletion request has been approved by the administrator and successfully executed. If you have any other questions or need further assistance, please feel free to contact us.', additional_kwargs={'refusal': None}, response_metadata={'token_usage': {'completion_tokens': 31, 'prompt_tokens': 53, 'total_tokens': 84, 'prompt_tokens_details': {'cached_tokens': 0, 'audio_tokens': 0}, 'completion_tokens_details': {'reasoning_tokens': 0, 'audio_tokens': 0, 'accepted_prediction_tokens': 0, 'rejected_prediction_tokens': 0}}, 'model_name': 'gpt-4o-mini-2024-07-18', 'system_fingerprint': 'fp_0ba0d124f1', 'finish_reason': 'stop', 'logprobs': None}, id='run-1db8104c-678e-49e3-b468-f7c77f6fc57d-0', usage_metadata={'input_tokens': 53, 'output_tokens': 31, 'total_tokens': 84, 'input_token_details': {'audio': 0, 'cache_read': 0}, 'output_token_details': {'audio': 0, 'reasoning': 0}}), 'user_approval': '是'}
+    """
+
+    """
+    等待人工输入是一种常见的 HIL 交互模式，它能够允许我们构建的代理向用户提出需要确认的问题，并等待确认输入后再继续。其中具体要执行的关键步骤是：
+    1. 需要在图编译时通过`interrupt_before`或者`interrupt_after`设置断点。
+    2. 需要在图编译时设置一个`checkpointer` 来保存图的状态。
+    3. 需要使用 `.update_state` 来更新图的状态，其中要包含我们得到的人工响应。
+    4. 恢复图的执行，等待图运行结束，输出最终的响应结果。
+    """
+
+    # 🚀 我们可以把上述过程构建成一个具备多轮对话形式的人机交互流程，如下： 
+    # 创建一个函数来封装对话逻辑
+    def run_dialogue(graph, config, all_chunks=[]):
+        while True:
+            # 接收用户输入
+            user_input = input("请输入您的消息（输入'退出'结束对话）：")
+            if user_input.lower() == '退出':
+                break
+            
+            # 运行图，直至到断点的节点
+            for chunk in graph.stream({"user_input": user_input}, config, stream_mode="values"):
+                all_chunks.append(chunk)
+            
+            # 处理可能的审批请求
+            last_chunk = all_chunks[-1]
+            if last_chunk["user_approval"] ==  f"用户输入的指令是:{last_chunk['user_input']}, 请人工确认是否执行！":
+                user_approval = input(f"当前用户的输入是：{last_chunk['user_input']}, 请人工确认是否执行！请回复 是/否。")
+                graph.update_state(config, {"user_approval": user_approval})
+
+            # 继续执行图
+            for chunk in graph.stream(None, config, stream_mode="values"):
+                all_chunks.append(chunk)
+            
+            # 显示最终模型的响应
+            print("人工智能助理：", all_chunks[-1]["model_response"].content)
+
+    # 初始化配置和状态存储
+    config = {"configurable": {"thread_id": "2"}}
+    # 使用该函数运行对话
+    run_dialogue(graph, config)
+
+
+    # ✂ 复杂代理架构中如何添加动态断点
+
+    from langchain_core.tools import tool
+    from typing import Union, Optional
+    from pydantic import BaseModel, Field
+    import requests
+    from langgraph.prebuilt import ToolNode
+
+    class SearchQuery(BaseModel):
+        query: str = Field(description="Questions for networking queries")
+    @tool(args_schema = SearchQuery)
+    def fetch_real_time_info(query):
+        """Get real-time Internet information"""
+        url = "https://google.serper.dev/search"
+        payload = json.dumps({
+          "q": query,
+          "num": 1,
+        })
+        headers = {
+          'X-API-KEY': '4699ef7b10e45569b5da67d707a8dce99174821d',
+          'Content-Type': 'application/json'
+        }
+        response = requests.post(url, headers=headers, data=payload)
+        data = json.loads(response.text)  # 将返回的JSON字符串转换为字典
+        if 'organic' in data:
+            return json.dumps(data['organic'],  ensure_ascii=False)  # 返回'organic'部分的JSON字符串
+        else:
+            return json.dumps({"error": "No organic results found"},  ensure_ascii=False)  # 如果没有'organic'键，返回错误信息
+
+    class WeatherLoc(BaseModel):
+        location: str = Field(description="The location name of the city")
+    @tool(args_schema = WeatherLoc)
+    def get_weather(location):
+        """
+        Function to query current weather.
+        :param loc: Required parameter, of type string, representing the specific city name for the weather query. \
+        Note that for cities in China, the corresponding English city name should be used. For example, to query the weather for Beijing, \
+        the loc parameter should be input as 'Beijing'.
+        :return: The result of the OpenWeather API query for current weather, with the specific URL request address being: https://api.openweathermap.org/data/2.5/weather. \
+        The return type is a JSON-formatted object after parsing, represented as a string, containing all important weather information.
+        """
+        # Step 1.构建请求
+        url = "https://api.openweathermap.org/data/2.5/weather"
+        # Step 2.设置查询参数
+        params = {
+            "q": location,               
+            "appid": "01f0a372b3810c5c30d746565343f92d",    # 输入API key
+            "units": "metric",            # 使用摄氏度而不是华氏度
+            "lang":"zh_cn"                # 输出语言为简体中文
+        }
+        # Step 3.发送GET请求
+        response = requests.get(url, params=params)
+        # Step 4.解析响应
+        data = response.json()
+        return json.dumps(data)
+
+    tools = [get_weather, fetch_real_time_info]
+    tool_node = ToolNode(tools)
+
+    # 定义大模型，并将工具绑定到大模型上
+    import getpass
+    import os
+    import json
+    from langchain_openai import ChatOpenAI
+    from langchain_core.tools import tool
+    from langgraph.graph import MessagesState, START, END, StateGraph
+    from langgraph.checkpoint.memory import MemorySaver
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+    llm = ChatOpenAI(model="gpt-4o")
+    llm = llm.bind_tools(tools)
+
+    # 定义一个Router Function 用来根据大模型的实时响应判断是执行外部函数调用还是直接输出最终的响应
+    def should_continue(state):
+        last_messages = state["messages"][-1]
+        # 如果没有 工具调用，则输出至最终节点
+        if not last_message.tool_calls:
+            return "end"
+        # 如果还有子任务需要继续执行工具调用的话，则继续等待执行
+        else:
+            return "continue"
+
+    # 用于大模型交互的节点函数，其功能是接收用户的响应，使用`GPT 4 `模型生成具体的响应文本
+    def call_model(state):
+        messages = state["messages"]
+        response = llm.invoke(messages)
+        return {"messages": [response]}
+
+    # 然后通过`LangGraph`基本构建图的方法，依次定义状态图 -> 向图中添加节点 - > 添加节点之间的边。
+
+    workflow = StateGraph(MessagesState)
+
+    workflow.add_node("agent", call_model)
+    workflow.add_node("action", tool_node)
+    workflow.add_edge(START, "agent")
+
+    # 添加条件边 
+    workflow.add_conditional_edges(
+        "agent",
+        should_continue,
+        {
+            "continue": "action",
+            "end": END,
+        }
+    )
+
+    workflow.add_edge("action", "agent")
+
+    # 🍋 最后，如果想要在执行任意工具前都由人工介入进行确认，只需要在编译图的时候，在调用 `action` 节点之前添加一个`breakpoint`（断点)：
+    memory = MemorySaver()
+    graph = workflow.compile(checkpointer=memory, interrupt_before=["action"])
+
+    # 调用 
+    config = {"configurable": {"thread_id": "4"}}
+    for chunk in graph.stream({"messages": "请帮我查一下北京的天气"}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+
+    # 🚂 实现人机交互式信息管理系统应用 
+    from sqlalchemy import create_engine, Column, Integer, String, Float
+    from sqlalchemy.orm import sessionmaker, declarative_base
+
+    # 创建基类
+    Base = declarative_base()
+
+    # 定义 WeatherInfo 模型
+    class Weather(Base):
+        __tablename__ = 'weather'
+        city_id = Column(Integer, primary_key=True)  # 城市ID
+        city_name = Column(String(50))                # 城市名称
+        main_weather = Column(String(50))             # 主要天气状况
+        description = Column(String(100))              # 描述
+        temperature = Column(Float)                    # 温度
+        feels_like = Column(Float)                    # 体感温度
+        temp_min = Column(Float)                      # 最低温度
+        temp_max = Column(Float)                      # 最高温度
+
+    # 数据库连接 URI
+    DATABASE_URI = 'mysql+pymysql://root:snowball950123@localhost/langgraph_agent?charset=utf8mb4'     # 这里要替换成自己的数据库连接串
+    engine = create_engine(DATABASE_URI)
+
+    # 如果表不存在，则创建表
+    Base.metadata.create_all(engine)
+
+    # 创建会话
+    Session = sessionmaker(bind=engine)
+
+    # 依次定义外部工具函数
+    from langchain_core.tools import tool
+    from typing import Union, Optional
+    from pydantic import BaseModel, Field
+    import requests
+
+    class WeatherLoc(BaseModel):
+        location: str = Field(description="The location name of the city")
+
+    class WeatherInfo(BaseModel):
+        """Extracted weather information for a specific city."""
+        city_id: int = Field(..., description="The unique identifier for the city")
+        city_name: str = Field(..., description="The name of the city")
+        main_weather: str = Field(..., description="The main weather condition")
+        description: str = Field(..., description="A detailed description of the weather")
+        temperature: float = Field(..., description="Current temperature in Celsius")
+        feels_like: float = Field(..., description="Feels-like temperature in Celsius")
+        temp_min: float = Field(..., description="Minimum temperature in Celsius")
+        temp_max: float = Field(..., description="Maximum temperature in Celsius")
+
+    class QueryWeatherSchema(BaseModel):
+        """Schema for querying weather information by city name."""
+        city_name: str = Field(..., description="The name of the city to query weather information")
+
+
+    class DeleteWeatherSchema(BaseModel):
+        """Schema for deleting weather information by city name."""
+        city_name: str = Field(..., description="The name of the city to delete weather information")
+        
+
+    @tool(args_schema = WeatherLoc)
+    def get_weather(location):
+        """
+        Function to query current weather.
+        :param loc: Required parameter, of type string, representing the specific city name for the weather query. \
+        Note that for cities in China, the corresponding English city name should be used. For example, to query the weather for Beijing, \
+        the loc parameter should be input as 'Beijing'.
+        :return: The result of the OpenWeather API query for current weather, with the specific URL request address being: https://api.openweathermap.org/data/2.5/weather. \
+        The return type is a JSON-formatted object after parsing, represented as a string, containing all important weather information.
+        """
+        # Step 1.构建请求
+        url = "https://api.openweathermap.org/data/2.5/weather"
+
+        # Step 2.设置查询参数
+        params = {
+            "q": location,               
+            "appid": "01f0a372b3810c5c30d746565343f92d",    # 输入API key
+            "units": "metric",            # 使用摄氏度而不是华氏度
+            "lang":"zh_cn"                # 输出语言为简体中文
+        }
+
+        # Step 3.发送GET请求
+        response = requests.get(url, params=params)
+        
+        # Step 4.解析响应
+        data = response.json()
+        return json.dumps(data)
+
+
+    @tool(args_schema=WeatherInfo)
+    def insert_weather_to_db(city_id, city_name, main_weather, description, temperature, feels_like, temp_min, temp_max):
+        """Insert weather information into the database."""
+        session = Session()  # 确保为每次操作创建新的会话
+        try:
+            # 创建天气实例
+            weather = Weather(
+                city_id=city_id,
+                city_name=city_name,
+                main_weather=main_weather,
+                description=description,
+                temperature=temperature,
+                feels_like=feels_like,
+                temp_min=temp_min,
+                temp_max=temp_max
+            )
+            # 添加到会话
+            session.add(weather)
+            # 提交事务
+            session.commit()
+            return {"messages": [f"天气数据已成功存储至Mysql数据库。"]}
+        except Exception as e:
+            session.rollback()  # 出错时回滚
+            return {"messages": [f"数据存储失败，错误原因：{e}"]}
+        finally:
+            session.close()  # 关闭会话
+
+
+    @tool(args_schema=QueryWeatherSchema)
+    def query_weather_from_db(city_name: str):
+        """Query weather information from the database by city name."""
+        session = Session()
+        try:
+            # 查询天气数据
+            weather_data = session.query(Weather).filter(Weather.city_name == city_name).first()
+            print(weather_data)
+            if weather_data:
+                return {
+                    "city_id": weather_data.city_id,
+                    "city_name": weather_data.city_name,
+                    "main_weather": weather_data.main_weather,
+                    "description": weather_data.description,
+                    "temperature": weather_data.temperature,
+                    "feels_like": weather_data.feels_like,
+                    "temp_min": weather_data.temp_min,
+                    "temp_max": weather_data.temp_max
+                }
+            else:
+                return {"messages": [f"未找到城市 '{city_name}' 的天气信息。"]}
+        except Exception as e:
+            return {"messages": [f"查询失败，错误原因：{e}"]}
+        finally:
+            session.close()  # 关闭会话
+
+
+    @tool(args_schema=DeleteWeatherSchema)
+    def delete_weather_from_db(city_name: str):
+        """Delete weather information from the database by city name."""
+        session = Session()
+        try:
+            # 查询要删除的天气数据
+            weather_data = session.query(Weather).filter(Weather.city_name == city_name).first()
+            
+            if weather_data:
+                # 删除记录
+                session.delete(weather_data)
+                session.commit()
+                return {"messages": [f"城市 '{city_name}' 的天气信息已成功删除。"]}
+            else:
+                return {"messages": [f"未找到城市 '{city_name}' 的天气信息。"]}
+        except Exception as e:
+            session.rollback()  # 出错时回滚
+            return {"messages": [f"删除失败，错误原因：{e}"]}
+        finally:
+            session.close()  # 关闭会话
+
+    # 使用ToolNode构建外部工具库
+    from langgraph.prebuilt import ToolNode
+    tools = [get_weather, insert_weather_to_db, query_weather_from_db, delete_weather_from_db]
+    tool_node = ToolNode(tools)
+
+    # 定义Agent基座模型，并绑定外部工具库
+    import getpass
+    import os
+    import json
+    from langchain_openai import ChatOpenAI
+    from langchain_core.tools import tool
+    from langgraph.graph import MessagesState, START
+    from langgraph.prebuilt import ToolNode
+    from langgraph.graph import END, StateGraph
+    from langgraph.checkpoint.memory import MemorySaver
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+    llm = ChatOpenAI(model="gpt-4o")
+    llm = llm.bind_tools(tools) # 🔒 绑定工具
+
+    # call_model 函数用来接收用户的输入请求，由大模型进行用户意图分析
+    def call_model(state):
+        messages = state["messages"]
+        response = llm.invoke(messages)
+        return {"messages": [response]}
+
+    # `should_continue` 函数为`Router Function`
+    # 当`Agent`判断用户的需求中需要触发`删除`的高危操作时，则需要进入到高危操作的具体处理策略中
+    def should_continue(state):
+        messages = state["messages"]
+        last_message = messages[-1]
+        if not last_message.tool_calls:
+            return "end"
+        elif last_message.tool_calls[0]["name"] == "delete_weather_from_db":
+            return "run_tool"
+        else:
+            return "continue"
+
+    # `run_tool` 函数内的逻辑为高危操作工具的执行逻辑，需要人工批准后决定是否执行     
+    def run_tool(state):
+        new_messages = []
+        tool_calls = state["messages"][-1].tool_calls
+        
+        # tools =  [get_weather, insert_weather_to_db, query_weather_from_db, delete_weather_from_db]
+        tools =  [delete_weather_from_db]
+        tools = {t.name: t for t in tools}
+        
+        for tool_call in tool_calls:
+            tool = tools[tool_call["name"]]
+            result = tool.invoke(tool_call["args"])
+            new_messages.append(
+                {
+                    "role": "tool",
+                    "name": tool_call["name"],
+                    "content": result,
+                    "tool_call_id": tool_call["id"],
+                }
+            )
+        return {"messages": new_messages}
+
+    # 构建图
+    workflow = StateGraph(MessagesState)
+    workflow.add_node("agent", call_model)
+    workflow.add_node("action", tool_node)
+    workflow.add_node("run_tool", run_tool)
+    workflow.add_edge(START, "agent")
+    workflow.add_conditional_edges(
+        "agent",
+        should_continue,
+        {
+            "continue": "action",
+            "run_tool":"run_tool",
+            "end": END,
+        },
+    )
+    workflow.add_edge("action", "agent")
+    workflow.add_edge("run_tool", "agent") 
+
+    # 最后，在编译图的阶段，添加`checkpointer` 与具体的 `breakpoint`
+    memory = MemorySaver()
+    graph = workflow.compile(checkpointer=memory, interrupt_before=["run_tool"])
+
+    config = {"configurable": {"thread_id": "9"}}
+
+    for chunk in graph.stream({"messages": "北京的天气怎么样？"}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+
+    config = {"configurable": {"thread_id": "9"}}
+    for chunk in graph.stream({"messages": "帮我删除数据库中北京的天气数据"}, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+
+
+    state = graph.get_state(config)
+
+
+    for chunk in graph.stream(None, config, stream_mode="values"):
+        chunk["messages"][-1].pretty_print()
+    """
+    ================================= Tool Message =================================
+    Name: delete_weather_from_db
+
+    {'messages': ["城市 'Beijing' 的天气信息已成功删除。"]}
+    """
+
+
+
+
+
+    config = {"configurable": {"thread_id": "10"}}
+
+    for chunk in graph.stream({"messages": "帮我删除数据库中上海的天气数据"}, config, stream_mode="values"):
+        state = graph.get_state(config)
+
+        # print(state.next)
+        # print(state.tasks)
+
+        # 检查是否有任务，如果没有则结束循环
+        if not state.tasks:
+            # print("所有任务都已完成。")
+            chunk["messages"][-1].pretty_print()
+            break
+        
+        if state.tasks[0].name == 'run_tool':
+            while True:
+                user_input = input("是否允许执行删除操作？请输入'是'或'否'：")
+                if user_input in ["是", "否"]:
+                    break
+                else:
+                    print("输入错误，请输入'是'或'否'。")
+                
+            if user_input == "是":
+                graph.update_state(config=config, values=chunk)
+                for event in graph.stream(None, config, stream_mode="values"):
+                    event["messages"][-1].pretty_print()
+            elif user_input == "否":
+                state = graph.get_state(config)
+                tool_call_id = state.values["messages"][-1].tool_calls[0]["id"]
+                print(tool_call_id)
+
+                #我们现在需要构造一个替换工具调用。把参数改为“xxsd”，请注意，我们可以更改任意数量的参数或工具名称-它必须是一个有效的
+                new_message = {
+                    "role": "tool",
+                    # 这是得到的用户不允许操作的反馈
+                    "content": "管理员不允许执行该操作！",
+                    "name": "delete_weather_from_db",
+                    "tool_call_id": tool_call_id,
+                }
+                graph.update_state(config, {"messages": [new_message]}, as_node="run_tool",)
+                for event in graph.stream(None, config, stream_mode="values"):
+                    event["messages"][-1].pretty_print()
+
+
+
+    """
+    注意，这里的关键是：需要更新 `state`。对于模拟的工具数据来说，需要传递一条消息，该消息的 ID 与要响应的工具调用ID相同。
+    接下来我们就可以基于这种逻辑来构建具有人机交互的多轮对话代理：
+    """
+    def run_multi_round_dialogue(graph, config):
+        while True:  # 开始多轮循环
+            # 询问用户输入操作，允许退出
+            user_input = input("请输入您的问题（例如：'帮我查询上海的天气数据'），输入'退出'结束对话：")
+            
+            # 检查是否退出对话
+            if user_input.lower() == '退出':
+                print("对话已结束。")
+                break
+
+            # 启动对话，根据用户的输入进行处理
+            for chunk in graph.stream({"messages": user_input}, config, stream_mode="values"):
+                state = graph.get_state(config)
+
+                # 如果没有任务则结束这一轮循环
+                if not state.tasks:
+                    if "messages" in chunk and len(chunk["messages"]) > 0:
+                        print("人工智能助理：", chunk["messages"][-1].content)
+                    break
+                
+                # 处理动态断点的任务
+                if state.tasks[0].name == 'run_tool':
+                    user_approval = None
+                    while True:
+                        user_approval = input("是否允许执行删除操作？请输入'是'或'否'：")
+                        if user_approval in ["是", "否"]:
+                            break
+                        else:
+                            print("输入错误，请输入'是'或'否'。")
+                        
+                    if user_approval == "是":
+                        graph.update_state(config=config, values=chunk)
+                        for event in graph.stream(None, config, stream_mode="values"):
+                            if "messages" in event and len(event["messages"]) > 0:
+                                print("人工智能助理：",  event["messages"][-1].content)
+                                # event["messages"][-1].pretty_print()
+                    elif user_approval == "否":
+                        state = graph.get_state(config)
+                        tool_call_id = state.values["messages"][-1].tool_calls[0]["id"]
+
+                        # 构造一个反馈消息来停止操作
+                        new_message = {
+                            "role": "tool",
+                            "content": "管理员不允许执行该操作！",
+                            "name": "delete_weather_from_db",
+                            "tool_call_id": tool_call_id,
+                        }
+                        graph.update_state(config, {"messages": [new_message]}, as_node="run_tool")
+                        for event in graph.stream(None, config, stream_mode="values"):
+                            if "messages" in event and len(event["messages"]) > 0:
+                                print("人工智能助理：",  event["messages"][-1].content)
+                                #event["messages"][-1].pretty_print()
+
+
+    config = {"configurable": {"thread_id": "10"}}
+    # 使用该函数启动对话
+    run_multi_round_dialogue(graph, config) 
+
+
+    #----------------------------------------------------------------------
+    # 🚂 langgrah构建多智能体系统
+
+    # 🚀 Acchitectures架构
+    """
+    - NetWork（网络）：每个代理都可以与其他每个代理通信。任何代理都可以决定接下来要呼叫哪个其他代理。
+    - Supervisor（主管）：每个代理都与一个 `Supervisor` 代理通信。由 `Supervisor` 代理决定接下来应调用哪个代理。
+    - Supervisor （tool-calling）： `Supervisor` 架构的一个特例。每个代理都是一个工具。由`Supervisor`代理通过工具调用的方式来决定调用哪些子代理执行任务，以及要传递给这些代理程序的参数
+    - Hierarchical（分层）：定义具有 `supervisor` 嵌套 `supervisor`多代理系统。这是 `Supervisor` 架构的一种泛化，允许更复杂的控制流。
+    """
+
+    # 🚀 Subgraphs 子图
+    # 🍊 父、子图的状态模式中有共同的键（通道）
+
+    # step1： 定义用于构建Agent的大模型实例
+    from langchain_ollama import ChatOllama
+
+    llm = ChatOllama(
+        base_url = "http://192.168.110.131:11434",  # 注意：这里需要替换成自己本地启动的endpoint
+        model="qwen2.5:72b",
+    )
+
+    # step2: 定义父图的状态模式
+    from typing import TypedDict
+    class ParentState(TypedDict):
+        user_input: str   # 用来接收用户的输入
+        final_answer: str   # 用来存储大模型针对用户输入的响应
+
+    # step3: 定义父图的节点逻辑
+    def parent_node(state: ParentState):
+        response = llm.invoke(state['user_input'])
+        return {"final_answer": response}
+
+    # step4: 定义子图的状态模式
+    class SubgraphState(TypedDict):
+        final_answer: str
+        summary_answer: str
+
+    # step5: 定义子图的节点逻辑
+    # 第一个节点用来将父图生成一个不超过10个单词的简短总结
+    # 第二个节点根据完整的响应及其总结进行综合的评分
+
+    from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, AIMessage
+
+    def subgraph_node_1(state: SubgrahState):
+        system_prompt="""
+        Please summary the content you receive to 50 words or less
+        """        
+        messages = state["final_answer"]
+        messages = [SystemMessage(content=system_prompt)]+[HumanMessage(content=messages.content)]
+        response = llm.invoke(messages)
+        return {"summary_answer": response}
+
+    def subgraph_node_2(state: SubgraphState):
+        messages = f"""
+        This is the full content of what you received: {state["final_answer"]}\n
+        This information is summarized for the full content: {state["summary_answer"]}
+        Please rate the next and summary information, returning a scale of 1 to 10, Note: Only the score value needs to be returned.
+        """    
+
+        response = llm.invoke([HumanMessage(content=messages)])
+
+        # 发送共享状态密钥的更新
+        return {"final_answer": response.content}
+
+    # step6: 定义子图的图结构并且进行编译
+    from langgraph.graph import START, StateGraph
+
+    subgraph_builder = StateGraph(SubgraphState)
+    subgraph_builder.add_node(subgraph_node_1)
+    subgraph_builder.add_node(subgraph_node_2)
+    subgraph_builder.add_edge(START, "subgraph_node_1")
+    subgraph_builder.add_edge("subgraph_node_1", "subgraph_node_2")
+    subgraph = subgraph_builder.compile()
+
+    # step7: 定义父图的图结构，并将子图作为节点添加至父图
+    builder = StateGraph(ParentState)
+    builder.add_node("node_1", parent_node)
+
+    builder.add_node("node_2", subgraph)
+    builder.add_edge("node_1", "node_2")
+    graph = builder.compile()
+
+    # step8: 可视化完整的图结构
+    from IPython.display import Image, display
+    display(Image(graph.get_graph(xray=True).draw_mermaid_png()))
+
+    async for chunk in graph.astream({"user_input": "如何理解RAG？"}, stream_mode='values', subgraphs=True):
+        print(chunk)
+
+
+
+    # 🍊 父、子图的状态模式中没有共同的键（通道）
+
+    from typing import TypedDict
+
+    # 定义父图中的状态
+    class ParentState(TypedDict):
+        user_input: str   # 用来接收用户的输入
+        final_answer: str   # 用来存储大模型针对用户输入的响应
+
+    def parent_node_1(state: ParentState):
+        response = llm.invoke(state["user_input"])
+        return {"final_answer": response}
+
+    from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, AIMessage
+
+    # 定义子图中的状态
+    class SubgraphState(TypedDict):
+        # 以下三个 key 都是 子图 (subgraph) 中独享的
+        response_answer: str 
+        summary_answer:str
+        score: str
+
+    # 定义第一个节点，用于接收父图中的响应并且做文本摘要
+    def subgraph_node_1(state: SubgraphState):
+        system_prompt = """
+        Please summary the content you receive to 50 words or less
+        """
+        messages = state['response_answer']  # 这里接收父图传递过来的响应
+        messages = [SystemMessage(content=system_prompt)] + [HumanMessage(content=messages.content)]
+        response = llm.invoke(messages)
+        return {"summary_answer": response}
+
+    # 定义第二个节点：
+    def subgraph_node_2(state: SubgraphState):
+        messages = f"""
+        This is the full content of what you received：{state["response_answer"]} \n
+        This information is summarized for the full content:{state["summary_answer"]} 
+        Please rate the text and summary information, returning a scale of 1 to 10. Note: Only the score value needs to be returned.
+        """
+      
+        response = llm.invoke([HumanMessage(content=messages)])
+
+        # 发送共享状态密钥（'user_input'）的更新
+        return {"score": response.content}    
+
+    # 正常定义子图并编译
+    subgraph_builder = StateGraph(SubgraphState)
+    subgraph_builder.add_node(subgraph_node_1)
+    subgraph_builder.add_node(subgraph_node_2)
+    subgraph_builder.add_edge(START, "subgraph_node_1")
+    subgraph_builder.add_edge("subgraph_node_1", "subgraph_node_2")
+    subgraph = subgraph_builder.compile()
+
+    def parent_node_2(state: ParentState):
+        # 将父图中的状态转换为子图状态
+        response = subgraph.invoke({"response_answer": state["final_answer"]})
+        # 将子图状态再转换回父状态
+        return {"final_answer": response["score"]}
+
+    builder = StateGraph(ParentState)
+    builder.add_node("node_1", parent_node_1)
+
+    # 注意，我们使用的不是编译后的子图，而是调用子图的‘ node_2 ’函数
+    builder.add_node("node_2", parent_node_2)
+    builder.add_edge(START, "node_1")
+    builder.add_edge("node_1", "node_2")
+    graph = builder.compile()
+
+    from IPython.display import Image, display
+    display(Image(graph.get_graph(xray=True).draw_mermaid_png()))
+
+
+
+    # 🚀 Supervisor 架构
+    # 定义图状态
+    from langgraph.graph import StateGraph, MessagesState, START, END
+
+    class AgentState(MessagesState):
+        next: str
+
+    # 定义以下三个子代理节点
+    members = ['chat', 'coder', 'sqler']
+    options = members + ['FINISH']
+
+    from typing import Literal, TypedDict
+
+    class Router(TypedDict):
+        """worker to router to next. If not wordered needed, route to FINISH"""
+        next: Literal[*options]
+
+    from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage
+
+    def supervisor(state: AgentState):
+        system_prompt = (
+            "You are a supervisor tasked with managing a conoversation between the"
+            f" following workers: {members}.\n\n"
+            "Each worker has a specific role:\n"
+            "- chat: Responds directly to user inputs using natrual language.\n"
+            "- coder: Activated for tasks that require mathemtical calculations or specific coding needs.\n"
+            "- sqler: Used when database queries or explicit SQL generation is needs.\n\n"
+            "Given the following user request, respond with the worker to act next."
+            " Each worker will perform a task and respond with their results and status."
+            " When finished, respond with FINISH."
+        )      
+        messages = [{"role": "system", "content": system_prompt},] + state["messages"]
+        response = llm.with_structured_ouput(Router).invoke(messages)
+        next_ = response["next"]
+
+        if next_ == "FINISH":
+            next_ = END 
+
+        return {"next": next_}
+
+    def chat(state: AgentState):
+        messages = state['messages'][-1]
+        model_response = llm.invoke(messages.content)    
+        final_response = [HumanMessage(content=model_response.content, name="chat")]
+        return {"messages": final_response}
+
+    def coder(state: AgentState):
+        messages = state['messages'][-1]
+        model_response = llm.invoke(messages.content)    
+        final_response = [HumanMessage(content=model_response.content, name="coder")]
+        return {"messages": final_response}
+
+    def sqler(state: AgentState):
+        messages = state['messages'][-1]
+        model_response = llm.invoke(messages.content)    
+        final_response = [HumanMessage(content=model_response.content, name="sqler")]
+        return {"messages": final_response}
+
+    # 定义状态图
+    builder = StateGraph(AgentState)
+
+    builder.add_node("supervisor", supervisor)
+    builder.add_node("chat", chat)
+    builder.add_node("coder", coder)
+    builder.add_node("sqler", sqler)
+
+    # 让每个子智能体在完成工作后向主管汇报，即需要构建它们之间的边
+    for member in members
+        builder.add_edge(member, "supervisor")
+
+    builder.add_conditional_edge("supervisor", lambda state: state["next"])
+    builder.add_edge(START, "supervisor")    
+    graph = builder.compile()
+
+    from IPython.display import Image, display
+    image = graph.get_graph(xray=True)
+    display(Image(image).draw_mermaid_png())
+
+
+# 🍅 milvus 数据库
+# ====================================================================================================================================
+
+    from pymilvus import MilvusClient, DataType
+
+    client = MilvusClient(uri="http://localhost:19530", token="root:root")
+
+    schema = MilvusClient.create_schema(description="文章集合", enable_dynamic_field=True)
+
+    schema.add_field(name="content_vector", datatype=DataType.FLOAT_VECTOR, dim=1024)
+
+    schema.add_field(
+        name="id", datatype=DataType.INT64, is_primary=True, auto_id=True
+    )  # id自动递增 auto_id
+
+    """
+    标量数据类型:
+    VARCHAR: 短文本 标题、作者名
+    TEXT: 长文本 用于全文搜索
+    INT64: 整数 时间戳、数量
+    FLOAT/DOUBLE: 浮点型 评分、价格
+    BOOL: 布尔值 
+    JSON: 半结构化数据
+    ARRAY: 同结构化元素列表
+    BLOB: 二进制数据 文件、图像、视频
+    NULL: NULL值
+    """
+
+    # 配置索引
+    index_params = client.prepare_index_params()
+    index_params.add_index(
+        field_name="content_vector",
+        index_type="HNSW",
+        metric_type="COSINE",
+        params={"M": 128, "efConstruction": 4096},
+    )
+
+    # 创建集合
+    client.create_collection(
+        collection_name="articles", schema=schema, index_params=index_params
+    )
+
+    # 集合别名
+    client.create_alias(collection_name="articles", alias="production_articles")
+
+    # 集合加载与释放
+    client.load_collection(collection_name="articles")
+    client.release_collection(collection_name="articles")
+
+
+    # 数据库：顶层命名空间
+    client.create_database("my_project")
+    client.use_database("my_project")
+    client.drop_database("my_project")
+
+    # 修改字段
+    client.alter_collection_field(
+        collection_name="articles", field_name="title", field_params={"max_length": 256}
+    )
+
+    # 添加字段
+    client.add_collection_field(
+        collection_name="articles",
+        field_name="priority_level",
+        data_type=DataType.VARCHAR,
+        max_length=20,
+        nullable=True,
+        default_value="standard",
+    )
+    client.add_collection_field(
+        collection_name="articles",
+        field_name="cotegory",
+        data_type=DataType.VARCHAR,
+        is_partition_key=True,
+    )
+
+    # 查询
+    result = client.query(
+        collection_name="articles",
+        filter="id == 1",
+        output_fields=["title", "content", "priority_level", "$meta['extra_info]"],
+    )
+
+
+    # 插入实体
+    data = []
+    client.insert(collection_name="articles", data=data)
+
+    ## 分区
+    partition_name = "partition_A"
+    # 🚀 创建分区
+    # 检查分区是否已存在
+    if not client.has_partition(collection_name="articles", partition_name=partition_name):
+        # 创建分区
+        client.create_partition(collection_name="articles", partition_name=partition_name)
+        print(f"Partition '{partition_name}' created.")
+    else:
+        print(f"Partition '{partition_name}' already exists.")
+
+
+    # 🚀 删除分区
+    # 1. 检查分区是否存在
+    if client.has_partition(collection_name="articles", partition_name=partition_name):
+        try:
+            # 2. 释放分区 (重要：未释放的分区无法删除)
+            client.release_partitions(
+                collection_name="articles", partition_names=[partition_name]
+            )
+            print(f"Partition '{partition_name}' released.")
+
+            # 3. 删除分区
+            client.drop_partition(collection_name="aritcles", partition_name=partition_name)
+            print(f"Partition '{partition_name}' dropped successfully.")
+        except Exception as e:
+            print(f"Failed to drop partition: {e}")
+    else:
+        print(f"Partition '{partition_name}' does not exist.")
+
+
+    # 插入实体指定分区
+    client.insert(collection_name="articles", data=data, partition_name="p1")
+
+    ## 覆盖模式下的Upsert
+    """默认模式，用新实体完全替换旧实例。请求中必须包含所有字段的值，未提供的字段将被设为Null或默认值"""
+    data = []
+    client.upsert(collection_name="articles", data=data)
+
+    ## 合并模式下的Upsert
+    """只更新请求中指定的字段，其它字段保持不变。请求只需包含主键和要更新的字段"""
+    data = []
+    client.upsert(collection_name="articles", data=data, partial_update=True)
+
+    # 🚀 通过过滤条件批量删除
+    client.delete(
+        collection_name="quick_setup", filter="color in ['red_3023', 'purple_4974]"
+    )
+
+    # 🚀 通过主键删除
+    client.delete(collection_name="articles", ids=[19, 20])
+
+    # 🚀 从指定分区删除
+    client.delete(collection_name="articles", ids=[19, 20], partition_name="p1")
+
+    # 🔍 单向量搜索
+    query_vector = [0.33, -1.229, 0.321, 0, 0.3949]
+
+    res = client.search(
+        collection_name="articles",
+        data=[query_vector],  # 查询向量（列表形式，可包括多个）
+        anns_field="vector",  # 要搜索的向量名称
+        limit=3,  # 返回最相似的前3个结果
+        search_params={"metric_type": "COSINE"},
+    )
+
+    for hits in res:
+        for hit in hits:
+            print(f"id:{hit['id']}, distance: {hit['distance']:.4f}")  # 保留4位小数
+
+    # 🔍 带输出字段的搜索
+    res = client.search(
+        collection_name="articles",
+        data=[query_vector],  # 查询向量（列表形式，可包括多个）
+        anns_field="vector",  # 要搜索的向量名称
+        limit=3,  # 返回最相似的前3个结果
+        search_params={"metric_type": "COSINE"},
+        ## 输出字段
+        output_fields=["id", "title", "content", "priority_level", "$meta['extra_info]"],
+    )
+
+    # 🔍 分区里搜索
+    res = client.search(
+        collection_name="articles",
+        data=[query_vector],  # 查询向量（列表形式，可包括多个）
+        anns_field="vector",  # 要搜索的向量名称
+        limit=3,  # 返回最相似的前3个结果
+        search_params={"metric_type": "COSINE"},
+        ## 分区名称
+        partition_names=["p1"],
+    )
+
+
+    # 🔍 使用分页搜索
+    res = client.search(
+        collection_name="articles",
+        data=[query_vector],  # 查询向量（列表形式，可包括多个）
+        anns_field="vector",  # 要搜索的向量名称
+        search_params={"metric_type": "COSINE"},
+        ## 分页参数 返回第11~13个结果
+        limit=3,
+        offset=10,
+    )
+
+    # 🔍 可以多字段排序
+    res = client.search(
+        collection_name="articles",
+        data=[query_vector],  # 查询向量（列表形式，可包括多个）
+        anns_field="vector",  # 要搜索的向量名称
+        limit=20,
+        output_fields=["id", "title", "price", "rating"],
+        ## 排序字段
+        order_by_fields=[
+            {"field": "price", "order": "asc"},
+            {"field": "rating", "order": "desc"},
+        ],
+    )
+
+    # 创建索引
+    index_params = client.prepare_index_params()
+
+    index_params.add_index(
+        field_name="tags", index_type="AUTOINDEX", index_name="tags_index"
+    )
+
+    # 创建集合后，你可以通过‘describe_collection’ 方法查看集合的详细信息，确认数组字段是否已正确配置
+    description = client.describe_collection(collection_name="articles")
+    print("Collection schema:", description)
+
+    # 数组的高级查询
+
+    # ! => tags 不是空的
+    filter_expr = "tags IS NOT NULL"
+    # ! => 数组中包含指定值
+    filter_expr = "ARRAY_CONTAINS(tags, 'rock')"
+    # ! => 数组元素个数大于2
+    filter_expr = "ARRAY_LENGTH(tags) > 2"
+    # ! => 数组中包含 'rock' 或 'pop'
+    filter_expr = "ARRAY_CONTAINS_ANY(tags, ['rock', 'pop'])"
+    # ! => 也可以组合使用这些查询条件
+    filter_expr = "ARRAY_CONTAINS(tags, 'rock') AND ARRAY_LENGTH(tags) > 2"
+
+    result = client.query(
+        collection_name="articles", filter=filter_expr, output_fields=["pk", "tags"]
+    )
+
+
+    result = client.search(
+        collection_name="articles",
+        data=[[0.3, -0.4, 0.1]],
+        filter=filter_expr,
+        limit=5,
+        search_params={"params": {"nprobe": 10}},
+        output_fields=["tags", "ratings"],
+    )
+
+
+    # # -------- TTL -------------------------------------------------------
+
+    # 🌰 集合级TTL 创建集合时 通过properties参数传入
+    client.create_collection(
+        collection_name="articles",
+        schema=schema,
+        index_params=index_params,
+        properties={"collection.ttl.seconds": 1209600},  # 14天
+    )
+
+    # 🌰 给已有集合添加TTL
+    client.alter_collection_properties(
+        collection_name="articles", properties={"collection.ttl.seconds": 1209600}  # 14天
+    )
+
+    # 🗑 取消TTL
+    client.drop_collection_properties(
+        collection_name="articles", property_keys=["collection.ttl.seconds"]
+    )
+
+
+    # 🍌 实体级TTL
+    schema = client.create_schema(enable_dynamic_field=False)
+
+    schema.add_field("id", DataType.INT64, is_primary=True, auto_id=False)
+    schema.add_field("title", DataType.VARCHAR, max_length=256)
+    schema.add_field(
+        "expire_at", DataType.TIMESTAMPTZ, nullable=True
+    )  # ! 过期时间，关键字段
+    schema.add_field("vector", DataType.FLOAT_VECTOR, dim=128)
+
+    index_params = client.prepare_index_params()
+    index_params.add_index(
+        field_name="vector", index_type="AUTOINDEX", index_name="vector_index"
+    )
+
+    client.create_collection(
+        collection_name="articles",
+        schema=schema,
+        index_params=index_params,
+        properties={"ttl_field": "expire_at"},  # ! 标记为ttl字段
+        # shards_num=2,  # ! 分片数
+    )
+
+    # 灵活控制每条数据的生命周期
+    import random
+
+    rows = [
+        # 永不过期
+        {"id": 1, "expire_at": None, "vector": [random.random() for _ in range(128)]},
+        # 在 2025-12-31 UTC 午夜过期
+        {
+            "id": 1,
+            "expire_at": "2025-12-31T00:00:00Z",
+            "vector": [random.random() for _ in range(128)],
+        },
+        # 上海时间 2027-01-01 零点过期（内部自动转为 UTC 时间）
+        {
+            "id": 1,
+            "expire_at": "2027-01-01T00:00:00+08:00",
+            "vector": [random.random() for _ in range(128)],
+        },
+    ]
+    client.insert("articles", rows)
+
+    # 延长某条数据的生命（如果还没有被物理删除）
+    client.upsert(
+        "articles",
+        [
+            {
+                "id": 1,
+                "vector": [random.random() for _ in range(128)],
+                "expire_at": "2028-01-01T00:00:00Z",
+            },
+        ],
+    )
+
+    ## 给已有集合添加TTL
+
+    # step 1 添加TIMESTAMPTZ列
+    client.add_collection_field(
+        collection_name="articles",
+        field_name="expire_at",
+        field_type=DataType.TIMESTAMPTZ,
+        nullable=True,  # # 允许NULL值
+    )
+
+    # step 2 标记为ttl字段
+    client.alter_collection_properties(
+        collection_name="articles", properties={"ttl_field": "expire_at"}  # 标记为ttl字段
+    )
+
+    # step 3 (可选)为历史数据回填过期时间
+    client.upsert(
+        "articles",
+        [
+            {
+                "id": 1,
+                "vector": [random.random() for _ in range(128)],
+                "expire_at": "2028-01-01T00:00:00Z",
+            }
+        ],
+    )
+
+
+    # 从集合级TTL -> 实体级TTL
+    def convert_to_entity_ttl(collection_name: str, ttl_field: str = "expire_at"):
+        # step1 删除集合级TTL
+        client.drop_collection_properties(
+            collection_name=collection_name, property_keys=["collection.ttl.seconds"]
+        )
+        # step2 添加TIMESTAMPTZ列
+        client.add_collection_field(
+            collection_name=collection_name,
+            field_name=ttl_field,
+            field_type=DataType.TIMESTAMPTZ,
+            nullable=True,  # # 允许NULL值
+        )
+        # step3 标记为ttl字段
+        client.alter_collection_properties(
+            collection_name=collection_name,
+            properties={"ttl_field": ttl_field},  # 标记为ttl字段
+        )
+
+
+    # 从实体级ttl -> 集合级ttl
+    def convert_to_collection_ttl(collection_name: str, seconds: int = 1209600):
+        # step 1 删除实体级ttl字段
+        client.drop_collection_properties(
+            collection_name=collection_name, property_keys=["ttl_field"]
+        )
+        # step 2 添加集合级ttl
+        client.alter_collection_properties(
+            collection_name=collection_name, properties={"collection.ttl.seconds": seconds}
+        )
+
+
+    # # IVF_FLAT 示例
+    # step1 定义索引参数（未触发训练）
+    index_params = client.prepare_index_params()
+    index_params.add_index(
+        field_name="vector",
+        index_type="IVF_FLAT",
+        index_name="vector_index",
+        metric_type="COSINE",
+        params={"nlist": 1000000},  # 聚类中心数量, 也就是桶的数量
+    )
+
+    # step2 创建集合 （仅保存索引参数）
+    client.create_collection(
+        collection_name="articles", schema=schema, index_params=index_params
+    )
+
+
+    # 搜索
+    search_params = {
+        "metric_type": "CONSINE",
+        "params": {"nprobe": 15},  # 搜索时考虑的聚类中心数量 搜索最近的15个桶
+    }  # 搜索时考虑的聚类中心数据
+    results = client.search(
+        collection_name="articles",
+        data=[query_vector],
+        search_params=search_params,
+        limit=10,
+    )
+
+
+    # # IVF_PQ的代码展示
+    # 创建IVF_PQ索引
+    index_params = {
+        "index_type": "IVF_PQ",
+        "metric_type": "L2",
+        "params": {
+            "nlist": 1000000,  # 聚类中心数量
+            "m": 16,  # 子空间数量  [n, n, n, n]  有多少个n m就为几  每个n如果能取当0~255 nbit就为8
+            "nbit": 8,  # 每个子空间的bit数
+        },
+    }
+
+    # 搜索
+    search_params = {
+        "metric_type": "L2",
+        "params": {"nprobe": 32},  # 搜索时考虑的聚类中心数据
+    }
+    results = client.search(
+        collection_name="articles",
+        data=[query_vector],
+        search_params=search_params,
+        limit=10,
+    )
+
+    # # ANN：近似最近邻 　ENN：精确最近邻
+    # # 主要向量索引： FLAT IVF_FLAT IVF_PQ IVF_SQ8 IVF_RABITQ HNSW ANNOY DiskANN SCANN
+    # # 主要标量索引： 倒排标量索引 bitmap
+    # IVF-PQ 的压缩率 > IVF_SQ8 > IVF_FLAT
+    # 🚀 通常的决策路径：数据量小->FLAT；内存充足、追求极致性能->HNSW；数据量大、希望节省内存->IVF_SQ8, IVF_PQ或DiskANN
+
+    """
+    HNSW 关键参数
+    1. M 节点在这一层最多的可导航的节点数
+        1. 每个节点最多可连接的邻居数量。
+        2. 值越大，图越密集，搜索精度越高，但内存占用和计算量也越大。
+        3. 默认值：16
+    2. efContrction 构建时在多少个节点寻找M个节点
+        1. 构建图时，每个节点搜索的候选邻居数量。
+        2. 值越大，图质量越高，但构建时间越长。（不可能整层节点过一遍）
+        3. 默认值：200
+    3. ef 搜索时的候选数量
+        1. 搜索时，每层保留的候选节点数量。
+        2. 值越大，搜索精度越高，但速度越慢。
+        3. 默认值：10
+    """
+
+
+    ## milvus几何字段
+
+    # 🌰定义集合结构
+    schema = MilvusClient.create_schema(enable_dynamic_field=True)
+    schema.add_field("id", DataType.INT64, is_primary=True)
+    schema.add_field("embedding", DataType.FLOAT_VECTOR, dim=764)  # 图像/文本向量
+    schema.add_field("geo", DataType.GEOMETRY, nullable=True)  # 地理位置
+    schema.add_field("name", DataType.VARCHAR, max_length=128)  # 名称描述
+
+    client.create_collection("spatial_collection", schema=schema)
+
+
+    # 🌰 查询数据
+    # 🚀 场景1：区域范围内的相似商铺推荐
+    top_left_lon, top_left_lat = 116.404494, 39.904211
+    bottom_right_lon, bottom_right_lat = 116.404494, 39.904211
+    # 定义矩形区域的WKT格式(左上》右上》右下》左上（回到原点）)
+    bounding_box_wkt = f"POLYGON (({top_left_lon} {top_left_lat}, {bottom_right_lon} {top_left_lat}, {bottom_right_lon} {bottom_right_lat}, {top_left_lon} {bottom_right_lat}, {top_left_lon} {top_left_lat}))"
+
+    query_search = client.query(
+        collection_name="spatial_collection",
+        filter=f"st_within(geo, '{bounding_box_wkt}')",
+        output_fields=["name", "geo"],
+    )
+    for ret in query_search:
+        print(ret)
+
+    # 🚀 场景2：距离约束下的多模态搜索
+    center_lon, center_lat = 116.404494, 39.904211
+    radius_meters = 1000.0
+    point_wkt = f"POINT({center_lon} {center_lat})"
+    query_search = client.query(
+        collection_name="spatial_collection",
+        filter=f"st_dwithin(geo, '{point_wkt}', {radius_meters})",
+        output_fields=["name", "geo"],
+    )
+    for ret in query_search:
+        print(ret)
+
+    # 创建空间索引，加速查询
+    index_params = client.prepare_index_params()
+    index_params.add_index(
+        field_name="geo",
+        index_type="RTREE",
+        index_name="geo_rtree_index",
+    )
+    client.create_index("spatial_collection", index_params)
+
+
+    ## 分析器概述
+    # Standard内置分析器
+    analyzer_params = {
+        "type": "standard",  # 使用standard内置分析器
+        "stop_words": ["a", "an", "for", "an"],  # 定义要从标记中排除的常用词（停用词）列表
+    }
+
+    text = "An effecient system for relies on a rubost"
+
+    # 运行分析器
+    result = client.run_analyzer(
+        text, analyzer_params
+    )  # ['deffecient', 'system', 'for', 'relied', 'rubost']
+
+    print(result)
+
+    analyzer_params = {
+        "type": "standard",
+        "length": {
+            "type": "length",
+            "min": 2,
+            "max": 10,
+        },
+        "stop": {
+            "type": "stop",
+            "stop_words": ["a", "an", "for"],  # 定义要从标记中排除的常用词（停用词）列表
+        },
+        "regex": {
+            "type": "regex",
+            "pattern": r"[a-zA-Z0-9\s]@[a-zA-Z0-9\s]",  # 匹配非字母数字和空格的字符
+            "replacement": "[EMAIL]",  # 替换为字符串
+        },
+    }
+
+    # 🌰 过滤器
+    client.create_analyzer(
+        analyzer_name="my_lowercase_analyzer",
+        tokenizer="standard",
+        filter_list=[
+            "lowercase",  # 小写过滤器
+            "ascii_folding",  # ASCII 折叠过滤器 ，将非ASCII字符转换为写它最接近的ASCII字符
+            "alphanum_only",  # 字母数字过滤器，只保留字线和数字
+            "cn_alphanum_only",  # 中文字母数字过滤器，只保留中文字母数字
+            "cn_char_only",  # 中文字过滤器，只保留中文文字
+            "length",  # 长度过滤器，根据指定的最小范围和最大范围筛选标记
+            "stop",  # 停用词过滤器，根据指定的常用词（停用词）列表，排除停用词（停用词）
+            "remove_punct",  # 标点符号过滤器，移除所有标点符号
+            "regex",  # 正则表达式过滤器，根据指定的正则表达式模式替换标记
+        ],
+        analyzer_params=analyzer_params,
+    )
+
+
+    # 🌰 分词器
+    analyzer_params = {
+        "tokenizer": "standard"  # 分词标记器
+        # "tokenizer": "whitespace" # 空格标记器 与上面的相比，他会保留标点符号
+        # "tokenizer": "jieba" # 结巴分词器
+        # "tokenizer": "lindera"
+        # "tokenizer": "icu"
+    }
+
+
+    """
+    jieba标记器参数
+        dict: ["_default_"] # 使用默认字典
+        mode: "search" # 使用搜索模式 exact 精确模式
+        hmm: True # 启用HMM进行概率分词 隐马尔可夫模型
+    """
+
+    sample_text = "milvus结巴分词器中文测试"
+    analyzer_params = {"tokenizer": "jieba"}
+    result = client.run_analyzer(sample_text, analyzer_params)
+    # ["milvus", "结巴", "分词器", "中文", "测试"]
+
+    """
+    lindera标记器参数
+        dict_kind: <type>
+            "ko-dic": 韩语 
+            "ipadic": 日语 
+            "ipadic-neologd": 日语新版 
+            "unidic": 日语 
+            "cc-cedict": 中文普通话 
+    """
+
+    """
+    Milvus 一致性 四种级别 1. 强一致性 2. 有界一致性 3. 最终一致性 4. 会话一致性
+
+    """
+
+    # 🚀 在milvus中保存创建包含稀疏向量的集合
+    # 要在milvus中使用稀疏微量，需要创建一个包含以下字段的集合
+    # 1. 一个SPARSE_FLOAT_VECTOR字段，用于存储稀疏向量
+    # 2. 通常还会存储原始文本，可使用VARCHAR字段
+
+    from pymilvus import MilvusClient, DataType
+    client = MilvusClient("uri=http://localhost:19530")
+
+    schema = client.create_schema(
+        auto_id=True,
+        enable_dynamic_field=True
+    )
+
+    schema.add_field(field_name="pk", datatype=DataType.VARCHAR, max_length=256)
+    schema.add_field(field_name="sparse_vector", datatype=DataType.SPARSE_FLOAT_VECTOR)
+    schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=65535, enable_analyzer=True)
+
+    # 创建集合
+    client.create_collection(
+        collection_name="sparse_collection",
+        schema=schema
+    )
+
+
+
+    """
+    ============================================================
+    🍌 Chroma 向量数据库
+    ============================================================
+    """
+    from chromadb import chromadb
+
+    client = chromadb.client()
+
+    collection = client.get_or_create_collection(
+        name="my-collection",
+        metadata={"hnsw:space": "cosine"}
+    )
+
+    # 添加文档到集合
+    collection.add(
+        documents=["这是一篇关于AI的文案", "这是一篇关于机器学习的文章"],
+        metadatas=[{"category": "AI"}, {"category": "ML"}],
+        ids=["id1", "id2"]
+    )
+
+    # 向量检索
+    results = collection.query(
+        query_texts=["什么是人工智能"],
+        n_results=2
+    )
+
+    # 🚀 三种模式
+    # 1. 临时客户端
+    import chromadb
+    client = chromadb.EphemeralClient()
+
+    # 2. 持久客户端
+    client = chromadb.PersistentClient(path="/path/to/save/to")
+
+    # 3. 客户端服务器模式
+    client = chromadb.HttpClient(host="localhost", port=8000)
+
+
+    # 🚀 多模态数据添加示例
+    collection.add(
+        ids=['img1', 'img2', 'img3'],
+        uris=['/path/to/img1.jpg', '/path/to/image2.png', None], # 图像通过URI引用
+        documents=[None, None, "纯文本数据"],
+        metadatas={
+            {"type": "image", "format": "jpg"},
+            {"type": "image", "format": "png"},
+            {"type": "text", "format": "内部文档"}
+        }
+    )
+
+
+
+    # 🚀 复杂数据查询
+    result = collection.query(
+        query_texts=["尝试学习的最新进展"],
+        n_results=5,
+        where={
+            "$and": [
+                {"content_type": "article"},
+                {"publish_data": {"$gte": "2024-01-01"}},
+                {"word_content": {"$lte": 2000}},
+                {"language": "zh"},
+                {"topic": {"$in": ["机器学习", "人工智能"]}}
+            ]
+        }
+    )
+
+
+    # 🚀 删除数据
+    # 按ID直接删除数据
+    collection.delete(ids=["id1", "id2"])
+
+    # 按元数据条件删除
+    collection.delete(where={"cotegory": {"$eq": "临时"}})
+
+    # 按文档内容删除
+    collection.delete(where_document={"$contains": "草稿"})
+
+    # 组合条件删除
+    collection.delete(
+        where={"timestamp": {"$lt": "2023-01-01"}},
+        where_document={"$contains": "过期内容"}
+    )
+
+
+
+    # 🔍 精确查询 get
+    # 获取所有文档
+    all_docs = collection.get()
+
+    # 根据ID查询特定文档
+    docs_by_id = collection.get(ids=["id1", "id2"])
+
+    # 使用条件过滤
+    filter_docs = collection.get(
+        where={"category": {"$in": ["科技", "旅游"]}},
+        where_document={"$contains": "介绍"}
+    )
+
+    # 🔍 相似性搜索 query
+    results = collection.query(
+        query_texts=["查询文本"], # ChromaDB会自动转为向量
+        n_results=5,
+        where={"status": "已发布"}, # 元数据过滤
+        where_document={"$not_contains": "内部"} # 文档内部过滤
+    )
+
+
+    # ✒ 修改数据
+    collection.update(
+        ids=["id1", 'id2'],
+        documents=["id1的更新内容", "id2的更新内容"],
+        metadata=[{"status": "更新"}, {"status": "更新"}]
+    )
+
+    # 🔍 控制查询返回字段
+    # 只返回文档与元数据
+    results = collection.query(
+        #......
+        include=["documents", "metadata", "distances"]
+    )
+
+    # 返回所有信息（包含嵌入向量）
+    results = collection.query(
+        #....
+        include=['embedding', "documents", "metadata", "distances"]
+    )
+
+
+# ✈ Neo4j 图数据库
+# ====================================================================================================================================
+
+    from neo4j import GraphDatabase
+
+    URI = "neo4j://localhost"
+    AUTH = ("<username>", "<password>")
+
+    with GraphDatabase.driver(URI, auth=AUTH) as driver:
+        # 验证是否连接成功
+        driver.verify_connectivity()
+        print("成功连接到Neo4j数据库")
+
+        # 执行一个写事务
+        summary = driver.execute_query(
+            """
+            create (a:Person {name: $name})
+            create (b:Person {name: $fiendName})
+            create (a)-[:KNOWS]->(b)
+            return a, b
+            """
+            ,
+            name="Alice",
+            friendName="Divid",
+            database="neo4j"
+        ).summay
+
+        # 查询数据
+        records, summary, keys = driver.execute_query(
+            """
+            match (p:Person)-[:KNOWS]->(friend:Person)
+            return p.name as person, friend.name as friend
+            """
+            ,
+            database="neo4j"
+        )
+        print("查询结果")
+        for record in records:
+            print(f"{record['person']  认识 record['friend']}")
+
+        # 查看查询的元数据
+        print(f"\n查询'{summary.query}'返回{len(records)}条记录。")
+
+
+    # 🔥 neo4j数据库查询 案例
+
+    def neo4j_query_examples(driver, query_type, params=None):
+        """
+        执行各种Neo4j查询示例
+        
+        参数:
+        - driver: Neo4j驱动实例
+        - query_type: 查询类型，可选值包括:
+            'all_persons', 'all_companies', 'filter_by_city', 'all_relationships',
+            'specific_relationship', 'node_relationships', 'path_query', 'aggregation',
+            'group_by', 'colleagues', 'complex_query', 'param_query', 'subgraph', 'community'
+        - params: 查询参数字典，根据查询类型不同而不同
+        
+        返回:
+        - 查询结果列表
+        """
+        if params is None:
+            params = {}
+        
+        results = []
+        
+        with driver.session() as session:
+            if query_type == 'all_persons':
+                # 查询所有Person节点
+                result = session.run("""
+                    MATCH (p:Person)
+                    RETURN p.name AS name, p.age AS age, p.city AS city
+                """)
+                
+                print("所有Person节点:")
+                for record in result:
+                    print(f"姓名: {record['name']}, 年龄: {record['age']}, 城市: {record['city']}")
+                    results.append({
+                        'name': record['name'],
+                        'age': record['age'],
+                        'city': record['city']
+                    })
+            
+            elif query_type == 'all_companies':
+                # 查询所有Company节点
+                result = session.run("""
+                    MATCH (c:Company)
+                    RETURN c.name AS name, c.industry AS industry, c.location AS location
+                """)
+                
+                print("所有Company节点:")
+                for record in result:
+                    print(f"公司: {record['name']}, 行业: {record['industry']}, 位置: {record['location']}")
+                    results.append({
+                        'name': record['name'],
+                        'industry': record['industry'],
+                        'location': record['location']
+                    })
+            
+            elif query_type == 'filter_by_city':
+                # 按城市过滤Person节点
+                city = params.get('city', 'beijing')
+                result = session.run("""
+                    MATCH (p:Person)
+                    WHERE p.city = $city
+                    RETURN p.name AS name, p.age AS age
+                """, {'city': city})
+                
+                print(f"{city}的人员:")
+                for record in result:
+                    print(f"姓名: {record['name']}, 年龄: {record['age']}")
+                    results.append({
+                        'name': record['name'],
+                        'age': record['age']
+                    })
+            
+            elif query_type == 'all_relationships':
+                # 查询所有关系
+                result = session.run("""
+                    MATCH (p:Person)-[r]->(c:Company)
+                    RETURN p.name AS person, type(r) AS relationship, c.name AS company
+                """)
+                
+                print("所有人员与公司的关系:")
+                for record in result:
+                    print(f"{record['person']} {record['relationship']} {record['company']}")
+                    results.append({
+                        'person': record['person'],
+                        'relationship': record['relationship'],
+                        'company': record['company']
+                    })
+            
+            elif query_type == 'specific_relationship':
+                # 查询特定类型的关系
+                rel_type = params.get('rel_type', 'EMPLOYED_BY')
+                result = session.run(f"""
+                    MATCH (p:Person)-[:{rel_type}]->(c:Company)
+                    RETURN p.name AS person, c.name AS company
+                """)
+                
+                print(f"{rel_type}关系:")
+                for record in result:
+                    print(f"{record['person']} 与 {record['company']} 有{rel_type}关系")
+                    results.append({
+                        'person': record['person'],
+                        'company': record['company']
+                    })
+            
+            elif query_type == 'node_relationships':
+                # 查询特定节点的关系
+                person_name = params.get('person_name', 'muyu')
+                result = session.run("""
+                    MATCH (p:Person {name: $name})-[r]->(c)
+                    RETURN type(r) AS relationship, c.name AS connected_to, labels(c) AS node_type
+                """, {'name': person_name})
+                
+                print(f"{person_name}的所有关系:")
+                for record in result:
+                    print(f"关系类型: {record['relationship']}, 连接到: {record['connected_to']}, 节点类型: {record['node_type']}")
+                    results.append({
+                        'relationship': record['relationship'],
+                        'connected_to': record['connected_to'],
+                        'node_type': record['node_type']
+                    })
+                  
+            elif query_type == 'aggregation':
+                # 聚合查询
+                result = session.run("""
+                    MATCH (p:Person)-[:EMPLOYED_BY]->(c:Company)
+                    RETURN c.name AS company, count(p) AS employee_count, avg(p.age) AS avg_age
+                """)
+                
+                print("公司员工统计:")
+                for record in result:
+                    print(f"公司: {record['company']}, 员工数: {record['employee_count']}, 平均年龄: {round(record['avg_age'], 1)}")
+                    results.append({
+                        'company': record['company'],
+                        'employee_count': record['employee_count'],
+                        'avg_age': record['avg_age']
+                    })
+            
+            elif query_type == 'group_by':
+                # 条件分组查询
+                result = session.run("""
+                    MATCH (p:Person)
+                    RETURN p.city AS city, count(p) AS person_count,
+                           collect(p.name) AS names
+                    ORDER BY person_count DESC
+                """)
+                
+                print("按城市分组的人员统计:")
+                for record in result:
+                    print(f"城市: {record['city']}, 人数: {record['person_count']}, 姓名: {record['names']}")
+                    results.append({
+                        'city': record['city'],
+                        'person_count': record['person_count'],
+                        'names': record['names']
+                    })
+            
+            
+            elif query_type == 'complex_query':
+                # 多条件复合查询
+                min_age = params.get('min_age', 25)
+                location = params.get('location', 'beijing')
+                result = session.run("""
+                    MATCH (p:Person)-[r]->(c:Company)
+                    WHERE p.age > $min_age AND c.location = $location
+                    AND (type(r) = 'EMPLOYED_BY' OR type(r) = 'INVESTED_IN')
+                    RETURN p.name AS person, p.age AS age, 
+                           type(r) AS relationship, c.name AS company
+                    ORDER BY p.age DESC
+                """, {'min_age': min_age, 'location': location})
+                
+                print(f"{min_age}岁以上且与{location}公司有雇佣或投资关系的人:")
+                for record in result:
+                    print(f"{record['person']} ({record['age']}岁) {record['relationship']} {record['company']}")
+                    results.append({
+                        'person': record['person'],
+                        'age': record['age'],
+                        'relationship': record['relationship'],
+                        'company': record['company']
+                    })
+            
+            elif query_type == 'param_query':
+                # 参数化查询
+                query_params = {
+                    'min_age': params.get('min_age', 25),
+                    'location': params.get('location', 'beijing'),
+                    'relationship_types': params.get('relationship_types', ["EMPLOYED_BY", "INVESTED_IN"])
+                }
+                
+                result = session.run("""
+                    MATCH (p:Person)-[r]->(c:Company)
+                    WHERE p.age > $min_age AND c.location = $location
+                    AND type(r) IN $relationship_types
+                    RETURN p.name AS person, type(r) AS relationship, c.name AS company
+                """, query_params)
+                
+                print(f"参数化查询结果 (年龄 > {query_params['min_age']}, 位置: {query_params['location']}):")
+                for record in result:
+                    print(f"{record['person']} {record['relationship']} {record['company']}")
+                    results.append({
+                        'person': record['person'],
+                        'relationship': record['relationship'],
+                        'company': record['company']
+                    })
+            
+            else:
+                print(f"未知的查询类型: {query_type}")
+                results.append({"error": f"未知的查询类型: {query_type}"})
+        
+        return results
+
+
+# 🧠 Agent记忆管理
+# ====================================================================================================================================
+
+    # 会话存在的结构 
+    session_id: 唯一标识一次完整对话会话，用于跨请求追踪上下文归属
+    messages[]: 存储所有对话轮次
+    compressed_content: 压缩摘要，当消息超过阈值后，旧消息补提炼到为此摘要块，注入到system消息头部
+    metadata: 记录创建时间、最近活跃时间、Token消耗统计、压缩次数待运营信息 
+
+
+    # 🐠最简单的短期记忆
+    # mini-Openclaw使用Json文件存储每个会话
+    import json
+    import os
+    import time
+
+    SESSIONS_DIR="./sessions" # 会话文件存储目录
+    os.makedirs(SESSIONS_DIR, exist_ok=True)
+
+    def load_session(session_id: str) -> dict:
+        """加载会话，不存在则创建新会话"""
+        path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        # 新会话的初始结构
+        return {
+            "title": "",
+            "created_at": int(time.time()),
+            "updated_at": int(time.time()),
+            "compressed_context": "",   # 压缩摘要（暂时为空，3.3节会填充）
+            "messages": []              # 当前对话历史
+        }
+
+
+    def save_session(session_id: str, session: dict):
+        """保存会话到 JSON 文件"""
+        session["updated_at"] = int(time.time())
+        path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(session, f, ensure_ascii=False, indent=2)
+
+    # 测试：加载会话 → 添加消息 → 保存 → 重新加载验证
+    session = load_session("test_user_001")
+    session["messages"].append({"role": "user", "content": "我叫小明"})
+    save_session("test_user_001", session)
+
+    # 重新加载，验证持久化
+    loaded = load_session("test_user_001")
+    print(f"持久化验证：{loaded['messages'][-1]['content']}") 
+
+
+
+    # 🔪消息截断策略
+    MAX_HISTORY = 20  # mini-OpenClaw 默认值，可根据模型上下文窗口调整
+
+    def get_messages_for_llm(session: dict) -> list:
+        """
+        构造实际传给 LLM 的消息列表。
+        策略：如果有压缩摘要，先注入摘要；再取最近 MAX_HISTORY 条。
+        """
+        messages_to_send = []
+
+        # 如果存在压缩摘要，作为 system 消息插在最前面
+        if session.get("compressed_context"):
+            messages_to_send.append({
+                "role": "system",
+                "content": session["compressed_context"]
+            })
+
+        # 💥 只取最近 MAX_HISTORY 条对话
+        recent_messages = session["messages"][-MAX_HISTORY:]
+        messages_to_send.extend(recent_messages)
+
+        return messages_to_send
+
+    # 验证：超过 20 条时只取最近 20 条
+    test_session = {"compressed_context": "", "messages": [{"role": "user", "content": f"消息{i}"} for i in range(30)]}
+    result = get_messages_for_llm(test_session)
+    print(f"截断验证：传入 LLM 的消息数 = {len(result)}（应为 20）")
+    print(f"第一条内容：{result[0]['content']}（应为 消息10）")
+
+
+    # 🎈压缩摘要机制
+    def compress_session(session: dict, client) -> dict:
+        """
+        压缩会话历史。
+        策略：取前 50% 的消息作为待压缩部分（至少 4 条），
+        调用 LLM 生成摘要后更新 compressed_context 字段，保留后 50% 的消息继续使用。
+        """
+        messages = session["messages"]
+        if len(messages) < 4:
+            return session  # 消息太少，不压缩
+
+        # 取前 50% 作为待压缩部分（至少 4 条）
+        compress_count = max(4, len(messages) // 2)
+        to_compress = messages[:compress_count]
+        to_keep = messages[compress_count:]
+
+        # 构造压缩 prompt
+        history_text = "\n".join(
+            f"{m['role'].upper()}: {m['content']}" for m in to_compress
+        )
+        # 滚动摘要：把已有摘要 + 新消息一起压缩成统一摘要                                                                                                                                                 
+        existing = session.get("compressed_context", "")
+        if existing:                                                                                                                                                                                      
+            to_compress_text = f"[之前的摘要]\n{existing}\n\n[新增对话]\n{history_text}"
+        else:                                                                                                                                                                                             
+            to_compress_text = history_text
+                                                                                                                                                                                                        
+        compress_prompt = f"""
+        请将以下内容压缩成一段简洁的统一摘要，保留所有关键信息（用户身份、重要决策、技术细节、未完成的任务）。                                                                      
+                                
+        对话历史：                                                                                                                                                                                        
+        {to_compress_text}                             
+                                
+        要求：           
+        - 用第三人称描述（「用户」「助手」）
+        - 保留所有关键事实，不遗漏重要细节                                                                                                                                                                
+        - 100-200字以内
+        - 以「[以下是之前对话的摘要]」开头
+        """                                                                                                                                                             
+                                                                                                                                                                                                        
+        response = client.chat.completions.create(
+            model=MODEL,                                                                                                                                                                                  
+            messages=[{"role": "user", "content": compress_prompt}],
+            timeout=30          
+        )                
+        summary = response.choices[0].message.content
+                                                                                                                                                                                                        
+        # 用新的统一摘要替换旧的（不追加）
+        session["compressed_context"] = summary                                                                                                                                                           
+        session["messages"] = to_keep                  
+        return session     
+
+    # 演示压缩效果
+    test_session = {
+        "compressed_context": "",
+        "messages": [
+            {"role": "user", "content": "我叫小明，我在学 Python 数据科学"},
+            {"role": "assistant", "content": "你好小明！Python 数据科学很有前途。"},
+            {"role": "user", "content": "我已经学完了 pandas 的 groupby"},
+            {"role": "assistant", "content": "很好！下一步可以学 sklearn。"},
+            {"role": "user", "content": "sklearn 的 Pipeline 怎么用？"},
+            {"role": "assistant", "content": "Pipeline 是 sklearn 的核心工具..."},
+        ]
+    }
+    print(f"压缩前：{len(test_session['messages'])} 条消息")
+    compressed = compress_session(test_session, client)  # 取消注释可实际运行
+    print(f"压缩后：{len(compressed['messages'])} 条消息")
+    print(f"摘要内容：{compressed['compressed_context']}")
+    print("压缩函数定义完成（取消注释可实际调用 LLM 执行压缩）")
+
+
+    # 🐢 长期记忆
+    # 🚂 向量化数据
+    from llama_index.core import Document, VectorStoreIndex
+    from llama_index.core.node_parser import SentenceSplitter
+    from llama_index.core.settings import Settings
+    from llama_index.embeddings.openai import OpenAIEmbedding
+    from dotenv import load_dotenv
+    import os
+
+    load_dotenv()
+
+
+    # 配置 Embedding 模型（与 mini-OpenClaw memory_indexer.py 一致）
+    # 注意：Embedding 用 OPENAI_API_KEY，与 LLM 的 DEEPSEEK_API_KEY 分开
+    Settings.embed_model = OpenAIEmbedding(
+        model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+        api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    )
+
+    # 构造记忆条目（模拟 Agent 积累的用户画像）
+    memory_texts = [
+        "用户叫小明，是一名 Python 开发者，主要做数据分析",
+        "用户正在学习 LangChain，上次讨论到 RAG 架构",
+        "用户不喜欢 SQL，更偏向用 Pandas 处理数据",
+        "用户的项目用 FastAPI 作为后端框架",
+        "用户有 3 年 Python 经验，对机器学习基础了解",
+    ]
+
+    # 用 Document + SentenceSplitter 构建索引（与 memory_indexer.py 相同流程）
+    docs = [Document(text=t) for t in memory_texts]
+    splitter = SentenceSplitter(chunk_size=256, chunk_overlap=32)
+    nodes = splitter.get_nodes_from_documents(docs)
+    index = VectorStoreIndex(nodes)
+    print(f"向量索引创建完成，共 {len(nodes)} 个节点")
+
+    # 语义检索：用 retriever 找最相关的 2 条记忆
+    retriever = index.as_retriever(similarity_top_k=2)
+    query = "用户用什么数据处理工具"
+    results = retriever.retrieve(query)
+
+    print(f"\n查询：'{query}'")
+    print("\n检索结果（分数越高越相似）：")
+    for node in results:
+        print(f"  [{node.score:.4f}] {node.text}")
+
+
+
+    # ✈KV存储，精确Key检索
+    import json
+    import os
+
+    SESSIONS_DIR = "sessions"
+    os.makedirs(SESSIONS_DIR, exist_ok=True)
+
+    def kv_save(key: str, value: dict) -> None:
+        """KV 写入：key → JSON 文件"""
+        path = os.path.join(SESSIONS_DIR, f"{key}.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(value, f, ensure_ascii=False, indent=2)
+
+    def kv_load(key: str) -> dict:
+        """KV 读取：通过 key 精确取回 value"""
+        path = os.path.join(SESSIONS_DIR, f"{key}.json")
+        if not os.path.exists(path):
+            return {}  # key 不存在，返回空
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    # 演示：用 user_id 作为 key，存储用户画像
+    kv_save("user_xiaoming", {
+        "name": "小明",
+        "role": "Python 开发者",
+        "preferences": ["Pandas", "FastAPI"],
+        "skill_level": "中级"
+    })
+
+    profile = kv_load("user_xiaoming")
+    print(f"用户画像：{profile}")
+
+
+
+    # ⚖ 写入机制： 判断Agent何时写入长期记忆
+    from langchain_deepseek import ChatDeepSeek
+    from langchain_core.messages import HumanMessage
+    from dotenv import load_dotenv
+    import json
+    import os
+
+    load_dotenv()
+
+    # LLM 工厂函数：统一管理连接配置，仅 temperature 按场景不同
+    def create_llm(temperature: float = 0.7) -> ChatDeepSeek:
+        return ChatDeepSeek(
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+            temperature=temperature,
+        )
+
+    # 记忆筛选用低 temperature（0.1），减少随机性
+    llm_judge = create_llm(0.1)
+
+    def is_worth_memorizing(conversation_snippet: str) -> tuple[bool, str]:
+        """
+        判断对话片段是否值得写入长期记忆。
+        返回：(是否写入, 提炼后的记忆文本)
+        """
+        prompt = f"""
+        你是一个记忆筛选助手。请分析以下对话片段，判断其中是否包含值得长期记忆的信息。
+
+        值得长期记忆的信息特征：
+        - 用户的身份、职业、技术背景
+        - 用户的明确偏好或厌恶
+        - 正在进行的项目的关键背景
+        - 用户提出的明确要求或约束
+
+        不值得长期记忆的信息：
+        - 临时性的任务（「帮我写一段代码」执行完就结束了）
+        - 常识性问题的问答
+        - 纯粹的闲聊
+
+        对话片段：
+        {conversation_snippet}
+
+        请严格用 JSON 格式回复，不要输出其他内容：
+        {{"worth_memorizing": true/false, "memory_text": "如果值得记忆，提炼成一句话；否则留空"}}
+        """
+
+        result = llm_judge.invoke([HumanMessage(content=prompt)])
+        parsed = json.loads(result.content)
+        return parsed["worth_memorizing"], parsed.get("memory_text", "")
+
+    # 测试：两个对话片段，一个值得记忆，一个不值得
+    snippet1 = "用户：我叫小明，做了 3 年 Python，现在在做一个 FastAPI 项目。\nAgent：了解！"
+    snippet2 = "用户：Python 的 list comprehension 怎么写？\nAgent：[x for x in range(10)] 这样写。"
+
+    for snippet in [snippet1, snippet2]:
+        worth, text = is_worth_memorizing(snippet)
+        print(f"值得记忆：{worth}")
+        if worth:
+            print(f"记忆内容：{text}")
+        print()
+
+
+    # 🚀 Direct注入：全文读取注入System Prompt
+    import hashlib
+    import os
+
+    # === 配置常量 ===
+    MEMORY_FILE = "MEMORY.md"
+
+    # 当 MEMORY.md 的估算 Token 数超过此阈值时，从 Direct 注入切换为 RAG 检索
+    # 阈值设置依据：主流模型 System Prompt 上限约 4K tokens，预留一半给对话历史
+    MEMORY_TOKEN_THRESHOLD = 2000
+
+
+    def load_memory_direct() -> str:
+        """
+        Direct 注入模式：读取 MEMORY.md 全文，拼接到 System Prompt 中。
+        
+        工作流程：
+        1. 计算当前文件 MD5
+        2. 与缓存 MD5 比较——相同则直接返回缓存（跳过磁盘读取）
+        3. 不同则重新读取文件，更新缓存
+        
+        返回值：记忆全文字符串，由调用方拼接到 System Prompt 末尾
+        """
+        if not os.path.exists(MEMORY_FILE):
+            return ""
+
+        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+
+        # 更新缓存：下次调用时如果 MD5 相同就不再读磁盘  
+        # 这里不读磁盘有什么意义？ 
+        _memory_cache["content"] = content
+        _memory_cache["md5"] = current_md5
+        return content
+
+
+    def append_to_memory(memory_text: str) -> None:
+        """
+        向 MEMORY.md 追加一条记忆。
+        写入后立即使缓存失效（md5 置空），确保下次 load 能读到最新内容。
+        """
+        with open(MEMORY_FILE, "a", encoding="utf-8") as f:
+            f.write(f"- {memory_text}\n")
+
+
+    def estimate_tokens(text: str) -> int:
+        """
+        粗估 Token 数（不依赖 tiktoken，零依赖实现）。
+        中文约 1.5 字符/token，英文约 0.75 词/token。
+        生产环境建议用 tiktoken 精确计算。
+        """
+        return int(len(text) / 1.5)
+
+
+    def should_use_rag() -> bool:
+        """
+        判断是否应从 Direct 切换为 RAG 模式。
+        当 MEMORY.md 内容超过 MEMORY_TOKEN_THRESHOLD 时返回 True。
+        调用方根据此结果决定：
+        - False → load_memory_direct() 全文注入 System Prompt
+        - True  → 走 RAG 检索路径，只注入相关片段
+        """
+        content = load_memory_direct()
+        return estimate_tokens(content) > MEMORY_TOKEN_THRESHOLD
+
+
+    # === 演示：模拟 Agent 写入和读取长期记忆 ===
+    # 确保 MEMORY.md 存在（首次运行时创建）
+    if not os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+            f.write("# 长期记忆\n\n")
+
+    # 模拟 Agent 在对话中积累的用户画像
+    append_to_memory("用户叫小明，Python 开发者，3 年经验")
+    append_to_memory("用户偏好 FastAPI + Pandas，不喜欢 SQL")
+
+    # 读取并展示当前记忆状态
+    memory = load_memory_direct()
+    print(f"当前记忆内容（{estimate_tokens(memory)} tokens 估算）：")
+    print(memory)
+    print(f"\n是否需要切换 RAG 模式：{should_use_rag()}")    
+
+
+
+
+    # 🚀 RAG注入 语义检索后注入 MEMORY.md体积超过时, Dirct注入的成本开始变得不可接受
+
+    from llama_index.core import Document, VectorStoreIndex
+    from llama_index.core.node_parser import SentenceSplitter
+    from llama_index.core.settings import Settings
+    from llama_index.embeddings.openai import OpenAIEmbedding
+    import os, hashlib
+
+    # Cell 2：文档切分（Chunking）
+    content = open(MEMORY_FILE, "r", encoding="utf-8").read()
+
+    # 将整个文件包装成 LlamaIndex Document
+    doc = Document(text=content, metadata={"source": "MEMORY.md"})
+
+    # SentenceSplitter：按句子边界切割
+    # chunk_size=256   → 每块最多 256 个 token
+    # chunk_overlap=32 → 相邻块重叠 32 token，防止语义在边界处断裂
+    splitter = SentenceSplitter(chunk_size=256, chunk_overlap=32)
+    nodes = splitter.get_nodes_from_documents([doc])
+
+    print(f"切分结果：共 {len(nodes)} 个文本块\n")
+    print("=" * 50)
+
+    # Cell 3：对每个 Node 做 Embedding，打印向量形状与前几个维度
+
+    Settings.embed_model = OpenAIEmbedding(
+        model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+        api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+    )
+
+    embed_model = Settings.embed_model
+
+    print("正在调用 Embedding API，请稍候...\n") 
+    # Cell 4：构建向量索引，执行语义检索，展示召回结果的溯源信息
+    # 构建索引（内部自动对所有 Node 做 Embedding 并建立向量数据库）
+    index = VectorStoreIndex(nodes)
+    print("✅ 向量索引构建完成\n")
+
+    # 执行语义检索
+    query = "用户用什么工具做数据处理"
+    retriever = index.as_retriever(similarity_top_k=2)  # 召回最相似的 2 个 Node
+    result_nodes = retriever.retrieve(query)
+    print(f"Query: {query}\n")
+    print("=" * 50)
+    print(f"召回 {len(result_nodes)} 个文本块：\n")
+
+
+    # Cell 5：组装最终注入 LLM 的记忆字符串
+    def format_rag_memory(result_nodes) -> str:
+        """
+        将检索结果格式化为 Markdown 字符串。
+        该字符串会被拼接到 LLM 的 system prompt 头部，
+        让 LLM 在回答时"记得"用户的历史信息。
+        """
+        if not result_nodes:
+            return ""
+        lines = [f"- {n.node.get_text().strip()}" for n in result_nodes]
+        return "## 相关记忆（语义检索）\n" + "\n".join(lines)
+
+
+    injected_memory = format_rag_memory(result_nodes)
+
+    print("最终注入 LLM 的记忆字符串（放入 system prompt）：")
+    print("-" * 50)
+    print(injected_memory)
+    print("-" * 50)
+
+    # 模拟拼接 system prompt（实际 Agent 代码中的用法）
+    system_prompt = f"""你是一个智能助手。以下是用户的历史记忆，请结合这些信息回答问题：
+
+    {injected_memory}
+
+    请根据以上记忆，回答用户的问题。
+    """
+    print("\n组装后的 system_prompt 示例（前200字）：")
+    print(system_prompt[:200], "...")
+
+
+
+    # 🏆 sleep-time agent: 离线记忆重组
+    """
+    实时写入解决了「有价值的信息能及时存入记忆」的问题，但随着时间积累，`MEMORY.md` 会出现新的质量问题：同一个事实被多次写入（「用户喜欢
+    Python」在不同会话中反复出现）、早期的记忆已经过时（用户当时在做 A 项目，现在已经换成 B
+    项目了）、部分记忆措辞混乱需要整理。这些问题无法在实时写入阶段解决，因为实时写入追求的是速度，没有时间做全局扫描。
+
+    sleep-time agent 是解决这个问题的经典模式：Agent 在「非工作时间」（两次对话之间的空闲期）异步运行一个整理任务，对 `MEMORY.md`
+    进行全量扫描、去重、提炼和重组。它不参与实时对话，只做「记忆质量维护」这一件事。
+    """
+
+    # Cell 1：构造一份包含"重复、矛盾、冗余"的脏记忆文件
+    # 目标：为 sleep-time 重组提供有明显整理空间的测试数据
+    MEMORY_FILE = "MEMORY.md"
+
+    # 故意设计以下几类问题（用注释标出，实际文件不含注释）：
+    #   [重复] 用户偏好 Pandas 出现了两次
+    #   [矛盾] 用户喜欢 SQL vs 不喜欢 SQL
+    #   [冗余] 用户信息分散在多条而非一条
+    #   [过时] 用户"正在学习 Python"vs"已有 3 年经验"
+
+    dirty_memory = """# 长期记忆
+
+    - 用户叫小明
+    - 用户是 Python 开发者
+    - 用户有大约 3 年的 Python 开发经验
+    - 用户正在学习 Python 基础（过时）
+    - 用户偏好使用 Pandas 做数据处理
+    - 用户不喜欢写 SQL，更喜欢用 Pandas 操作数据
+    - 用户喜欢用 SQL 做数据查询（与上条矛盾）
+    - 用户在开发一个数据分析 API 项目
+    - 用户的项目使用 FastAPI 作为后端框架
+    - 用户正在开发基于 FastAPI 的数据分析接口（与上条重复）
+    - 用户上次讨论了 LangChain RAG 架构
+    - 用户对 LangChain 的 RAG 实现方式很感兴趣（与上条重复）
+    - 用户习惯用 conda 管理 Python 环境
+    - 用户使用 conda 创建虚拟环境（与上条重复）
+    - 用户询问过如何优化向量检索速度
+    - 用户希望部署到云端，询问过 AWS 和阿里云的费用对比
+    - 用户表示预算有限，倾向于选择性价比高的方案
+    """
+
+    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+        f.write(dirty_memory)
+
+    # Cell 2：执行 sleep-time 记忆重组
+    # 流程：读取 MEMORY.md → 构造整理 prompt → 调用 LLM → 备份原文件 → 写回整理结果
+    from langchain_deepseek import ChatDeepSeek
+    from langchain_core.messages import HumanMessage
+    from dotenv import load_dotenv
+    import os
+
+    load_dotenv()
+
+    def create_llm(temperature: float = 0.7) -> ChatDeepSeek:
+        """
+        LLM 工厂函数。
+        temperature=0.2：低随机性，保证整理结果稳定、不乱发挥
+        """
+        return ChatDeepSeek(
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+            temperature=temperature,
+        )
+
+    # 整理任务用低 temperature，避免 LLM 随机删掉重要条目
+    llm_organizer = create_llm(0.2)
+
+
+    def sleep_time_reorganize() -> str:
+        """
+        sleep-time 记忆重组主函数。
+
+        整理策略（通过 prompt 指令 LLM 执行）：
+        1. 去重：相同含义的条目只保留一条
+        2. 去矛盾：时间靠后或更具体的信息优先
+        3. 去冗余：把分散的同一主题信息合并为一条
+        4. 精炼：每条压缩为一句话
+        5. 限制总量：最多 20 条，强制聚焦核心信息
+        """
+        if not os.path.exists(MEMORY_FILE):
+            return ""
+
+        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+            current_memory = f.read().strip()
+
+        # 内容太少（<100字符）说明刚写入，不值得整理
+        if not current_memory or len(current_memory) < 100:
+            return current_memory
+
+        # ---- 构造整理 prompt ----
+        # 关键：用明确的规则约束 LLM 的整理行为，避免随意删改
+        prompt = f"""你是一个记忆整理助手。请对以下 Agent 长期记忆进行整理：
+
+        整理规则：
+        1. 去除重复信息，合并相似条目
+        2. 删除过时或矛盾的信息（保留更新的、更具体的）
+        3. 将每条记忆精炼为一句话，以 '- ' 开头
+        4. 保留文件头 '# 长期记忆'
+        5. 最多保留 20 条最重要的记忆
+
+        当前记忆：
+        {current_memory}
+
+        请直接输出整理后的完整 Markdown 内容，不要添加任何解释。"""
+
+        print("正在调用 LLM 进行记忆整理，请稍候...\n")
+        result = llm_organizer.invoke([HumanMessage(content=prompt)])
+        reorganized = result.content.strip()
+
+        # ---- 写回前备份原始内容 ----
+        # 防止 LLM 整理出错时无法恢复
+        backup_path = MEMORY_FILE + ".bak"
+        with open(backup_path, "w", encoding="utf-8") as f:
+            f.write(current_memory)
+
+        # 写回整理后的内容
+        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+            f.write(reorganized)
+
+        before_lines = current_memory.count("\n")
+        after_lines  = reorganized.count("\n")
+        print(f" 整理完成：{before_lines} 行 → {after_lines} 行（压缩率 {(1 - after_lines/before_lines)*100:.0f}%）")
+        print(f" 原始备份：{backup_path}")
+        return reorganized
+
+    reorganized = sleep_time_reorganize()
+
+
+    # Cell 3：整理前后对比，量化整理效果
+
+    # 读取备份（整理前）和当前文件（整理后）
+    with open(MEMORY_FILE + ".bak", "r", encoding="utf-8") as f:
+        before = f.read().strip()
+
+    with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+        after = f.read().strip()
+
+    # 提取条目列表（以"- "开头的行）
+    before_items = [l.strip() for l in before.split("\n") if l.strip().startswith("- ")]
+    after_items  = [l.strip() for l in after.split("\n")  if l.strip().startswith("- ")]
+
+    # ---- 打印对比报告 ----
+    print("=" * 60)
+    print(" sleep-time 记忆重组效果对比")
+    print("=" * 60)
+
+    print(f"\n【数量变化】")
+    print(f"  整理前：{len(before_items)} 条")
+    print(f"  整理后：{len(after_items)} 条")
+    print(f"  减少了：{len(before_items) - len(after_items)} 条（{(1 - len(after_items)/len(before_items))*100:.0f}% 压缩）")
+
+    print(f"\n【字符量变化】")
+    print(f"  整理前：{len(before)} 字符")
+    print(f"  整理后：{len(after)} 字符")
+
+    print("\n" + "-" * 60)
+    print("整理前（原始脏记忆）：")
+    print("-" * 60)
+    for i, item in enumerate(before_items, 1):
+        print(f"  {i:2d}. {item}")
+
+    print("\n" + "-" * 60)
+    print("整理后（LLM 提炼结果）：")
+    print("-" * 60)
+    for i, item in enumerate(after_items, 1):
+        print(f"  {i:2d}. {item}")
+
+    print("\n" + "-" * 60)
+    print("  预期效果验证：")
+    print("   重复条目（Pandas/FastAPI/conda/LangChain）是否合并为 1 条？")
+    print("   矛盾条目（喜欢SQL vs 不喜欢SQL）是否保留了正确的一条？")
+    print("   过时条目（正在学习Python基础）是否被删除？")
+    print("   分散的用户信息是否合并为一条？")
+
+
+    # 🤖 短期与长期记忆协同--Memory Manager架构
+    import json, os
+    from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+
+    class MemoryManagerSkeleton:
+        """最小可运行的 MemoryManager 骨架：只实现三阶段主链路"""
+
+        def __init__(self, session_dir="sessions", memory_file="MEMORY.md", max_history=20):
+            self.session_dir = session_dir
+            self.memory_file = memory_file
+            self.max_history = max_history
+            os.makedirs(session_dir, exist_ok=True)
+
+        def load(self, session_id: str, user_query: str) -> tuple[dict, str]:
+            """阶段一：加载短期记忆（session）+ 长期记忆（MEMORY.md 全文）"""
+            # 短期记忆：从 JSON 文件加载
+            path = os.path.join(self.session_dir, f"{session_id}.json")
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    session = json.load(f)
+            else:
+                session = {"messages": [], "compressed_context": ""}
+
+            # 长期记忆：Direct 全文读取（骨架版不含 RAG 切换）
+            long_term = ""
+            if os.path.exists(self.memory_file):
+                with open(self.memory_file, "r", encoding="utf-8") as f:
+                    long_term = f.read().strip()
+
+            return session, long_term
+
+        def get_messages_for_llm(self, session: dict, long_term_context: str,
+                                  system_base: str = "你是一个有记忆能力的 AI 助手。") -> list:
+            """阶段二：构造 LangChain Message 列表（直接传给 ChatDeepSeek）"""
+            messages = []
+
+            # System Prompt = 基础指令 + 长期记忆
+            system_content = system_base
+            if long_term_context:
+                system_content += f"\n\n## 关于用户的长期记忆\n{long_term_context}"
+            messages.append(SystemMessage(content=system_content))
+
+            # 压缩摘要（若有）
+            if session.get("compressed_context"):
+                messages.append(SystemMessage(content=f"## 早期对话摘要\n{session['compressed_context']}"))
+
+            # 最近 N 条对话历史（dict → LangChain Message）
+            for msg in session["messages"][-self.max_history:]:
+                if msg["role"] == "user":
+                    messages.append(HumanMessage(content=msg["content"]))
+                elif msg["role"] == "assistant":
+                    messages.append(AIMessage(content=msg["content"]))
+
+            return messages
+
+        def update(self, session_id: str, session: dict,
+                   user_input: str, assistant_response: str) -> None:
+            """阶段三：追加本轮对话 + 保存 session"""
+            session["messages"].append({"role": "user", "content": user_input})
+            session["messages"].append({"role": "assistant", "content": assistant_response})
+
+            # 保存到文件
+            path = os.path.join(self.session_dir, f"{session_id}.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(session, f, ensure_ascii=False, indent=2)
+
+
+
+    # ── 验证三阶段主链路 ──────────────────────────────────────
+    mm = MemoryManagerSkeleton(session_dir="./sessions", memory_file="MEMORY.md")
+
+    # 阶段一：加载（首次为空）
+    session, long_term = mm.load("test_session", "你好")
+    print(f"短期记忆：{len(session['messages'])} 条消息")
+    print(f"长期记忆：{'有内容' if long_term else '空'}")
+
+    # 阶段二：构造 LLM 输入
+    messages = mm.get_messages_for_llm(session, long_term)
+    print(f"\n传给 LLM 的消息数：{len(messages)}")
+    for msg in messages:
+        print(f"  [{type(msg).__name__}] {msg.content[:50]}...")
+
+    # 阶段三：模拟更新
+    mm.update("test_session", session, "我叫小明", "你好小明！")
+    print(f"\n更新后消息数：{len(session['messages'])}")
+
+    # 验证持久化：重新 load 看数据是否保存
+    session2, _ = mm.load("test_session", "")
+    print(f"重新加载后消息数：{len(session2['messages'])}（持久化验证通过）")
+
+    # 清理
+    import shutil
+    shutil.rmtree("/tmp/sessions", ignore_errors=True)
+
+
+# 🔰 Mem0
+# ====================================================================================================================================
+
+    # 🚀 三层记忆存储 user_id agent_id run_id
+
+    import shutil, os
+    from dotenv import load_dotenv
+    from mem0 import Memory
+
+    load_dotenv()
+
+    QDRANT_PATH="./qdrant"
+
+    # 清理 Qdrant 本地存储残留锁（Notebook 重复运行时文件锁不会自动释放）
+    for p in [QDRANT_PATH, os.path.expanduser("~/.mem0/migrations_qdrant")]:
+        if os.path.exists(p):
+            shutil.rmtree(p)
+
+    # 准备示例对话（mem0 要求 OpenAI 格式的消息列表）
+    messages = [
+        {"role": "user", "content": "我正在学习用 FastAPI 搭建后端服务"},
+        {"role": "assistant", "content": "FastAPI 是一个非常好的选择，它基于 Pydantic 和 Starlette，性能优秀且类型安全。"},
+    ]
+
+    config = {
+        "llm": {
+            "provider": "openai",
+            "config": {
+                "model": "deepseek-chat",
+                "api_key": os.getenv("DEEPSEEK_API_KEY"),
+                "openai_base_url": "https://api.deepseek.com/v1",
+                "temperature": 0.1,
+            }
+        },
+        "embedder": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                "api_key": os.getenv("OPENAI_API_KEY"),
+            }
+        },
+        "vector_store": {                          # ← 关键！不写这块就用 /tmp
+            "provider": "milvus",
+            "config": {
+                "collection_name": "mem0_prod",
+                "path": QDRANT_PATH,           # 持久化到项目目录
+                # 生产环境推荐换成远端服务器模式：
+                # "host": "your-qdrant-server.com",
+                # "port": 6333,
+            }
+        },
+        "version": "v1.1"
+    }
+
+    memory = Memory.from_config(config)
+
+    # 用户记忆：跨会话持久
+    memory.add(messages, user_id="alice")
+
+    # Agent 记忆：与特定 Agent 绑定
+    memory.add(messages, agent_id="customer_support_bot")
+
+    # 会话记忆：仅本次会话
+    memory.add(messages, user_id="alice", run_id="session_2026_03_29")
+
+    # 三维组合：最精细的隔离
+    memory.add(messages, user_id="alice", agent_id="travel_bot", run_id="trip_planning_001")
+
+
+    # 🔍 找出所有带有 alice 标签的记忆
+    alice_memories = memory.get_all(user_id="alice")
+
+    print("打印原始存储信息：")
+    print(alice_memories)
+    print("-" * 30)
+    print("alice 的记忆：")
+    for mem in alice_memories["results"]:
+        # mem0 会自动把复杂的 payload 整理成人类可读的字典
+        print(f"记忆内容: {mem['memory']}")
+        print(f"附带属性: {mem['user_id']} | {mem.get('agent_id', '空')}")
+        print("-" * 30)
+
+
+
+    # 🔍 检索记忆：语义向量搜索（query → embedding → 余弦相似度匹配）
+    results = memory.search(
+        query="Alice 的饮食偏好是什么？",      # 自然语言查询，自动转为向量
+        user_id="alice",                     # 只在 alice 的命名空间内搜索
+        limit=5                              # 返回最相关的 5 条
+    )
+
+    print("检索结果：")
+    for entry in results["results"]:
+        print(f"  - {entry['memory']}（相似度得分: {entry.get('score', 'N/A')}）")
+
+
+    # 🚀 封装完整的记忆增强对话函数
+    from openai import OpenAI
+
+    # DeepSeek 客户端（用于对话生成）
+    # 初始化 DeepSeek 客户端（通过 OpenAI SDK 兼容接口调用）
+    deepseek_client = OpenAI(
+        api_key=os.getenv("DEEPSEEK_API_KEY"),  # DeepSeek API 密钥
+        base_url="https://api.deepseek.com/v1"  # DeepSeek 兼容端点
+    )
+
+    def chat_with_memory(message: str, user_id: str = "default_user") -> str:
+        """带记忆增强的对话函数"""
+
+        # 1. 检索相关记忆
+        relevant_memories = memory.search(
+            query=message,      # 用当前用户消息作为检索 query
+            user_id=user_id,    # 只检索该用户的记忆
+            limit=3             # 取 Top-3 避免上下文过长
+        )
+
+        # 将检索到的记忆拼接为文本，注入 System Prompt
+        memories_str = "\n".join(
+            f"- {entry['memory']}"
+            for entry in relevant_memories["results"]
+        )
+
+        # 2. 构建带记忆的系统提示
+        system_prompt = (
+            f"你是一个有记忆能力的 AI 助手。基于用户的历史偏好进行个性化回答。\n"
+            f"用户历史记忆：\n{memories_str}"
+            if memories_str else
+            "你是一个有记忆能力的 AI 助手。"
+        )
+
+        # 3. 调用 DeepSeek 生成响应
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message}
+            ]
+        )
+
+        assistant_message = response.choices[0].message.content
+
+        # 4. 保存本轮对话到记忆（LLM 裁判会自动决定是否值得记住）
+        memory.add(
+            messages=[
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": assistant_message}
+            ],
+            user_id=user_id
+        )
+
+        return assistant_message
+
+
+
+    # 💥 清理记忆
+    memory.delete_all(user_id="demo_conflict")
+
+
+
+    # 🚀 langchain接入mem0
+
+    from langchain_core.tools import tool
+
+    config = {
+        "llm": ...
+    }
+
+    memory = Memory.from_config(config)
+
+    @tool
+    def search_memories(query: str, user_id: str) -> str:
+        """从记忆库检索与用户相关的历史信息。当你需要了解用户偏好或历史上下文时调用此工具。"""
+        results = memory.search(query, user_id=user_id, limit=5)
+        if not results["results"]:
+            return "未找到相关记忆"
+        return "\n".join([f"- {r['memory']}" for r in results["results"]])
+
+    @tool
+    def save_memory(content: str, user_id: str) -> str:
+        """保存重要信息到用户记忆库。当对话中出现用户的偏好、背景或重要决策时调用此工具。"""
+        memory.add(
+            messages=[{"role": "user", "content": content}],
+            user_id=user_id
+        )
+        return "记忆已保存"
+
+    # 创建带记忆工具的Agent
+    from langchain_openai import ChatOpenAI
+    from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
+
+    # 初始化 LLM + 绑定工具
+    llm = ChatOpenAI(
+        model="deepseek-chat",
+        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        base_url="https://api.deepseek.com/v1",
+        temperature=0.7,
+    )
+    tools = [search_memories, save_memory]
+    llm_with_tools = llm.bind_tools(tools)
+    tool_map = {"search_memories": search_memories, "save_memory": save_memory}
+
+    # 当前用户标识
+    current_user_id = "demo_alice"
+
+    # ─── 场景一：保存用户偏好 ───
+    # 用户告知饮食偏好，Agent 应自主决定调用 save_memory
+    print("=" * 50)
+    print("场景一：用户告知新信息 → Agent 保存记忆")
+    print("=" * 50)
+
+    save_messages = [
+        SystemMessage(content=f"你是一个有记忆能力的助手。可以使用工具检索和保存用户信息。当前用户的 user_id 是 {current_user_id}，调用工具时请使用此 ID。"),
+        HumanMessage(content="我是素食主义者，平时不吃肉，喜欢吃沙拉和水果。")
+    ]
+
+    # 第 1 步：LLM 决策
+    save_response = llm_with_tools.invoke(save_messages)
+    print(f"Agent 响应：{save_response.content}")
+    print(f"Agent 决定调用的工具：{[tc['name'] for tc in save_response.tool_calls]}")
+
+    # 第 2 步：执行工具 + 第 3 步：二次推理
+    exec_messages = save_messages + [save_response]
+
+    for tc in save_response.tool_calls:
+        tool_fn = tool_map[tc['name']]
+        tool_result = tool_fn.invoke(tc['args'])
+        print(f"工具 {tc['name']} 执行结果: {tool_result[:300]}")
+        exec_messages.append(ToolMessage(content=tool_result, tool_call_id=tc['id']))
+
+    # LLM 看到工具执行结果后，生成最终确认回复
+    final_save = llm_with_tools.invoke(exec_messages)
+    print(f"\nAgent 最终回复：{final_save.content}")
+
+
+    # ─── 场景二：检索用户偏好 ───
+    # 用户询问之前说过的信息，Agent 应自主调用 search_memories
+    print("=" * 50)
+    print("场景二：用户提问 → Agent 检索记忆 → 个性化回复")
+    print("=" * 50)
+
+    search_messages = [
+        SystemMessage(content=f"你是一个有记忆能力的助手。可以使用工具检索和保存用户信息。当前用户的 user_id 是 {current_user_id}，调用工具时请使用此 ID。"),
+        HumanMessage(content="我之前跟你说过我的饮食偏好，还记得吗？")
+    ]
+
+    # 第 1 步：LLM 决策
+    search_response = llm_with_tools.invoke(search_messages)
+    print(f"Agent 决定调用：{[tc['name'] for tc in search_response.tool_calls]}")
+
+    # 第 2 步：执行检索工具
+    exec_messages = search_messages + [search_response]
+    for tc in search_response.tool_calls:
+        tool_fn = tool_map[tc['name']]
+        tool_result = tool_fn.invoke(tc['args'])
+        print(f"\n记忆检索结果: {tool_result[:300]}")
+        exec_messages.append(ToolMessage(content=tool_result, tool_call_id=tc['id']))
+
+    # 第 3 步：二次推理 将工具调用结果添加到messages，再发送至llm
+    final_search = llm_with_tools.invoke(exec_messages)
+    print(f"\nAgent 最终回复：{final_search.content}")
+
+
+    """
+    🔥
+    手动写执行循环需要十几行代码（构建 messages、遍历 tool_calls、封装 ToolMessage……）。
+    在生产项目中不会这么写。LangChain 的 `create_agent()` 把整个循环封装成了一行调用，
+    **LLM 决策 → 执行工具 → 喂回结果 → 再次决策**全部自动完成：
+    """
+
+    from langchain.agents import create_agent
+
+    # 一行代码创建自动执行工具的 Agent（LangChain 1.2+ API）
+    # create_agent 内部自动完成：LLM 决策 → 执行工具 → 喂回结果 → 循环直到完成
+    agent = create_agent(
+        model=llm,
+        tools=[search_memories, save_memory],
+        system_prompt=f"你是一个有记忆能力的助手。可以使用工具检索和保存用户信息。当前用户的 user_id 是 {current_user_id}，调用工具时请使用此 ID。"
+    )
+
+    # 直接对话，Agent 自动决定是否调用工具、自动执行、自动生成最终回复
+    result = agent.invoke({"messages": [{"role": "user", "content": "我之前的饮食偏好是什么？"}]})
+
+    # 打印完整的消息流（可以看到 Agent 内部的决策过程）
+    for msg in result["messages"]:
+        role = msg.__class__.__name__
+        content = msg.content[:200] if msg.content else "(tool_call)"
+        print(f"[{role}] {content}")
+
+
+
+    # 💥 双检索注入（meo0+RAG并行）
+    import asyncio
+    async def build_context(user_input: str, user_id: str) -> str:
+        """并行执行 mem0 记忆检索 + RAG 知识库检索，拼接为完整上下文"""
+
+        # 定义两个并行任务
+        async def mem0_search():
+            results = await async_memory.search(
+                user_input, user_id=user_id, limit=5
+            )
+            return "\n".join([r["memory"] for r in results["results"]])
+
+        async def rag_search():
+            # 此处用模拟数据替代真实 RAG 检索
+            # 实际项目中替换为你的 RAG retriever
+            return "（RAG 检索结果：相关文档片段...）"
+
+        # asyncio.gather 并行执行两路检索
+        mem0_result, rag_result = await asyncio.gather(
+            mem0_search(),
+            rag_search()
+        )
+
+        # 拼接上下文
+        context = f"""用户历史偏好（来自 mem0）：
+        {mem0_result}
+
+        相关知识（来自 RAG）：
+        {rag_result}"""
+
+        return context
+
+    # 测试并行检索
+    async def demo_dual_retrieval():
+        context = await build_context(
+            "推荐一种适合我的编程语言",
+            user_id="demo_alice"
+        )
+        print("拼接后的完整上下文：")
+        print(context)
+
+    # 在 Notebook 中运行 async 函数
+    await demo_dual_retrieval()
+
+
+# 📢 Agent 服务化  FastAPI
+# ====================================================================================================================================
+
+    from fastapi import FastAPI
+
+    app = FastAPI()
+
+    @app.get(
+        "/items/{item_id}",
+        tags=["items"],
+        summary="通过Id获取物品",
+        description="根据物品ID返回物品的详细信息"
+    )
+    async def read_item(item_id: int):
+        return {"item_id": item_id}
+
+
+    # 🚀 响应模型
+    from typing import Optional
+    from fastaip import FastAPI, status
+    from pydantic import BaseModel
+
+    app = FastAPI()
+
+    class Item(BaseModel):
+        name: str
+        description: Optional[str] = None
+        price: float
+        tax: Optional[float] = None
+
+    @app.post(
+        "/items", 
+        response_model=Item, 
+        status_code=status.HTTP_201_CREATED
+    )
+    async def create_item(item: Item):
+        return item    
+
+
+    # 🌰 特殊类型和验证
+    from fastapi import FastAPI
+    from pydatic import BaseModel, HttpUrl
+
+    app = FastAPI()
+
+    class Image(BaseModel):
+        url: HttpUrl
+        name: str
+
+    class Item(BaseModel):
+        name: str
+        description: str | None = None
+        price: float
+        tax: float | None = None
+        tags: set[str] = []
+        image: Image | None = None
+
+    @app.put("item/{item_id}")
+    async def update_item(item_id: int, item: Item):
+        results = {"item_id": item_id, "item": item}
+        return results
+
+
+    # 🚀 使用Cookie参数
+    from typing import Annotated
+    from fastapi import FastAPI, Cookie
+
+    app = FastAPI()
+
+    @app.get("/items/")
+    async def read_items(ads_id: Annotated[str | None, Cookie(descrption="商品Id")] = None):
+        return {"ads_id": ads_id}
+
+    # 🚀 限制接收Cookie
+    # 在某些特殊情况下，你可能想要限制只接收特定的Cookie。可以使用pydantic的模型配置额外的的字段
+    from typing import Annotated
+    from fastapi import FastAPI, Cookie
+    from pydantic import BaseModel
+
+    app = FastAPI()
+
+    class Cookies(BaseModel):
+        model_config={"extra": "forbid"}
+
+        session_id: str
+        fatebook_tracker: str | None = None
+        googall_tracker: str | None = None
+
+    @app.get("/items/")
+    async def read_items(cookies: Annotated[Cookies, Cookie()]):
+        return cookies
+
+    # 🚀 声明header参数
+    from typing import Annotated
+    from fastapi import FastAPI, Header
+
+    app = FastAPI()
+
+    @app.get("/item")
+    async def read_items(user_agent: Annotated[str|None, Header()] = None):
+        return {"User_Agent": user_agent}        
+
+    # 如果需要禁用下划线到连字符的自动转换，可以在Header中的设置convert_underscores=False
+
+
+    # 🖥 额外模型：分离输入、输出和数据库模型
+    from pydantic import BaseModel, EmailStr
+
+    class UserIn(BaseModel):
+        username: str
+        password: str
+        email: EmailStr
+        full_name: str | None = None
+
+    class UserOut(BaseModel):
+        username: str
+        email: EmailStr
+        full_name: str | None = None
+
+    class UserInDB(BaseModel):
+        username: str    
+        hashed_password: str
+        email: EmailStr
+        full_name: str | None = None
+
+    from fastapi import FastAPI
+    app = FastAPI()
+
+    def fake_password_hasher(raw_password: str):
+        return "supersecret" + raw_password
+
+    def fake_save_user(user_in: UserIn):
+        hashed_password = fake_password_hasher(user_in.password)
+        user_in_db = UserInDB(**user_in.model_dump(), hashed_password=hashed_password)
+        return user_in_db
+
+    @app.post("/user/", response_model=UserOut)
+    async def create_user(user_in: UserIn):
+        user_saved = fake_save_user(user_in)
+        return user_saved
+
+    # ✖ 错误处理
+    from fastapi import FastAPI, HTTPException
+
+    app = FastAPI()
+
+    items = {"foo": "The Foo Wrestiers"}
+
+    @app.get("/items/{item_id}")
+    async def read_item(item_id: str):
+        if item_id not in items
+            raise HTTPException(status_code=404, detail="Item not found")
+        return {"item": items[item_id]}
+
+
+    # 🚀 jsonable_encoder() 函数可以将任何对象转换为与JSON兼容的python数据结构
+    from fastapi.encoders import jsonable_encoder
+
+    item_dict = jsonable_encoder(item)
+
+
+    # 🔥 依赖注入
+    from fastapi import FastAPI, Depends, HTTPException, Cookie
+
+    app = FastAPI()
+
+    # 定义依赖项，从Cookie中验证用户Token
+    async def get_current_infok(access_token: str = Cookie(None))
+        if access_token is None:
+            raise HTTPException(status_code=401, detail="未提供认证信息")
+
+        return {"user_id": 1, "username": "xxxx", "role": "admin"}
+
+
+    @app.get("/prefile")
+    async def get_profile(current_user: dict = Depends(get_current_user)):
+        return {
+            "user_id": current_user["user_id"],
+            "phone": "138****2212"
+        }
+
+
+    # 🚀 全局依赖关系
+    from fastapi import FastAPI, Depends, Header
+    from typing import Optional
+
+    # 定义全局依赖，记录请求头
+    async def log_request_header(
+        # Header(None)：从请求头X-Request-Id获取值，如果不存在则为None
+        # 参数名x_request_id自动转换为X-Request-Id
+        x_request_id: Optional[str] -> Header(None)
+    ):
+        print(f"Request ID: {x_request_id}")
+
+    # 创建应用，设置全局依赖
+    app = FastAPI(dependencies=[Depends(log_request_header)])
+
+
+    # 🚀 路由
+    from fastapi import FastAPI, APIRouter
+
+    app = FastAPI()
+
+    user_router = APIRouter(
+        prefix="/users",
+        tags=["用户管理"]
+    )
+
+    @user_router.get("/")
+    async def get_users():
+        return ["user1", "user2"]
+
+    @user_router.get("/{user_id}")
+    async def get_user(user_id: int):
+        return {"user_id": user_id}     
+
+    app.include_router(user_router)
+
+
+
+    # 🚀 中间件
+    import time
+    from fastapi import FastAPI, Request
+
+    # 定义中间件 全局
+    @app.middleware("http")
+    async def add_process_time_header(
+        request: Request,
+        call_next
+    ):
+        start_time = time.perf_counter()
+        response = await call_next(request)
+
+        process_time = time.perf_counter() - start_time
+
+        response.headers["X-Process-Time"] = str(process_time)
+        return response
+
+
+    # 类形式添加中间件 需要手动注册 
+    from starletter.middleware.base import BaseHTTPMiddleware
+
+    class MiddlewareA(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            print("开始")
+            response = call_next(request)
+            pinrt("结束")
+            return response
+
+    # 添加中间件
+    app.add_middleware(MiddlewareA)
+
+
+    # 🍎 CORS 
+    from fastapi import FastAPI
+    from fastapi.midddlware.cors import CORSMiddleware
+
+    app = FastAPI()
+
+    app.middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credientials=True,
+        allow_methods=["*"],
+        allow_headers=["*"]
+    )
+
+
+# 🚕 Redis 数据库
+# docker exec -it redis redis-cli
+# ====================================================================================================================================
+
+    import redis
+
+    pool = redis.ConnectionPool(host="127.0.0.1", port=6379)
+    r = redis.Redis(connection_pool=pool)
+
+    r.delete("foo")
+
+    # 🚀 string
+    r.set("foo", "bar")
+    print(r.get("foo"))
+    r.set("key_resource_1", "1", nx=True, ex=10)  # 原子性
+
+    # 不允许设置已经存在的键
+    ret = r.setnx("name", "zhngsha")
+    print(ret)
+
+    # 设置过期时间
+    r.setex("production", 10, "com")
+
+    # 自增自减
+    r.set("age", 21)
+    r.incr("age", 10)
+    r.decr("age", 10)
+
+    # 🚀 hash
+    r.hset("info", "name", "rain")
+    print(r.hget("info", "name"))
+
+    r.hmset("info", {"age": 22, "name": "rain"})
+    print(r.hgetall("info"))
+
+    # 🚀 list
+    r.rpush("scores", "100", "90", "80")
+    r.lpush("scores", "120")
+    print(r.lrange("scores", 0, -1))  # 获取列表所有元素
+    r.linsert("scores", "AFTER", "100", 95)  # 100元素后面加 95
+    r.lpop("scores")
+    r.rpop("scores")
+    r.lindex("scores", 1)  # 获取索引为1的元素
+
+    # 🚀 set
+    r.sadd("name_set", "element1", "element2", "element3")
+    # 获取集合所有元素
+    print(r.smembers("name_set"))
+    # 从集合中随机获取2个元素
+    print(r.srandmember("name_set", 2))
+    # 删除集合中元素
+    r.srem("name_set", "element2")
+
+    # 🚀 zset
+    r.zadd("jifenbang", {"yuan": 100, "li": 90, "wang": 80})
+    r.zrange("jifenbang", 0, -1)
+    r.zrange("jifenbang", 0, -1, withscores=True)  # 名字加分数一起给我
+    r.zrevrange("jifenbang", 0, -1, withscores=True)  # 从高到低排序
+
+    r.zrangebyscore("jifenbang", 60, 100)  # 范围
+    r.zrangebyscore("jifenbang", 60, 100, start=0, num=1)  # 范围 后 从0开始取，只取1个
+    r.zrem("jifenbang", "li")  # 删除li
+
+    r.exists("jifenbang")  # 检查是否存在是否存在
+    r.keys("*")  # 获取所有键名
+    r.expire("name", 10)  # 设置ttl
+
+    # 🚀 发布订阅
+    # 生产者
+    r.publish("room_101", "hello world")
+
+    # 消费者
+    pub = r.pubsub()
+    pub.subscribe("room_101")
+    pub.parse_response()
+
+    while True:
+        print("waiting...")
+        res_msg = pub.parse_response()
+        print("msg", res_msg)
+
+
+# 🐴 Harness Engineering
+# ====================================================================================================================================
+
+
+# 🌙 Agent Scope
+# ====================================================================================================================================
+
+
+# 🏀 Agents SDK
+# ====================================================================================================================================
+    
+    # 🚀 三大模块 Agent Handoffs Guardrails
+
+    # ! pip install openai python-dotenv openai-agents
+    import os
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True) # 如果已经配置过全局变量，则使用.env 文件中的变量覆盖替换
+
+    from agents import Agent
+    agent = Agent(
+        name="乐于助人的私人小助理",
+        instructions="请使用中文回答用户的问题",
+    )
+
+    from agents import Runner
+    result = await Runner.run(
+        starting_agent=agent,
+        input="你好，请你介绍一下你自己"
+        )
+
+    print(result.final_output)
+
+
+    # 🚀 其它模型接入
+    from openai import OpenAI
+    import os
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+
+    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+    DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL")
+    DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL")
+
+    # 实例化客户端
+    client = OpenAI(
+        api_key=DEEPSEEK_API_KEY, 
+        base_url=DEEPSEEK_BASE_URL
+    )
+
+    response = client.chat.completions.create(
+        model=DEEPSEEK_MODEL,
+        messages=[
+            {"role": "user", "content": "你好，好久不见!请介绍下你自己。"}
+        ]
+    ) 
+
+    
+    # 除此以外，`Runner.run`是一个异步方法，所以接入的模型实例也需要使用异步，因此这里实例化模型时需要使用`AsyncOpenAI`包
+    from openai import AsyncOpenAI, OpenAIChatCompletionsModel
+
+    deepseek_client = AsyncOpenAI(
+        base_url=DEEPSEEK_BASE_URL, 
+        api_key=DEEPSEEK_API_KEY
+    )
+
+    agent = Agent(
+        name="乐于助人的私人小助理",
+        instructions="请使用中文回答用户的问题",
+        model=OpenAIChatCompletionsModel(
+            model=DEEPSEEK_MODEL,
+            openai_client=deepseek_client,
+        )
+    )
+
+    result = await Runner.run(agent, "你好，请你介绍一下你自己")
+    print(result.final_output)
+
+    # 自定义采样参数的方法，则是需要通过`ModelSettings`类进行实例化并传递，如下代码所示：
+    from agents import ModelSettings
+
+    agent = Agent(
+        name="乐于助人的私人小助理",
+        instructions="请使用中文回答用户的问题",
+        model=OpenAIChatCompletionsModel(
+            model=DEEPSEEK_MODEL,
+            openai_client=deepseek_client,
+        ),
+        model_settings=ModelSettings(
+            temperature=0.6,
+            max_tokens=10,
+        )
+    )
+    result = await Runner.run(agent, "请你介绍一下你自己")
+    print(result.final_output)
+
+    # 🚀 Runner核心组件详解
+    """
+    - Runner.run(): 异步运行并返回最终响应结果。
+    - Runner.run_sync(): 同步运行，本质上是对异步 `run()` 方法的封装，
+                         从而可以在没有事件循环的情况下（例如在普通的 Python 脚本或某些环境中）以同步方式执行代理的逻辑。
+    - Runner.run_streamed(): 异步运行并返回最终的响应结果。它以流模式调用大模型，并在接收到事件时将其进行流式的实时传输。
+    """
+
+    # 🚢 上下文管理
+
+        # ✈ Agent Local Context 
+        """`Agent` 运行状态下所用的数据在`OpenAI Agents SDK`框架中称之为`Local Context`。
+        它的形式是一个`Python`对象，在整个`Agent`运行期间持续存在"""
+
+        """
+        Agent能够执行复杂任务的核心是可以执行函数调用，而函数调用的两种参数来源主要有两种：
+        1. 大模型解析的显式参数：通过 JsonSchema 定义，由大模型理解用户意图后提供；即工具函数的注释描述部分；
+        2. 人工构建的隐式参数： 由开发人员预先设置，对大模型不可见，即需要借助`Local Context`来传递；
+        """
+        from dataclasses import dataclass
+        from typing import Optional
+        from agents import RunContextWrapper, function_tool
+
+        # 通过数据类来定义上下文类
+        @dataclass
+        class UserInfo:  
+            name: str
+            uid: int
+            birthday: str = "1995-01-23"  # 添加用户生日信息
+            location: str = "北京"        # 添加用户位置信息
+
+        # 定义工具函数
+        @function_tool
+        async def fetch_user_info(
+            wrapper: RunContextWrapper[UserInfo],     # 隐式参数 - 上下文
+            info_type: str,                           # 显式参数 - 由大模型解析用户想查询的信息类型
+            format_type: Optional[str] = None         # 显式参数 - 可选的格式化方式
+        ) -> str:  
+            """
+            获取用户的详细信息
+            
+            参数:
+            - info_type: 要获取的信息类型，如"年龄"、"生日"、"位置"等
+            - format_type: 可选的信息格式，如"简洁"、"详细"
+            """
+            # 从隐式上下文参数获取用户基本信息
+            user_name = wrapper.context.name
+            user_id = wrapper.context.uid
+            
+
+            # 根据显式参数决定返回什么信息
+            if info_type.lower() == "年龄":
+                info = f"30 岁"
+            elif info_type.lower() == "生日":
+                info = wrapper.context.birthday
+            elif info_type.lower() == "位置":
+                info = wrapper.context.location
+            else:
+                info = "未知信息类型"
+            
+            # 根据显式参数决定返回格式
+            if format_type and format_type.lower() == "详细":
+                return f"用户详细信息 - ID: {user_id}, 姓名: {user_name}, {info_type}: {info}"
+            else:
+                return f"用户 {user_name} 的{info_type}是 {info}"
+
+
+        userinfo_service_agent = Agent[UserInfo](
+            name="客户服务助手",
+            instructions="你是一个帮助查询用户信息的助手",
+            model=OpenAIChatCompletionsModel(
+                model=DEEPSEEK_MODEL,
+                openai_client=deepseek_client,
+            ),
+            model_settings=ModelSettings(
+                temperature=0.6,
+                max_tokens=2048,
+            ),
+            tools=[fetch_user_info] # 💡 
+        )       
+
+        user_info = UserInfo(name="water", uid=123456)
+
+        # 示例1: 查询年龄（基本用法）💡 
+        result1 = await Runner.run(  
+            starting_agent=userinfo_service_agent,
+            input="请告诉我water的年龄",
+            context=user_info,  # 通过context参数来传递上下文类对象
+        )
+        print("===== 查询年龄 =====")
+        print(result1.final_output) 
+
+        # ☄ Local Context的另一个重要应用场景是多代理协作中的状态共享
+        import nest_asyncio
+        nest_asyncio.apply()
+
+        # 阶段一：上下文设计与初始化
+        from dataclasses import dataclass, field
+        from typing import List, Dict, Any, Optional
+        import pymysql
+        from pymysql.cursors import DictCursor
+        from datetime import datetime, date
+        from dbutils.pooled_db import PooledDB
+        from faker import Faker
+        import json
+        from agents import Agent, RunContextWrapper, Runner, function_tool, handoff
+
+        # 创建Faker实例用于生成模拟数据
+        fake = Faker('zh_CN')
+
+        @dataclass
+        class MySQLContext:
+            """管理MySQL连接和查询状态的上下文类"""
+            connection_pool: PooledDB  # 共享数据库连接池
+            customer_id: str  # 当前正在服务的客户ID
+            query_results: Dict[str, Any] = field(default_factory=dict) # 用于存储查询结果
+            current_step: str = "客户信息查询" # 当前步骤
+            workflow_complete: bool = False # 是否完成工作流
+            
+            def get_connection(self):
+                """从连接池获取一个连接"""
+                return self.connection_pool.connection()
+
+        # 创建连接池 - 使用您提供的dbutils和pymysql实现
+        pool = PooledDB(
+            creator=pymysql,       # 使用pymysql模块
+            maxconnections=5,      # 连接池允许的最大连接数
+            host="localhost",
+            user="root",
+            password="Snowball2019",  # 使用您提供的密码
+            port=3306,
+            database="financial_service",
+            charset='utf8mb4',
+            connect_timeout=10     # 连接超时时间
+        )
+        
+
+        # 阶段二：创建客户信息助手（第一个智能体）
+        # 这个函数负责查询客户的基本个人信息，包括姓名、账户类型、余额、联系方式等
+        @function_tool
+        async def query_customer_info(
+            context: RunContextWrapper[MySQLContext],           # 隐式参数 - 上下文
+            include_sensitive_info: Optional[bool] = False,     # 显式参数 - 是否包含敏感信息
+            format_type: Optional[str] = "standard"             # 显式参数 - 输出格式
+        ) -> str:
+            """
+            查询客户的基本信息
+            
+            参数:
+            - include_sensitive_info: 是否包含敏感信息如电话和邮箱
+            - format_type: 输出格式类型，可选"standard"、"brief"或"detailed"   
+            """
+            connection = None
+            cursor = None
+            try:
+                # 从上下文获取隐式参数 
+                connection = context.context.get_connection()   # 从上下文获取数据库连接
+                cursor = connection.cursor(DictCursor)          # 创建游标
+                customer_id = context.context.customer_id      # 从上下文获取当前客户ID
+                
+                # 查询客户基本信息
+                cursor.execute("""
+                SELECT id, name, account_type, balance, phone, email, address, registration_date
+                FROM customers
+                WHERE id = %s
+                """, (customer_id,))
+                
+                customer = cursor.fetchone()  # 获取查询结果
+                if not customer:
+                    return f"未找到ID为{customer_id}的客户信息"
+                
+                # 将日期转换为字符串
+                if 'registration_date' in customer and isinstance(customer['registration_date'], (datetime, date)):
+                    customer['registration_date'] = customer['registration_date'].isoformat()
+                    
+                # 存储查询结果到上下文
+                context.context.query_results["customer_info"] = customer  # 将查询结果存储到上下文
+                context.context.current_step = "交易历史查询"              # 更新当前步骤
+                
+                # 根据显式参数处理敏感信息
+                if not include_sensitive_info:
+                    phone = "***********" if 'phone' in customer else "未提供"  # 如果包含敏感信息，则将电话和邮箱隐藏
+                    email = "***********" if 'email' in customer else "未提供"  # 如果包含敏感信息，则将电话和邮箱隐藏
+                else:
+                    phone = customer.get('phone', "未提供")  # 如果不需要隐藏敏感信息，则直接返回电话和邮箱
+                    email = customer.get('email', "未提供")  # 如果不需要隐藏敏感信息，则直接返回电话和邮箱
+                
+                # 根据显式参数格式化输出
+                if format_type.lower() == "brief":
+                    # 简要格式
+                    info = (
+                        f"客户 {customer['name']} ({customer['account_type']})\n"
+                        f"账户余额: {customer['balance']} 元"
+                    )
+                elif format_type.lower() == "detailed":
+                    # 详细格式
+                    info = (
+                        f"客户详细信息（ID: {customer_id}）:\n"
+                        f"- 姓名: {customer['name']}\n"
+                        f"- 账户类型: {customer['account_type']}\n"
+                        f"- 账户余额: {customer['balance']} 元\n"
+                        f"- 电话: {phone}\n"
+                        f"- 邮箱: {email}\n"
+                        f"- 地址: {customer['address']}\n"
+                        f"- 注册日期: {customer['registration_date']}\n"
+                        f"- 客户价值评估: {'高' if float(customer['balance']) > 500000 else '中' if float(customer['balance']) > 100000 else '一般'}"
+                    )
+                else:
+                    # 标准格式
+                    info = (
+                        f"客户信息:\n"
+                        f"- 姓名: {customer['name']}\n"
+                        f"- 账户类型: {customer['account_type']}\n"
+                        f"- 账户余额: {customer['balance']} 元\n"
+                        f"- 电话: {phone}\n"
+                        f"- 邮箱: {email}\n"
+                        f"- 地址: {customer['address']}\n"
+                        f"- 注册日期: {customer['registration_date']}"
+                    )
+                
+                return info
+            
+            except Exception as e:
+                return f"查询客户信息时发生错误: {str(e)}"
+            
+            finally:
+                if cursor:
+                    cursor.close()
+                if connection:
+                    connection.close()
+                        
+        @function_tool
+        async def query_transaction_history(
+            context: RunContextWrapper[MySQLContext],           # 隐式参数 - 上下文
+            days: Optional[int] = 30,                           # 显式参数 - 查询天数
+            transaction_type: Optional[str] = None,             # 显式参数 - 交易类型过滤
+            min_amount: Optional[float] = None                  # 显式参数 - 最小金额过滤
+        ) -> str:
+            """
+            查询客户的交易历史
+            
+            参数:
+            - days: 查询最近几天的交易，默认30天
+            - transaction_type: 交易类型过滤，如"存款"、"取款"、"购买"、"赎回" 
+            - min_amount: 最小交易金额过滤
+            """
+            connection = None
+            cursor = None
+            try:
+                # 从上下文获取隐式参数
+                connection = context.context.get_connection()   # 从上下文获取数据库连接
+                cursor = connection.cursor(DictCursor)          # 创建游标
+                customer_id = context.context.customer_id      # 从上下文获取当前客户ID
+                
+                # 构建查询SQL - 使用显式参数
+                base_query = """
+                SELECT t.id, t.amount, t.transaction_date, t.transaction_type, t.status, p.name as product_name
+                FROM transactions t
+                JOIN products p ON t.product_id = p.id
+                WHERE t.customer_id = %s
+                """
+                
+                query_params = [customer_id]
+                
+                # 添加日期过滤条件
+                if days:
+                    base_query += " AND t.transaction_date >= DATE_SUB(NOW(), INTERVAL %s DAY)"
+                    query_params.append(days)
+                
+                # 添加交易类型过滤条件
+                if transaction_type:
+                    base_query += " AND t.transaction_type = %s"
+                    query_params.append(transaction_type)
+                
+                # 添加最小金额过滤条件
+                if min_amount:
+                    base_query += " AND t.amount >= %s"
+                    query_params.append(min_amount)
+                
+                base_query += " ORDER BY t.transaction_date DESC LIMIT 10"
+                
+                # 执行查询
+                cursor.execute(base_query, tuple(query_params))
+                transactions = cursor.fetchall()
+                
+                # 转换日期为字符串
+                for tx in transactions:
+                    if 'transaction_date' in tx and isinstance(tx['transaction_date'], (datetime, date)):
+                        tx['transaction_date'] = tx['transaction_date'].isoformat()
+                
+                # 存储查询结果到上下文
+                context.context.query_results["transaction_history"] = transactions  # 将查询结果存储到上下文
+                context.context.current_step = "产品推荐"                              # 更新当前步骤
+                
+                # 构建筛选条件描述
+                filter_desc = []
+                if days:
+                    filter_desc.append(f"最近{days}天")
+                if transaction_type:
+                    filter_desc.append(f"类型为{transaction_type}")
+                if min_amount:
+                    filter_desc.append(f"金额≥{min_amount}元")
+                
+                filter_text = "（筛选：" + "、".join(filter_desc) + "）" if filter_desc else ""
+                
+                if not transactions:
+                    return f"该客户{filter_text}没有交易记录"
+                
+                # 格式化输出交易历史
+                history = f"最近交易记录{filter_text}:\n"
+                for i, tx in enumerate(transactions, 1):
+                    history += (
+                        f"{i}. 产品: {tx['product_name']}\n"
+                        f"   金额: {tx['amount']} 元\n"
+                        f"   类型: {tx['transaction_type']}\n"
+                        f"   日期: {tx['transaction_date']}\n"
+                        f"   状态: {tx['status']}\n"
+                    )
+                
+                # 添加总结信息
+                total_amount = sum(float(tx['amount']) for tx in transactions)
+                history += f"\n共 {len(transactions)} 笔交易，总金额: {total_amount:.2f} 元"
+                
+                return history
+            
+            except Exception as e:
+                return f"查询交易历史时发生错误: {str(e)}"
+            
+            finally:
+                if cursor:
+                    cursor.close()
+                if connection:
+                    connection.close()            
+
+        
+        # 创建代理
+        info_agent = Agent[MySQLContext](
+            name="客户信息助手",
+            instructions="请使用中文回答用户的问题",
+            model=OpenAIChatCompletionsModel(
+                model=DEEPSEEK_MODEL,
+                openai_client=deepseek_client,
+            ),
+            model_settings=ModelSettings(
+                temperature=0.6,
+                max_tokens=2048,
+            ),
+            tools=[query_customer_info, query_transaction_history], # 通过 tools 参数接收工具函数
+            handoffs=[recommend_agent]
+        )
+
+
+        # 选择一个客户ID
+        # 从某个界面选择客户的过程
+        mysql_ctx = MySQLContext(
+            connection_pool=pool,
+            customer_id="CUST000100",  # 示例客户ID
+        )
+
+
+        # 第一步：客户信息查询
+        result1 = await Runner.run(
+            starting_agent=info_agent,
+            input="查询下客户的基本信息",
+            context=mysql_ctx  # 传递上下文
+        )
+        print("\n===== 客户信息查询 =====")
+        print(result1.final_output)
+
+        # 阶段三：构建产品的推荐代理（第二智能体）
+        @function_tool
+        async def recommend_products(
+            context: RunContextWrapper[MySQLContext],           # 隐式参数 - 上下文
+            product_category: Optional[str] = None,             # 显式参数 - 产品类别
+            risk_level: Optional[str] = None,                   # 显式参数 - 风险等级
+            max_results: Optional[int] = 6                      # 显式参数 - 最大结果数量
+        ) -> str:
+            """
+            基于客户信息和交易历史推荐产品
+            
+            参数:
+            - product_category: 产品类别过滤，如"储蓄"、"理财"、"保险"、"贷款"
+            - risk_level: 风险等级过滤，如"低"、"中"、"高"
+            - max_results: 最多返回几个产品推荐，默认6个
+            """
+            connection = None
+            cursor = None
+            try:
+                # 从上下文获取隐式参数
+                connection = context.context.get_connection() # 从上下文获取数据库连接
+                cursor = connection.cursor(DictCursor) # 创建游标
+                
+                # 从上下文获取前面步骤查询的客户信息
+                customer_info = context.context.query_results.get("customer_info", {}) # 从上下文获取客户信息
+                if not customer_info:
+                    return "无法推荐产品，客户信息不可用"
+                
+                account_type = customer_info.get('account_type')
+                balance = float(customer_info.get('balance', 0))
+                
+                # 构建基础查询
+                base_query = """
+                SELECT id, name, category, min_amount, interest_rate, term_months, risk_level
+                FROM products
+                WHERE min_amount <= %s
+                """
+                
+                query_params = [balance]
+                
+                # 根据显式参数添加条件
+                if product_category:
+                    base_query += " AND category = %s"
+                    query_params.append(product_category)
+                
+                if risk_level:
+                    base_query += " AND risk_level = %s"
+                    query_params.append(risk_level)
+                
+                # 根据用户类型决定是否包含VIP产品
+                if account_type in ('VIP', '白金'):
+                    # VIP客户可以看到所有产品，优先显示VIP专属产品
+                    base_query += """ ORDER BY CASE 
+                        WHEN suitable_for_vip = 1 THEN 0 
+                        ELSE 1 
+                    END, category"""
+                else:
+                    # 普通客户只看非VIP产品
+                    base_query += " AND suitable_for_vip = 0 ORDER BY category"
+                
+                # 限制结果数量
+                base_query += f" LIMIT {max_results}"
+                
+                # 执行查询
+                cursor.execute(base_query, tuple(query_params))
+                recommended_products = cursor.fetchall()
+                
+                # 存储推荐结果到上下文
+                context.context.query_results["recommended_products"] = recommended_products
+                context.context.current_step = "完成推荐"
+                context.context.workflow_complete = True
+                
+                if not recommended_products:
+                    return "没有找到符合客户条件的产品"
+                
+                # 构建筛选条件描述
+                filter_desc = []
+                if product_category:
+                    filter_desc.append(f"类别：{product_category}")
+                if risk_level:
+                    filter_desc.append(f"风险等级：{risk_level}")
+                
+                filter_text = "（筛选：" + "、".join(filter_desc) + "）" if filter_desc else ""
+                
+                # 格式化推荐输出
+                recommendations = f"为{customer_info['name']}({account_type}客户)推荐以下产品{filter_text}:\n\n"
+                
+                for i, product in enumerate(recommended_products, 1):
+                    interest_info = f"利率: {product['interest_rate']}%" if product['interest_rate'] is not None else ""
+                    term_info = f"期限: {product['term_months']}个月" if product['term_months'] > 0 else "无固定期限"
+                    
+                    recommendations += (
+                        f"{i}. {product['name']} ({product['category']})\n"
+                        f"   最低金额: {product['min_amount']} 元\n"
+                        f"   {interest_info}\n"
+                        f"   {term_info}\n"
+                        f"   风险等级: {product['risk_level']}\n\n"
+                    )
+                
+                # 根据客户类型添加特权信息
+                if account_type == '白金':
+                    recommendations += "【白金会员特权】您可以享受产品手续费全免和专属理财经理服务。\n"
+                elif account_type == 'VIP':
+                    recommendations += "【VIP会员特权】您可以享受产品手续费5折优惠。\n"
+                
+                return recommendations
+            
+            except Exception as e:
+                return f"推荐产品时发生错误: {str(e)}"
+            
+            finally:
+                if cursor:
+                    cursor.close()
+                if connection:
+                    connection.close()
+
+        
+        # 有两种方式可以构建转接代理
+
+        # 🌰 第一种比较简单的方法是直接传递Agent对象
+
+            recommend_agent = Agent[MySQLContext](
+                name="产品推荐助手",
+                instructions="请使用中文回答用户的问题",
+                model=OpenAIChatCompletionsModel(
+                    model=DEEPSEEK_MODEL,
+                    openai_client=deepseek_client,
+                ),
+                model_settings=ModelSettings(
+                    temperature=0.6,
+                    max_tokens=2048,
+                ),
+                tools=[recommend_products],
+                handoffs=[info_agent]  # 可以切换回客户信息助手，当然也可以传递多个代理
+            )
+
+            # 选择一个客户ID
+            # 从某个界面选择客户的过程
+            mysql_ctx = MySQLContext(
+                connection_pool=pool,
+                customer_id="CUST000100",  # 示例客户ID
+            )
+
+            # 产品推荐
+            result4 = await Runner.run(
+                starting_agent=recommend_agent,
+                input="查询客户近一年的存款记录，推荐一个储蓄产品",
+                context=mysql_ctx
+            )
+            print("\n===== 产品推荐 =====")
+            print(result4.final_output)
+
+        # 🌰 第二种方式通过handoff函数设置代理转接
+        # 创建代理
+        info_agent = Agent[MySQLContext](
+            name="客户信息助手",
+            instructions="请使用中文回答用户的问题",
+            model=OpenAIChatCompletionsModel(
+                model=DEEPSEEK_MODEL,
+                openai_client=deepseek_client,
+            ),
+            model_settings=ModelSettings(
+                temperature=0.6,
+                max_tokens=2048,
+            ),
+            tools=[query_customer_info, query_transaction_history], # 通过 tools 参数接收工具函数
+            handoffs=[handoff(
+                agent=recommend_agent,
+                tool_name_override="transfer_to_recommend_agent",
+                tool_description_override="""当且仅当用户明确需要产品推荐，且您已通过query_customer_info和query_transaction_history工具获取了足够\
+                                            的客户基本信息和交易历史后，才使用此工具将对话转交给产品推荐助手。切勿在客户信息不完整时使用此工具。""",
+            )]   
+        )
+
+        recommend_agent = Agent[MySQLContext](
+            name="产品推荐助手",
+            instructions="请使用中文回答用户的问题",
+            model=OpenAIChatCompletionsModel(
+                model=DEEPSEEK_MODEL,
+                openai_client=deepseek_client,
+            ),
+            model_settings=ModelSettings(
+                temperature=0.6,
+                max_tokens=2048,
+            ),
+            tools=[recommend_products],
+            handoffs = [handoff(
+                agent=info_agent,
+                tool_name_override="transfer_to_info_agent",
+                tool_description_override="""当且仅当您需要获取更多客户信息或查询历史交易记录且当前上下文中没有这些信息时，才使用此工具。\
+                                            使用此工具前，请明确说明您需要查询的具体信息类型（如基本资料、交易历史等）。\
+                                            获取信息后，您应当回到产品推荐流程。""",
+            )]
+        )
+
+
+        # ✈ Model Context
+
+        RECOMMENDED_PROMPT_PREFIX = (
+            "# 系统上下文\n"
+            "您是一个名为 Agents SDK 的多代理系统的一部分，旨在简化代理的协调和执行。"
+            "代理使用两个主要抽象：**Agents** 和 **Handoff**。一个代理包含指令和工具，并可以在适当的时候将对话交接给另一个代理。\n"
+            "交接是通过调用一个交接函数来实现的，通常命名为 `transfer_to_<agent_name>`。代理之间的转移在后台无缝处理；请不要在与用户的对话中提及或引起对这些转移的注意。\n"
+        )
+
+
+        # 1. 首先创建recommend_agent，s
+        recommend_agent = Agent[MySQLContext](
+            name="产品推荐助手",
+            instructions=f"""{RECOMMENDED_PROMPT_PREFIX}
+            您是一位专业的金融产品推荐专家，擅长根据客户信息和交易历史推荐合适的金融产品。
+
+            请按照以下顺序处理用户请求：
+            1. 首先尝试使用您自己的工具(recommend_products)基于已有信息推荐产品
+            2. 只有在确实需要更多客户信息或交易历史且当前上下文中没有这些信息时，才使用transfer_to_info_agent工具
+            3. 一旦获得所需的客户信息，请回到自己的工具推荐产品，不要直接给出回答
+
+            请使用中文与用户交流，提供专业的产品推荐。
+            """,
+            model=OpenAIChatCompletionsModel(
+                model=DEEPSEEK_MODEL,
+                openai_client=deepseek_client,
+            ),
+            model_settings=ModelSettings(
+                temperature=0.6,
+                max_tokens=2048,
+            ),
+            tools=[recommend_products],
+            handoffs = [handoff(
+                agent=info_agent,
+                tool_name_override="transfer_to_info_agent",
+                tool_description_override="当且仅当您需要获取更多客户信息或查询历史交易记录且当前上下文中没有这些信息时，才使用此工具。使用此工具前，请明确说明您需要查询的具体信息类型（如基本资料、交易历史等）。获取信息后，您应当回到产品推荐流程。",
+            )]
+        )
+
+        # 2. 然后创建info_agent，包含对recommend_agent的handoff
+        info_agent = Agent[MySQLContext](
+            name="客户信息助手",
+            instructions=f"""{RECOMMENDED_PROMPT_PREFIX}
+            您是一位专业的客户信息查询助手，擅长检索和提供客户详细信息及交易历史记录。
+
+            请按照以下顺序处理用户请求：
+            1. 首先使用您自己的工具(query_customer_info, query_transaction_history)获取客户信息
+            2. 如果用户明确表示需要产品推荐，且您已获取到足够的客户信息后，才使用transfer_to_recommend_agent工具
+            3. 切勿在未获取充分客户信息的情况下过早转交给产品推荐助手
+
+            请使用中文与用户交流，确保提供准确的客户信息。
+            """,
+            model=OpenAIChatCompletionsModel(
+                model=DEEPSEEK_MODEL,
+                openai_client=deepseek_client,
+            ),
+            model_settings=ModelSettings(
+                temperature=0.6,
+                max_tokens=2048,
+            ),
+            tools=[query_customer_info, query_transaction_history],
+            handoffs=[handoff(
+                agent=recommend_agent,
+                tool_name_override="transfer_to_recommend_agent",
+                tool_description_override="当且仅当用户明确需要产品推荐，且您已通过query_customer_info和query_transaction_history工具获取了足够的客户基本信息和交易历史后，才使用此工具将对话转交给产品推荐助手。切勿在客户信息不完整时使用此工具。",
+            )]  
+        )
+
+
+    # 📞 Stdio MCP服务器接入
+    import asyncio
+    import os
+    import shutil
+
+    from agents import Agent, Runner, gen_trace_id, trace
+    from agents.mcp import MCPServer, MCPServerStdio
+
+
+    async def run(mcp_server: MCPServer):
+        agent = Agent(
+            name="Assistant",
+            instructions="Use the tools to read the filesystem and answer questions based on those files.",
+            mcp_servers=[mcp_server],
+        )
+
+        # List the files it can read
+        message = "Read the files and list them."
+        print(f"Running: {message}")
+        result = await Runner.run(starting_agent=agent, input=message)
+        print(result.final_output)
+
+        # Ask about books
+        message = "What is my #1 favorite book?"
+        print(f"\n\nRunning: {message}")
+        result = await Runner.run(starting_agent=agent, input=message)
+        print(result.final_output)
+
+        # Ask a question that reads then reasons.
+        message = "Look at my favorite songs. Suggest one new song that I might like."
+        print(f"\n\nRunning: {message}")
+        result = await Runner.run(starting_agent=agent, input=message)
+        print(result.final_output)
+
+
+    async def main():
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        samples_dir = os.path.join(current_dir, "sample_files")
+
+        async with MCPServerStdio(
+            name="Filesystem Server, via npx",
+            params={
+                "command": "npx",
+                "args": ["-y", "@modelcontextprotocol/server-filesystem", samples_dir],
+            },
+        ) as server:
+            trace_id = gen_trace_id()
+            with trace(workflow_name="MCP Filesystem Example", trace_id=trace_id):
+                print(f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}\n")
+                await run(server)
+
+
+    if __name__ == "__main__":
+        # Let's make sure the user has npx installed
+        if not shutil.which("npx"):
+            raise RuntimeError("npx is not installed. Please install it with `npm install -g npx`.")
+
+        asyncio.run(main())
+
+    # 🚀 Agents SDK中的事件回调    
+
+
+
+
+# 🦅 HuggingFace
+# ====================================================================================================================================
+
+    import requests
+
+    API_URL = "https://api-inference.huggingface.co/models/uer/gpt2-chinese-cluecorpussmall"
+
+    # 不使用token进行匿名访问
+    response = requests.post(API_URL, json={"inputs": "你好啊！Hugging face"})
+    print(response.json())
+
+
+    # 使用token进行访问
+    API_TOKEN = "bcviiofewvniu"
+    headers = {
+        "Authorization": f"Bearer {API_TOKEN}"
+    }
+
+    response = requests.post(API_URL,  headers=headers, json={"inputs": "你好啊！Hugging face"})
+    print(response.json())
+
+
+    # 🚀将模型下载到本地调用
+    from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+    from transformers import BertForSequenceClassification, BertTokenizer
+
+    # 将模型与分词工具下载到本地
+    model_name = "uer/gpt2-chinese-cluecorpussmall"
+    cache_dir = "model/uer/gpt2-chinese-cluecorpussmall" # 模型下载的本地目录
+
+    # 下载模型
+    AutoModelForCausalLM.from_pretrained(model_name, cache_dir=cache_dir)
+    # 下载分词器
+    AutoTokenizer.from_pretrained(nodel_name, cache_dir=cache_dir)
+
+
+    model_name="bert-base-chinese"
+    model = BertForSequenceClassification.from_pretrained(model_name)
+    tokenizer = BertTokenizer.from_pretrained(model_name)
+    # 创建分类pipeline
+    classify = pipeline("text-classification", model=model, tokenizer=tokenizer, device="cuda")
+
+    # 进行分类
+    result = classify("你好，我是一款语言模型")
+    print(result)
+
+
+    from datasets import load_dataset, load_from_disk
+
+    # 在线加载数据集
+    dataset = load_dataset("NousResearch/hermes-function-calling-v1", split="train")
+
+    # 本地加载数据集
+    dataset = load_from_disk("<本地绝对路径>")
+
+
+    # 🚀定制化数据集
+    from torch.utils.data import Dataset
+    from datasets import load_from_disk
+
+    class MyDataset(Dataset):
+        # 初始化数据
+        def __init__(self, split):
+            # 从词盘加载数据
+            self.dataset = load_from_disk(r"<数据在本地的绝对路径>")
+            if split == 'train':
+                self.dataset = self.dataset['train']
+            elif split == "validation":
+                self.dataset = self.dataset["validation"]
+            elif split == "test":
+                self.dataset = self.dataset["test"]
+            else:
+                print("数据集的名称输入错误")    
+
+        # 获取数据的长度     
+        def __len__(self):
+            return len(self.dataset)
+
+        # 对数据做定制化处理    
+        def __getitem__(self, item):
+            text = self.dataset[item]["text"]
+            label = self.dataset[item]["label"]
+            return text, label
+
+
+    # 🚀定制模型
+    from transformers import BertModel
+    import torch
+
+    # 定义训练设备
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    pretrained = BertModel.from_pretrained("bert-base-chinese").to(DEVICE)
+    print(pretrained)  # out_features=
+
+    # 定义下游任务模型（将主干网络所提取的特征进行分类）
+    class Model(torch.nn.Module):
+        # 模型结构设计
+        def __init__(self):
+            super().__init__()
+            self.fc = torch.nn.Linear(768, 2) # 二分类
+        def forward(self, input_ids, attention_mask, token_type_ids):  # 定义前向推理
+            with torch.no_grad(): # 上游任务不参与训练
+                out = pretrained(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+
+            # 下游任务参与训练
+            out = self.fc(out.last_hidden_state[:,0])
+            out = out.softmax(dim=1)
+            return out
+
+
+    # 🚀 训练器
+    import torch
+    from torch.utils.data import DataLoader
+    from transformers import BertTokenizer, AdanW
+
+    # 定义训练设备
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # 训练轮次
+    EPOCH = 100
+
+    tokenizer = BertTokenizer.from_pretrained("bert-base-chinese")
+
+    # 自定义函数，对数据进行编码处理
+    def collate_fn(data):
+        sentes = [i[0] for i in data]
+        label = [i[1] for i in data]
+        # 编码处理
+        data = tokernizer.batch_encode_plus(
+            batch_text_or_text_pairs=sentes,
+            truncation=True,
+            padding="max_length",
+            max_length=500,
+            return_tensors="pt",
+            return_length=True
+        )
+        input_ids = data["input_ids"]
+        attention_mask = data["attention_mask"]
+        token_type_ids = data["token_type_ids"]
+        labels = torch.longTensor(label)
+
+        return input_ids, attention_mask, token_type_ids, labels 
+
+
+    # 创建数据集
+    train_dataset = MyDataset("train")
+    # 创建data_loader
+    train_loader = DataLoader(
+        dataset=train_loader,
+        batch_size=32,
+        shuffle=True, # 打乱数据集
+        drop_last=True, 
+        collate_fn=collate_fn
+    )
+
+    if __name__ == "__main__":
+        # 开始训练
+        print(DEVICE)
+        model = Model().to(DEVICE)
+        optimizer = AdanW(model.parameters(), lr=5e-4)
+        loss_func = torch.nn.CrossEntropyLoss()
+
+        model.train()
+        for epoch in range(EPOCH):
+            for i, (input_ids, attention_mask, token_type_ids, labels) in enumerate(train_loader):
+                # 将数据放到DEVICE上
+                input_ids, attention_mask, token_type_ids, labels = input_ids.to(DEVICE), \ 
+                    attention_mask.to(DEVICE), token_type_ids.to(DEVICE), labels.to(DEVICE)
+
+                # 执行前向计算得到输出
+                out = model(input_ids, attention_mask, token_type_ids)
+
+                loss = loss_func(out, labels)
+
+                optimizer.zero_grad()
+                loss.backword()
+                optimizer.step()
+
+                if i%5 == 0:
+                    out = out.argmax(dim=1)
+                    acc = (out == labels).sum().item()/len(labels)
+                    print(epoch, i, loss.item(), acc)
+
+            # 保存模型参数 
+            torch.save(model.state_dict(), f"params/{epoch}bert.pt")
+            print(epoch, "参数保存成功")
+
+
+# 📜 Context Engineering 
+# ====================================================================================================================================
+
+    # 🔹 六大模块: 系统提示层，对话历史层，记忆注入层，工具上下文层，任务状态层，外部知识层
+
+    # 🔹 五大策略框架：Write写入持久化/Select运行时检索/Compress上下文压缩/Isolate下上文隔离/Cache提示缓存
+
+
+    # 环境准备
+        from langchain_deepseek import ChatDeepSeek
+        from transformers import AutoTokenizer
+        from dotenv import load_dotenv
+        import os, time
+
+        # 加载环境变量（从 .env 文件读取 API 配置）
+        load_dotenv()
+
+        def create_llm(temperature: float = 0.7) -> ChatDeepSeek:
+            """
+            统一 LLM 初始化工厂函数，避免每个演示重复配置
+            
+            Args:
+                temperature: 控制输出随机性，0=确定性，1=高随机性，默认0.7
+            
+            Returns:
+                ChatDeepSeek: 配置好的 LLM 实例
+            """
+            return ChatDeepSeek(
+                model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),  # 从环境变量读取模型名
+                api_key=os.getenv("DEEPSEEK_API_KEY"),  # API 密钥
+                base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),  # API 端点
+                temperature=temperature,  # 输出随机性控制
+            )
+
+        # 加载 DeepSeek 官方 tokenizer（首次运行需下载 ~几MB，后续自动缓存）
+        # trust_remote_code=True 允许执行模型仓库中的自定义代码（DeepSeek tokenizer 需要）
+        tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-V3", trust_remote_code=True)
+
+        def count_tokens(text: str) -> int:
+            """
+            用 DeepSeek 官方 tokenizer 精确计算 token 数
+            
+            Args:
+                text: 待计算的文本字符串
+            
+            Returns:
+                int: token 数量（与 API 实际消耗一致）
+            """
+            return len(tokenizer.encode(text))
+
+        # 初始化全局 LLM 实例，temperature=0.3 确保演示结果稳定可复现
+        llm = create_llm(0.3)
+        print(f"LLM 初始化完成，Tokenizer 加载完成")
+
+    # 🎯 Write写入持久化
+    # 对话历史层 | 记忆注入层 | 任务状态层
+    # ----------------------------------------------------------------------------------------------------------------
+    # 🚀 === 短期记忆层的 Write：LLM 压缩摘要 + 持久化到 sessions/ ===
+        import json, os, time
+
+        SESSIONS_DIR = "./sessions"
+        os.makedirs(SESSIONS_DIR, exist_ok=True)
+
+        # 核心参数（与 SessionManager 一致：消息数达到阈值时，压缩前半部分，只保留后半部分）
+        COMPRESS_TRIGGER = 8   # 演示用小阈值（生产环境 SessionManager 用 20）
+        KEEP_RECENT = 4        # 压缩后保留最近 4 条消息
+
+        # ---- 步骤 1：创建 session，写入 8 条多轮对话 ----
+        session_id = "write_demo"
+
+        session = {
+            "title": "新项目技术选型讨论",
+            "created_at": time.strftime("%Y-%m-%d %H:%M"),
+            "updated_at": time.strftime("%Y-%m-%d %H:%M"),
+            "compressed_context": "",   # 压缩前为空
+            "messages": [
+                {"role": "user", "content": "新项目的数据库用什么？"},
+                {"role": "assistant", "content": "推荐 PostgreSQL。理由：项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 的 async 支持性能优秀。"},
+                {"role": "user", "content": "缓存方案呢？"},
+                {"role": "assistant", "content": "Redis，Cache-Aside 模式。热点数据 TTL=300s，写操作先更新 DB 再删缓存。"},
+                {"role": "user", "content": "部署方案定了吗？"},
+                {"role": "assistant", "content": "Docker Compose 本地开发，AWS ECS 生产。CI/CD 用 GitHub Actions，自动化金丝雀发布。"},
+                {"role": "user", "content": "预算上限是多少？"},
+                {"role": "assistant", "content": "初期 15 万以内。服务器 3 万/年，API 调用预留 2 万/月。"},
+            ]
+        }
+
+        # 写入 JSON（压缩前：8 条消息，compressed_context 为空）
+        session_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+        with open(session_path, "w", encoding="utf-8") as f:
+            json.dump(session, f, ensure_ascii=False, indent=2)
+
+        print(f"=== 压缩前：{session_path} ===")
+        print(f"messages: {len(session['messages'])} 条（达到 COMPRESS_TRIGGER={COMPRESS_TRIGGER}）")
+        print(f"compressed_context: （空）")
+
+        # ---- 步骤 2：达到阈值，压缩前 4 条为摘要，只保留后 4 条 ----
+        if len(session["messages"]) >= COMPRESS_TRIGGER:
+            early_messages = session["messages"][:-KEEP_RECENT]   # 前 4 条：将被压缩
+            recent_messages = session["messages"][-KEEP_RECENT:]  # 后 4 条：保留原文
+
+            # LLM 压缩早期对话（一句话回复，控制运行时间）
+            early_text = "\n".join(f'{m["role"]}: {m["content"]}' for m in early_messages)
+            compress_prompt = f"""
+            请将以下对话历史压缩为一段简洁的摘要，保留所有关键技术决策和数字：
+            \n\n{early_text}\n\n
+            输出要求：一段话，不超过 80 字。
+            """
+
+            summary = llm.invoke(compress_prompt).content # 送入模型进行压缩
+
+            # 写回 session：compressed_context 存摘要，messages 只留最近的
+            session["compressed_context"] = summary
+            session["messages"] = recent_messages
+            session["updated_at"] = time.strftime("%Y-%m-%d %H:%M")
+
+            # 处理后，重新写回文件
+            with open(session_path, "w", encoding="utf-8") as f:
+                json.dump(session, f, ensure_ascii=False, indent=2)
+
+        # ---- 步骤 3：展示压缩结果 ----
+        original_tokens = count_tokens(early_text)
+        summary_tokens = count_tokens(summary)
+
+        print(f"\n=== 压缩后：{session_path} ===")
+        print(f"compressed_context ({summary_tokens} tokens，原始 {original_tokens} tokens，压缩率 {(1 - summary_tokens/original_tokens)*100:.0f}%)：")
+        print(f"  {summary}")
+        print(f"messages: {len(session['messages'])} 条（只保留最近 {KEEP_RECENT} 条）")
+        for m in session["messages"]:
+            print(f"  [{m['role']}] {m['content'][:50]}")
+
+        # 从文件读回验证
+        print(f"\n=== 验证：从文件读回 ===")
+        with open(session_path, "r", encoding="utf-8") as f:
+            saved = json.load(f)
+        print(f"compressed_context 长度: {len(saved['compressed_context'])} 字符")
+        print(f"messages 数量: {len(saved['messages'])} 条")
+
+
+    # 🚀 === 长期记忆层的 Write：mem0.add() 选择性提取 ===
+        """
+        长期记忆的 Write 目标完全不同：**从对话中识别出值得跨会话保留的关键事实，结构化后写入向量数据库**。前课的 `mem0.add()` 
+        内部会调用 LLM 裁判（`_extract_facts()`）判断哪些信息值得记住，然后执行 ADD/UPDATE/NONE 三分类。
+
+        这里有一个关键细节：`mem0` 默认从 user 角色的消息中提取事实。因此，如果用户只是在提问（「数据库用什么？」），
+        `mem0` 提取不到有价值的决策信息。真实场景中，用户会在对话中确认决策（「数据库我们决定用 PostgreSQL」），这些确认性表述才是长期记忆的提取目标。
+        下面我们模拟这个场景：
+        """
+        import os, shutil
+        from mem0 import Memory
+
+        QDRANT_PATH = "./qdrant_write_demo"
+
+        # 清理残留锁（Notebook 重复运行时文件锁不会自动释放）
+        for p in [QDRANT_PATH, os.path.expanduser("~/.mem0/migrations_qdrant")]:
+            if os.path.exists(p):
+                shutil.rmtree(p)
+
+        # mem0 配置（与进阶课件一致：DeepSeek 做 LLM，OpenAI 做 Embedding）
+        config = {
+            "llm": {
+                "provider": "openai",
+                "config": {
+                    "model": "deepseek-chat",
+                    "api_key": os.getenv("DEEPSEEK_API_KEY"),
+                    "openai_base_url": "https://api.deepseek.com/v1",
+                    "temperature": 0.1,
+                }
+            },
+            "embedder": {
+                "provider": "openai",
+                "config": {
+                    "model": "text-embedding-3-small",
+                    "api_key": os.getenv("OPENAI_API_KEY"),
+                }
+            },
+            "vector_store": {
+                "provider": "qdrant",
+                "config": {
+                    "collection_name": "write_demo",
+                    "path": QDRANT_PATH,
+                }
+            },
+            "version": "v1.1"
+        }
+
+        memory = Memory.from_config(config)
+
+        # 关键：mem0 默认从 user 消息中提取事实
+        # 因此对话需要反映真实场景——用户确认技术决策，而非只是提问
+        decisions_conversation = [
+            {"role": "user", "content": "数据库我们决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async"},
+            {"role": "assistant", "content": "好的，PostgreSQL + SQLAlchemy 2.0 async 已记录。"},
+            {"role": "user", "content": "缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存"},
+            {"role": "assistant", "content": "了解，Redis Cache-Aside + write-through 策略。"},
+            {"role": "user", "content": "部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布"},
+            {"role": "assistant", "content": "部署流水线已记录。"},
+            {"role": "user", "content": "预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月"},
+            {"role": "assistant", "content": "预算约束已记录。"},
+        ]
+
+        # 一行代码完成「提取 + 去重 + 向量化 + 存储」
+        add_result = memory.add(decisions_conversation, user_id="dev_team_lead")
+
+        print("=== 长期 Write：mem0.add() 提取的记忆条目 ===")
+        for item in add_result.get("results", []):
+            event = item.get("event", "UNKNOWN")
+            mem_text = item.get("memory", "")
+            print(f"  [{event}] {mem_text}")
+
+        # === 长期 Write：mem0.add() 提取的记忆条目 ===
+          # [ADD] 数据库决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async
+          # [ADD] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
+          # [ADD] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
+          # [ADD] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
+
+
+        # 验证：search 能检索到刚才写入的记忆
+        search_result = memory.search("项目用什么数据库", user_id="dev_team_lead")
+        print(f'\n=== 验证：search("项目用什么数据库") ===')
+        for item in search_result.get("results", []):
+            print(f"  [score={item['score']:.2f}] {item['memory']}")
+
+        # === 验证：search("项目用什么数据库") ===
+          # [score=0.54] 数据库决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async
+          # [score=0.51] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
+          # [score=0.49] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
+          # [score=0.45] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
+
+
+        # Token 对比
+        mem_texts = [item.get("memory", "") for item in add_result.get("results", [])]
+        mem_tokens = sum(count_tokens(t) for t in mem_texts)
+        print(f"\n=== 三层 Write 的 Token 经济学对比 ===")
+        print(f"原始对话:     {original_tokens} tokens（完整历史）")
+        print(f"短期 Write:   {summary_tokens} tokens（压缩摘要，保留在 session 内）")
+        print(f"长期 Write:   {mem_tokens} tokens（{len(mem_texts)} 条结构化记忆，永久存入向量库）")
+        # === 三层 Write 的 Token 经济学对比 ===
+        # 原始对话:     79 tokens（完整历史）
+        # 短期 Write:   53 tokens（压缩摘要，保留在 session 内）
+        # 长期 Write:   108 tokens（4 条结构化记忆，永久存入向量库）
+
+
+    # 🚀 === 任务状态层的 Write：Scratchpad / todo.md
+        """
+        除了记忆层的两种 Write，还有一种在生产 Agent 中极为常见的 Write 形态：把任务执行进度写入结构化文件（如 `todo.md`、`CLAUDE.md`），
+        让 Agent 在上下文窗口被重置后能恢复执行状态。这对应我们在 2.6 节介绍的「任务状态层」——Scratchpad 就是 Agent 的「草稿纸」。
+
+        与前两种 Write 的关键区别：短期压缩保留的是对话语义，mem0 提取的是用户知识，而 todo.md 记录的是任务进度——哪些步骤做完了、当前卡在哪、下一步是什么。
+        下面模拟一个多步骤项目任务，展示 Agent 如何通过 Write to Scratchpad 实现「断点续传」：
+        """
+
+        import json, os
+
+        TODO_FILE = "./todo_demo.md"
+
+        # ---- 第一阶段：Agent 执行任务并实时写入进度 ----
+        task_plan = [
+            {"step": 1, "task": "初始化 PostgreSQL 连接池", "status": "done", "result": "pool_size=20, max_overflow=10"},
+            {"step": 2, "task": "创建 users 表迁移脚本", "status": "done", "result": "alembic revision --autogenerate 完成"},
+            {"step": 3, "task": "实现 JWT 认证中间件", "status": "in_progress", "result": "refresh token 逻辑未完成"},
+            {"step": 4, "task": "配置 Redis 缓存层", "status": "pending", "result": ""},
+            {"step": 5, "task": "编写 API 集成测试", "status": "pending", "result": ""},
+        ]
+
+        # Agent 将当前进度写入 todo.md（Write to Scratchpad）
+        def write_todo(tasks, filepath):
+            lines = ["# 项目任务进度\n\n"]
+            status_icon = {"done": "[x]", "in_progress": "[-]", "pending": "[ ]"}
+            for t in tasks:
+                icon = status_icon[t["status"]]
+                line = f"{icon} Step {t['step']}: {t['task']}"
+                if t["result"]:
+                    line += f" → {t['result']}"
+                lines.append(line + "\n")
+            with open(filepath, "w") as f:
+                f.writelines(lines)
+
+        write_todo(task_plan, TODO_FILE)
+        print("=== Agent 写入 todo.md（模拟执行到 Step 3 中断）===")
+        print(open(TODO_FILE).read())
+
+        # === Agent 写入 todo.md（模拟执行到 Step 3 中断）===
+        ## 项目任务进度
+
+        # [x] Step 1: 初始化 PostgreSQL 连接池 → pool_size=20, max_overflow=10
+        # [x] Step 2: 创建 users 表迁移脚本 → alembic revision --autogenerate 完成
+        # [-] Step 3: 实现 JWT 认证中间件 → refresh token 逻辑未完成
+        # [ ] Step 4: 配置 Redis 缓存层
+        # [ ] Step 5: 编写 API 集成测试
+
+
+        # ---- 第二阶段：模拟上下文重置（新会话/auto-compact 后）----
+        # Agent 读回 todo.md，恢复执行状态
+        def read_todo(filepath):
+            with open(filepath) as f:
+                content = f.read()
+            # 解析出当前进度
+            done = content.count("[x]")
+            in_progress = content.count("[-]")
+            pending = content.count("[ ]")
+            return content, done, in_progress, pending
+
+        content, done, in_prog, pending = read_todo(TODO_FILE)
+        print("=== 新会话：Agent 读取 todo.md 恢复状态 ===")
+        print(f"已完成: {done} | 进行中: {in_prog} | 待开始: {pending}")
+        print(f"→ Agent 决策：继续 Step 3（JWT refresh token），无需从头开始")
+
+        # === 新会话：Agent 读取 todo.md 恢复状态 ===
+        # 已完成: 2 | 进行中: 1 | 待开始: 2
+        # → Agent 决策：继续 Step 3（JWT refresh token），无需从头开始
+
+        # Token 对比：todo.md vs 完整对话历史
+        todo_tokens = count_tokens(content)
+        # 假设完成前 3 步产生了约 20 轮对话
+        estimated_history = "user: ...\nassistant: ...\n" * 20
+        history_tokens = count_tokens(estimated_history) * 5  # 真实对话每轮约 200 tokens
+        print(f"\n=== Scratchpad Write 的 Token 经济学 ===")
+        print(f"todo.md:        {todo_tokens} tokens（结构化进度）")
+        print(f"完整对话历史:   ~{history_tokens} tokens（20 轮对话估算）")
+        print(f"恢复执行所需上下文：只需 todo.md + 当前步骤描述，不需要回放全部历史")
+
+        # === Scratchpad Write 的 Token 经济学 ===
+        # todo.md:        103 tokens（结构化进度）
+        # 完整对话历史:   ~700 tokens（20 轮对话估算）
+        # 恢复执行所需上下文：只需 todo.md + 当前步骤描述，不需要回放全部历史
+
+        # 清理
+        os.remove(TODO_FILE)
+
+
+    # 🎯 Select运行时检索
+    # 记忆注入层 | 外部知识层
+    # ----------------------------------------------------------------------------------------------------------------
+    # 🚀 === memo0 memory.search 向量语义搜索
+        # 场景：Agent 收到新任务——"帮我配置数据库连接池"
+        # Select 策略：先搜索长期记忆，看项目之前做过什么技术决策
+        task_query = "服务器预算"
+        results = memory.search(query=task_query, user_id="dev_team_lead", limit=2)
+
+        print(f'=== memory.search("{task_query}") ===')
+        print(f"召回 {len(results.get('results', []))} 条相关记忆：\n")
+        for item in results.get("results", []):
+            score = item.get("score", 0)
+            mem = item.get("memory", "")
+            print(f"  [相关度 {score:.2f}] {mem}")
+
+        # === memory.search("服务器预算") ===
+        # 召回 2 条相关记忆：
+
+          # [相关度 0.65] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
+          # [相关度 0.42] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
+
+
+        # 对比：换一个与已有记忆无关的查询
+        irrelevant_query = "本地部署方案"
+        irr_results = memory.search(query=irrelevant_query, user_id="dev_team_lead", limit=2)
+        print(f'\n=== memory.search("{irrelevant_query}") ===')
+        print(f"召回 {len(irr_results.get('results', []))} 条记忆：\n")
+        for item in irr_results.get("results", []):
+            score = item.get("score", 0)
+            mem = item.get("memory", "")
+            print(f"  [相关度 {score:.2f}] {mem}")
+
+        # === memory.search("本地部署方案") ===
+        # 召回 2 条记忆：
+
+          # [相关度 0.52] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
+          # [相关度 0.37] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存    
+
+        # Token 节省分析：全量 vs Select
+        all_mems = memory.get_all(user_id="dev_team_lead")
+        all_text = "\n".join(m.get("memory", "") for m in all_mems.get("results", []))
+        selected_text = "\n".join(
+            item.get("memory", "") for item in results.get("results", [])
+            if item.get("score", 0) > 0.3  # 只保留相关度 > 0.3 的记忆
+        )
+        print(f"\n=== Select 效果：语义过滤的 Token 节省 ===")
+        print(f"记忆库全量注入: {count_tokens(all_text)} tokens（{len(all_mems.get('results', []))} 条）")
+        print(f"Select 后注入:  {count_tokens(selected_text)} tokens（仅高相关度条目）")
+        if count_tokens(all_text) > 0:
+            print(f"节省:           {(1 - count_tokens(selected_text)/count_tokens(all_text))*100:.0f}%")
+
+        # === Select 效果：语义过滤的 Token 节省 ===
+        # 记忆库全量注入: 111 tokens（4 条）
+        # Select 后注入:  56 tokens（仅高相关度条目）
+        # 节省:           50%    
+
+    # 🚀 === Glob + Grep 文件精确检索
+        """
+        前一种 Select 操作的是结构化数据（向量数据库），而 Glob + Grep 操作的是**非结构化的文件系统**。
+        这是 Coding Agent（如 Claude Code、Cursor）最核心的 Select 能力：面对一个几万文件的代码仓库，Agent 不可能把所有文件都读进上下文，
+        必须先用 Glob 按文件名模式缩小范围，再用 Grep 按关键词精确定位。
+        """
+        # === Select 策略：Glob + Grep 文件精确检索 ===
+        import glob, os, shutil
+
+        # 构建模拟项目目录（实际 Agent 操作真实代码仓库）
+        PROJECT = "./select_demo_project"
+        os.makedirs(f"{PROJECT}/backend/api", exist_ok=True)
+        os.makedirs(f"{PROJECT}/backend/graph", exist_ok=True)
+        os.makedirs(f"{PROJECT}/backend/models", exist_ok=True)
+        os.makedirs(f"{PROJECT}/frontend/src", exist_ok=True)
+
+        mock_files = {
+            f"{PROJECT}/backend/api/chat.py": (
+                "from fastapi import APIRouter\n"
+                "# SSE 流式端点，处理用户消息\n"
+                "async def chat_stream(request):\n"
+                "    session = SessionManager()\n"
+                "    response = await agent.invoke(request.message)\n"
+            ),
+            f"{PROJECT}/backend/graph/agent.py": (
+                "from langchain_deepseek import ChatDeepSeek\n"
+                "from mem0 import Memory\n"
+                "MAX_HISTORY = 20\n"
+                "class AgentManager:\n"
+                "    def __init__(self):\n"
+                "        self.memory = Memory.from_config(config)\n"
+            ),
+            f"{PROJECT}/backend/graph/session_manager.py": (
+                "import json\n"
+                "class SessionManager:\n"
+                "    def compress_history(self, messages):\n"
+                "        # LLM 摘要压缩，保留决策链\n"
+                "        summary = llm.invoke(compress_prompt)\n"
+            ),
+            f"{PROJECT}/backend/graph/mem0_manager.py": (
+                "from mem0 import Memory\n"
+                "def get_typed_context(user_id, query):\n"
+                "    results = memory.search(query, user_id=user_id)\n"
+                "    return group_by_type(results)\n"
+            ),
+            f"{PROJECT}/backend/models/database.py": (
+                "from sqlalchemy import create_engine\n"
+                "DATABASE_URL = os.getenv('DATABASE_URL')\n"
+                "engine = create_engine(DATABASE_URL, pool_size=10)\n"
+            ),
+            f"{PROJECT}/frontend/src/App.tsx": (
+                "import React from 'react'\n"
+                "function App() { return <ChatWindow /> }\n"
+            ),
+        }
+
+        for path, content in mock_files.items():
+            with open(path, "w") as f:
+                f.write(content)
+
+        # ✈ Step 1: Glob — 按文件名模式快速圈定范围
+        pattern = f"{PROJECT}/backend/**/*.py"
+        py_files = glob.glob(pattern, recursive=True) # 检索出项目中的所有后端项目中的py文件
+        print(f"=== Step 1: Glob(\"{pattern}\") ===")
+        print(f"匹配 {len(py_files)} 个 Python 文件：")
+        for f in py_files:
+            print(f"  {f}")
+
+        # ✈ Step 2: Grep — 按关键词从候选文件中精确筛选
+        keyword = "Memory"
+        print(f'\n=== Step 2: Grep(\"{keyword}\") — 在 Glob 结果中搜索 ===')
+        matched = []
+        for filepath in py_files:
+            with open(filepath) as f:
+                content = f.read()
+            hits = [(i+1, line.strip()) for i, line in enumerate(content.split("\n")) if keyword in line]
+            if hits:
+                matched.append(filepath)
+                for lineno, line in hits:
+                    print(f"  {os.path.basename(filepath)}:{lineno}  {line}")
+
+        # Token 节省分析
+        all_content = "\n".join(open(f).read() for f in py_files)
+        sel_content = "\n".join(open(f).read() for f in matched)
+        print(f"\n=== Select 效果：两阶段过滤的 Token 节省 ===")
+        print(f"项目全部文件:  6 个（含前端）")
+        print(f"Glob 过滤后:   {len(py_files)} 个 Python 文件 → {count_tokens(all_content)} tokens")
+        print(f"Grep 精筛后:   {len(matched)} 个含 Memory 的文件 → {count_tokens(sel_content)} tokens")
+        print(f"两阶段节省:    {(1 - count_tokens(sel_content)/max(count_tokens(all_content),1))*100:.0f}%")
+
+        # 清理
+        shutil.rmtree(PROJECT)
+
+        # === Step 1: Glob("./select_demo_project/backend/**/*.py") ===
+        # 匹配 5 个 Python 文件：
+        #   ./select_demo_project/backend/api/chat.py
+        #   ./select_demo_project/backend/graph/agent.py
+        #   ./select_demo_project/backend/graph/mem0_manager.py
+        #   ./select_demo_project/backend/graph/session_manager.py
+        #   ./select_demo_project/backend/models/database.py
+
+        # === Step 2: Grep("Memory") — 在 Glob 结果中搜索 ===
+        #   agent.py:2  from mem0 import Memory
+        #   agent.py:6  self.memory = Memory.from_config(config)
+        #   mem0_manager.py:1  from mem0 import Memory
+
+        # === Select 效果：两阶段过滤的 Token 节省 ===
+        # 项目全部文件:  6 个（含前端）
+        # Glob 过滤后:   5 个 Python 文件 → 199 tokens
+        # Grep 精筛后:   2 个含 Memory 的文件 → 83 tokens
+        # 两阶段节省:    58%
+
+    # 🚀 ===  LlamaIndex Embedding + BM25混合召回
+        from llama_index.core import VectorStoreIndex, Document
+        from llama_index.core.node_parser import SentenceSplitter
+        from llama_index.embeddings.openai import OpenAIEmbedding
+        from llama_index.retrievers.bm25 import BM25Retriever
+        from llama_index.core.retrievers import QueryFusionRetriever
+        from llama_index.embeddings.dashscope import DashScopeEmbedding
+
+        # 构造知识库文档（模拟 Agent 的外部知识源——技术运维手册）
+        knowledge_docs = [
+            Document(text="PostgreSQL 连接池推荐 pgbouncer，transaction 模式下单连接可复用，"
+                           "默认 max_connections 设为 CPU 核心数 × 2 + 1，超过此值性能反而下降。"),
+            Document(text="Redis Cache-Aside 标准流程：读请求先查缓存，miss 则查 DB 并回填；"
+                           "写请求先更新 DB 再删缓存键，TTL 推荐 300 秒。"),
+            Document(text="Docker Compose 适合本地开发，volumes 挂载实现热重载；"
+                           "生产环境推荐 AWS ECS 或 Kubernetes，配合 ALB 做负载均衡。"),
+            Document(text="LangChain Agent 工具定义需包含 name、description、func 三字段。"
+                           "description 质量直接影响工具选择准确率，建议包含使用场景和输入格式说明。"),
+            Document(text="向量数据库选型：Qdrant 适合中小规模（百万级），Milvus 适合大规模（亿级），"
+                           "Chroma 适合原型验证，Pinecone 适合免运维的云端场景。"),
+            Document(text="金丝雀发布策略：先切 5% 流量到新版本，监控 P99 延迟和错误率 15 分钟，"
+                           "无异常后按 5→25→50→100% 逐步扩大。回滚阈值：错误率 >1% 或 P99 >500ms。"),
+        ]
+
+        # ---- 通道 A：Embedding 向量语义召回 ----
+        embed_model = OpenAIEmbedding(
+            model_name="text-embedding-3-small",
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
+
+        # 设置 Qwen Embedding模型
+        # embed_model = DashScopeEmbedding(
+        #     model_name="text-embedding-v4",
+        #     api_key=os.getenv("DASHSCOPE_API_KEY"),
+        #     api_base=os.getenv("DASHSCOPE_BASE_URL", "https://api.dashscope.aliyuncs.com")
+        # )
+
+        splitter = SentenceSplitter(chunk_size=256, chunk_overlap=20)
+        nodes = splitter.get_nodes_from_documents(knowledge_docs)
+        index = VectorStoreIndex(nodes, embed_model=embed_model)
+        vector_retriever = index.as_retriever(similarity_top_k=3)
+
+        query = "数据库连接池怎么配置"
+        vector_results = vector_retriever.retrieve(query)
+
+        print(f'=== 通道 A：Embedding 语义召回（query="{query}"）===')
+        for r in vector_results:
+            print(f"  [score={r.score:.3f}] {r.text[:80]}...")
+
+        # ---- 通道 B：BM25 关键词召回（LlamaIndex 内置）----
+        # skip_stemming=True：跳过英文词干提取（中文无此需求）
+        # token_pattern：中文按字切分 + 英文按词切分（BM25 中文场景标准配置）
+        bm25_retriever = BM25Retriever.from_defaults(
+            nodes=nodes,
+            similarity_top_k=3,
+            skip_stemming=True,
+            token_pattern=r"[\u4e00-\u9fff]|[a-zA-Z0-9]+",
+        )
+
+        bm25_results = bm25_retriever.retrieve(query)
+        print(f'\n=== 通道 B：BM25 关键词召回 ===')
+        for r in bm25_results:
+            print(f"  [score={r.score:.3f}] {r.text[:80]}...")
+
+        # ---- QueryFusionRetriever：内置 RRF 合并两路结果 ----
+        # mode="reciprocal_rerank"：Reciprocal Rank Fusion，按排名倒数加权合并
+        fusion_retriever = QueryFusionRetriever(
+            retrievers=[vector_retriever, bm25_retriever],
+            similarity_top_k=3,
+            num_queries=1,             # 不做查询扩展，直接用原始 query
+            mode="reciprocal_rerank",  # RRF 合并策略
+            use_async=False,
+        )
+
+        fusion_results = fusion_retriever.retrieve(query)
+        print(f'\n=== QueryFusionRetriever 混合召回（RRF 合并）===')
+        for r in fusion_results:
+            print(f"  [rrf={r.score:.4f}] {r.text[:80]}...")
+
+    # 🚀 ===  Skills路由：意图分类驱动的上下文切换
+        from langchain_core.tools import tool
+        # ---- Skill A：代码调试（3 个工具）----
+        @tool
+        def read_file(path: str) -> str:
+            """读取指定路径的源代码文件，返回文件内容和行号"""
+            return f"[模拟] 文件内容: {path}"
+
+        @tool
+        def search_codebase(query: str) -> str:
+            """在代码仓库中搜索关键词，返回匹配的文件路径和行号"""
+            return f"[模拟] 搜索结果: {query}"
+
+        @tool
+        def run_tests(test_path: str) -> str:
+            """运行指定路径的测试文件，返回通过/失败结果"""
+            return f"[模拟] 测试通过: {test_path}"
+
+        # ---- Skill B：部署运维（3 个工具）----
+        @tool
+        def deploy_staging(version: str) -> str:
+            """将指定版本部署到 staging 环境，返回部署状态"""
+            return f"[模拟] staging 部署完成: {version}"
+
+        @tool
+        def check_health(env: str) -> str:
+            """检查指定环境的服务健康状态，返回 HTTP 状态码"""
+            return f"[模拟] {env} 健康: 200 OK"
+
+        @tool
+        def rollback_deploy(env: str) -> str:
+            """回滚指定环境到上一个稳定版本"""
+            return f"[模拟] {env} 已回滚"
+
+        # ---- Skill C：记忆管理（2 个工具）----
+        @tool
+        def save_memory(content: str) -> str:
+            """将用户偏好或项目决策保存到长期记忆库"""
+            return f"[模拟] 已保存记忆: {content}"
+
+        @tool
+        def search_memories(query: str) -> str:
+            """在长期记忆库中搜索相关记忆条目"""
+            return f"[模拟] 记忆检索: {query}"
+
+        from pydantic import BaseModel, Field
+
+        # Skill 注册表：description 供 LLM 分类器阅读，tools 和 system_prompt 在分类后加载
+        skill_registry = {
+            "code_debug": {
+                "description": "代码调试与错误排查：处理报错信息、定位 bug 根因、运行测试验证修复",
+                "tools": [read_file, search_codebase, run_tests],
+                "system_prompt": "你是代码调试专家。先复现问题，再定位根因，最后验证修复。",
+            },
+            "deploy_ops": {
+                "description": "部署与运维操作：发布新版本到各环境、健康检查、回滚、金丝雀发布流程",
+                "tools": [deploy_staging, check_health, rollback_deploy],
+                "system_prompt": "你是部署运维专家。严格执行金丝雀发布流程，每步都要健康检查。",
+            },
+            "memory_manage": {
+                "description": "记忆管理：保存用户偏好和项目决策到长期记忆、检索历史记忆",
+                "tools": [save_memory, search_memories],
+                "system_prompt": "你是记忆管理助手。帮用户管理长期偏好和项目上下文。",
+            },
+        }
+
+        class SkillIntent(BaseModel):
+            """用户意图分类结果"""
+            skill_id: str = Field(description="匹配的 Skill ID，必须是 code_debug / deploy_ops / memory_manage 之一")
+            confidence: float = Field(description="分类置信度 0.0-1.0")
+
+        # 分类 prompt：列出所有 Skill 的 description，让 LLM 选择
+        skill_descriptions = "\n".join(
+            f"- {sid}: {s['description']}" for sid, s in skill_registry.items()
+        )
+        classify_prompt = f"""根据用户消息，从以下 Skills 中选择最匹配的一个：
+
+        {skill_descriptions}
+
+        返回 skill_id 和 confidence。"""
+
+        classifier = llm.with_structured_output(SkillIntent)
+        print("Skill 注册表和 LLM 分类器已构建")
+        print(f"分类器输入的 Skill 描述：\n{skill_descriptions}")    
+        # Skill 注册表和 LLM 分类器已构建
+        # 分类器输入的 Skill 描述：
+        # - code_debug: 代码调试与错误排查：处理报错信息、定位 bug 根因、运行测试验证修复
+        # - deploy_ops: 部署与运维操作：发布新版本到各环境、健康检查、回滚、金丝雀发布流程
+        # - memory_manage: 记忆管理：保存用户偏好和项目决策到长期记忆、检索历史记忆
+
+        # === Skills 路由——步骤 3：端到端演示（分类 → 装配 → Token 对比）===
+
+        test_messages = [
+            "代码报错了，AgentManager 初始化失败",
+            "把新版本部署到 staging 环境",
+            "帮我记住：以后 code review 要检查 token 消耗",
+        ]
+
+        # 基线：如果不做 Skills 路由，Agent 需要加载全部 8 个工具的描述
+        all_tools = [t for s in skill_registry.values() for t in s["tools"]]
+        all_tools_desc = "\n".join(f"{t.name}: {t.description}" for t in all_tools)
+        all_tokens = count_tokens(all_tools_desc)
+
+        for msg in test_messages:
+            # Stage 1：LLM 意图分类
+            intent = classifier.invoke(f"{classify_prompt}\n\n用户消息: {msg}")
+            skill = skill_registry[intent.skill_id]
+
+            # Stage 2：只装配选中 Skill 的工具（Select 的核心价值）
+            skill_tools_desc = "\n".join(f"{t.name}: {t.description}" for t in skill["tools"])
+            skill_tokens = count_tokens(skill_tools_desc)
+
+            print(f'用户: "{msg}"')
+            print(f'  → LLM 分类: {intent.skill_id} (confidence={intent.confidence})')
+            print(f'    装配工具: {[t.name for t in skill["tools"]]}')
+            print(f'    系统提示: "{skill["system_prompt"][:40]}..."')
+            print(f'    Token: 全量 {all_tokens} → Skill {skill_tokens}（节省 {(1-skill_tokens/all_tokens)*100:.0f}%）')
+            print()
+
+        # ---- 真正的 Agent 构造：用最后一条消息演示上下文装配 ----
+        from langchain.agents import create_agent
+        from langchain_core.prompts import ChatPromptTemplate
+
+        last_msg = test_messages[-1]  # "帮我记住：以后 code review 要检查 token 消耗"
+        intent = classifier.invoke(f"{classify_prompt}\n\n用户消息: {last_msg}")
+        selected_skill = skill_registry[intent.skill_id]
+
+        # 构造 Agent：只传入选中 Skill 的工具和系统提示
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", selected_skill["system_prompt"]),  # ← system_prompt 真正传入
+            ("placeholder", "{chat_history}"),
+            ("human", "{input}"),
+            ("placeholder", "{agent_scratchpad}"),
+        ])
+
+        agent = create_agent(
+            llm,
+            tools=selected_skill["tools"],  # ← tools 真正传入上下文
+            prompt=prompt,
+        )
+
+        print(f"\n=== 真正的 Agent 调用（用户: \"{last_msg}\"）===")
+        print(f"选中 Skill: {intent.skill_id}")
+        print(f"Agent 可见工具: {[t.name for t in selected_skill['tools']]}")
+        print(f"Agent 系统提示: {selected_skill['system_prompt']}")
+
+        # 调用 Agent
+        from langchain.agents import AgentExecutor
+        agent_executor = AgentExecutor(agent=agent, tools=selected_skill["tools"], verbose=False)
+        result = agent_executor.invoke({"input": last_msg})
+
+        print(f"\nAgent 响应: {result['output']}")
+        print(f"\n✓ 验证：Agent 只能调用 {intent.skill_id} Skill 的 {len(selected_skill['tools'])} 个工具")
+        print(f"  （而非全部 {len(all_tools)} 个工具）")
+        # 用户: "代码报错了，AgentManager 初始化失败"
+        #   → LLM 分类: code_debug (confidence=0.95)
+        #     装配工具: ['read_file', 'search_codebase', 'run_tests']
+        #     系统提示: "你是代码调试专家。先复现问题，再定位根因，最后验证修复。..."
+        #     Token: 全量 139 → Skill 54（节省 61%）
+
+        # 用户: "把新版本部署到 staging 环境"
+        #   → LLM 分类: deploy_ops (confidence=0.95)
+        #     装配工具: ['deploy_staging', 'check_health', 'rollback_deploy']
+        #     系统提示: "你是部署运维专家。严格执行金丝雀发布流程，每步都要健康检查。..."
+        #     Token: 全量 139 → Skill 51（节省 63%）
+
+        # 用户: "帮我记住：以后 code review 要检查 token 消耗"
+        #   → LLM 分类: memory_manage (confidence=0.95)
+        #     装配工具: ['save_memory', 'search_memories']
+        #     系统提示: "你是记忆管理助手。帮用户管理长期偏好和项目上下文。..."
+        #     Token: 全量 139 → Skill 32（节省 77%）
+
+        # === 分类后的 Agent 构造（伪代码）===
+        # # 只加载 2 个工具，而非全部 8 个
+
+
+    # 🎯 Compress上下文压缩
+    # 对话历史层 | 工具上下文层
+    # ----------------------------------------------------------------------------------------------------------------
+    # 🚀 === compaction 压缩重启
+        """
+        注意它和前面短期记忆压缩的关键区别：短期记忆是「压缩早期 + 保留最近」，
+        而 Compaction 是全量压缩将**整个对话历史**（包括工具调用、代码修改、测试结果）
+        压缩为一条结构化的 `SystemMessage`，然后用这条摘要**替换**全部原始消息，开启新的上下文窗口继续工作：
+        """
+        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+        # ---- 步骤 1：构造一段工具密集型的 Agent 对话（模拟 Claude Code 场景）----
+        # 注意：Compaction 场景包含 user / assistant / tool 三种角色，
+        # 而短期记忆场景只有 user / assistant 两种
+        messages = [
+            HumanMessage(content="帮我重构 auth 模块，支持 OAuth2 认证流程"),
+            AIMessage(content="好的，先读取当前代码结构。\n[调用 read_file('auth.py')]"),
+            AIMessage(content="[tool result] auth.py: 340行，含 BasicAuth 类，使用 session-based 认证"),
+            AIMessage(content="分析完成。当前使用 BasicAuth，需新增 OAuth2Provider。\n"
+                     "决策：采用 refresh_token 流程，token 存储于 Redis，增加速率限制。\n"
+                     "[调用 edit_file('auth.py')]"),
+            AIMessage(content="[tool result] auth.py 已修改：+OAuth2Provider 类，+token 刷新逻辑，共新增 180 行"),
+            HumanMessage(content="再加上单元测试"),
+            AIMessage(content="编写 12 个测试用例覆盖 OAuth2 核心流程。\n[调用 write_file('test_auth.py')]"),
+            AIMessage(content="[tool result] test_auth.py 创建成功，含 12 个测试用例"),
+            HumanMessage(content="运行测试看看结果"),
+            AIMessage(content="[调用 run_tests('test_auth.py')]"),
+            AIMessage(content="[tool result] 11/12 通过，1 个 token 过期边界用例不稳定（偶发 timing issue）"),
+            AIMessage(content="测试结果：11/12 通过。不稳定用例是 test_token_expiry_boundary，"
+                     "原因是 timing 精度问题，下一步需要用 mock time 修复。"),
+        ]
+
+        total_tokens = sum(count_tokens(m.content) for m in messages)
+        print(f"=== Compaction 前 ===")
+        print(f"消息数: {len(messages)} 条（含 user/assistant/tool 三种角色）")
+        print(f"总 tokens: {total_tokens}")
+        # ---- 步骤 2：检测是否达到阈值，触发全量 Compaction ----
+        MAX_CONTEXT_TOKENS = 150   # 演示用小阈值（生产环境 Claude Code 用 200K * 95%）
+
+        # ---- 步骤 2：检测是否达到阈值，触发全量 Compaction ----
+        if total_tokens > MAX_CONTEXT_TOKENS * 0.95:
+            # 关键区别：Compaction 压缩 **全部** 消息，不保留最近消息原文
+            full_text = "\n".join(f"[{m.type}] {m.content}" for m in messages)
+
+            # 结构化压缩提示词：要求 LLM 输出 Claude Code 风格的 Compaction Summary
+            compress_prompt = f"""请将以下 Agent 对话历史压缩为结构化摘要。
+
+            对话内容：
+            {full_text}
+
+            输出要求（严格按以下五个字段输出，每个字段一行）：
+            Task: 一句话描述用户的核心任务
+            Files modified: 列出所有被修改或创建的文件及关键变更
+            Decisions: 列出做出的关键技术决策
+            Status: 当前进度和测试结果
+            Next: 下一步待做的事项"""
+
+            summary = llm.invoke(compress_prompt).content # 调用大模型进行压缩
+
+            # 关键操作：用 SystemMessage(结构化摘要) 替换 **整个** 消息列表
+            compacted = [SystemMessage(content=f"[Compaction Summary]\n{summary}")]
+        else:
+            compacted = messages
+            summary = ""
+            print("未达阈值，无需 Compaction")
+
+        # ---- 步骤 3：展示压缩结果 ----
+        compacted_tokens = sum(count_tokens(m.content) for m in compacted)
+        print(f"\n=== Compaction 后 ===")
+        print(f"消息数: {len(messages)} → {len(compacted)}"
+              f"（全部 {len(messages)} 条被压缩为 1 条 SystemMessage）")
+        print(f"Tokens: {total_tokens} → {compacted_tokens}"
+              f"（压缩率 {(1 - compacted_tokens/total_tokens)*100:.0f}%）")
+        print(f"\n--- Compaction Summary ---")
+        print(compacted[0].content)
+
+        # ---- 步骤 4：验证——压缩后 LLM 仍能回答早期问题 ----
+        verify_msgs = compacted + [HumanMessage(content="我们之前定的认证方案是什么？一句话回复")]
+        answer = llm.invoke(verify_msgs).content
+        print(f"\n=== 验证：压缩后仍能回答早期决策 ===")
+        print(f"  Q: 我们之前定的认证方案是什么？")
+        print(f"  A: {answer}")  
+
+    # 🚀 === 硬截断 trim_messages
+        """
+        trim_messages 是最直接的压缩方式——不调用 LLM，直接按 token 上限从后往前保留消息。优点是零成本零延迟，缺点是早期信息直接丢弃：
+        """
+        from langchain_core.messages import HumanMessage, AIMessage, trim_messages
+
+        # 1. 构造 12 轮对话历史（包含关键技术决策）
+        messages = []
+        decisions = ["选 PostgreSQL", "用 Redis 缓存", "JWT 认证", "Docker 部署",
+                     "pool_size=50", "GitHub Actions CI", "ELK 日志", "Sentry 监控",
+                     "slowapi 限流", "React 前端", "Zustand 状态管理", "pytest 测试"]
+        for i, decision in enumerate(decisions):
+            messages.append(HumanMessage(content=f"第{i+1}个技术决策是什么？"))
+            messages.append(AIMessage(content=f"决策{i+1}：{decision}。理由是团队熟悉度高、社区生态成熟、与现有架构兼容。"))
+
+        original_tokens = sum(count_tokens(m.content) for m in messages)
+        print(f"原始消息: {len(messages)} 条（{len(messages)//2} 轮），约 {original_tokens} tokens")
+
+        # 2. 硬截断：只保留最近 N 条消息
+        # token_counter=len 让 max_tokens 以「消息条数」为单位（LangChain 设计）
+        trimmed = trim_messages(
+            messages,
+            strategy="last",       # 从后往前保留
+            max_tokens=8,          # 保留最近 8 条消息（4 轮）
+            token_counter=len,     # len = 按消息条数计（非 token 数）
+            start_on="human",      # 确保从 human 消息开始
+        )
+
+        trimmed_tokens = sum(count_tokens(m.content) for m in trimmed)
+        kept_rounds = len(trimmed) // 2
+        lost_rounds = len(decisions) - kept_rounds
+
+        lost_list = ", ".join(decisions[:lost_rounds])                                                                               
+        kept_list = ", ".join(decisions[lost_rounds:])                                                                                             
+        print(f"\n丢失的早期决策({lost_rounds}个): {lost_list}")                                                                                   
+        print(f"保留的近期决策({kept_rounds}个): {kept_list}")                                                                                     
+        print(f"\n 硬截断的代价：前 {lost_rounds} 个关键决策（PostgreSQL、Redis 等）被直接丢弃，不可恢复")
+
+    # 🚀 === LLM 摘要压缩：SummarizatoinMiddleware
+        from langchain.agents import create_agent                                                                                                  
+        from langchain.agents.middleware import SummarizationMiddleware                                                                            
+        from langchain_core.messages import HumanMessage
+        from langgraph.checkpoint.memory import InMemorySaver                                                                                      
+                                                                                                                                                
+        checkpointer = InMemorySaver()
+           
+        # 创建带摘要中间件的 Agent
+        agent = create_agent(
+            model=llm,               # 复用前面初始化的 DeepSeek 模型
+            tools=[],                # 纯对话演示，不需要工具
+            middleware=[                                                                                                             
+                SummarizationMiddleware(                                                                                                           
+                    model=llm,                   # 同模型做摘要（生产环境可用更便宜的小模型）                                                      
+                    trigger=("tokens", 300),     # 触发阈值（演示用小值，生产通常 4000-8000）                                                      
+                    keep=("messages", 6),        # 保留最近 6 条原文不压缩                                                                         
+                )                                                                                                                                  
+            ],                                                                                                                                     
+            checkpointer=checkpointer,          # 状态持久化（摘要需要跨轮次保存）                                                                 
+        )  
+
+        # 用相同的 12 轮技术决策对话测试                                                                                                       
+        config = {"configurable": {"thread_id": "compress-demo"}}
+        decisions = ["选 PostgreSQL", "用 Redis 缓存", "JWT 认证", "Docker 部署",                                                    
+                    "pool_size=50", "GitHub Actions CI", "ELK 日志", "Sentry 监控",                                                               
+                    "slowapi 限流", "React 前端", "Zustand 状态管理", "pytest 测试"]                                                              
+                                                                                                                                            
+        print("=== 逐轮发送技术决策，观察 SummarizationMiddleware 压缩过程 ===\n")                                                                 
+        for i, decision in enumerate(decisions):                                                                                                   
+            response = agent.invoke(                                                                                                               
+                {"messages": [HumanMessage(content=f"记住第{i+1}个技术决策：{decision}。理由：团队熟悉度高、社区成熟。")]},                                                
+                config                                                                                                                             
+            )                                                                                                                                      
+            msgs = response["messages"]                                                                                                            
+            msg_count = len(msgs)                                                                                                                  
+            expected = (i + 1) * 2  # 无压缩时的预期消息数                                                                                         
+                                                                                                                                                    
+            if msg_count < expected:                                                                                                           
+                # 压缩已触发，第一条消息是摘要                                                                                                     
+                summary_preview = msgs[0].content[:200].replace('\n', ' ')                                                                         
+                latest_reply = msgs[-1].content[:100].replace('\n', ' ')                                                                           
+                print(f"轮次 {i+1:2d} | 消息数: {msg_count:3d}（无压缩应为 {expected:2d}）← 压缩中")                                               
+                print(f"         [摘要] {summary_preview}...")                                                                                   
+                print(f"         [最新] {latest_reply}...")                                                                                      
+                print()                                                                                                                            
+            else:                                                                                                                                  
+                print(f"轮次 {i+1:2d} | 消息数: {msg_count:3d}（无压缩应为 {expected:2d}）")                                                       
+                                                                                                                                                    
+        # 最终验证                                                                                                                                 
+        print("=== 验证：早期决策是否被摘要保留 ===")                                                                                              
+        final = agent.invoke({"messages": [HumanMessage(content="请列出之前所有的技术决策")]}, config)                                                                     
+        print(final["messages"][-1].content[:500])
+
+    # 🚀 === 工具结果清除 Tool Result Clearing
+        # 核心机制：工具调用完成后，将 ToolMessage 的原始返回值替换为占位符，
+        # 仅保留"调用了什么工具"的事实，依赖 Agent 的 AIMessage 携带关键结论。
+        from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+        import time
+
+        # 模拟 Agent 分析项目依赖的完整消息链（2 次工具调用）
+        original_messages = [
+            HumanMessage(content="这个项目用了哪些核心依赖？各自什么版本？有没有已知的兼容性问题？"),
+
+            # Step 1: Agent 决定查看 requirements.txt
+            AIMessage(
+                content="我先查看项目的依赖配置文件，确认核心依赖和版本信息。",
+                tool_calls=[{"name": "read_file", "args": {"path": "requirements.txt"}, "id": "call_1"}]
+            ),
+            # 工具返回完整文件内容（大量 token）
+            ToolMessage(content="""# Core dependencies
+            fastapi==0.104.1
+            uvicorn[standard]==0.24.0
+            pydantic==2.5.0
+            sqlalchemy==2.0.23
+            alembic==1.13.0
+            asyncpg==0.29.0
+
+            # Cache & Message Queue
+            redis==5.0.1
+            celery==5.3.6
+            kombu==5.3.4
+
+            # AI/ML
+            langchain==0.1.0
+            langchain-openai==0.0.2
+            openai==1.6.1
+            tiktoken==0.5.2
+            chromadb==0.4.22
+            sentence-transformers==2.2.2
+
+            # Monitoring
+            prometheus-client==0.19.0
+            sentry-sdk[fastapi]==1.39.1
+            structlog==23.2.0
+
+            # Testing
+            pytest==7.4.3
+            pytest-asyncio==0.23.2
+            httpx==0.25.2
+            factory-boy==3.3.0""", tool_call_id="call_1"),
+
+            # Step 2: Agent 进一步检查 docker-compose
+            AIMessage(
+                content="requirements.txt 显示核心依赖为 FastAPI 0.104 + SQLAlchemy 2.0 + Redis 5.0 + LangChain 0.1.0。"
+                        "接下来检查 docker-compose 确认基础设施版本。",
+                tool_calls=[{"name": "read_file", "args": {"path": "docker-compose.yml"}, "id": "call_2"}]
+            ),
+            ToolMessage(content="""version: '3.8'
+            services:
+              app:
+                build: .
+                ports: ["8000:8000"]
+                depends_on: [db, redis, chromadb]
+                environment:
+                  - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/app
+                  - REDIS_URL=redis://redis:6379/0
+                  - CHROMADB_HOST=chromadb
+              db:
+                image: postgres:16.1
+                volumes: [pgdata:/var/lib/postgresql/data]
+                environment:
+                  POSTGRES_DB: app
+                  POSTGRES_USER: user
+                  POSTGRES_PASSWORD: pass
+              redis:
+                image: redis:7.2-alpine
+                command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+              chromadb:
+                image: chromadb/chroma:0.4.22
+                volumes: [chromadata:/chroma/chroma]
+            volumes:
+              pgdata:
+              chromadata:""", tool_call_id="call_2"),
+
+            # Agent 最终结论（已浓缩所有关键信息）
+            AIMessage(content=(
+                "项目核心依赖分析完成：\n"
+                "1. **Web 框架**：FastAPI 0.104.1 + Uvicorn 0.24.0 + Pydantic 2.5.0\n"
+                "2. **数据库**：PostgreSQL 16.1 + SQLAlchemy 2.0.23 + asyncpg 0.29.0\n"
+                "3. **缓存/队列**：Redis 7.2 + Celery 5.3.6\n"
+                "4. **AI/ML**：LangChain 0.1.0 + OpenAI 1.6.1 + ChromaDB 0.4.22\n\n"
+                "兼容性风险：LangChain 0.1.0 是早期版本，与 langchain-openai 0.0.2 "
+                "的 API 可能在后续升级中出现 breaking change。建议锁定版本或关注 changelog。"
+            )),
+        ]
+
+        print(f"消息链构造完成：{len(original_messages)} 条消息（{len(original_messages)//2} 轮工具调用 + 最终结论）")
+
+        # --- 展示原始消息链中各类型的 token 占比 ---
+        print("=== 原始消息链：各消息类型 token 占比 ===\n")
+        type_tokens = {"HumanMessage": 0, "AIMessage": 0, "ToolMessage": 0}
+        for msg in original_messages:
+            t = type(msg).__name__
+            tokens = count_tokens(str(msg.content))
+            type_tokens[t] += tokens
+
+        total = sum(type_tokens.values())
+        for t, tok in type_tokens.items():
+            bar = "█" * int(tok / total * 30)
+            print(f"  {t:15s} {tok:4d} tokens ({tok/total*100:4.1f}%) {bar}")
+        print(f"  {'总计':15s} {total:4d} tokens")          
+
+
+        # --- 定义工具结果清除函数并执行 ---
+        def clear_tool_results(messages):
+            """工具调用完成后，将冗长的原始返回值压缩为一行结论性摘要"""
+            cleared = []
+            for msg in messages:
+                if isinstance(msg, ToolMessage):
+                    # 用 LLM 将工具输出压缩为一行摘要（只压缩单条输出，比整段对话压缩便宜得多）
+                    summary_resp = llm.invoke(
+                        f"用一句话（不超过80字）总结以下工具输出的关键发现：\n\n{msg.content}"
+                    )
+                    cleared.append(ToolMessage(
+                        content=f"[摘要] {summary_resp.content.strip()}",
+                        tool_call_id=msg.tool_call_id
+                    ))
+                else:
+                    cleared.append(msg)
+            return cleared
+
+        cleared_messages = clear_tool_results(original_messages)
+
+        # 展示摘要效果
+        print("=== 工具结果清除：原始输出 → 一行摘要 ===\n")
+        tool_idx = 0
+        for orig, clr in zip(original_messages, cleared_messages):
+            if isinstance(orig, ToolMessage):
+                tool_idx += 1
+                orig_tokens = count_tokens(orig.content)
+                clr_tokens = count_tokens(clr.content)
+                print(f"ToolMessage #{tool_idx}:")
+                print(f"  原始: {orig_tokens} tokens | {orig.content[:80]}...")
+                print(f"  摘要: {clr_tokens} tokens | {clr.content}")
+                print(f"  压缩率: {(1 - clr_tokens/orig_tokens)*100:.0f}%\n")
+
+        # Token 对比
+        cleared_tokens = sum(count_tokens(str(m.content)) for m in cleared_messages)
+        saved_pct = (1 - cleared_tokens / total) * 100
+        print(f"=== 整体 Token 对比 ===")
+        print(f"清除前: {total} tokens")
+        print(f"清除后: {cleared_tokens} tokens（节省 {saved_pct:.0f}%）")
+
+    # 🚀 === 观察遮蔽 Observation Masking
+        # 核心原理（JetBrains, NeurIPS 2025）：
+        # Agent 每步的 Reasoning 已自然浓缩了上一步 Observation 的关键发现，
+        # 因此遮蔽冗长的原始 Observation 不会丢失决策信息。
+
+        # 模拟 3 步工具调用链（Agent 调试数据库连接超时问题）
+        tool_chain = [
+            {
+                "action": "search_codebase('database timeout config')",
+                "reasoning": "用户报告数据库连接超时，先搜索超时相关配置定位问题范围",
+                "observation": """找到 6 处匹配：
+                db/pool.py:15 → pool_size=20, pool_timeout=30
+                db/pool.py:28 → pool_recycle=3600, pool_pre_ping=True
+                config/prod.yaml:8 → max_overflow=10, pool_timeout=30
+                config/dev.yaml:8 → max_overflow=5, pool_timeout=60
+                utils/health.py:42 → timeout=10 (健康检查专用)
+                scripts/migrate.py:8 → timeout=300 (迁移脚本专用)""",
+            },
+            {
+                "action": "read_file('db/pool.py')",
+                # ↓ reasoning 浓缩了 step1 的发现：pool_timeout=30, max_overflow=10
+                "reasoning": "搜索发现生产环境 pool_timeout=30 且 max_overflow=10，读取源码确认完整配置",
+                "observation": """import sqlalchemy
+                from sqlalchemy import create_engine
+                engine = create_engine(
+                    DATABASE_URL,
+                    pool_size=20,        # 常驻连接数                                                                                        
+                    max_overflow=10,     # 溢出连接上限                                                                                                    
+                    pool_timeout=30,     # 获取连接的等待超时                                                                                              
+                    pool_recycle=3600,   # 每小时回收连接                                                                                                  
+                    pool_pre_ping=True,  # 使用前 ping 检测                                                                                                
+                    echo=False, echo_pool=False,                                                                                                       
+                    # 注意：没有设置 connect_timeout（数据库建连超时）
+                )
+                # 连接池监控
+                from sqlalchemy import event
+                @event.listens_for(engine, 'checkout')
+                def receive_checkout(dbapi_conn, conn_record, conn_proxy):
+                    logging.info(f'Connection checked out: {conn_record}')""",
+            },
+            {
+                "action": "run_tests('pytest tests/db/test_pool.py -v')",
+                # ↓ reasoning 浓缩了 step2 的发现：缺少 connect_timeout
+                "reasoning": "源码确认 max_overflow=10 且缺少 connect_timeout，跑测试验证高并发表现",                                
+                "observation": """test_basic_connection PASSED       [20%]                                                                         
+                test_pool_size PASSED              [40%]                                                                                                   
+                test_timeout_handling PASSED       [60%]                                                                                                   
+                test_recycle PASSED                [80%]                                                                                                   
+                test_concurrent_overflow FAILED    [100%]                                                                                              
+                FAILED - sqlalchemy.exc.TimeoutError: QueuePool limit of
+                size 20 overflow 10 reached, connection timed out, timeout 30.
+                ========================= 4 passed, 1 failed in 3.2s ==========================""",
+            },
+        ]
+
+        # --- 1. 展示核心机制：Reasoning 如何浓缩上一步 Observation ---
+        print("=== 信息传递链：每步 Reasoning 浓缩了上一步 Observation 的关键发现 ===\n")
+        for i, step in enumerate(tool_chain):
+            if i > 0:
+                prev = tool_chain[i-1]
+                print(f"Step {i} Observation（{count_tokens(prev['observation'])} tokens 原始输出）")
+                print(f"  ↓ 浓缩为")
+                print(f"Step {i+1} Reasoning：「{step['reasoning']}」\n")
+
+        # --- 2. 构建完整 vs 遮蔽上下文 ---
+        full_context = ""
+        masked_context = ""
+        for step in tool_chain:
+            full_context += f"Action: {step['action']}\nReasoning: {step['reasoning']}\nObservation:\n{step['observation']}\n\n"
+            masked_context += f"Action: {step['action']}\nReasoning: {step['reasoning']}\nObservation: [已遮蔽]\n\n"
+
+        full_tokens = count_tokens(full_context)
+        masked_tokens = count_tokens(masked_context)
+        saved_pct = (1 - masked_tokens / full_tokens) * 100
+
+        print(f"=== Token 对比 ===")
+        print(f"完整上下文: {full_tokens} tokens")
+        print(f"遮蔽后:     {masked_tokens} tokens（节省 {saved_pct:.0f}%）")
+
+        # --- 3. LLM 对比：遮蔽后能否依靠 Reasoning 链定位根因 ---
+        question = "根据以上调试过程，数据库连接超时的根因是什么？建议怎么修复？"
+
+        import time
+        for label, ctx in [("完整上下文", full_context), ("遮蔽 Observation", masked_context)]:
+            prompt = f"以下是 Agent 的调试过程：\n{ctx}\n{question}"
+            start = time.time()
+            resp = llm.invoke(prompt)
+            elapsed = time.time() - start
+            print(f"\n=== {label}（{elapsed:.1f}s）===")
+            print(resp.content[:300])
+
+        print(f"\n关键发现：遮蔽 Observation 节省了 {saved_pct:.0f}% token，")
+        print(f"   但 Reasoning 链已携带关键信息（pool_timeout=30 → 缺少 connect_timeout → overflow FAILED），")
+        print(f"   LLM 仍能正确定位根因。这就是 Observation Masking 的核心原理。")
+
+
+
+
+        # 用真实的 Agent 工具调用链演示观察遮蔽原理
+        from langchain_core.tools import tool
+        from langchain_core.messages import ToolMessage, AIMessage, HumanMessage
+        from langchain.agents import create_agent
+        import time
+
+        # --- 1. 定义三个调试工具（模拟返回真实格式数据）---
+        @tool
+        def search_codebase(query: str) -> str:
+            """搜索代码库中与查询相关的代码片段和配置"""
+            return """找到 6 处匹配：
+          db/pool.py:15 → pool_size=20, pool_timeout=30
+          db/pool.py:28 → pool_recycle=3600, pool_pre_ping=True
+          config/prod.yaml:8 → max_overflow=10, pool_timeout=30
+          config/dev.yaml:8 → max_overflow=5, pool_timeout=60
+          utils/health.py:42 → timeout=10 (健康检查专用)
+          scripts/migrate.py:8 → timeout=300 (迁移脚本专用)"""
+
+        @tool
+        def read_file(file_path: str) -> str:
+            """读取指定路径的文件内容"""
+            return """import sqlalchemy
+        from sqlalchemy import create_engine
+        engine = create_engine(
+            DATABASE_URL,
+            pool_size=20,        # 常驻连接数
+            max_overflow=10,     # 溢出连接上限
+            pool_timeout=30,     # 获取连接的等待超时
+            pool_recycle=3600,   # 每小时回收连接
+            pool_pre_ping=True,  # 使用前 ping 检测
+            echo=False, echo_pool=False,
+            # 注意：没有设置 connect_timeout（数据库建连超时）
+        )
+        from sqlalchemy import event
+        @event.listens_for(engine, 'checkout')
+        def receive_checkout(dbapi_conn, conn_record, conn_proxy):
+            logging.info(f'Connection checked out: {conn_record}')"""
+
+        @tool
+        def run_tests(command: str) -> str:
+            """运行 pytest 测试并返回结果"""
+            return """test_basic_connection PASSED       [20%]
+        test_pool_size PASSED              [40%]
+        test_timeout_handling PASSED       [60%]
+        test_recycle PASSED                [80%]
+        test_concurrent_overflow FAILED    [100%]
+        FAILED - sqlalchemy.exc.TimeoutError: QueuePool limit of
+          size 20 overflow 10 reached, connection timed out, timeout 30.
+        ========================= 4 passed, 1 failed in 3.2s =========================="""
+
+        # --- 2. 创建 ReAct Agent 并执行调试任务 ---
+        debug_agent = create_agent(
+            llm, 
+            [search_codebase, read_file, run_tests],
+            system_prompt="请你作为数据库运维人员，仔细梳理数据库保存问题，并将tool工具返回的结果内容进行Reasoning链思考，需要在思考中加入tool里面核心重要的内容"
+        )
+
+        print("=== Agent 自主调试：观察完整的 Action → Observation → Reasoning 链 ===\n")
+        result = debug_agent.invoke({"messages": [HumanMessage(content=(
+            "数据库连接频繁超时，请调试定位根因。"
+            "建议：先用 search_codebase 搜索 timeout 配置，"
+            "再用 read_file 读取 db/pool.py，最后用 run_tests 跑 pytest tests/db/test_pool.py -v"
+        ))]})
+
+        # --- 3. 展示 Agent 真实轨迹（标注每条消息类型）---
+        messages = result["messages"]
+        step = 0
+        for msg in messages:
+            if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+                step += 1
+                for tc in msg.tool_calls:
+                    args_preview = list(tc['args'].values())[0][:60] if tc['args'] else ''
+                    print(f"  Step {step} [Action]      {tc['name']}({args_preview})")
+                if msg.content:
+                    print(f"  Step {step} [Reasoning]   {msg.content[:150]}")
+            elif isinstance(msg, ToolMessage):
+                obs_tokens = count_tokens(msg.content)
+                print(f"  Step {step} [Observation] ({obs_tokens} tokens) {msg.content[:80]}...")
+                print()
+            elif isinstance(msg, AIMessage):
+                print(f"  [Final Answer] {msg.content[:200]}...")
+                print()
+
+        # --- 4. 核心操作：Observation Masking（基于信息传播链判断）---
+        # 核心逻辑：只有当 Observation[N] 后面存在 AIMessage（即 Reasoning[N+1] 已吸收其关键信息），
+        #           才能安全遮蔽。最近一轮的 Observation 尚未被后续推理吸收，必须保留。
+        print("=== 执行 Observation Masking：遮蔽已被后续推理吸收的历史 Observation ===\n")
+        masked_messages = []
+        for i, msg in enumerate(messages):
+            if isinstance(msg, ToolMessage):
+                # 检查这个 Observation 之后是否有 AIMessage 吸收了它
+                has_subsequent_reasoning = any(
+                    isinstance(messages[j], AIMessage) for j in range(i + 1, len(messages))
+                )
+                if has_subsequent_reasoning:
+                    # 信息已传播到后续 Reasoning，安全遮蔽
+                    masked_messages.append(ToolMessage(
+                        content="[Observation 已被后续推理吸收]",
+                        tool_call_id=msg.tool_call_id
+                    ))
+                else:
+                    # 最近一轮，信息尚未传播，保留完整内容
+                    masked_messages.append(msg)
+            else:
+                masked_messages.append(msg)
+
+        # Token 对比
+        full_tokens = sum(count_tokens(str(m.content)) for m in messages)
+        masked_tokens = sum(count_tokens(str(m.content)) for m in masked_messages)
+        saved_pct = (1 - masked_tokens / full_tokens) * 100
+        print(f"完整轨迹: {full_tokens} tokens")
+        print(f"遮蔽后:   {masked_tokens} tokens（节省 {saved_pct:.0f}%）")
+
+        # --- 5. 验证：用两种上下文分别提问，对比回答质量 ---
+        question = "根据以上调试过程，数据库连接超时的根因是什么？建议怎么修复？"
+
+        for label, msgs in [("完整上下文", messages), ("遮蔽 Observation", masked_messages)]:
+            ctx = "\n".join(
+                f"[{type(m).__name__}] {str(m.content)[:300]}" for m in msgs
+            )
+            start = time.time()
+            resp = llm.invoke(f"以下是 Agent 的调试轨迹：\n{ctx}\n\n{question}")
+            elapsed = time.time() - start
+            print(f"\n--- {label}（{elapsed:.1f}s）---")
+            print(resp.content[:300])
+
+        print(f"\nObservation Masking 验证完成：")
+        print(f"   历史 ToolMessage 遮蔽后节省 {saved_pct:.0f}% tokens，")
+        print(f"   关键：只遮蔽已被后续 Reasoning 吸收的 Observation，保留最近一轮完整内容。")
+        print(f"   AIMessage 中的 Reasoning 已浓缩历史 Observation 的关键发现，信息无损。")
+
+
+    # 🎯 Isolate下上文隔离
+    # 工具上下文层 | 任务状态层
+    # ----------------------------------------------------------------------------------------------------------------
+    # 🚀 === Isolate 策略：子 Agent 的上下文隔离
+        # 模拟主 Agent 的完整上下文（3000 tokens 的累积历史）
+        main_agent_history = """[系统提示] 你是 DevAssist，后端工程 AI 助手...（800 tokens）
+        [轮次1] 用户讨论了数据库选型，最终选择 PostgreSQL...
+        [轮次2] 用户要求设计 API 路由结构，生成了 15 个端点...
+        [轮次3] 用户报告了认证模块的 JWT 刷新 bug，已修复...
+        [轮次4] 用户要求添加 Redis 缓存层，完成了 Cache-Aside 实现...
+        [轮次5] 用户讨论了部署方案，选择 Docker + ECS...
+        [轮次6] 用户要求优化慢查询，分析了 3 个问题 SQL...
+        [轮次7] 用户讨论了日志方案，选择 ELK Stack...
+        [轮次8] 用户要求写单元测试，覆盖了 auth 和 db 模块..."""
+
+        # 当前子任务：生成数据库迁移脚本（只需要知道数据库相关信息）
+        subtask = "生成从 users 表添加 email_verified 字段的数据库迁移脚本（PostgreSQL, SQLAlchemy 2.0, alembic）"
+
+        # 方式A：继承全部历史（不隔离）
+        context_no_isolate = f"{main_agent_history}\n\n当前任务：{subtask}"
+
+        # 方式B：只传任务描述（隔离）
+        context_isolated = f"你是数据库迁移专家。请完成以下任务：\n{subtask}"
+
+        tokens_full = count_tokens(context_no_isolate)
+        tokens_isolated = count_tokens(context_isolated)
+
+        print(f"不隔离（继承全部历史）: {tokens_full} tokens")
+        print(f"隔离（只传任务描述）:   {tokens_isolated} tokens")
+        print(f"上下文缩减: {(1-tokens_isolated/tokens_full)*100:.0f}%\n")
+
+        # 对比回答质量
+        for label, ctx in [("不隔离", context_no_isolate), ("隔离", context_isolated)]:
+            resp = llm.invoke(ctx)
+            print(f"=== {label} ===")
+            print(resp.content[:250])
+            print()
+
+        print("两种方式都能正确生成迁移脚本——但隔离版本不携带 JWT bug、Redis 缓存等无关历史")
+        
+
+
+        from langchain.agents import create_agent
+        from deepagents.middleware.subagents import SubAgentMiddleware
+        from deepagents.backends import StateBackend
+        from langchain_core.messages import HumanMessage
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        # 主 Agent + 子 Agent 一体化配置
+        isolate_agent = create_agent(
+            model=llm,
+            tools=[],                    # 主 Agent 自身无额外工具
+            system_prompt="你是 DevAssist 后端工程助手。数据库迁移任务请使用 task 工具委派给 db_expert。",
+            middleware=[
+                SubAgentMiddleware(
+                    backend=StateBackend(),  # 轻量级内存后端，无需文件系统
+                    subagents=[
+                        {
+                            "name": "db_expert",
+                            "description": "数据库迁移专家，处理 PostgreSQL + Alembic 相关任务",
+                            "system_prompt": "你是数据库迁移专家，精通 PostgreSQL、SQLAlchemy 2.0、Alembic。只处理数据库相关任务，输出完整可用的迁移脚本。",
+                            "model": "deepseek:deepseek-chat",  # 子 Agent 使用的模型
+                            "tools": [],
+                        }
+                    ],
+                )
+            ],
+            checkpointer=InMemorySaver(),  # 跨轮次保存主 Agent 历史
+        )
+
+        print("主 Agent 创建完成")
+        print("  中间件自动注入了 task 工具，可委派任务给 db_expert 子 Agent")
+        print("  子 Agent 每次被调用时上下文完全隔离，不继承主 Agent 历史")
+
+
+        # Isolate 策略实战（2/3）：积累主 Agent 对话历史 ===
+        config = {"configurable": {"thread_id": "isolate-demo"}}
+
+        # 模拟 3 轮无关任务（限制回复长度以加速演示），让主 Agent 积累上下文
+        history = [
+            "帮我选择数据库，PostgreSQL 还是 MySQL？一句话给结论",
+            "JWT 刷新 token 过期后没有自动续签，一句话说修复思路",
+            "Redis 缓存穿透怎么防？一句话总结方案",
+        ]
+
+        print("=== 积累主 Agent 对话历史（3 轮简短任务）===\n")
+        for i, msg in enumerate(history):
+            result = isolate_agent.invoke(
+                {"messages": [HumanMessage(content=msg)]}, config
+            )
+            msg_count = len(result["messages"])
+            print(f"轮次 {i+1} | 消息数: {msg_count:3d} | {msg[:35]}...")
+
+        parent_tokens = sum(count_tokens(str(m.content)) for m in result["messages"])
+        print(f"\n主 Agent 累积上下文: {parent_tokens} tokens, {len(result['messages'])} 条消息")
+        print("包含：数据库选型、JWT 修复思路、Redis 缓存方案")
+
+
+    # 🎯 Cache提示缓存
+    # 系统提示层 | 工具上下文层 | 外部知识层
+    # ----------------------------------------------------------------------------------------------------------------    
+        # 缓存匹配从请求头部开始，系统提示 + 工具描述必须在消息列表的最前面，动态内容（用户消息、对话历史）放后面。顺序颠倒会导致缓存完全失效
+
+        response = llm.invoke(msgs)
+
+        # 提取 API 返回的缓存命中数据
+        usage = response.response_metadata.get("token_usage", {})
+        hit = usage.get("prompt_cache_hit_tokens", 0)  # 命中缓存数
+        miss = usage.get("prompt_cache_miss_tokens", 0) # 未命中缓存数
+        prompt = usage.get("prompt_tokens", 0) # 总token
+
+        status = "缓存命中" if hit > 0 else "缓存未命中"
+
+
+# ⌛ Langchain Middleware 实例
+# ====================================================================================================================================
+    
+    from typing import Any
+    from langchain_core.messages import ToolMessages
+    from langchain.messages import RemoveMessages
+    from langchain.agents import AgentState
+    from langchain.agents.middleware import AgentMiddleware
+    from langgraph.graph.message import REMOVE_ALL_MESSAGES
+    from langgraph.runtime import Runtime
+
+
+    from transformers import AutoTokenizer
+    # 加载 DeepSeek 官方 tokenizer（首次运行需下载 ~几MB，后续自动缓存）
+    # trust_remote_code=True 允许执行模型仓库中的自定义代码（DeepSeek tokenizer 需要）
+    tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-V3", trust_remote_code=True)
+
+    def count_tokens(text: str) -> int:
+        """
+        用 DeepSeek 官方 tokenizer 精确计算 token 数
+        
+        Args:
+            text: 待计算的文本字符串
+        
+        Returns:
+            int: token 数量（与 API 实际消耗一致）
+        """
+        return len(tokenizer.encode(text))
+
+    def count_tokens_approximately(messages: list) -> int:
+        """
+        用 DeepSeek 官方 tokenizer 精确计算消息列表总 token 数
+        函数名保留是为了兼容 MessageTrimMiddleware / CompactionMiddleware 的 token_counter 注入接口，
+        实际已升级为精确计数。
+        """
+        total = 0
+        for m in messages:
+            content = m.content if hasattr(m, "content") else str(m)
+            # 兼容多模态 content：LangChain 的 content 可能是 list of blocks
+            if isinstance(content, list):
+                content = "".join(
+                    block.get("text", "") if isinstance(block, dict) else str(block)
+                    for block in content
+                )
+            if not isinstance(content, str):
+                content = str(content)
+            total += count_tokens(content)
+        return total
+
+    # 🚀 === ToolResultClearMiddleware 工具结果清除
+        # 摘要 Prompt 模板
+        TOOL_SUMMARY_PROMPT = (
+            "用一句话（不超过80字）总结以下工具输出的关键发现，保留数字/文件名/错误信息等决策相关细节：\n\n{tool_output}"
+        )
+
+        # 已摘要标记：幂等保护，避免对摘要再次摘要导致信息衰减
+        SUMMARY_PREFIX = "[摘要] "
+
+        class ToolResultClearMiddleware(AgentMiddleware):
+            """工具结果清除 Middleware（对齐基础入门 2.5 节定义）：
+            超出保留窗口的 ToolMessage 用 LLM 压缩为一行摘要，保留 tool_call_id。
+
+            Args:
+                llm:                      用于生成摘要的 Chat Model 实例
+                keep_recent_tool_results: 最近 N 条 ToolMessage 保留原文，默认 3
+                summary_prompt:           摘要 Prompt 模板，需含 {tool_output} 占位符
+            """
+
+            def __init__(
+                self,
+                llm,
+                keep_recent_tool_result: int = 3, #  # 窗口外的条目才会被 LLM 压缩
+                summary_prompt: str = TOOL_SUMMARY_PROMPT,
+            ) -> None:
+                super().__init__()
+                self.llm = llm
+                self.keep_recent = keep_recent_tool_result
+                self.summary_prompt = summary_prompt
+                # 以 tool_call_id 为 key 缓存摘要，跨轮复用避免重复调 LLM
+                self._summary_cache: dict[str, str] = {}
+
+            def _summarize(self, msg: ToolMessage) -> str:
+                """LLM 压缩单条 ToolMessage，带缓存与异常降级。"""
+                # tool_call_id 唯一标识一次工具调用，用它做缓存 key 保证内容幂等
+                cache_key = msg.tool_call_id
+                if cache_key in self._summary_cache
+                    return self._summary_cache[cache_key]
+
+                try:
+                    resp = self.llm.invoke(
+                        self.summary_prompt.format(tool_ouput=str(msg.content))
+                    )
+                    summary = resp.content.strip() if hasattr(resp, "content") else str(resp).strip()
+                except Exception as e:
+                    # LLM 调用失败时降级为占位文本，保证 pipeline 不中断
+                    tool_name = getattr(msg, "name", "unknown")
+                    summary = f"{tool_name} 原始输出已清除（摘要失败：{type(e).__name__}）"    
+
+                self._summary_cache[cache_key]=summary
+                return summary
+
+            def after_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+                messages = state['messages']
+                 
+                # 收集所有 ToolMessage 的位置索引，后续按窗口切分
+                tool_indics = [i for i, m in enumerate(messages) if isinstance(m, ToolMessage)]
+
+                # 未超窗口直接放行，避免无谓 LLM 开销
+                if len(tool_indcs) < self.keep_recent:
+                    return None
+
+                # 窗口外的索引 = 全部 - 最近 keep_recent 条
+                to_clear_set = set(tool_indices[:-self.keep_recent])
+                changed = False
+                new_messages = []
+                for i, msg in enumerate(messages):
+                    if i in to_clear_set and isinstance(msg, ToolMessage):
+                        content_str = str(msg.content)
+                        # 幂等保护：已含 SUMMARY_PREFIX 说明本轮已压缩，跳过防止二次衰减
+                        if content_str.startswith(SUMMARY_PREFIX):
+                            new_messages.append(msg)
+                            continue
+                        summary = self._summarize(msg)
+                        new_messages.append(ToolMessage(
+                            content=f"{SUMMARY_PREFIX}{summary}",
+                            tool_call_id=msg.tool_call_id,
+                            name=getattr(msg, 'name', None)
+                        )) 
+                        changed=True
+
+                if not changed:
+                    return None
+
+                # RemoveMessage(REMOVE_ALL_MESSAGES) 是 LangGraph 清空消息列表的标准信号
+                # 再追加 new_messages 等同于原子替换，避免脏写入 
+                return {
+                    "messages": [
+                        RemoveMessages(id=REMOVE_ALL_MESSAGES),
+                        *new_messages
+                    ]
+                }
+
+
+    # 🚀 === ObservationMaskMiddleware 观察遮蔽
+        # 遮蔽前缀：幂等保护，避免重复遮蔽时 content_len 被替换为占位符长度
+        MASK_PREFIX = "[观察已遮蔽:"
+
+        class ObservationMaskMiddleware(Middleware):
+            """观察遮蔽 Middleware：保留 AIMessage 推理链，遮蔽 ToolMessage 为占位符。
+            适用于推理密集型任务（代码生成、多步规划），不适用于对话型任务。
+
+            Args:
+                mask_template:            遮蔽后占位符模板，支持 {tool_name} {content_len} 插值
+                keep_last_n_observations: 保留最近 N 条观察不遮蔽，0 = 全部遮蔽
+            """
+
+            def __init__(
+                self,
+                mask_template: str = "[观察已遮蔽: {tool_name} 返回 {content_len} 字符]",
+                keep_last_n_observations: int = 1,  # 0 表示全部遮蔽，>0 表示保留尾部 N 条
+            ) -> None:
+                super().__init__()
+                self.mask_template = mask_template
+                self.keep_last_n = keep_last_n_observations
+
+            def before_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+                messages = state['messages']
+                tool_indices = [i for i, m in messages if isinstance(m, ToolMessage)]
+
+                # 没有ToolMessage则无需处理
+                if not tool_indices:
+                    return None    
+
+                # keep_last_n > 0：保留尾部 N 条，其余遮蔽；= 0：全部遮蔽
+                if keep_last_n > 0:
+                    to_mask = set(tool_indices[:-self.keep_last_n])
+                else:
+                    to_mask = set(tool_indices)
+
+                changed = False
+                new_messages = []
+                for i, msg in enumerate(messages):
+                    if i in to_mask and isinstance(msg, ToolMessage):
+                        content_str = str(msg.content)
+                        # 幂等保护：已遮蔽的跳过，防止 content_len 被替换为占位符长度
+                        if (content_str.startswith(MASK_PREFIX)):
+                            new_messages.append(msg)
+                            continue
+                        masked = self.mask_template.format(
+                            tool_name=getattr(msg, "name", "tool"),
+                            content_len=len(content_str)
+                        )        
+                        new_messages.append(ToolMessage(
+                            content=masked,
+                            tool_call_id=msg.tool_call_id,
+                            name=getattr(msg, "name", None)
+                        ))
+                        changed = True
+                    else:
+                        new_messages.append(msg)
+
+                if not changed:
+                    return None
+
+                return {
+                    "messages": [
+                        RemoveMessage(id=REMOVE_ALL_MESSAGES),
+                        *new_messages
+                    ]
+                }                 
+
+
+    # 🚀 === MessageTrimMiddleware 硬截断
+        from langchain_core.messages import trim_messages
+
+        class MessageTrimMiddleare(AgentMiddleware):
+            """硬截断 Middleware：超出 max_tokens 时从头部移除旧消息。
+
+            Args:
+                max_tokens:    触发截断的 token 上限，默认 4000
+                keep_last:     至少保留最近 N 条消息
+                token_counter: 可注入自定义计数函数；None 时用内置粗估
+            """
+
+            def __init__(
+                self,
+                max_tokens: int = 4000,
+                keep_last: int = 10,
+                token_counter = None
+            ):
+                super().__init__()
+                self.max_tokens = max_tokens
+                self.keep_last = keep_last
+                self.token_counter = token_counter or count_tokens_approximately
+
+            def before_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+                messages = state['messages']
+
+                if self.token_counter(messages) < self.max_tokens:
+                    return None
+
+                trimmed = trim_messages(
+                    messages,
+                    strategy="last",
+                    max_tokens=self.max_tokens,
+                    token_counter=self.token_counter,
+                    include_system=True,
+                    allow_partial=False
+                )    
+
+                # keep_last 保底：trim 可能移除过多导致上下文断层，兜底保留最近 keep_last 条
+                if len(trimmed) < self.keep_last and len(messages) >= self.keep_last:
+                    trimmed = messages[-self.keep_last:]
+
+                # trim 后条数未减少说明 token_counter 与 trim 结果不一致，无需写回
+                if len(trimmed) == len(messages):
+                    return None
+
+                return {
+                    "messages": [
+                        RemoveMessage(content=REMOVE_ALL_MESSAGES),
+                        *trimmed
+                    ]
+                }    
+
+    
+    # 🚀 === CompactionMiddleware 全局压缩重启
+        # 全局压缩提示词
+        COMPACTION_SUMMARY_PROMPT = """
+        请将以下对话历史压缩为一段简洁的上下文摘要，保留所有关键事实、决策和结论。
+        不要遗漏任何用户明确告知的信息。
+
+        对话历史：
+        {history}
+
+        输出格式：
+        [对话摘要]
+        （直接输出摘要内容，不要加前缀）
+        """
+
+        class CompactionMiddleware(AgentMiddleware):
+            """全局压缩重启 Middleware：超过 trigger_tokens 时执行完整压缩。
+
+            Args:
+                model:          LLM 实例，用于生成历史摘要
+                trigger_tokens: token 总数超过此值才触发，默认 3500
+                keep_recent:    压缩后保留的最近消息条数，默认 0
+                token_counter:  token 计数函数；None 时用粗估
+                summary_prompt: 摘要提示词模板，含 {history} 插槽
+            """
+
+            def __init__(
+                self,
+                model,
+                trigger_tokens: int = 3500,  # 比上游 Trim/Mask 阈值高，作为最后保险丝
+                keep_recent: int = 0,
+                token_counter=None,
+                summary_prompt: str = COMPACTION_SUMMARY_PROMPT,
+            ) -> None:
+                super().__init__()
+                self.model = model
+                self.trigger_tokens = trigger_tokens
+                self.keep_recent = keep_recent
+                self.token_counter = token_counter or count_tokens_approximately
+                self.summary_prompt = summary_prompt
+
+            def before_model(self, state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+                messages = state["messages"]
+                total_tokens = self.token_counter(messages)
+
+                # 未超阈值直接放行，不做任何压缩
+                if total_tokens <= self.trigger_tokens:
+                    return None
+
+                # 分离首条 SystemMessage，压缩完成后需放回列表最前
+                if messages and isinstance(messages[0], SystemMessage):
+                    system_msg = messages[0]
+                    rest = messages[1:]
+                else:
+                    system_msg = None
+                    rest = messages
+
+                # 中段历史（去掉 keep_recent 尾部）才是压缩目标                                                                                                                                                           
+                if self.keep_recent == 0:                                             
+                    # 全局重启语义：保留 system + 摘要，所有对话消息全部压缩                                    
+                    to_compact = rest                                                                                                                                                                                     
+                    recent = []
+                elif len(rest) > self.keep_recent:                                                                                                                                                                        
+                    to_compact = rest[:-self.keep_recent]                                                                                                                                                                 
+                    recent = rest[-self.keep_recent:]                                                           
+                else:                                                                                                                                                                                                     
+                    # 剩余消息不足 keep_recent，压缩无意义直接跳过                    
+                    return None 
+
+                if not to_compact:
+                    return None
+
+                # 截断每条消息至 500 字符，防止历史文本撑爆 LLM 上下文
+                history_text = "\n".join(
+                    f"[{m.type.upper()}]: {str(m.content)[:500]}" for m in to_compact
+                )
+                prompt = self.summary_prompt.format(history=history_text)
+                summary_text = self.model.invoke(prompt).content
+                compaction_msg = SystemMessage(content=f"[历史对话摘要]\n{summary_text}")
+
+                new_messages = []
+
+                if system_msg:
+                    new_messages.append(system_msg)
+                    
+                new_messages.append(compaction_msg)
+                new_messages.extend(recent)
+
+                return {
+                    "messages": [
+                        RemoveMessage(id=REMOVE_ALL_MESSAGES),
+                        *new_messages,
+                    ]
+                }    
+
+
+    # 🚀 === SessionWriteMiddleware 会话写入
+        import json, os, time
+
+        class SessionWriteMiddleware(AgentMiddleware):
+            """Layer 1：会话级短期记忆 — 文件持久化 + 压缩前半部分
+            
+            继承 AgentMiddleware，实现 after_model hook：LLM 调用完成后，
+            从 state["messages"] 读取消息列表，执行可选的 LLM 压缩，
+            并将摘要和最近消息持久化到 sessions/{session_id}.json。
+            
+            这是纯副作用层（return None），不修改 state 中的 messages。
+            in-memory messages 截断请使用 Ch1 的 SummarizationMiddleware。
+            
+            Args:
+                session_id: 当前会话标识，决定 JSON 文件名
+                llm: 用于压缩早期消息的 LLM 实例（必须支持 .invoke）
+                compress_trigger: 触发压缩的消息数阈值，默认 8（对齐 2.1.1 COMPRESS_TRIGGER）
+                keep_recent: 压缩后保留的最近消息数，默认 4（对齐 2.1.1 KEEP_RECENT）
+                sessions_dir: 持久化目录，默认 "./sessions"
+            """
+
+            def __init__(self, session_id, llm, compress_trigger=8, keep_recent=4, sessions_dir="./sessions"):
+                super().__init__()
+                self.session_id = session_id
+                self.llm = llm
+                self.compress_trigger = compress_trigger
+                self.keep_recent = keep_recent
+                self.sessions_dir = sessions_dir
+                self._last_summary = ""  # 内部维护的累积摘要
+                os.makedirs(sessions_dir, exist_ok=True) # 确保文件目录存在
+
+            def after_model(self, state: AgentState, runtime: Runtime) -> dict | None:
+                """LLM 响应完成后触发：读 messages，可选压缩，落盘到 JSON。
+        
+                Args:
+                    state: AgentState（dict 子类），通过 state["messages"] 取消息列表
+                    runtime: LangGraph Runtime，此 middleware 未使用 runtime.store
+                Returns:
+                    None — 纯副作用，不修改 state（压缩后的摘要存在实例变量，不写回 state）
+                """
+
+                messages = state['messages']
+                compress_ctx = self._last_summary
+
+                msg_dicts = [
+                    {"role": "user" if m.type == "human" else "assistant", "content": m.content}
+                    for m in messages
+                ]
+
+                if len(msg_dicts) >= self.compress_trigger:
+                    early  = msg_dicts[:-self.keep_recent]           # 前半部分：压缩为摘要
+                    recent = msg_dicts[-self.keep_recent:]           # 后半部分：保留原文                   
+                    early_text = "\n".join(f'{m["role"]: {m["content"]}' for m in early)
+                    prompt = (
+                        f"请将以下对话压缩为一段摘要，保留关键决策和数字："
+                        f"\n\n{early_text}\n\n输出不超过 80 字。"
+                    )
+                    summary = self.llm.invoke(prompt).content
+
+                    # 累积摘要：新摘要追加到旧的后面，避免跨轮压缩时信息丢失
+                    compressed_ctx =  (compressed_ctx + " " + summary).strip() if compressed_ctx else summary
+                    self._last_summary = compressed_ctx
+                    msg_dicts = recent
+
+                # 持久化到 sessions/{session_id}.json
+                session = {
+                    "title": state.get('title', f"Session {self.session_id}"),
+                    "updated_at": time.strftime("%Y-%m-%d %H:%M"),  # 每次写入更新时间戳
+                    "compressed_context": compressed_ctx,
+                    "messages": msg_dicts,
+                }    
+
+                path = os.path.join(self.sessions_dir, f"{self.session_id}.json")
+                with open(path, "w", encoding="uft-8") as f:
+                    # indent=2 保持可读性，ensure_ascii=False 保留中文字符
+                    json.jump(session, f, ensure_ascii=False, indent=2)
+
+                return None     
+
+
+# ☀ 多智能体协作
+# ====================================================================================================================================
+
+    """
+    🍊 Workflow 流程编排
+    🍇 Supervisor 集中调试
+    🍋 Hierachical 分层协同
+    🍉 Swarm 自主协作
+    """
+
+    # 🍊 Workflow 流程编排
+    #-------------------------------------------------------------------------------------------------------------------
+    # 🚀 Langgraph StateGraph串行边
+    from typing import TypedDict  # 给 LangGraph 的图状态定义带类型的字段结构
+    from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
+    from langchain_core.tools import tool    # 把普通函数包成 LangChain 工具，挂给 agent
+    from langgraph.graph import StateGraph, START, END  # 建图核心：StateGraph 定状态图，START/END 是起止虚拟节点
+    from langgraph.prebuilt import create_react_agent   # 把"模型 + 工具"组装成能自主调工具的 agent
+
+    # 把 env-prep 里的搜索函数包成 LangChain 工具
+    @tool
+    def web_search(query: str) -> str:
+        """联网搜索资料，返回前 3 条结果的标题和摘要。输入查询词。"""
+        return web_search_raw(query)
+
+    llm = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3)
+
+    # 三道工序各是一个带搜索工具的真 agent：能自主决定要不要搜、搜什么——这才叫 agent
+    researcher = create_react_agent(llm, tools=[web_search],
+        prompt="你是研究员。先用 web_search 搜索一两次主题资料，再提炼 3 个最该写进技术博客的要点，逗号分隔，只输出要点。")
+    writer = create_react_agent(llm, tools=[web_search],
+        prompt="你是技术撰稿人。根据研究要点写一段 80 字以内的博客片段，只输出正文。")
+    editor = create_react_agent(llm, tools=[web_search],
+        prompt="你是编辑。把博客片段精简润色成一句 25 字以内的导读，只输出这句话。")
+
+    # State 是流水线上传递的一张共享表，每个节点把对应 agent 的产出填进去
+    class State(TypedDict):
+        topic: str       # 输入：写作主题
+        points: str      # 研究员产出：研究要点
+        draft: str       # 写作者产出：博客初稿
+        final: str       # 编辑产出：精简定稿
+
+    def research(state: State):                              # 工序一：研究员 agent 搜资料、提要点
+        print("【研究员】启动")
+        r = researcher.invoke({"messages": [("user", f"主题：{state['topic']}")]})
+        out = r["messages"][-1].content
+        print(f"【研究员】产出：{out}\n")
+        return {"points": out}
+
+    def write(state: State):                                 # 工序二：撰稿 agent 据要点写初稿
+        print("【写作者】启动")
+        r = writer.invoke({"messages": [("user", f"研究要点：{state['points']}")]})
+        out = r["messages"][-1].content
+        print(f"【写作者】产出：{out}\n")
+        return {"draft": out}
+
+    def edit(state: State):                                  # 工序三：编辑 agent 精简定稿
+        print("【编辑】启动")
+        r = editor.invoke({"messages": [("user", f"博客片段：{state['draft']}")]})
+        out = r["messages"][-1].content
+        print(f"【编辑】产出：{out}\n")
+        return {"final": out}
+
+    # 三道工序按顺序焊死在边里——这就是 Workflow：每个工位是带工具的 agent，但工位顺序由代码定死
+    g = StateGraph(State)
+    g.add_node("research", research)
+    g.add_node("write", write)
+    g.add_node("edit", edit)
+
+    g.add_edge(START, "research")
+    g.add_edge("research", "write")
+    g.add_edge("write", "edit")
+    g.add_edge("edit", END)
+    app = g.compile()  # 把状态图编译成可执行的图
+        
+    result = app.invoke({"topic": "多智能体协作模式"})
+    print("【研究要点】", result["points"])
+    print("【博客初稿】", result["draft"])
+    print("【精简定稿】", result["final"])
+
+
+    # ✈ CrewAI：Process.sequential
+    from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套：Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
+    from crewai.tools import tool as crew_tool          # CrewAI 的工具装饰器，把普通函数注册成 agent 可调的工具
+
+    # 把 env-prep 里的搜索函数包成 CrewAI 工具
+    @crew_tool("web_search")
+    def web_search(query: str) -> str:
+        """联网搜索资料，返回前 3 条结果的标题和摘要。输入查询词。"""
+        return web_search_raw(query)
+
+    # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀，这是 CrewAI 这条链路的硬要求
+    llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
+    os.environ.setdefault("OPENAI_API_KEY", KEY)             # CrewAI 部分组件会读 OPENAI_API_KEY，兜底设一下
+
+    # 三个角色，每个都配上搜索工具——能自主决定要不要搜、搜什么，这才叫 agent
+    researcher = Agent(role="内容研究员", goal="就给定主题先联网搜索、再提炼最该写进技术博客的核心要点",
+                       backstory="你擅长先查资料再下笔。", llm=llm, tools=[web_search], verbose=False)
+    writer = Agent(role="技术写作者", goal="把研究要点写成一段通俗的技术博客",
+                   backstory="你写的技术博客准确又好读。", llm=llm, tools=[web_search], verbose=False)
+    editor = Agent(role="文字编辑", goal="把一段博客精简成一句导读",
+                   backstory="你能把一整段讲解收成一句话。", llm=llm, tools=[web_search], verbose=False)
+
+    # Task.description 必须明确"先用 web_search 工具搜索"，否则 agent 可能跳过工具直接答
+    t_research = Task(description="先用 web_search 工具搜索一两次「{topic}」，再提炼 3 个最该写进技术博客的核心要点，逗号分隔。",
+                      expected_output="3 个核心要点，逗号分隔。", agent=researcher)
+    t_write = Task(description="根据上一步的要点，写一段 80 字以内的技术博客片段。",
+                   expected_output="一段 80 字以内的博客片段。", agent=writer)
+    t_edit = Task(description="把上一步的博客精简成一句 25 字以内的导读。",
+                  expected_output="一句 25 字以内的导读。", agent=editor)
+
+    crew = Crew(agents=[researcher, writer, editor],  # 把一组 agent + task 编成一个团队
+                tasks=[t_research, t_write, t_edit],
+                process=Process.sequential, verbose=False)   # sequential = 流程编排
+
+    result = await crew.kickoff_async(inputs={"topic": "多智能体协作模式"})  # Jupyter 自带事件循环，须用异步版启动（过程中 web_search 被调用时会打印）
+    print("\n【各工序产出】")
+    for t in [t_research, t_write, t_edit]:
+        print(f"【{t.agent.role}】产出：", t.output.raw if t.output else "(无)")
+    print("\n【最终导读】", result)
+
+
+    # 🚢 OpenAI Agents SDK: 代码驱动编排
+    from openai import AsyncOpenAI  # OpenAI 官方异步客户端，指向 OpenRouter 兼容端点
+    # 多导入 function_tool：把普通函数包成 agent 可调的工具
+    from agents import Agent, Runner, OpenAIChatCompletionsModel, function_tool, set_tracing_disabled 
+
+    set_tracing_disabled(True)                               # 关掉默认连 OpenAI 的 tracing，走第三方端点必须
+    client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
+    model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+    # 把 env-prep 里的搜索函数包成 OpenAI SDK 工具
+    @function_tool
+    def web_search(query: str) -> str:
+        """联网搜索资料，返回前 3 条结果的标题和摘要。输入查询词。"""
+        return web_search_raw(query)
+
+    # 三个 Agent 各管一道工序，每个都挂上搜索工具；它们之间没有 handoff，纯靠下面的代码把输出接力下去
+    researcher = Agent(name="researcher", model=model, tools=[web_search],
+                       instructions="先用 web_search 搜索一两次用户给的主题，再提炼 3 个最该写进技术博客的核心要点，逗号分隔，不要解释。")
+    writer = Agent(name="writer", model=model, tools=[web_search],
+                   instructions="根据用户给的研究要点，写一段 80 字以内的技术博客片段。")
+    editor = Agent(name="editor", model=model, tools=[web_search],
+                   instructions="把用户给的博客片段精简成一句 25 字以内的导读。")
+
+    async def main():
+        topic = "多智能体协作模式"
+        print("【研究员】启动")
+        r1 = await Runner.run(researcher, topic)             # 工序一：研究
+        print(f"【研究员】产出：{r1.final_output}\n")
+        print("【写作者】启动")
+        r2 = await Runner.run(writer, r1.final_output)       # 上一步产出当这一步输入
+        print(f"【写作者】产出：{r2.final_output}\n")
+        print("【编辑】启动")
+        r3 = await Runner.run(editor, r2.final_output)       # 再接力一棒
+        print(f"【编辑】产出：{r3.final_output}\n")
+
+    await main()      
+
+
+    # 🍇 Supervisor 集中调试
+    # -------------------------------------------------------------------------------------------------------------------
+    # 🚀 Langgraph
+    import os  # 读环境变量（密钥、模型名）
+    from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型，LangGraph 节点里用它调 LLM
+    from langgraph.prebuilt import create_react_agent          # 本课锁定 1.2.4，从 prebuilt 导入即可，当前版本可用
+    from langgraph_supervisor import create_supervisor  # LangGraph 官方扩展：一键装配"主管 + 一组专家"的集中调度结构
+
+    # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
+    model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+
+    # 两个专家 agent（无外部工具，凭模型知识各管一个维度）；name 是主管派单时的寻址依据
+    tech_expert = create_react_agent(model, tools=[], name="tech_expert",  # 造一个会自主推理、按需调工具的 ReAct 智能体
+        prompt="你是技术专家。只从技术原理和架构角度回答问题，80 字以内。")
+    apply_expert = create_react_agent(model, tools=[], name="apply_expert",
+        prompt="你是应用专家。只从落地场景和典型案例角度回答问题，80 字以内。")
+
+    # 主管：create_supervisor 自动给它注入 transfer_to_tech_expert / transfer_to_apply_expert 派单工具
+    supervisor = create_supervisor(  # 一键装配"主管 + 一组专家"的星形集中调度
+        agents=[tech_expert, apply_expert],
+        model=model,
+        prompt=("你是研究主管。把用户问题的技术维度交给 tech_expert，应用维度交给 apply_expert，"
+                "两份都收齐后，综合成一段 150 字以内的研究简报。")
+    ).compile()  # 把状态图编译成可执行的图
+
+    # 用 stream 边跑边打印——messages 是共享状态(黑板)，跑完再打顺序是按对话结构整理的；要看真实时间线得流式看
+    seen = set()                                                # 记录已打印的消息，去重
+    for _, state in supervisor.stream(
+            {"messages": [{"role": "user", "content": "多智能体协作模式在 2026 年的现状"}]},
+            subgraphs=True, stream_mode="values"):              # subgraphs=True 才看得到专家子图内部的事件
+        for m in state.get("messages", []):
+            if m.id in seen: continue
+            seen.add(m.id)
+            who = getattr(m, "name", None) or m.type
+            content = m.content if isinstance(m.content, str) else str(m.content)
+            if content.strip():
+                print(f"[{who}] {content[:220]}")
+
+
+    # 🚢 OpenAI Agents SDK： agents-as-tools          
+    import asyncio  # 驱动异步的 agent 调用
+    from openai import AsyncOpenAI  # OpenAI 官方异步客户端，指向 OpenRouter 兼容端点
+    from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK：Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+
+    set_tracing_disabled(True)                                  # 关掉 SDK 默认上报，走第三方端点时必须
+    client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)        # 复用环境准备 cell 的 BASE_URL/KEY
+    model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+    # 两个专家 Agent
+    tech_expert = Agent(name="tech_expert", model=model,
+                        instructions="你是技术专家。只从技术原理和架构角度回答，80 字以内。")
+    apply_expert = Agent(name="apply_expert", model=model,
+                         instructions="你是应用专家。只从落地场景和典型案例角度回答，80 字以内。")
+
+    # 主管：把两个专家 as_tool 挂成自己的工具；主管自己决定何时调哪个、最后综合（控制权不转移）
+    manager = Agent(
+        name="manager", 
+        model=model,
+        instructions=("你是研究主管。用 ask_tech 工具问技术维度，用 ask_apply 工具问应用维度，"
+                      "两个都问完后综合成一段 150 字以内的研究简报。"),
+        tools=[
+            tech_expert.as_tool(tool_name="ask_tech", tool_description="就问题咨询技术专家"),  # 把一个 agent 包装成另一个 agent 可调用的工具（agents-as-tools）
+            apply_expert.as_tool(tool_name="ask_apply", tool_description="就问题咨询应用专家"),
+        ]
+    )
+
+    async def main():
+        r = await Runner.run(manager, "多智能体协作模式在 2026 年的现状")  # OpenAI Agents SDK 执行入口：跑一个 agent 直到产出
+        print("【研究简报】", r.final_output)
+
+    await main()       # Jupyter 里直接 await
+
+    # ✈ CrewAI: Process.hierachical
+    import os  # 读环境变量（密钥、模型名）
+    from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套：Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
+
+    os.environ.setdefault("OPENAI_API_KEY", KEY)               # CrewAI 底层 litellm 会查这个变量
+    # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀，这是 CrewAI 这条链路的硬要求
+    llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
+
+    # 两个专家；hierarchical 模式下不绑 Task，由 manager 决定派给谁
+    tech_expert = Agent(role="技术专家", goal="从技术原理和架构角度分析问题",
+                        backstory="你精通多智能体协作模式的技术机制。", llm=llm, verbose=False)
+    apply_expert = Agent(role="应用专家", goal="从落地场景和典型案例角度分析问题",
+                         backstory="你熟悉多智能体协作模式的产业落地。", llm=llm, verbose=False)
+
+    # Task 不绑具体 agent，交给 manager 调度
+    task = Task(description="就「多智能体协作模式在 2026 年的现状」产出一份研究简报，综合技术与应用两个维度。",
+                expected_output="一段 150 字以内的研究简报。")
+
+    # Process.hierarchical + manager_llm：CrewAI 自动建一个 manager 负责派单和汇总
+    crew = Crew(agents=[tech_expert, apply_expert], tasks=[task],  # 把一组 agent + task 编成一个团队
+                process=Process.hierarchical, manager_llm=llm, verbose=False)  # CrewAI 层级编排：主管自动调度下属
+
+    result = await crew.kickoff_async()  # Jupyter 自带事件循环，须用异步版启动
+    print("【研究简报】", result)
+
+
+
+    # 🍋 Hierachical 分层协同
+    # -------------------------------------------------------------------------------------------------------------------
+    # 🚀 Langgraph
+    from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
+    from langgraph.prebuilt import create_react_agent     # 造底层 worker（会自主推理的 ReAct 智能体）
+    from langgraph_supervisor import create_supervisor    # 装配主管；它的产物可以再被上层 create_supervisor 嵌套
+
+    # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
+    model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+
+    # ---- 最底层：四个 worker，各管一摊 ----
+    fe_ui = create_react_agent(model, tools=[], name="fe_ui",
+        prompt="你是前端界面工程师。给出待办应用的界面与交互实现，60 字以内。")
+    fe_state = create_react_agent(model, tools=[], name="fe_state",
+        prompt="你是前端状态工程师。给出待办应用的前端状态管理与数据持久化方案，60 字以内。")
+    be_api = create_react_agent(model, tools=[], name="be_api",
+        prompt="你是后端接口工程师。给出待办应用的 REST 接口设计，60 字以内。")
+    be_db = create_react_agent(model, tools=[], name="be_db",
+        prompt="你是后端存储工程师。给出待办应用的数据库表与存储方案，60 字以内。")
+
+    # ---- 中间层：两个团队主管，各自管两个 worker（这一层 LLM 自主派单），编译时起 name 供上层寻址 ----
+    frontend_team = create_supervisor(
+        model=model,
+        agents=[fe_ui, fe_state], 
+        prompt="你是前端组长。把界面交互交给 fe_ui，状态与持久化交给 fe_state，两份都收齐后用一句话汇报前端方案。",
+        supervisor_name="fe_lead",
+    ).compile(name="frontend_team")     # 编译成"一个 agent"，名字叫 frontend_team
+
+    backend_team = create_supervisor(
+        model=model,
+        agents=[be_api, be_db],
+        prompt="你是后端组长。把接口设计交给 be_api，存储方案交给 be_db，两份都收齐后用一句话汇报后端方案。",
+        supervisor_name="be_lead",
+    ).compile(name="backend_team")
+
+    # ---- 最顶层：CTO 主管把两个团队主管当 agent 管起来（顶层 LLM 自主派单）----
+    top = create_supervisor(
+        model=model, 
+        agents=[frontend_team, backend_team],  # 注意：传进来的是两个"主管"，不是 worker——这就是嵌套
+        prompt=("你是技术总监。把前端相关工作交给 frontend_team，后端相关工作交给 backend_team，"
+                "两个团队都汇报完后，综合成一段 120 字以内的交付简报。"),
+        supervisor_name="cto",
+    ).compile()
+
+    # 同 3.2：stream 流式打印才是真实时间线（嵌套图要 subgraphs=True 才看得到组内事件）
+    seen = set()
+    for _, state in top.stream(
+            {"messages": [{"role": "user", "content": "做一个待办事项小应用"}]},
+            subgraphs=True, stream_mode="values"):
+        for m in state.get("messages", []):
+            if m.id in seen: continue
+            seen.add(m.id)
+            who = getattr(m, "name", None) or m.type
+            content = m.content if isinstance(m.content, str) else str(m.content)
+            if content.strip():
+                print(f"[{who}] {content[:200]}")
+
+
+    # 🚢 OpenAI Agents SDK： 嵌套agents-as-tools
+    import asyncio  # 驱动异步的 agent 调用
+    from openai import AsyncOpenAI  # OpenAI 官方异步客户端，指向 OpenRouter 兼容端点
+    from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK：Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+
+    set_tracing_disabled(True)                              # 关掉 SDK 默认上报，走第三方端点时必须
+    client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)    # 复用第二章环境准备 cell 的 BASE_URL/KEY
+    model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+    def make_lead(side: str) -> Agent:                      # 组长：把工程师当工具挂上（第一层嵌套）
+        eng = Agent(name=f"{side}_eng", model=model,
+                    instructions=f"你是{side}工程师，给出{side}实现方案，80 字以内。")
+        return Agent(name=f"{side}_lead", model=model,
+                     instructions=f"你是{side}组长。用工具问{side}工程师拿实现方案，然后一句话汇报本组结论。",
+                     tools=[eng.as_tool(tool_name=f"ask_{side}_eng", tool_description=f"问{side}工程师实现方案")])  # 把一个 agent 包装成另一个 agent 可调用的工具（agents-as-tools）
+
+    fe_lead = make_lead("前端")
+    be_lead = make_lead("后端")
+    # 总监：把两个组长当工具挂上（第二层嵌套）
+    cto = Agent(name="cto", model=model,
+                instructions="你是技术总监。用工具分别问前端组长、后端组长拿本组结论，综合成 100 字以内交付简报。",
+                tools=[fe_lead.as_tool(tool_name="ask_fe_lead", tool_description="问前端组长本组结论"),
+                       be_lead.as_tool(tool_name="ask_be_lead", tool_description="问后端组长本组结论")])
+
+    async def main():
+        # max_turns 要给够：两层嵌套意味着总监一次调用会触发组长再调工程师，工具调用轮次成倍增加
+        r = await Runner.run(cto, "做一个待办事项小应用", max_turns=20)  # OpenAI Agents SDK 执行入口：跑一个 agent 直到产出
+        print("【技术总监交付简报】", r.final_output)
+
+    await main()       # Jupyter 里直接 await
+
+
+    # 🍉 Swarm 自主协作
+    # -------------------------------------------------------------------------------------------------------------------
+    # 🚀 OpenAI Agents SDK: handoffs是它的招牌
+    import asyncio  # 驱动异步的 agent 调用
+    from openai import AsyncOpenAI  # OpenAI 官方异步客户端，指向 OpenRouter 兼容端点
+    from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK：Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+
+    set_tracing_disabled(True)                              # 走 OpenRouter 第三方端点，必须关掉回传 OpenAI 的追踪
+    client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
+    model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+    # name 必须英文：handoff 底层是 transfer_to_&lt;name&gt; 工具，中文名会撞名崩溃；中文角色说明放 instructions/handoff_description
+    refund = Agent(
+        name="refund", 
+        model=model, 
+        handoff_description="处理退款申请",
+        instructions="你是退款专员，处理退款。如果用户反映商品有质量问题、需要先做技术鉴定，转交给技术专员。一句话回复。",
+        handoffs: [tech]
+    )
+    tech = Agent(
+        name="tech", 
+        model=model, 
+        handoff_description="商品质量技术鉴定",
+        instructions="你是技术专员，负责商品质量技术鉴定，给出鉴定结论。一句话回复。"
+    )
+    triage = Agent(
+        name="triage", 
+        model=model,
+        instructions="你是客服分诊台，只负责判断用户问题类型并转给对应专员：退款相关转 refund，纯技术问题转 tech。不要自己回答业务问题。",
+        handoffs=[refund, tech]
+    )   # 分诊台能转给退款、技术两个专员
+
+    async def main():
+        # max_turns 是保险丝：万一两个专员互踢死循环，到上限强制停下
+        result = await Runner.run(triage, "我买的手机有质量问题，想退款", max_turns=10)  # OpenAI Agents SDK 执行入口：跑一个 agent 直到产出
+        print("【最终回复】", result.final_output)
+        print("\n【接力轨迹】")
+        for item in result.new_items:                        # 遍历运行产生的事件，打印 handoff 发生在哪些 agent 之间
+            cls = item.__class__.__name__
+            if "Handoff" in cls:                             # 一次控制权转交事件
+                print(f"  - 发生 handoff：{cls}")
+            elif cls == "MessageOutputItem":                 # 某个 agent 产出了一段回复
+                who = getattr(item.agent, "name", "?")
+                print(f"  - {who} 回复")
+
+    await main()       # Jupyter 里直接 await，不要再套 asyncio.run（环境准备 cell 已开 nest_asyncio）
+
+
+    # ✈ Langgraph: langgraph-swarm 官方双件套之一
+    from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型，LangGraph 节点里用它调 LLM
+    from langgraph.prebuilt import create_react_agent  # LangGraph 预制件：造一个会自主推理、按需调工具的 ReAct 智能体
+    from langgraph_swarm import create_swarm, create_handoff_tool  # langgraph-swarm 扩展：create_swarm 建去中心化群组 / create_handoff_tool 造平级转交工具
+    from langgraph.checkpoint.memory import InMemorySaver  # 把图执行状态存进内存的 checkpointer，支持 interrupt 暂停后恢复
+
+    # 复用环境准备 cell 的 MODEL/BASE_URL/KEY
+    model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+
+    # 每个专员挂一件 handoff 工具，能把控制权转给另一个专员（平级，无中心）
+    refund = create_react_agent(
+        model, 
+        name="refund",  # 造一个会自主推理、按需调工具的 ReAct 智能体
+        tools=[
+            create_handoff_tool(agent_name="tech", description="商品有质量问题、需技术鉴定时转给技术专员") # 造一个"把控制权转交给某 agent"的自主协作工具
+        ],  
+        prompt="你是退款专员，处理退款。商品质量问题需要技术鉴定时转给 tech。一句话回复。"
+    )
+    tech = create_react_agent(
+        model, 
+        name="tech",
+        tools=[
+            create_handoff_tool(agent_name="refund", description="鉴定完转回退款专员")
+        ],
+        prompt="你是技术专员，做商品质量技术鉴定并给结论。一句话回复。")
+
+
+    checkpointer = InMemorySaver() # swarm 几乎必配：记住 active_agent，否则跨轮丢"现在轮到谁"
+    # create_swarm 把两个专员装配成互联群组，default_active_agent 指定初始接待者
+    swarm = create_swarm(agents=[refund, tech], default_active_agent="refund").compile(checkpointer=checkpointer)  # 编译图并挂上 checkpointer，状态才能存档、之后恢复
+
+    config = {"configurable": {"thread_id": "1"}}            # thread_id 标识一次会话，checkpointer 按它存取 active_agent
+    # 同 3.2：stream 流式打印接力轨迹的真实时间线
+    seen = set()
+    for _, state in swarm.stream(
+            {"messages": [{"role": "user", "content": "我的手机有质量问题，想退款"}]},
+            config, subgraphs=True, stream_mode="values"):
+        for m in state.get("messages", []):
+            if m.id in seen: continue
+            seen.add(m.id)
+            who = getattr(m, "name", None) or m.type
+            content = m.content if isinstance(m.content, str) else str(m.content)
+            if content.strip():
+                print(f"[{who}] {content[:160]}")
+
+
+# ☎ MCP
+# ====================================================================================================================================
+
+
+# 🚄 模型微调
+# ====================================================================================================================================
+
+
+# 🏐 Google ADK
+# ====================================================================================================================================
