@@ -1504,6 +1504,8 @@
         "generate_text_embeddings",    
     """
 
+# 🎧 Agentic RAG
+# ====================================================================================================================================
 
 # ⚖ Ragas: 智能体与RAG系统的评估框架 
 # ====================================================================================================================================
@@ -2380,7 +2382,6 @@
 
         # 将文本转化为向量
         res = embedding.embed_query("hello world")
-
 
     # 🚀 提示词模板
         from langchain_core.prompts import PromptTemplate
@@ -7401,7 +7402,7 @@
         return results
 
 
-# 🧠 Agent记忆管理
+# 🧠 Agent 记忆管理
 # ====================================================================================================================================
 
     # 会话存在的结构 
@@ -8135,7 +8136,7 @@
     shutil.rmtree("/tmp/sessions", ignore_errors=True)
 
 
-# 🔰 Mem0
+# ✍ Mem0
 # ====================================================================================================================================
 
     # 🚀 三层记忆存储 user_id agent_id run_id
@@ -8823,9 +8824,541 @@
 # 🐴 Harness Engineering
 # ====================================================================================================================================
 
+    # ✈ 八大机制
+        # 👑 Agent Loop 四相循环
+            MAX_ITER = 20  # 硬性上限，到点必停
 
+            def agent_loop(initial_state):
+                """四相循环主函数
+                
+                Args:
+                    initial_state: 初始状态对象（含任务、历史、已完成标记）
+                Returns:
+                    final_state: 循环结束时的最终状态
+                """
+                state = initial_state
+                # for 循环代替 while True，保证最大迭代次数
+                for i in range(MAX_ITER):
+                    context = gather_context(state)    # 相 1：收集上下文
+                    action = take_action(context)      # 相 2：执行动作
+                    result = verify(action)            # 相 3：验证结果
+                    state = iterate(state, result)     # 相 4：迭代状态
+                    # 显式终止条件：状态自报完成才退出
+                    if state.is_done():
+                        break
+                return state
+
+        # 👑 Tool Use 工具编排
+            TOOL_REGISTRY = {"read_file": read_file, "write_file": write_file, "run_pytest": run_pytest}
+
+            def safe_tool_call(tool_name: str, **kwargs) -> dict:
+                """结构化工具调用包装器
+                
+                Args:
+                    tool_name: 工具名（从 TOOL_REGISTRY 查表）
+                    **kwargs: 工具参数（JSON schema 约束）
+                Returns:
+                    dict: {"status": "ok"|"error", "result": 或 "error": 字符串}
+                """
+                try:
+                    # 成功路径：正常返回结果
+                    result = TOOL_REGISTRY[tool_name](**kwargs)
+                    return {"status": "ok", "result": result}
+                except Exception as e:
+                    # 关键改进：error 不是空字符串，agent 能感知失败
+                    return {"status": "error", "error": str(e)}        
+
+        # 👑 Progress Tracking 进度追踪
+            import json
+            import pathlib
+
+            PROGRESS_FILE = pathlib.Path("claude-progress.json")
+
+            def save_progress(state: dict) -> None:
+                """每步完成后写进度文件，失败后可续传
+                
+                Args:
+                    state: 当前 agent 状态（含已完成任务、上下文快照）
+                """
+                # 每步写磁盘，写 JSON 格式方便人类阅读和工具消费
+                PROGRESS_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False))
+
+
+            def load_progress() -> dict | None:
+                """启动时先读进度，有则续传
+                
+                Returns:
+                    dict 或 None：有进度则返回状态，无则返回 None（全新开始）
+                """
+                # 存在即续传，不存在即从零开始
+                if PROGRESS_FILE.exists():
+                    return json.loads(PROGRESS_FILE.read_text())
+                return None    
+
+        # 👑 Context Management 上下文管理
+            CONTEXT_THRESHOLD = 80_000  # token 阈值（示意值，按模型实际 window 调整）
+
+            def call_llm_for_summary(msgs: list) -> str:
+                """把一串 messages 压成一段摘要
+
+                真实实现会调 LLM 生成带语义的总结；此处用最朴素的"拼接+截断"演示"压缩动作的形态"，
+                让学员看清 messages 从 N 条 → 1 条 summary 的数据流，而不是 LLM 本身怎么总结。
+
+                Args:
+                    msgs: 待压缩的消息列表（不含 system prompt）
+                Returns:
+                    str: 摘要字符串
+                """
+                # 仅演示形态：把所有 content 拼接后截断；真实场景请换成 LLM 摘要
+                joined = " | ".join(str(m.get("content", ""))[:80] for m in msgs)
+                return f"[前 {len(msgs)} 条消息压缩摘要] {joined[:500]}"
+
+
+            def manage_context(messages: list, token_count: int) -> list:
+                """上下文管理器：超阈值触发压缩
+
+                Args:
+                    messages: 当前消息列表（OpenAI 格式）
+                    token_count: 当前总 token 数（由上层调用方估算）
+                Returns:
+                    list: 处理后的 messages（未超阈值则原样返回）
+                """
+                # 未超阈值直接返回，保持 prompt cache 命中
+                if token_count <= CONTEXT_THRESHOLD:
+                    return messages
+                # 超阈值才触发压缩；system prompt（messages[0]）永远不动以保 cache
+                summary = call_llm_for_summary(messages[1:])
+                # 返回前缀稳定 + 压缩摘要的新 messages
+                return [messages[0], {"role": "assistant", "content": summary}]               
+
+        # 👑 Feature List 任务拆解
+            # 强制单次只做一件事
+            import json
+
+            # 典型 feature list 结构：id / task / status 三字段
+            feature_list = [
+                {"id": 1, "task": "读取 test_calculator.py", "status": "pending"},
+                {"id": 2, "task": "修复 add 函数的整数溢出 bug", "status": "pending"},
+                {"id": 3, "task": "运行 pytest 验证全部通过", "status": "pending"},
+            ]
+
+
+            def get_next_task(features: list) -> dict | None:
+                """取下一个 pending 任务，防止 agent 贪心多做
+                
+                Args:
+                    features: feature list（字典列表）
+                Returns:
+                    dict 或 None：最早的 pending 任务，全部完成则 None
+                """
+                # 按 id 顺序取第一个 pending，强制单步执行
+                # 这里用 next + 生成器是为了短路——找到第一个立即返回，不遍历全表
+                # 如果 agent 想"一次做多件"，这个函数只返回一件，它就不得不分多轮
+                return next((f for f in features if f["status"] == "pending"), None)   
+
+        # 👑 Verification Loop 验证闭环
+            import subprocess
+
+            def verify_with_pytest() -> dict:
+                """pytest 真机验证
+                
+                Returns:
+                    dict: {"passed": bool, "output": str}
+                """
+                # 真跑 pytest，不 mock 不 skip（mock 会让 agent 看到"假通过"）
+                # --tb=short 让错误回溯简短，避免 stdout 溢出塞满 context
+                result = subprocess.run(
+                    ["pytest", "--tb=short"], capture_output=True, text=True
+                )
+                # 关键：returncode 不丢弃，作为 passed 判定依据
+                # stdout + stderr 合并返回，让 agent 能看到完整错误信息
+                return {
+                    "passed": result.returncode == 0,
+                    "output": result.stdout + result.stderr,
+                }
+
+        # 👑 Subagents 子代理分治
+            def subagent(task: str, tools: list) -> str:
+                """子代理：独立 messages 列表完成子任务
+                
+                Args:
+                    task: 子任务描述（自然语言）
+                    tools: 子代理可用工具清单
+                Returns:
+                    str: 子任务的最终结论（不含中间过程）
+                """
+                # 子代理有独立的 messages，不共享主 agent 历史
+                sub_messages = [
+                    {"role": "system", "content": "你是专注于单一子任务的助手"},
+                    {"role": "user", "content": task},
+                ]
+                # 内部跑一个完整的 agent loop，但外部看不到中间步骤
+                return run_loop(sub_messages, tools)
+
+        # 👑 Generator-Evaluator 生成-评估对抗
+            def call_llm(prompt: str) -> str:
+                """LLM 调用 placeholder
+                
+                真实实现是 client.chat.completions.create(...)，见 cell [55] naive_agent 的 LLM 调用。
+                此处用回显保证三角色的输入-输出形态可见，让学员聚焦三角色结构而非 LLM 细节。
+                """
+                return f"[LLM 响应占位] 针对 prompt 前 60 字：{prompt[:60]}... (真实场景由 LLM 生成)"
+
+
+            def planner(task: str) -> list:
+                """规划者：把大任务拆成可评审的子任务清单
+                
+                Args:
+                    task: 原始任务描述
+                Returns:
+                    list: 可评审的子任务清单
+                """
+                return call_llm(f"把任务拆成可独立评审的子任务清单：{task}")
+
+
+            def generator(subtask: str) -> str:
+                """生成者：按规划逐项产出代码或解决方案
+                
+                Args:
+                    subtask: 单个子任务
+                Returns:
+                    str: 生成的代码或方案
+                """
+                return call_llm(f"请完成以下子任务：{subtask}")
+
+
+            def evaluator(code: str, criteria: str) -> dict:
+                """评价者：以怀疑者视角独立评审，不看生成过程
+                
+                Args:
+                    code: Generator 的产出（不含中间过程）
+                    criteria: 评审标准
+                Returns:
+                    dict: {"approved": bool, "feedback": str}
+                """
+                # 不看生成过程，只看最终产出是否满足标准
+                # 关键：prompt 里明确"批判性"，诱导 LLM 以审稿人角色挑刺而非辩护
+                verdict = call_llm(f"批判性审查以下代码是否满足标准：{criteria}\n\n{code}")
+                # 简化判定：verdict 含"通过"二字则认为 approved；工程代码应改为结构化输出（JSON）
+                return {"approved": "通过" in verdict, "feedback": verdict}                       
+
+            
 # 🌙 Agent Scope
 # ====================================================================================================================================
+    # 🚀 第一个智能体
+        import asyncio
+        import os
+
+        from agentscope.agent import Agent
+        from agentscope.credential import DashScopeCredential
+        from agentscope.event import EventType
+        from agentscope.message import UserMsg
+        from agentscope.model import DashScopeChatModel
+        from agentscope.tool import Toolkit, Bash, Read, Write, Edit
+
+        async def main() -> None:
+            agent = Agent(
+                name="Friday",
+                system_prompt="You are a helpful assistant named Friday.",
+                model=DashScopeChatModel(
+                    credential=DashScopeCredential(
+                        api_key=os.getenv("DASHSCOPE_API_KEY"),
+                    ),
+                    model="qwen-plus",
+                ),
+                toolkit=Toolkit(tools=[Bash(), Read(), Write(), Edit()]),
+            )
+
+            user_msg = UserMsg(name="user", content="Hello, who are you?")
+
+            # 方式一：等待最终的助手消息。
+            reply_msg = await agent.reply(user_msg)
+            # `reply_msg` 是一个 `AssistantMsg`，其 `content` 是一组内容块。
+            # 可按需检查文本块、工具调用等。
+            ...
+
+            # 方式二：流式获取增量事件（文本片段、工具调用等）。
+            async for event in agent.reply_stream(user_msg):
+                # 根据 `event.type` 分发处理 —— 每个分支对应一种事件类型。
+                match event.type:
+                    case EventType.TEXT_BLOCK_DELTA:
+                        # 模型返回的流式文本片段 —— 追加到界面或标准输出。
+                        ...
+                    case EventType.TOOL_CALL_START:
+                        # 智能体即将调用工具 —— 展示调用信息。
+                        ...
+                    case _:
+                        # 其他事件：思考块、工具结果、回复结束等。
+                        ...
+
+
+        asyncio.run(main())
+
+    # 🚀 创建文本消息
+        from agentscope.message import UserMsg, SystemMsg, AssistantMsg
+
+        # 用户消息
+        user_msg = UserMsg(
+            name="user",
+            content="这张图片里有什么？"
+        )
+
+        # 系统消息，仅用于系统提示（System prompt）
+        system_msg = SystemMsg(
+            name="system",
+            content="你是一个名为 Friday 的 AI 助手。"
+        )
+
+        # 助手消息
+        assistant_msg = AssistantMsg(
+            name="Friday",
+            content="你好，有什么我可以帮你的吗？"
+        )    
+
+    # 🚀 创建多模态消息    
+        from agentscope.message import UserMsg, TextBlock, DataBlock, Base64Source
+
+        # 用户消息
+        user_msg = UserMsg(
+            name="user",
+            content=[
+                TextBlock(text="描述这张图片："),
+                DataBlock(
+                    source=Base64Source(
+                        data="...",
+                        media_type="image/png"
+                    )
+                ),
+            ],
+        )
+ 
+    # 🚀 创建工具调用消息
+        from agentscope.message import AssistantMsg, ThinkingBlock, TextBlock, ToolCallBlock, ToolCallState, ToolResultBlock, ToolResultState
+
+        assistant_msg = AssistantMsg(
+            name="Friday",
+            content=[
+                ThinkingBlock(thinking="我应该调用工具来查询天气。"),
+                TextBlock(text="让我查询下北京的天气。"),
+                ToolCallBlock(
+                    id="tool_call_1",
+                    name="weather_search",
+                    input='{"city": "Beijing"}',
+                    state=ToolCallState.FINISHED,
+                ),
+                ToolResultBlock(
+                    id="tool_call_1",
+                    name="weather_search",
+                    output="北京的天气是晴天，温度 25°C。",
+                    state=ToolResultState.SUCCESS,
+                ),
+            ]
+        )
+
+    # 💡 配置智能体
+        import os
+        from agentscope.agent import Agent, ContextConfig
+        from agentscope.tool import Toolkit, Bash, Edit, Grep, Read, Write
+        from agentscope.mcp import MCPClient, HttpMCPConfig
+        from agentscope.model import DashScopeChatModel
+        from agentscope.credential import DashScopeCredential
+
+        agent = Agent(
+            name="my_agent",
+            system_prompt="你是一个AI助手。",
+            model=DashScopeChatModel(
+                credential=DashScopeCredential(api_key="YOUR_API_KEY"),
+                model="qwen-max",
+            ),
+            toolkit=Toolkit(
+                tools=[Bash(), Edit(), Grep(), Read(), Write()],
+                mcps=[
+                    MCPClient(
+                        name="amap",
+                        is_stateful=False,
+                        mcp_config=HttpMCPConfig(
+                            url=f"https://mcp.amap.com/mcp?key={os.environ['AMAP_API_KEY']}",
+                        ),
+                    ),
+                ],
+                skills_or_loaders=["./skills"],
+            ),
+            context_config=ContextConfig(
+                trigger_ratio=0.7,       # 使用 70% 上下文时触发压缩
+                reserve_ratio=0.2,       # 压缩后保留最近 20% 的内容
+                tool_result_limit=1000,  # 工具结果超过 1000 token 时截断
+            )
+        )    
+
+    # ✈ 压缩上下文
+        """
+        当 token 数量超过 context_config.trigger_ratio × model.context_length 时，智能体会自动压缩上下文。
+        压缩会对较旧的消息进行摘要，如果配置了 offloader，还会将其卸载到磁盘。
+        
+        也可以手动触发压缩：
+        """    
+        from agentscope.agent import ContextConfig
+
+        # 使用智能体的默认配置
+        await agent.compress_context()
+
+        # 或为本次调用传入自定义配置
+        await agent.compress_context(
+            ContextConfig(
+                trigger_ratio=0.6,
+                reserve_ratio=0.2,
+            )
+        )
+
+    # 💬 人机交互
+        # 当权限系统判断某个工具调用需要用户批准时，智能体会发出 RequireUserConfirmEvent 并暂停。
+
+        # 1 接收 RequireUserConfirmEvent
+            from agentscope.event import RequireUserConfirmEvent
+
+            async for event in agent.reply_stream(msg):
+                if isinstance(event, RequireUserConfirmEvent):
+                    for tc in event.tool_calls:
+                        print(f"工具: {tc.name}, 输入: {tc.input}")
+                        print(f"建议规则: {tc.suggested_rules}")
+
+        # 2 构建确认结果
+            # 为每个待处理的工具调用创建 ConfirmResult，指明是否允许执行。也可以修改工具调用输入或接受建议的权限规则：
+            from agentscope.event import ConfirmResult, UserConfirmResultEvent
+
+            confirm_results = []
+            for tc in event.tool_calls:
+                confirm_results.append(
+                    ConfirmResult(
+                        confirmed=True,           # 或 False 表示拒绝
+                        tool_call=tc,             # 传回（可选择修改）
+                        rules=tc.suggested_rules, # 接受规则以便未来自动允许
+                    )
+                )
+
+        # 3 恢复智能体
+            # 将 UserConfirmResultEvent 传回 reply 或 reply_stream：
+            confirm_event = UserConfirmResultEvent(
+                reply_id=event.reply_id,
+                confirm_results=confirm_results,
+            )
+            result = await agent.reply(confirm_event)
+            """
+            - 已确认的工具调用立即执行，智能体继续推理
+            - 已拒绝的工具调用会产生 LLM 可见的错误结果，LLM 可能会用不同方式重试
+            - 已接受的规则会持久化到权限引擎中——匹配的未来调用将自动允许，无需再次提示
+            """
+
+    # 🚀 持久化智能体状态
+        import asyncio
+        from agentscope.agent import Agent
+        from agentscope.state import AgentState
+        from agentscope.model import DashScopeChatModel
+        from agentscope.credential import DashScopeCredential
+        from agentscope.message import UserMsg
+        from agentscope.app.storage import RedisStorage
+
+        USER_ID = "user_123"
+        AGENT_ID = "agent_456"
+        SESSION_ID = "session_789"
+
+        async def main():
+            async with RedisStorage(host="localhost", port=6379) as storage:
+                # 从存储中加载状态，若不存在则使用全新状态
+                record = await storage.get_session(
+                    user_id=USER_ID,
+                    agent_id=AGENT_ID,
+                    session_id=SESSION_ID,
+                )
+                state = record.state if record else AgentState()
+
+                # 使用恢复的状态创建智能体
+                agent = Agent(
+                    name="my_agent",
+                    system_prompt="你是一个有帮助的助手。",
+                    model=DashScopeChatModel(
+                        credential=DashScopeCredential(api_key="YOUR_API_KEY"),
+                        model="qwen-max",
+                    ),
+                    state=state,
+                )
+
+                # 执行一轮 reply
+                result = await agent.reply(
+                    UserMsg(name="user", content="继续之前的任务。"),
+                )
+                print(result.get_text_content())
+
+                # 将更新后的状态持久化回 Redis
+                await storage.update_session_state(
+                    user_id=USER_ID,
+                    agent_id=AGENT_ID,
+                    session_id=SESSION_ID,
+                    state=agent.state,
+                )
+
+        asyncio.run(main())        
+
+    # 🚀 调用ChatModel
+        """
+        返回类型取决于模型的 stream 设置：
+        - stream=False —— 返回单个 ChatResponse，承载完整输出。
+        - stream=True —— 返回 AsyncGenerator[ChatResponse, None]。
+            中间 chunk（is_last=False）只携带增量内容。
+            为了让开发者无需自行累积增量，AgentScope 会在末尾追加一个 is_last=True 的 chunk，承载完整的累积内容。
+        """
+        import asyncio
+        import os
+        from agentscope.model import DashScopeChatModel
+        from agentscope.credential import DashScopeCredential
+        from agentscope.message import UserMsg
+
+        async def main():
+            model = DashScopeChatModel(
+                credential=DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"]),
+                model="qwen-plus",
+                stream=True,
+            )
+            msgs = [UserMsg(name="user", content="Count from 1 to 5.")]
+
+            async for chunk in await model(msgs):
+                if chunk.is_last:
+                    print("Final:", chunk.content)   # 完整累积内容
+                else:
+                    print("Delta:", chunk.content)   # 仅增量
+
+        asyncio.run(main())  
+    
+    # 生成结构化输出
+        """
+        当需要返回符合 Pydantic 模型或 JSON schema 的结构化结果时，调用 generate_structured_output 而非 __call__。
+        它返回一个 StructuredResponse，其 content 是经过 schema 校验的 dict：
+        """    
+        import asyncio
+        import os
+        from pydantic import BaseModel
+        from agentscope.model import DashScopeChatModel
+        from agentscope.credential import DashScopeCredential
+        from agentscope.message import UserMsg
+
+        class WeatherInfo(BaseModel):
+            city: str
+            temperature: float
+            unit: str
+
+        async def main():
+            model = DashScopeChatModel(
+                credential=DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"]),
+                model="qwen-plus",
+                stream=False,
+            )
+            response = await model.generate_structured_output(
+                messages=[UserMsg(name="user", content="What's the weather in Shanghai?")],
+                structured_model=WeatherInfo,
+            )
+            print(response.content)  # 符合 WeatherInfo 的 dict
+
+        asyncio.run(main())
 
 
 # 🏀 Agents SDK
@@ -8833,96 +9366,95 @@
     
     # 🚀 三大模块 Agent Handoffs Guardrails
 
-    # ! pip install openai python-dotenv openai-agents
-    import os
-    from dotenv import load_dotenv
+        # ! pip install openai python-dotenv openai-agents
+        import os
+        from dotenv import load_dotenv
 
-    load_dotenv(override=True) # 如果已经配置过全局变量，则使用.env 文件中的变量覆盖替换
+        load_dotenv(override=True) # 如果已经配置过全局变量，则使用.env 文件中的变量覆盖替换
 
-    from agents import Agent
-    agent = Agent(
-        name="乐于助人的私人小助理",
-        instructions="请使用中文回答用户的问题",
-    )
-
-    from agents import Runner
-    result = await Runner.run(
-        starting_agent=agent,
-        input="你好，请你介绍一下你自己"
+        from agents import Agent
+        agent = Agent(
+            name="乐于助人的私人小助理",
+            instructions="请使用中文回答用户的问题",
         )
 
-    print(result.final_output)
+        from agents import Runner
+        result = await Runner.run(
+            starting_agent=agent,
+            input="你好，请你介绍一下你自己"
+        )
 
+        print(result.final_output)
 
     # 🚀 其它模型接入
-    from openai import OpenAI
-    import os
-    from dotenv import load_dotenv
-    load_dotenv(override=True)
+        from openai import OpenAI
+        import os
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
 
-    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-    DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL")
-    DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL")
+        DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+        DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL")
+        DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL")
 
-    # 实例化客户端
-    client = OpenAI(
-        api_key=DEEPSEEK_API_KEY, 
-        base_url=DEEPSEEK_BASE_URL
-    )
-
-    response = client.chat.completions.create(
-        model=DEEPSEEK_MODEL,
-        messages=[
-            {"role": "user", "content": "你好，好久不见!请介绍下你自己。"}
-        ]
-    ) 
-
-    
-    # 除此以外，`Runner.run`是一个异步方法，所以接入的模型实例也需要使用异步，因此这里实例化模型时需要使用`AsyncOpenAI`包
-    from openai import AsyncOpenAI, OpenAIChatCompletionsModel
-
-    deepseek_client = AsyncOpenAI(
-        base_url=DEEPSEEK_BASE_URL, 
-        api_key=DEEPSEEK_API_KEY
-    )
-
-    agent = Agent(
-        name="乐于助人的私人小助理",
-        instructions="请使用中文回答用户的问题",
-        model=OpenAIChatCompletionsModel(
-            model=DEEPSEEK_MODEL,
-            openai_client=deepseek_client,
+        # 实例化客户端
+        client = OpenAI(
+            api_key=DEEPSEEK_API_KEY, 
+            base_url=DEEPSEEK_BASE_URL
         )
-    )
 
-    result = await Runner.run(agent, "你好，请你介绍一下你自己")
-    print(result.final_output)
-
-    # 自定义采样参数的方法，则是需要通过`ModelSettings`类进行实例化并传递，如下代码所示：
-    from agents import ModelSettings
-
-    agent = Agent(
-        name="乐于助人的私人小助理",
-        instructions="请使用中文回答用户的问题",
-        model=OpenAIChatCompletionsModel(
+        response = client.chat.completions.create(
             model=DEEPSEEK_MODEL,
-            openai_client=deepseek_client,
-        ),
-        model_settings=ModelSettings(
-            temperature=0.6,
-            max_tokens=10,
-        )
-    )
-    result = await Runner.run(agent, "请你介绍一下你自己")
-    print(result.final_output)
+            messages=[
+                {"role": "user", "content": "你好，好久不见!请介绍下你自己。"}
+            ]
+        ) 
 
-    # 🚀 Runner核心组件详解
-    """
-    - Runner.run(): 异步运行并返回最终响应结果。
-    - Runner.run_sync(): 同步运行，本质上是对异步 `run()` 方法的封装，
-                         从而可以在没有事件循环的情况下（例如在普通的 Python 脚本或某些环境中）以同步方式执行代理的逻辑。
-    - Runner.run_streamed(): 异步运行并返回最终的响应结果。它以流模式调用大模型，并在接收到事件时将其进行流式的实时传输。
-    """
+        
+        # 除此以外，`Runner.run`是一个异步方法，所以接入的模型实例也需要使用异步，因此这里实例化模型时需要使用`AsyncOpenAI`包
+        from openai import AsyncOpenAI, OpenAIChatCompletionsModel
+
+        deepseek_client = AsyncOpenAI(
+            base_url=DEEPSEEK_BASE_URL, 
+            api_key=DEEPSEEK_API_KEY
+        )
+
+        agent = Agent(
+            name="乐于助人的私人小助理",
+            instructions="请使用中文回答用户的问题",
+            model=OpenAIChatCompletionsModel(
+                model=DEEPSEEK_MODEL,
+                openai_client=deepseek_client,
+            )
+        )
+
+        result = await Runner.run(agent, "你好，请你介绍一下你自己")
+        print(result.final_output)
+
+        # 自定义采样参数的方法，则是需要通过`ModelSettings`类进行实例化并传递，如下代码所示：
+        from agents import ModelSettings
+
+        agent = Agent(
+            name="乐于助人的私人小助理",
+            instructions="请使用中文回答用户的问题",
+            model=OpenAIChatCompletionsModel(
+                model=DEEPSEEK_MODEL,
+                openai_client=deepseek_client,
+            ),
+            model_settings=ModelSettings(
+                temperature=0.6,
+                max_tokens=10,
+            )
+        )
+        result = await Runner.run(agent, "请你介绍一下你自己")
+        print(result.final_output)
+
+    # 🚀 Runner核心组件
+        """
+        - Runner.run(): 异步运行并返回最终响应结果。
+        - Runner.run_sync(): 同步运行，本质上是对异步 `run()` 方法的封装，
+                             从而可以在没有事件循环的情况下（例如在普通的 Python 脚本或某些环境中）以同步方式执行代理的逻辑。
+        - Runner.run_streamed(): 异步运行并返回最终的响应结果。它以流模式调用大模型，并在接收到事件时将其进行流式的实时传输。
+        """
 
     # 🚢 上下文管理
 
@@ -9551,67 +10083,225 @@
 
 
     # 📞 Stdio MCP服务器接入
-    import asyncio
-    import os
-    import shutil
+        import asyncio
+        import os
+        import shutil
 
-    from agents import Agent, Runner, gen_trace_id, trace
-    from agents.mcp import MCPServer, MCPServerStdio
-
-
-    async def run(mcp_server: MCPServer):
-        agent = Agent(
-            name="Assistant",
-            instructions="Use the tools to read the filesystem and answer questions based on those files.",
-            mcp_servers=[mcp_server],
-        )
-
-        # List the files it can read
-        message = "Read the files and list them."
-        print(f"Running: {message}")
-        result = await Runner.run(starting_agent=agent, input=message)
-        print(result.final_output)
-
-        # Ask about books
-        message = "What is my #1 favorite book?"
-        print(f"\n\nRunning: {message}")
-        result = await Runner.run(starting_agent=agent, input=message)
-        print(result.final_output)
-
-        # Ask a question that reads then reasons.
-        message = "Look at my favorite songs. Suggest one new song that I might like."
-        print(f"\n\nRunning: {message}")
-        result = await Runner.run(starting_agent=agent, input=message)
-        print(result.final_output)
+        from agents import Agent, Runner, gen_trace_id, trace
+        from agents.mcp import MCPServer, MCPServerStdio, MCPServerStreamableHttp
 
 
-    async def main():
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        samples_dir = os.path.join(current_dir, "sample_files")
+        async def run(mcp_server: MCPServer):
+            agent = Agent(
+                name="Assistant",
+                instructions="Use the tools to read the filesystem and answer questions based on those files.",
+                mcp_servers=[mcp_server],
+            )
 
-        async with MCPServerStdio(
-            name="Filesystem Server, via npx",
-            params={
-                "command": "npx",
-                "args": ["-y", "@modelcontextprotocol/server-filesystem", samples_dir],
-            },
-        ) as server:
-            trace_id = gen_trace_id()
-            with trace(workflow_name="MCP Filesystem Example", trace_id=trace_id):
-                print(f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}\n")
-                await run(server)
+            # List the files it can read
+            message = "Read the files and list them."
+            print(f"Running: {message}")
+            result = await Runner.run(starting_agent=agent, input=message)
+            print(result.final_output)
+
+            # Ask about books
+            message = "What is my #1 favorite book?"
+            print(f"\n\nRunning: {message}")
+            result = await Runner.run(starting_agent=agent, input=message)
+            print(result.final_output)
+
+            # Ask a question that reads then reasons.
+            message = "Look at my favorite songs. Suggest one new song that I might like."
+            print(f"\n\nRunning: {message}")
+            result = await Runner.run(starting_agent=agent, input=message)
+            print(result.final_output)
 
 
-    if __name__ == "__main__":
-        # Let's make sure the user has npx installed
-        if not shutil.which("npx"):
-            raise RuntimeError("npx is not installed. Please install it with `npm install -g npx`.")
+        async def main():
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            samples_dir = os.path.join(current_dir, "sample_files")
 
-        asyncio.run(main())
+            async with MCPServerStdio(
+                name="Filesystem Server, via npx",
+                params={
+                    "command": "npx",
+                    "args": ["-y", "@modelcontextprotocol/server-filesystem", samples_dir],
+                },
+            ) as server:
+                trace_id = gen_trace_id()
+                with trace(workflow_name="MCP Filesystem Example", trace_id=trace_id):
+                    print(f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}\n")
+                    await run(server)
 
-    # 🚀 Agents SDK中的事件回调    
+
+        if __name__ == "__main__":
+            # Let's make sure the user has npx installed
+            if not shutil.which("npx"):
+                raise RuntimeError("npx is not installed. Please install it with `npm install -g npx`.")
+
+            asyncio.run(main())
+
+    # 📞 SSE MCP服务器接入
+        from agents.mcp import MCPServerSse
+
+        async def main(prompt: str):
+            async with MCPServerSse(
+                name="12306_mcp",
+                params={
+                    "url": "https://mcp.api-inference.modelscope.net/eb9fa1122332744/mcp",  # 这里需要替换成 MCP的 SSE URL
+                    "timeout": 30,            # HTTP请求超时时间30秒
+                    "sse_read_timeout": 5   # 连接超时时间到5分钟
+                },
+                client_session_timeout_seconds=60,  # 增加客户端会话超时到60秒
+                cache_tools_list=True,             # 启用工具列表缓存
+            ) as mcp:
+                print(f"连接MCP服务器成功: {mcp.name}")  # 通过静态方法name查看当前连接的MCP服务器名称
+                try:
+                    tools = await mcp.list_tools()   # 通过其父类_MCPServerWithClientSession中的list_tools方法列出可用工具
+                    print(f"可用工具列表: {[tool.name for tool in tools]}")
+
+                    agent = Agent(               
+                        name="Train_Assistant",
+                        instructions="你是一个火车票查询助手，可以查询高铁信息",
+                        model=OpenAIChatCompletionsModel(
+                            model=os.getenv("DEEPSEEK_MODEL"),
+                            openai_client=deepseek_client,
+                        ),
+                        model_settings=ModelSettings(
+                            temperature=0.6,
+                            max_tokens=2048
+                        ),
+                        mcp_servers=[mcp],
+                    )
+
+                    print(f"开始处理查询: {prompt}")
+                    result = await Runner.run(    
+                        starting_agent=agent,
+                        input=prompt,
+                        run_config=RunConfig(
+                            tracing_disabled=True
+                        )
+                    )
+                except Exception as e:
+                    print(f"获取工具列表失败: {e}")
+        
+    # 📞 StreamableHttp MCP服务器接入
+        from pydantic import BaseModel
+        from agents.mcp import MCPServerStreamableHttp
+
+        async def main(prompt: str):
+            try:
+                async with MCPServerStreamableHttp(
+                    name='Assistant',
+                    params={
+                        "url": "http://localhost: 3000/mcp/",
+                        "headers": {
+                            "Content-Type": "application/json",
+                            # 初始握手/配置： 使用'application/json'
+                            # 事件流： 使用"text/event-stream"
+                            "Accept": "text/event-stream, application/json"
+                        }
+                    }
+                ) as mcp:
+
+        if __name__ == "__main__":
+            asyncio.run(main())    
+        
+      
+    # 🎩 安全护栏
+
+        # 🚀 使用装饰器 @input_guardrail() 直接将函数声明为输入护栏函数
+            from agents import (
+                Agent,
+                GuardrailFunctionOutput,
+                InputGuardrailTripwireTriggered,
+                RunContextWrapper,
+                Runner,
+                TResponseInputItem,
+                input_guardrail,
+            )
+
+            class MathHomeworkOutput(BaseModel):
+                reasoning: str
+                is_math_homework: bool
 
 
+            guardrail_agent = Agent(
+                name="Guardrail check",
+                instructions="Check if the user is asking you to do their math homework.",
+                output_type=MathHomeworkOutput,
+            )
+
+            @input_guardrail
+            async def math_guardrail(
+                context: RunContextWrapper[None], 
+                agent: Agent, 
+                input: str | list[TResponseInputItem]
+            ) -> GuardrailFunctionOutput:
+                """This is an input guardrail function, which happens to call an agent to check if the input
+                is a math homework question.
+                """
+                result = await Runner.run(guardrail_agent, input, context=context.context)
+                final_output = result.final_output_as(MathHomeworkOutput)
+
+                return GuardrailFunctionOutput(
+                    output_info=final_output,
+                    tripwire_triggered=final_output.is_math_homework, # 💡 这里如果是True的话，抛出异常，中断整个链路
+                )
+
+            async def main():
+                agent = Agent(
+                    name="Customer support agent",
+                    instructions="You are a customer support agent. You help customers with their questions.",
+                    input_guardrails=[math_guardrail],  # 🎈 
+                )
+
+                input_data: list[TResponseInputItem] = []
+
+                while True:
+                    user_input = input("Enter a message: ")
+                    input_data.append(
+                        {
+                            "role": "user",
+                            "content": user_input,
+                        }
+                    )
+
+                    try:
+                        result = await Runner.run(agent, input_data)
+                        print(result.final_output)
+                        # If the guardrail didn't trigger, we use the result as the input for the next run
+                        input_data = result.to_input_list()
+                    except InputGuardrailTripwireTriggered:
+                        # If the guardrail triggered, we instead add a refusal message to the input
+                        message = "Sorry, I can't help you with your math homework."
+                        print(message)
+                        input_data.append(
+                            {
+                                "role": "assistant",
+                                "content": message,
+                            }
+                        )
+
+                # Sample run:
+                # Enter a message: What's the capital of California?
+                # The capital of California is Sacramento.
+                # Enter a message: Can you help me solve for x: 2x + 5 = 11
+                # Sorry, I can't help you with your math homework.
+            
+            if __name__ == "__main__":
+                asyncio.run(main())
+        
+        # ✈ 显式实例化InputGuardrail对象创建护栏实例运行时的热插拔
+            from agents import InputGuardrail
+
+            async def check_id_info_leak(ctx: RunContextWrapper[None], agent: Agent, input_text: str):
+                pass
+
+            id_info_leak_guardrail = InputGuardrailk(
+                guradrail_function=check_id_info_leak,
+                name="id_info_leak_guardrail"
+            )
 
 
 # 🦅 HuggingFace
@@ -9859,1354 +10549,1354 @@
     # 🎯 Write写入持久化
     # 对话历史层 | 记忆注入层 | 任务状态层
     # ----------------------------------------------------------------------------------------------------------------
-    # 🚀 === 短期记忆层的 Write：LLM 压缩摘要 + 持久化到 sessions/ ===
-        import json, os, time
+        # 🚀 === 短期记忆层的 Write：LLM 压缩摘要 + 持久化到 sessions/ ===
+            import json, os, time
 
-        SESSIONS_DIR = "./sessions"
-        os.makedirs(SESSIONS_DIR, exist_ok=True)
+            SESSIONS_DIR = "./sessions"
+            os.makedirs(SESSIONS_DIR, exist_ok=True)
 
-        # 核心参数（与 SessionManager 一致：消息数达到阈值时，压缩前半部分，只保留后半部分）
-        COMPRESS_TRIGGER = 8   # 演示用小阈值（生产环境 SessionManager 用 20）
-        KEEP_RECENT = 4        # 压缩后保留最近 4 条消息
+            # 核心参数（与 SessionManager 一致：消息数达到阈值时，压缩前半部分，只保留后半部分）
+            COMPRESS_TRIGGER = 8   # 演示用小阈值（生产环境 SessionManager 用 20）
+            KEEP_RECENT = 4        # 压缩后保留最近 4 条消息
 
-        # ---- 步骤 1：创建 session，写入 8 条多轮对话 ----
-        session_id = "write_demo"
+            # ---- 步骤 1：创建 session，写入 8 条多轮对话 ----
+            session_id = "write_demo"
 
-        session = {
-            "title": "新项目技术选型讨论",
-            "created_at": time.strftime("%Y-%m-%d %H:%M"),
-            "updated_at": time.strftime("%Y-%m-%d %H:%M"),
-            "compressed_context": "",   # 压缩前为空
-            "messages": [
-                {"role": "user", "content": "新项目的数据库用什么？"},
-                {"role": "assistant", "content": "推荐 PostgreSQL。理由：项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 的 async 支持性能优秀。"},
-                {"role": "user", "content": "缓存方案呢？"},
-                {"role": "assistant", "content": "Redis，Cache-Aside 模式。热点数据 TTL=300s，写操作先更新 DB 再删缓存。"},
-                {"role": "user", "content": "部署方案定了吗？"},
-                {"role": "assistant", "content": "Docker Compose 本地开发，AWS ECS 生产。CI/CD 用 GitHub Actions，自动化金丝雀发布。"},
-                {"role": "user", "content": "预算上限是多少？"},
-                {"role": "assistant", "content": "初期 15 万以内。服务器 3 万/年，API 调用预留 2 万/月。"},
-            ]
-        }
+            session = {
+                "title": "新项目技术选型讨论",
+                "created_at": time.strftime("%Y-%m-%d %H:%M"),
+                "updated_at": time.strftime("%Y-%m-%d %H:%M"),
+                "compressed_context": "",   # 压缩前为空
+                "messages": [
+                    {"role": "user", "content": "新项目的数据库用什么？"},
+                    {"role": "assistant", "content": "推荐 PostgreSQL。理由：项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 的 async 支持性能优秀。"},
+                    {"role": "user", "content": "缓存方案呢？"},
+                    {"role": "assistant", "content": "Redis，Cache-Aside 模式。热点数据 TTL=300s，写操作先更新 DB 再删缓存。"},
+                    {"role": "user", "content": "部署方案定了吗？"},
+                    {"role": "assistant", "content": "Docker Compose 本地开发，AWS ECS 生产。CI/CD 用 GitHub Actions，自动化金丝雀发布。"},
+                    {"role": "user", "content": "预算上限是多少？"},
+                    {"role": "assistant", "content": "初期 15 万以内。服务器 3 万/年，API 调用预留 2 万/月。"},
+                ]
+            }
 
-        # 写入 JSON（压缩前：8 条消息，compressed_context 为空）
-        session_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-        with open(session_path, "w", encoding="utf-8") as f:
-            json.dump(session, f, ensure_ascii=False, indent=2)
-
-        print(f"=== 压缩前：{session_path} ===")
-        print(f"messages: {len(session['messages'])} 条（达到 COMPRESS_TRIGGER={COMPRESS_TRIGGER}）")
-        print(f"compressed_context: （空）")
-
-        # ---- 步骤 2：达到阈值，压缩前 4 条为摘要，只保留后 4 条 ----
-        if len(session["messages"]) >= COMPRESS_TRIGGER:
-            early_messages = session["messages"][:-KEEP_RECENT]   # 前 4 条：将被压缩
-            recent_messages = session["messages"][-KEEP_RECENT:]  # 后 4 条：保留原文
-
-            # LLM 压缩早期对话（一句话回复，控制运行时间）
-            early_text = "\n".join(f'{m["role"]}: {m["content"]}' for m in early_messages)
-            compress_prompt = f"""
-            请将以下对话历史压缩为一段简洁的摘要，保留所有关键技术决策和数字：
-            \n\n{early_text}\n\n
-            输出要求：一段话，不超过 80 字。
-            """
-
-            summary = llm.invoke(compress_prompt).content # 送入模型进行压缩
-
-            # 写回 session：compressed_context 存摘要，messages 只留最近的
-            session["compressed_context"] = summary
-            session["messages"] = recent_messages
-            session["updated_at"] = time.strftime("%Y-%m-%d %H:%M")
-
-            # 处理后，重新写回文件
+            # 写入 JSON（压缩前：8 条消息，compressed_context 为空）
+            session_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
             with open(session_path, "w", encoding="utf-8") as f:
                 json.dump(session, f, ensure_ascii=False, indent=2)
 
-        # ---- 步骤 3：展示压缩结果 ----
-        original_tokens = count_tokens(early_text)
-        summary_tokens = count_tokens(summary)
+            print(f"=== 压缩前：{session_path} ===")
+            print(f"messages: {len(session['messages'])} 条（达到 COMPRESS_TRIGGER={COMPRESS_TRIGGER}）")
+            print(f"compressed_context: （空）")
 
-        print(f"\n=== 压缩后：{session_path} ===")
-        print(f"compressed_context ({summary_tokens} tokens，原始 {original_tokens} tokens，压缩率 {(1 - summary_tokens/original_tokens)*100:.0f}%)：")
-        print(f"  {summary}")
-        print(f"messages: {len(session['messages'])} 条（只保留最近 {KEEP_RECENT} 条）")
-        for m in session["messages"]:
-            print(f"  [{m['role']}] {m['content'][:50]}")
+            # ---- 步骤 2：达到阈值，压缩前 4 条为摘要，只保留后 4 条 ----
+            if len(session["messages"]) >= COMPRESS_TRIGGER:
+                early_messages = session["messages"][:-KEEP_RECENT]   # 前 4 条：将被压缩
+                recent_messages = session["messages"][-KEEP_RECENT:]  # 后 4 条：保留原文
 
-        # 从文件读回验证
-        print(f"\n=== 验证：从文件读回 ===")
-        with open(session_path, "r", encoding="utf-8") as f:
-            saved = json.load(f)
-        print(f"compressed_context 长度: {len(saved['compressed_context'])} 字符")
-        print(f"messages 数量: {len(saved['messages'])} 条")
+                # LLM 压缩早期对话（一句话回复，控制运行时间）
+                early_text = "\n".join(f'{m["role"]}: {m["content"]}' for m in early_messages)
+                compress_prompt = f"""
+                请将以下对话历史压缩为一段简洁的摘要，保留所有关键技术决策和数字：
+                \n\n{early_text}\n\n
+                输出要求：一段话，不超过 80 字。
+                """
 
+                summary = llm.invoke(compress_prompt).content # 送入模型进行压缩
 
-    # 🚀 === 长期记忆层的 Write：mem0.add() 选择性提取 ===
-        """
-        长期记忆的 Write 目标完全不同：**从对话中识别出值得跨会话保留的关键事实，结构化后写入向量数据库**。前课的 `mem0.add()` 
-        内部会调用 LLM 裁判（`_extract_facts()`）判断哪些信息值得记住，然后执行 ADD/UPDATE/NONE 三分类。
+                # 写回 session：compressed_context 存摘要，messages 只留最近的
+                session["compressed_context"] = summary
+                session["messages"] = recent_messages
+                session["updated_at"] = time.strftime("%Y-%m-%d %H:%M")
 
-        这里有一个关键细节：`mem0` 默认从 user 角色的消息中提取事实。因此，如果用户只是在提问（「数据库用什么？」），
-        `mem0` 提取不到有价值的决策信息。真实场景中，用户会在对话中确认决策（「数据库我们决定用 PostgreSQL」），这些确认性表述才是长期记忆的提取目标。
-        下面我们模拟这个场景：
-        """
-        import os, shutil
-        from mem0 import Memory
+                # 处理后，重新写回文件
+                with open(session_path, "w", encoding="utf-8") as f:
+                    json.dump(session, f, ensure_ascii=False, indent=2)
 
-        QDRANT_PATH = "./qdrant_write_demo"
+            # ---- 步骤 3：展示压缩结果 ----
+            original_tokens = count_tokens(early_text)
+            summary_tokens = count_tokens(summary)
 
-        # 清理残留锁（Notebook 重复运行时文件锁不会自动释放）
-        for p in [QDRANT_PATH, os.path.expanduser("~/.mem0/migrations_qdrant")]:
-            if os.path.exists(p):
-                shutil.rmtree(p)
+            print(f"\n=== 压缩后：{session_path} ===")
+            print(f"compressed_context ({summary_tokens} tokens，原始 {original_tokens} tokens，压缩率 {(1 - summary_tokens/original_tokens)*100:.0f}%)：")
+            print(f"  {summary}")
+            print(f"messages: {len(session['messages'])} 条（只保留最近 {KEEP_RECENT} 条）")
+            for m in session["messages"]:
+                print(f"  [{m['role']}] {m['content'][:50]}")
 
-        # mem0 配置（与进阶课件一致：DeepSeek 做 LLM，OpenAI 做 Embedding）
-        config = {
-            "llm": {
-                "provider": "openai",
-                "config": {
-                    "model": "deepseek-chat",
-                    "api_key": os.getenv("DEEPSEEK_API_KEY"),
-                    "openai_base_url": "https://api.deepseek.com/v1",
-                    "temperature": 0.1,
-                }
-            },
-            "embedder": {
-                "provider": "openai",
-                "config": {
-                    "model": "text-embedding-3-small",
-                    "api_key": os.getenv("OPENAI_API_KEY"),
-                }
-            },
-            "vector_store": {
-                "provider": "qdrant",
-                "config": {
-                    "collection_name": "write_demo",
-                    "path": QDRANT_PATH,
-                }
-            },
-            "version": "v1.1"
-        }
-
-        memory = Memory.from_config(config)
-
-        # 关键：mem0 默认从 user 消息中提取事实
-        # 因此对话需要反映真实场景——用户确认技术决策，而非只是提问
-        decisions_conversation = [
-            {"role": "user", "content": "数据库我们决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async"},
-            {"role": "assistant", "content": "好的，PostgreSQL + SQLAlchemy 2.0 async 已记录。"},
-            {"role": "user", "content": "缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存"},
-            {"role": "assistant", "content": "了解，Redis Cache-Aside + write-through 策略。"},
-            {"role": "user", "content": "部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布"},
-            {"role": "assistant", "content": "部署流水线已记录。"},
-            {"role": "user", "content": "预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月"},
-            {"role": "assistant", "content": "预算约束已记录。"},
-        ]
-
-        # 一行代码完成「提取 + 去重 + 向量化 + 存储」
-        add_result = memory.add(decisions_conversation, user_id="dev_team_lead")
-
-        print("=== 长期 Write：mem0.add() 提取的记忆条目 ===")
-        for item in add_result.get("results", []):
-            event = item.get("event", "UNKNOWN")
-            mem_text = item.get("memory", "")
-            print(f"  [{event}] {mem_text}")
-
-        # === 长期 Write：mem0.add() 提取的记忆条目 ===
-          # [ADD] 数据库决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async
-          # [ADD] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
-          # [ADD] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
-          # [ADD] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
+            # 从文件读回验证
+            print(f"\n=== 验证：从文件读回 ===")
+            with open(session_path, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            print(f"compressed_context 长度: {len(saved['compressed_context'])} 字符")
+            print(f"messages 数量: {len(saved['messages'])} 条")
 
 
-        # 验证：search 能检索到刚才写入的记忆
-        search_result = memory.search("项目用什么数据库", user_id="dev_team_lead")
-        print(f'\n=== 验证：search("项目用什么数据库") ===')
-        for item in search_result.get("results", []):
-            print(f"  [score={item['score']:.2f}] {item['memory']}")
+        # 🚀 === 长期记忆层的 Write：mem0.add() 选择性提取 ===
+            """
+            长期记忆的 Write 目标完全不同：**从对话中识别出值得跨会话保留的关键事实，结构化后写入向量数据库**。前课的 `mem0.add()` 
+            内部会调用 LLM 裁判（`_extract_facts()`）判断哪些信息值得记住，然后执行 ADD/UPDATE/NONE 三分类。
 
-        # === 验证：search("项目用什么数据库") ===
-          # [score=0.54] 数据库决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async
-          # [score=0.51] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
-          # [score=0.49] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
-          # [score=0.45] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
+            这里有一个关键细节：`mem0` 默认从 user 角色的消息中提取事实。因此，如果用户只是在提问（「数据库用什么？」），
+            `mem0` 提取不到有价值的决策信息。真实场景中，用户会在对话中确认决策（「数据库我们决定用 PostgreSQL」），这些确认性表述才是长期记忆的提取目标。
+            下面我们模拟这个场景：
+            """
+            import os, shutil
+            from mem0 import Memory
+
+            QDRANT_PATH = "./qdrant_write_demo"
+
+            # 清理残留锁（Notebook 重复运行时文件锁不会自动释放）
+            for p in [QDRANT_PATH, os.path.expanduser("~/.mem0/migrations_qdrant")]:
+                if os.path.exists(p):
+                    shutil.rmtree(p)
+
+            # mem0 配置（与进阶课件一致：DeepSeek 做 LLM，OpenAI 做 Embedding）
+            config = {
+                "llm": {
+                    "provider": "openai",
+                    "config": {
+                        "model": "deepseek-chat",
+                        "api_key": os.getenv("DEEPSEEK_API_KEY"),
+                        "openai_base_url": "https://api.deepseek.com/v1",
+                        "temperature": 0.1,
+                    }
+                },
+                "embedder": {
+                    "provider": "openai",
+                    "config": {
+                        "model": "text-embedding-3-small",
+                        "api_key": os.getenv("OPENAI_API_KEY"),
+                    }
+                },
+                "vector_store": {
+                    "provider": "qdrant",
+                    "config": {
+                        "collection_name": "write_demo",
+                        "path": QDRANT_PATH,
+                    }
+                },
+                "version": "v1.1"
+            }
+
+            memory = Memory.from_config(config)
+
+            # 关键：mem0 默认从 user 消息中提取事实
+            # 因此对话需要反映真实场景——用户确认技术决策，而非只是提问
+            decisions_conversation = [
+                {"role": "user", "content": "数据库我们决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async"},
+                {"role": "assistant", "content": "好的，PostgreSQL + SQLAlchemy 2.0 async 已记录。"},
+                {"role": "user", "content": "缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存"},
+                {"role": "assistant", "content": "了解，Redis Cache-Aside + write-through 策略。"},
+                {"role": "user", "content": "部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布"},
+                {"role": "assistant", "content": "部署流水线已记录。"},
+                {"role": "user", "content": "预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月"},
+                {"role": "assistant", "content": "预算约束已记录。"},
+            ]
+
+            # 一行代码完成「提取 + 去重 + 向量化 + 存储」
+            add_result = memory.add(decisions_conversation, user_id="dev_team_lead")
+
+            print("=== 长期 Write：mem0.add() 提取的记忆条目 ===")
+            for item in add_result.get("results", []):
+                event = item.get("event", "UNKNOWN")
+                mem_text = item.get("memory", "")
+                print(f"  [{event}] {mem_text}")
+
+            # === 长期 Write：mem0.add() 提取的记忆条目 ===
+              # [ADD] 数据库决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async
+              # [ADD] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
+              # [ADD] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
+              # [ADD] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
 
 
-        # Token 对比
-        mem_texts = [item.get("memory", "") for item in add_result.get("results", [])]
-        mem_tokens = sum(count_tokens(t) for t in mem_texts)
-        print(f"\n=== 三层 Write 的 Token 经济学对比 ===")
-        print(f"原始对话:     {original_tokens} tokens（完整历史）")
-        print(f"短期 Write:   {summary_tokens} tokens（压缩摘要，保留在 session 内）")
-        print(f"长期 Write:   {mem_tokens} tokens（{len(mem_texts)} 条结构化记忆，永久存入向量库）")
-        # === 三层 Write 的 Token 经济学对比 ===
-        # 原始对话:     79 tokens（完整历史）
-        # 短期 Write:   53 tokens（压缩摘要，保留在 session 内）
-        # 长期 Write:   108 tokens（4 条结构化记忆，永久存入向量库）
+            # 验证：search 能检索到刚才写入的记忆
+            search_result = memory.search("项目用什么数据库", user_id="dev_team_lead")
+            print(f'\n=== 验证：search("项目用什么数据库") ===')
+            for item in search_result.get("results", []):
+                print(f"  [score={item['score']:.2f}] {item['memory']}")
+
+            # === 验证：search("项目用什么数据库") ===
+              # [score=0.54] 数据库决定用 PostgreSQL，项目有大量关联查询，团队熟悉度高，配合 SQLAlchemy 2.0 做 async
+              # [score=0.51] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
+              # [score=0.49] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
+              # [score=0.45] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
 
 
-    # 🚀 === 任务状态层的 Write：Scratchpad / todo.md
-        """
-        除了记忆层的两种 Write，还有一种在生产 Agent 中极为常见的 Write 形态：把任务执行进度写入结构化文件（如 `todo.md`、`CLAUDE.md`），
-        让 Agent 在上下文窗口被重置后能恢复执行状态。这对应我们在 2.6 节介绍的「任务状态层」——Scratchpad 就是 Agent 的「草稿纸」。
-
-        与前两种 Write 的关键区别：短期压缩保留的是对话语义，mem0 提取的是用户知识，而 todo.md 记录的是任务进度——哪些步骤做完了、当前卡在哪、下一步是什么。
-        下面模拟一个多步骤项目任务，展示 Agent 如何通过 Write to Scratchpad 实现「断点续传」：
-        """
-
-        import json, os
-
-        TODO_FILE = "./todo_demo.md"
-
-        # ---- 第一阶段：Agent 执行任务并实时写入进度 ----
-        task_plan = [
-            {"step": 1, "task": "初始化 PostgreSQL 连接池", "status": "done", "result": "pool_size=20, max_overflow=10"},
-            {"step": 2, "task": "创建 users 表迁移脚本", "status": "done", "result": "alembic revision --autogenerate 完成"},
-            {"step": 3, "task": "实现 JWT 认证中间件", "status": "in_progress", "result": "refresh token 逻辑未完成"},
-            {"step": 4, "task": "配置 Redis 缓存层", "status": "pending", "result": ""},
-            {"step": 5, "task": "编写 API 集成测试", "status": "pending", "result": ""},
-        ]
-
-        # Agent 将当前进度写入 todo.md（Write to Scratchpad）
-        def write_todo(tasks, filepath):
-            lines = ["# 项目任务进度\n\n"]
-            status_icon = {"done": "[x]", "in_progress": "[-]", "pending": "[ ]"}
-            for t in tasks:
-                icon = status_icon[t["status"]]
-                line = f"{icon} Step {t['step']}: {t['task']}"
-                if t["result"]:
-                    line += f" → {t['result']}"
-                lines.append(line + "\n")
-            with open(filepath, "w") as f:
-                f.writelines(lines)
-
-        write_todo(task_plan, TODO_FILE)
-        print("=== Agent 写入 todo.md（模拟执行到 Step 3 中断）===")
-        print(open(TODO_FILE).read())
-
-        # === Agent 写入 todo.md（模拟执行到 Step 3 中断）===
-        ## 项目任务进度
-
-        # [x] Step 1: 初始化 PostgreSQL 连接池 → pool_size=20, max_overflow=10
-        # [x] Step 2: 创建 users 表迁移脚本 → alembic revision --autogenerate 完成
-        # [-] Step 3: 实现 JWT 认证中间件 → refresh token 逻辑未完成
-        # [ ] Step 4: 配置 Redis 缓存层
-        # [ ] Step 5: 编写 API 集成测试
+            # Token 对比
+            mem_texts = [item.get("memory", "") for item in add_result.get("results", [])]
+            mem_tokens = sum(count_tokens(t) for t in mem_texts)
+            print(f"\n=== 三层 Write 的 Token 经济学对比 ===")
+            print(f"原始对话:     {original_tokens} tokens（完整历史）")
+            print(f"短期 Write:   {summary_tokens} tokens（压缩摘要，保留在 session 内）")
+            print(f"长期 Write:   {mem_tokens} tokens（{len(mem_texts)} 条结构化记忆，永久存入向量库）")
+            # === 三层 Write 的 Token 经济学对比 ===
+            # 原始对话:     79 tokens（完整历史）
+            # 短期 Write:   53 tokens（压缩摘要，保留在 session 内）
+            # 长期 Write:   108 tokens（4 条结构化记忆，永久存入向量库）
 
 
-        # ---- 第二阶段：模拟上下文重置（新会话/auto-compact 后）----
-        # Agent 读回 todo.md，恢复执行状态
-        def read_todo(filepath):
-            with open(filepath) as f:
-                content = f.read()
-            # 解析出当前进度
-            done = content.count("[x]")
-            in_progress = content.count("[-]")
-            pending = content.count("[ ]")
-            return content, done, in_progress, pending
+        # 🚀 === 任务状态层的 Write：Scratchpad / todo.md
+            """
+            除了记忆层的两种 Write，还有一种在生产 Agent 中极为常见的 Write 形态：把任务执行进度写入结构化文件（如 `todo.md`、`CLAUDE.md`），
+            让 Agent 在上下文窗口被重置后能恢复执行状态。这对应我们在 2.6 节介绍的「任务状态层」——Scratchpad 就是 Agent 的「草稿纸」。
 
-        content, done, in_prog, pending = read_todo(TODO_FILE)
-        print("=== 新会话：Agent 读取 todo.md 恢复状态 ===")
-        print(f"已完成: {done} | 进行中: {in_prog} | 待开始: {pending}")
-        print(f"→ Agent 决策：继续 Step 3（JWT refresh token），无需从头开始")
+            与前两种 Write 的关键区别：短期压缩保留的是对话语义，mem0 提取的是用户知识，而 todo.md 记录的是任务进度——哪些步骤做完了、当前卡在哪、下一步是什么。
+            下面模拟一个多步骤项目任务，展示 Agent 如何通过 Write to Scratchpad 实现「断点续传」：
+            """
 
-        # === 新会话：Agent 读取 todo.md 恢复状态 ===
-        # 已完成: 2 | 进行中: 1 | 待开始: 2
-        # → Agent 决策：继续 Step 3（JWT refresh token），无需从头开始
+            import json, os
 
-        # Token 对比：todo.md vs 完整对话历史
-        todo_tokens = count_tokens(content)
-        # 假设完成前 3 步产生了约 20 轮对话
-        estimated_history = "user: ...\nassistant: ...\n" * 20
-        history_tokens = count_tokens(estimated_history) * 5  # 真实对话每轮约 200 tokens
-        print(f"\n=== Scratchpad Write 的 Token 经济学 ===")
-        print(f"todo.md:        {todo_tokens} tokens（结构化进度）")
-        print(f"完整对话历史:   ~{history_tokens} tokens（20 轮对话估算）")
-        print(f"恢复执行所需上下文：只需 todo.md + 当前步骤描述，不需要回放全部历史")
+            TODO_FILE = "./todo_demo.md"
 
-        # === Scratchpad Write 的 Token 经济学 ===
-        # todo.md:        103 tokens（结构化进度）
-        # 完整对话历史:   ~700 tokens（20 轮对话估算）
-        # 恢复执行所需上下文：只需 todo.md + 当前步骤描述，不需要回放全部历史
+            # ---- 第一阶段：Agent 执行任务并实时写入进度 ----
+            task_plan = [
+                {"step": 1, "task": "初始化 PostgreSQL 连接池", "status": "done", "result": "pool_size=20, max_overflow=10"},
+                {"step": 2, "task": "创建 users 表迁移脚本", "status": "done", "result": "alembic revision --autogenerate 完成"},
+                {"step": 3, "task": "实现 JWT 认证中间件", "status": "in_progress", "result": "refresh token 逻辑未完成"},
+                {"step": 4, "task": "配置 Redis 缓存层", "status": "pending", "result": ""},
+                {"step": 5, "task": "编写 API 集成测试", "status": "pending", "result": ""},
+            ]
 
-        # 清理
-        os.remove(TODO_FILE)
+            # Agent 将当前进度写入 todo.md（Write to Scratchpad）
+            def write_todo(tasks, filepath):
+                lines = ["# 项目任务进度\n\n"]
+                status_icon = {"done": "[x]", "in_progress": "[-]", "pending": "[ ]"}
+                for t in tasks:
+                    icon = status_icon[t["status"]]
+                    line = f"{icon} Step {t['step']}: {t['task']}"
+                    if t["result"]:
+                        line += f" → {t['result']}"
+                    lines.append(line + "\n")
+                with open(filepath, "w") as f:
+                    f.writelines(lines)
+
+            write_todo(task_plan, TODO_FILE)
+            print("=== Agent 写入 todo.md（模拟执行到 Step 3 中断）===")
+            print(open(TODO_FILE).read())
+
+            # === Agent 写入 todo.md（模拟执行到 Step 3 中断）===
+            ## 项目任务进度
+
+            # [x] Step 1: 初始化 PostgreSQL 连接池 → pool_size=20, max_overflow=10
+            # [x] Step 2: 创建 users 表迁移脚本 → alembic revision --autogenerate 完成
+            # [-] Step 3: 实现 JWT 认证中间件 → refresh token 逻辑未完成
+            # [ ] Step 4: 配置 Redis 缓存层
+            # [ ] Step 5: 编写 API 集成测试
+
+
+            # ---- 第二阶段：模拟上下文重置（新会话/auto-compact 后）----
+            # Agent 读回 todo.md，恢复执行状态
+            def read_todo(filepath):
+                with open(filepath) as f:
+                    content = f.read()
+                # 解析出当前进度
+                done = content.count("[x]")
+                in_progress = content.count("[-]")
+                pending = content.count("[ ]")
+                return content, done, in_progress, pending
+
+            content, done, in_prog, pending = read_todo(TODO_FILE)
+            print("=== 新会话：Agent 读取 todo.md 恢复状态 ===")
+            print(f"已完成: {done} | 进行中: {in_prog} | 待开始: {pending}")
+            print(f"→ Agent 决策：继续 Step 3（JWT refresh token），无需从头开始")
+
+            # === 新会话：Agent 读取 todo.md 恢复状态 ===
+            # 已完成: 2 | 进行中: 1 | 待开始: 2
+            # → Agent 决策：继续 Step 3（JWT refresh token），无需从头开始
+
+            # Token 对比：todo.md vs 完整对话历史
+            todo_tokens = count_tokens(content)
+            # 假设完成前 3 步产生了约 20 轮对话
+            estimated_history = "user: ...\nassistant: ...\n" * 20
+            history_tokens = count_tokens(estimated_history) * 5  # 真实对话每轮约 200 tokens
+            print(f"\n=== Scratchpad Write 的 Token 经济学 ===")
+            print(f"todo.md:        {todo_tokens} tokens（结构化进度）")
+            print(f"完整对话历史:   ~{history_tokens} tokens（20 轮对话估算）")
+            print(f"恢复执行所需上下文：只需 todo.md + 当前步骤描述，不需要回放全部历史")
+
+            # === Scratchpad Write 的 Token 经济学 ===
+            # todo.md:        103 tokens（结构化进度）
+            # 完整对话历史:   ~700 tokens（20 轮对话估算）
+            # 恢复执行所需上下文：只需 todo.md + 当前步骤描述，不需要回放全部历史
+
+            # 清理
+            os.remove(TODO_FILE)
 
 
     # 🎯 Select运行时检索
     # 记忆注入层 | 外部知识层
     # ----------------------------------------------------------------------------------------------------------------
-    # 🚀 === memo0 memory.search 向量语义搜索
-        # 场景：Agent 收到新任务——"帮我配置数据库连接池"
-        # Select 策略：先搜索长期记忆，看项目之前做过什么技术决策
-        task_query = "服务器预算"
-        results = memory.search(query=task_query, user_id="dev_team_lead", limit=2)
+        # 🚀 === memo0 memory.search 向量语义搜索
+            # 场景：Agent 收到新任务——"帮我配置数据库连接池"
+            # Select 策略：先搜索长期记忆，看项目之前做过什么技术决策
+            task_query = "服务器预算"
+            results = memory.search(query=task_query, user_id="dev_team_lead", limit=2)
 
-        print(f'=== memory.search("{task_query}") ===')
-        print(f"召回 {len(results.get('results', []))} 条相关记忆：\n")
-        for item in results.get("results", []):
-            score = item.get("score", 0)
-            mem = item.get("memory", "")
-            print(f"  [相关度 {score:.2f}] {mem}")
+            print(f'=== memory.search("{task_query}") ===')
+            print(f"召回 {len(results.get('results', []))} 条相关记忆：\n")
+            for item in results.get("results", []):
+                score = item.get("score", 0)
+                mem = item.get("memory", "")
+                print(f"  [相关度 {score:.2f}] {mem}")
 
-        # === memory.search("服务器预算") ===
-        # 召回 2 条相关记忆：
+            # === memory.search("服务器预算") ===
+            # 召回 2 条相关记忆：
 
-          # [相关度 0.65] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
-          # [相关度 0.42] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
+              # [相关度 0.65] 预算上限 15 万，服务器 3 万一年，API 调用预留 2 万每月
+              # [相关度 0.42] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存
 
 
-        # 对比：换一个与已有记忆无关的查询
-        irrelevant_query = "本地部署方案"
-        irr_results = memory.search(query=irrelevant_query, user_id="dev_team_lead", limit=2)
-        print(f'\n=== memory.search("{irrelevant_query}") ===')
-        print(f"召回 {len(irr_results.get('results', []))} 条记忆：\n")
-        for item in irr_results.get("results", []):
-            score = item.get("score", 0)
-            mem = item.get("memory", "")
-            print(f"  [相关度 {score:.2f}] {mem}")
+            # 对比：换一个与已有记忆无关的查询
+            irrelevant_query = "本地部署方案"
+            irr_results = memory.search(query=irrelevant_query, user_id="dev_team_lead", limit=2)
+            print(f'\n=== memory.search("{irrelevant_query}") ===')
+            print(f"召回 {len(irr_results.get('results', []))} 条记忆：\n")
+            for item in irr_results.get("results", []):
+                score = item.get("score", 0)
+                mem = item.get("memory", "")
+                print(f"  [相关度 {score:.2f}] {mem}")
 
-        # === memory.search("本地部署方案") ===
-        # 召回 2 条记忆：
+            # === memory.search("本地部署方案") ===
+            # 召回 2 条记忆：
 
-          # [相关度 0.52] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
-          # [相关度 0.37] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存    
+              # [相关度 0.52] 部署方案：本地用 Docker Compose，生产上 AWS ECS，CI/CD 走 GitHub Actions 自动金丝雀发布
+              # [相关度 0.37] 缓存方案定了，用 Redis Cache-Aside 模式，热点数据 TTL 设 300 秒，写操作先更新 DB 再删缓存    
 
-        # Token 节省分析：全量 vs Select
-        all_mems = memory.get_all(user_id="dev_team_lead")
-        all_text = "\n".join(m.get("memory", "") for m in all_mems.get("results", []))
-        selected_text = "\n".join(
-            item.get("memory", "") for item in results.get("results", [])
-            if item.get("score", 0) > 0.3  # 只保留相关度 > 0.3 的记忆
-        )
-        print(f"\n=== Select 效果：语义过滤的 Token 节省 ===")
-        print(f"记忆库全量注入: {count_tokens(all_text)} tokens（{len(all_mems.get('results', []))} 条）")
-        print(f"Select 后注入:  {count_tokens(selected_text)} tokens（仅高相关度条目）")
-        if count_tokens(all_text) > 0:
-            print(f"节省:           {(1 - count_tokens(selected_text)/count_tokens(all_text))*100:.0f}%")
+            # Token 节省分析：全量 vs Select
+            all_mems = memory.get_all(user_id="dev_team_lead")
+            all_text = "\n".join(m.get("memory", "") for m in all_mems.get("results", []))
+            selected_text = "\n".join(
+                item.get("memory", "") for item in results.get("results", [])
+                if item.get("score", 0) > 0.3  # 只保留相关度 > 0.3 的记忆
+            )
+            print(f"\n=== Select 效果：语义过滤的 Token 节省 ===")
+            print(f"记忆库全量注入: {count_tokens(all_text)} tokens（{len(all_mems.get('results', []))} 条）")
+            print(f"Select 后注入:  {count_tokens(selected_text)} tokens（仅高相关度条目）")
+            if count_tokens(all_text) > 0:
+                print(f"节省:           {(1 - count_tokens(selected_text)/count_tokens(all_text))*100:.0f}%")
 
-        # === Select 效果：语义过滤的 Token 节省 ===
-        # 记忆库全量注入: 111 tokens（4 条）
-        # Select 后注入:  56 tokens（仅高相关度条目）
-        # 节省:           50%    
+            # === Select 效果：语义过滤的 Token 节省 ===
+            # 记忆库全量注入: 111 tokens（4 条）
+            # Select 后注入:  56 tokens（仅高相关度条目）
+            # 节省:           50%    
 
-    # 🚀 === Glob + Grep 文件精确检索
-        """
-        前一种 Select 操作的是结构化数据（向量数据库），而 Glob + Grep 操作的是**非结构化的文件系统**。
-        这是 Coding Agent（如 Claude Code、Cursor）最核心的 Select 能力：面对一个几万文件的代码仓库，Agent 不可能把所有文件都读进上下文，
-        必须先用 Glob 按文件名模式缩小范围，再用 Grep 按关键词精确定位。
-        """
-        # === Select 策略：Glob + Grep 文件精确检索 ===
-        import glob, os, shutil
+        # 🚀 === Glob + Grep 文件精确检索
+            """
+            前一种 Select 操作的是结构化数据（向量数据库），而 Glob + Grep 操作的是**非结构化的文件系统**。
+            这是 Coding Agent（如 Claude Code、Cursor）最核心的 Select 能力：面对一个几万文件的代码仓库，Agent 不可能把所有文件都读进上下文，
+            必须先用 Glob 按文件名模式缩小范围，再用 Grep 按关键词精确定位。
+            """
+            # === Select 策略：Glob + Grep 文件精确检索 ===
+            import glob, os, shutil
 
-        # 构建模拟项目目录（实际 Agent 操作真实代码仓库）
-        PROJECT = "./select_demo_project"
-        os.makedirs(f"{PROJECT}/backend/api", exist_ok=True)
-        os.makedirs(f"{PROJECT}/backend/graph", exist_ok=True)
-        os.makedirs(f"{PROJECT}/backend/models", exist_ok=True)
-        os.makedirs(f"{PROJECT}/frontend/src", exist_ok=True)
+            # 构建模拟项目目录（实际 Agent 操作真实代码仓库）
+            PROJECT = "./select_demo_project"
+            os.makedirs(f"{PROJECT}/backend/api", exist_ok=True)
+            os.makedirs(f"{PROJECT}/backend/graph", exist_ok=True)
+            os.makedirs(f"{PROJECT}/backend/models", exist_ok=True)
+            os.makedirs(f"{PROJECT}/frontend/src", exist_ok=True)
 
-        mock_files = {
-            f"{PROJECT}/backend/api/chat.py": (
-                "from fastapi import APIRouter\n"
-                "# SSE 流式端点，处理用户消息\n"
-                "async def chat_stream(request):\n"
-                "    session = SessionManager()\n"
-                "    response = await agent.invoke(request.message)\n"
-            ),
-            f"{PROJECT}/backend/graph/agent.py": (
-                "from langchain_deepseek import ChatDeepSeek\n"
-                "from mem0 import Memory\n"
-                "MAX_HISTORY = 20\n"
-                "class AgentManager:\n"
-                "    def __init__(self):\n"
-                "        self.memory = Memory.from_config(config)\n"
-            ),
-            f"{PROJECT}/backend/graph/session_manager.py": (
-                "import json\n"
-                "class SessionManager:\n"
-                "    def compress_history(self, messages):\n"
-                "        # LLM 摘要压缩，保留决策链\n"
-                "        summary = llm.invoke(compress_prompt)\n"
-            ),
-            f"{PROJECT}/backend/graph/mem0_manager.py": (
-                "from mem0 import Memory\n"
-                "def get_typed_context(user_id, query):\n"
-                "    results = memory.search(query, user_id=user_id)\n"
-                "    return group_by_type(results)\n"
-            ),
-            f"{PROJECT}/backend/models/database.py": (
-                "from sqlalchemy import create_engine\n"
-                "DATABASE_URL = os.getenv('DATABASE_URL')\n"
-                "engine = create_engine(DATABASE_URL, pool_size=10)\n"
-            ),
-            f"{PROJECT}/frontend/src/App.tsx": (
-                "import React from 'react'\n"
-                "function App() { return <ChatWindow /> }\n"
-            ),
-        }
+            mock_files = {
+                f"{PROJECT}/backend/api/chat.py": (
+                    "from fastapi import APIRouter\n"
+                    "# SSE 流式端点，处理用户消息\n"
+                    "async def chat_stream(request):\n"
+                    "    session = SessionManager()\n"
+                    "    response = await agent.invoke(request.message)\n"
+                ),
+                f"{PROJECT}/backend/graph/agent.py": (
+                    "from langchain_deepseek import ChatDeepSeek\n"
+                    "from mem0 import Memory\n"
+                    "MAX_HISTORY = 20\n"
+                    "class AgentManager:\n"
+                    "    def __init__(self):\n"
+                    "        self.memory = Memory.from_config(config)\n"
+                ),
+                f"{PROJECT}/backend/graph/session_manager.py": (
+                    "import json\n"
+                    "class SessionManager:\n"
+                    "    def compress_history(self, messages):\n"
+                    "        # LLM 摘要压缩，保留决策链\n"
+                    "        summary = llm.invoke(compress_prompt)\n"
+                ),
+                f"{PROJECT}/backend/graph/mem0_manager.py": (
+                    "from mem0 import Memory\n"
+                    "def get_typed_context(user_id, query):\n"
+                    "    results = memory.search(query, user_id=user_id)\n"
+                    "    return group_by_type(results)\n"
+                ),
+                f"{PROJECT}/backend/models/database.py": (
+                    "from sqlalchemy import create_engine\n"
+                    "DATABASE_URL = os.getenv('DATABASE_URL')\n"
+                    "engine = create_engine(DATABASE_URL, pool_size=10)\n"
+                ),
+                f"{PROJECT}/frontend/src/App.tsx": (
+                    "import React from 'react'\n"
+                    "function App() { return <ChatWindow /> }\n"
+                ),
+            }
 
-        for path, content in mock_files.items():
-            with open(path, "w") as f:
-                f.write(content)
+            for path, content in mock_files.items():
+                with open(path, "w") as f:
+                    f.write(content)
 
-        # ✈ Step 1: Glob — 按文件名模式快速圈定范围
-        pattern = f"{PROJECT}/backend/**/*.py"
-        py_files = glob.glob(pattern, recursive=True) # 检索出项目中的所有后端项目中的py文件
-        print(f"=== Step 1: Glob(\"{pattern}\") ===")
-        print(f"匹配 {len(py_files)} 个 Python 文件：")
-        for f in py_files:
-            print(f"  {f}")
+            # ✈ Step 1: Glob — 按文件名模式快速圈定范围
+            pattern = f"{PROJECT}/backend/**/*.py"
+            py_files = glob.glob(pattern, recursive=True) # 检索出项目中的所有后端项目中的py文件
+            print(f"=== Step 1: Glob(\"{pattern}\") ===")
+            print(f"匹配 {len(py_files)} 个 Python 文件：")
+            for f in py_files:
+                print(f"  {f}")
 
-        # ✈ Step 2: Grep — 按关键词从候选文件中精确筛选
-        keyword = "Memory"
-        print(f'\n=== Step 2: Grep(\"{keyword}\") — 在 Glob 结果中搜索 ===')
-        matched = []
-        for filepath in py_files:
-            with open(filepath) as f:
-                content = f.read()
-            hits = [(i+1, line.strip()) for i, line in enumerate(content.split("\n")) if keyword in line]
-            if hits:
-                matched.append(filepath)
-                for lineno, line in hits:
-                    print(f"  {os.path.basename(filepath)}:{lineno}  {line}")
+            # ✈ Step 2: Grep — 按关键词从候选文件中精确筛选
+            keyword = "Memory"
+            print(f'\n=== Step 2: Grep(\"{keyword}\") — 在 Glob 结果中搜索 ===')
+            matched = []
+            for filepath in py_files:
+                with open(filepath) as f:
+                    content = f.read()
+                hits = [(i+1, line.strip()) for i, line in enumerate(content.split("\n")) if keyword in line]
+                if hits:
+                    matched.append(filepath)
+                    for lineno, line in hits:
+                        print(f"  {os.path.basename(filepath)}:{lineno}  {line}")
 
-        # Token 节省分析
-        all_content = "\n".join(open(f).read() for f in py_files)
-        sel_content = "\n".join(open(f).read() for f in matched)
-        print(f"\n=== Select 效果：两阶段过滤的 Token 节省 ===")
-        print(f"项目全部文件:  6 个（含前端）")
-        print(f"Glob 过滤后:   {len(py_files)} 个 Python 文件 → {count_tokens(all_content)} tokens")
-        print(f"Grep 精筛后:   {len(matched)} 个含 Memory 的文件 → {count_tokens(sel_content)} tokens")
-        print(f"两阶段节省:    {(1 - count_tokens(sel_content)/max(count_tokens(all_content),1))*100:.0f}%")
+            # Token 节省分析
+            all_content = "\n".join(open(f).read() for f in py_files)
+            sel_content = "\n".join(open(f).read() for f in matched)
+            print(f"\n=== Select 效果：两阶段过滤的 Token 节省 ===")
+            print(f"项目全部文件:  6 个（含前端）")
+            print(f"Glob 过滤后:   {len(py_files)} 个 Python 文件 → {count_tokens(all_content)} tokens")
+            print(f"Grep 精筛后:   {len(matched)} 个含 Memory 的文件 → {count_tokens(sel_content)} tokens")
+            print(f"两阶段节省:    {(1 - count_tokens(sel_content)/max(count_tokens(all_content),1))*100:.0f}%")
 
-        # 清理
-        shutil.rmtree(PROJECT)
+            # 清理
+            shutil.rmtree(PROJECT)
 
-        # === Step 1: Glob("./select_demo_project/backend/**/*.py") ===
-        # 匹配 5 个 Python 文件：
-        #   ./select_demo_project/backend/api/chat.py
-        #   ./select_demo_project/backend/graph/agent.py
-        #   ./select_demo_project/backend/graph/mem0_manager.py
-        #   ./select_demo_project/backend/graph/session_manager.py
-        #   ./select_demo_project/backend/models/database.py
+            # === Step 1: Glob("./select_demo_project/backend/**/*.py") ===
+            # 匹配 5 个 Python 文件：
+            #   ./select_demo_project/backend/api/chat.py
+            #   ./select_demo_project/backend/graph/agent.py
+            #   ./select_demo_project/backend/graph/mem0_manager.py
+            #   ./select_demo_project/backend/graph/session_manager.py
+            #   ./select_demo_project/backend/models/database.py
 
-        # === Step 2: Grep("Memory") — 在 Glob 结果中搜索 ===
-        #   agent.py:2  from mem0 import Memory
-        #   agent.py:6  self.memory = Memory.from_config(config)
-        #   mem0_manager.py:1  from mem0 import Memory
+            # === Step 2: Grep("Memory") — 在 Glob 结果中搜索 ===
+            #   agent.py:2  from mem0 import Memory
+            #   agent.py:6  self.memory = Memory.from_config(config)
+            #   mem0_manager.py:1  from mem0 import Memory
 
-        # === Select 效果：两阶段过滤的 Token 节省 ===
-        # 项目全部文件:  6 个（含前端）
-        # Glob 过滤后:   5 个 Python 文件 → 199 tokens
-        # Grep 精筛后:   2 个含 Memory 的文件 → 83 tokens
-        # 两阶段节省:    58%
+            # === Select 效果：两阶段过滤的 Token 节省 ===
+            # 项目全部文件:  6 个（含前端）
+            # Glob 过滤后:   5 个 Python 文件 → 199 tokens
+            # Grep 精筛后:   2 个含 Memory 的文件 → 83 tokens
+            # 两阶段节省:    58%
 
-    # 🚀 ===  LlamaIndex Embedding + BM25混合召回
-        from llama_index.core import VectorStoreIndex, Document
-        from llama_index.core.node_parser import SentenceSplitter
-        from llama_index.embeddings.openai import OpenAIEmbedding
-        from llama_index.retrievers.bm25 import BM25Retriever
-        from llama_index.core.retrievers import QueryFusionRetriever
-        from llama_index.embeddings.dashscope import DashScopeEmbedding
+        # 🚀 ===  LlamaIndex Embedding + BM25混合召回
+            from llama_index.core import VectorStoreIndex, Document
+            from llama_index.core.node_parser import SentenceSplitter
+            from llama_index.embeddings.openai import OpenAIEmbedding
+            from llama_index.retrievers.bm25 import BM25Retriever
+            from llama_index.core.retrievers import QueryFusionRetriever
+            from llama_index.embeddings.dashscope import DashScopeEmbedding
 
-        # 构造知识库文档（模拟 Agent 的外部知识源——技术运维手册）
-        knowledge_docs = [
-            Document(text="PostgreSQL 连接池推荐 pgbouncer，transaction 模式下单连接可复用，"
-                           "默认 max_connections 设为 CPU 核心数 × 2 + 1，超过此值性能反而下降。"),
-            Document(text="Redis Cache-Aside 标准流程：读请求先查缓存，miss 则查 DB 并回填；"
-                           "写请求先更新 DB 再删缓存键，TTL 推荐 300 秒。"),
-            Document(text="Docker Compose 适合本地开发，volumes 挂载实现热重载；"
-                           "生产环境推荐 AWS ECS 或 Kubernetes，配合 ALB 做负载均衡。"),
-            Document(text="LangChain Agent 工具定义需包含 name、description、func 三字段。"
-                           "description 质量直接影响工具选择准确率，建议包含使用场景和输入格式说明。"),
-            Document(text="向量数据库选型：Qdrant 适合中小规模（百万级），Milvus 适合大规模（亿级），"
-                           "Chroma 适合原型验证，Pinecone 适合免运维的云端场景。"),
-            Document(text="金丝雀发布策略：先切 5% 流量到新版本，监控 P99 延迟和错误率 15 分钟，"
-                           "无异常后按 5→25→50→100% 逐步扩大。回滚阈值：错误率 >1% 或 P99 >500ms。"),
-        ]
+            # 构造知识库文档（模拟 Agent 的外部知识源——技术运维手册）
+            knowledge_docs = [
+                Document(text="PostgreSQL 连接池推荐 pgbouncer，transaction 模式下单连接可复用，"
+                               "默认 max_connections 设为 CPU 核心数 × 2 + 1，超过此值性能反而下降。"),
+                Document(text="Redis Cache-Aside 标准流程：读请求先查缓存，miss 则查 DB 并回填；"
+                               "写请求先更新 DB 再删缓存键，TTL 推荐 300 秒。"),
+                Document(text="Docker Compose 适合本地开发，volumes 挂载实现热重载；"
+                               "生产环境推荐 AWS ECS 或 Kubernetes，配合 ALB 做负载均衡。"),
+                Document(text="LangChain Agent 工具定义需包含 name、description、func 三字段。"
+                               "description 质量直接影响工具选择准确率，建议包含使用场景和输入格式说明。"),
+                Document(text="向量数据库选型：Qdrant 适合中小规模（百万级），Milvus 适合大规模（亿级），"
+                               "Chroma 适合原型验证，Pinecone 适合免运维的云端场景。"),
+                Document(text="金丝雀发布策略：先切 5% 流量到新版本，监控 P99 延迟和错误率 15 分钟，"
+                               "无异常后按 5→25→50→100% 逐步扩大。回滚阈值：错误率 >1% 或 P99 >500ms。"),
+            ]
 
-        # ---- 通道 A：Embedding 向量语义召回 ----
-        embed_model = OpenAIEmbedding(
-            model_name="text-embedding-3-small",
-            api_key=os.getenv("OPENAI_API_KEY"),
-        )
+            # ---- 通道 A：Embedding 向量语义召回 ----
+            embed_model = OpenAIEmbedding(
+                model_name="text-embedding-3-small",
+                api_key=os.getenv("OPENAI_API_KEY"),
+            )
 
-        # 设置 Qwen Embedding模型
-        # embed_model = DashScopeEmbedding(
-        #     model_name="text-embedding-v4",
-        #     api_key=os.getenv("DASHSCOPE_API_KEY"),
-        #     api_base=os.getenv("DASHSCOPE_BASE_URL", "https://api.dashscope.aliyuncs.com")
-        # )
+            # 设置 Qwen Embedding模型
+            # embed_model = DashScopeEmbedding(
+            #     model_name="text-embedding-v4",
+            #     api_key=os.getenv("DASHSCOPE_API_KEY"),
+            #     api_base=os.getenv("DASHSCOPE_BASE_URL", "https://api.dashscope.aliyuncs.com")
+            # )
 
-        splitter = SentenceSplitter(chunk_size=256, chunk_overlap=20)
-        nodes = splitter.get_nodes_from_documents(knowledge_docs)
-        index = VectorStoreIndex(nodes, embed_model=embed_model)
-        vector_retriever = index.as_retriever(similarity_top_k=3)
+            splitter = SentenceSplitter(chunk_size=256, chunk_overlap=20)
+            nodes = splitter.get_nodes_from_documents(knowledge_docs)
+            index = VectorStoreIndex(nodes, embed_model=embed_model)
+            vector_retriever = index.as_retriever(similarity_top_k=3)
 
-        query = "数据库连接池怎么配置"
-        vector_results = vector_retriever.retrieve(query)
+            query = "数据库连接池怎么配置"
+            vector_results = vector_retriever.retrieve(query)
 
-        print(f'=== 通道 A：Embedding 语义召回（query="{query}"）===')
-        for r in vector_results:
-            print(f"  [score={r.score:.3f}] {r.text[:80]}...")
+            print(f'=== 通道 A：Embedding 语义召回（query="{query}"）===')
+            for r in vector_results:
+                print(f"  [score={r.score:.3f}] {r.text[:80]}...")
 
-        # ---- 通道 B：BM25 关键词召回（LlamaIndex 内置）----
-        # skip_stemming=True：跳过英文词干提取（中文无此需求）
-        # token_pattern：中文按字切分 + 英文按词切分（BM25 中文场景标准配置）
-        bm25_retriever = BM25Retriever.from_defaults(
-            nodes=nodes,
-            similarity_top_k=3,
-            skip_stemming=True,
-            token_pattern=r"[\u4e00-\u9fff]|[a-zA-Z0-9]+",
-        )
+            # ---- 通道 B：BM25 关键词召回（LlamaIndex 内置）----
+            # skip_stemming=True：跳过英文词干提取（中文无此需求）
+            # token_pattern：中文按字切分 + 英文按词切分（BM25 中文场景标准配置）
+            bm25_retriever = BM25Retriever.from_defaults(
+                nodes=nodes,
+                similarity_top_k=3,
+                skip_stemming=True,
+                token_pattern=r"[\u4e00-\u9fff]|[a-zA-Z0-9]+",
+            )
 
-        bm25_results = bm25_retriever.retrieve(query)
-        print(f'\n=== 通道 B：BM25 关键词召回 ===')
-        for r in bm25_results:
-            print(f"  [score={r.score:.3f}] {r.text[:80]}...")
+            bm25_results = bm25_retriever.retrieve(query)
+            print(f'\n=== 通道 B：BM25 关键词召回 ===')
+            for r in bm25_results:
+                print(f"  [score={r.score:.3f}] {r.text[:80]}...")
 
-        # ---- QueryFusionRetriever：内置 RRF 合并两路结果 ----
-        # mode="reciprocal_rerank"：Reciprocal Rank Fusion，按排名倒数加权合并
-        fusion_retriever = QueryFusionRetriever(
-            retrievers=[vector_retriever, bm25_retriever],
-            similarity_top_k=3,
-            num_queries=1,             # 不做查询扩展，直接用原始 query
-            mode="reciprocal_rerank",  # RRF 合并策略
-            use_async=False,
-        )
+            # ---- QueryFusionRetriever：内置 RRF 合并两路结果 ----
+            # mode="reciprocal_rerank"：Reciprocal Rank Fusion，按排名倒数加权合并
+            fusion_retriever = QueryFusionRetriever(
+                retrievers=[vector_retriever, bm25_retriever],
+                similarity_top_k=3,
+                num_queries=1,             # 不做查询扩展，直接用原始 query
+                mode="reciprocal_rerank",  # RRF 合并策略
+                use_async=False,
+            )
 
-        fusion_results = fusion_retriever.retrieve(query)
-        print(f'\n=== QueryFusionRetriever 混合召回（RRF 合并）===')
-        for r in fusion_results:
-            print(f"  [rrf={r.score:.4f}] {r.text[:80]}...")
+            fusion_results = fusion_retriever.retrieve(query)
+            print(f'\n=== QueryFusionRetriever 混合召回（RRF 合并）===')
+            for r in fusion_results:
+                print(f"  [rrf={r.score:.4f}] {r.text[:80]}...")
 
-    # 🚀 ===  Skills路由：意图分类驱动的上下文切换
-        from langchain_core.tools import tool
-        # ---- Skill A：代码调试（3 个工具）----
-        @tool
-        def read_file(path: str) -> str:
-            """读取指定路径的源代码文件，返回文件内容和行号"""
-            return f"[模拟] 文件内容: {path}"
+        # 🚀 ===  Skills路由：意图分类驱动的上下文切换
+            from langchain_core.tools import tool
+            # ---- Skill A：代码调试（3 个工具）----
+            @tool
+            def read_file(path: str) -> str:
+                """读取指定路径的源代码文件，返回文件内容和行号"""
+                return f"[模拟] 文件内容: {path}"
 
-        @tool
-        def search_codebase(query: str) -> str:
-            """在代码仓库中搜索关键词，返回匹配的文件路径和行号"""
-            return f"[模拟] 搜索结果: {query}"
+            @tool
+            def search_codebase(query: str) -> str:
+                """在代码仓库中搜索关键词，返回匹配的文件路径和行号"""
+                return f"[模拟] 搜索结果: {query}"
 
-        @tool
-        def run_tests(test_path: str) -> str:
-            """运行指定路径的测试文件，返回通过/失败结果"""
-            return f"[模拟] 测试通过: {test_path}"
+            @tool
+            def run_tests(test_path: str) -> str:
+                """运行指定路径的测试文件，返回通过/失败结果"""
+                return f"[模拟] 测试通过: {test_path}"
 
-        # ---- Skill B：部署运维（3 个工具）----
-        @tool
-        def deploy_staging(version: str) -> str:
-            """将指定版本部署到 staging 环境，返回部署状态"""
-            return f"[模拟] staging 部署完成: {version}"
+            # ---- Skill B：部署运维（3 个工具）----
+            @tool
+            def deploy_staging(version: str) -> str:
+                """将指定版本部署到 staging 环境，返回部署状态"""
+                return f"[模拟] staging 部署完成: {version}"
 
-        @tool
-        def check_health(env: str) -> str:
-            """检查指定环境的服务健康状态，返回 HTTP 状态码"""
-            return f"[模拟] {env} 健康: 200 OK"
+            @tool
+            def check_health(env: str) -> str:
+                """检查指定环境的服务健康状态，返回 HTTP 状态码"""
+                return f"[模拟] {env} 健康: 200 OK"
 
-        @tool
-        def rollback_deploy(env: str) -> str:
-            """回滚指定环境到上一个稳定版本"""
-            return f"[模拟] {env} 已回滚"
+            @tool
+            def rollback_deploy(env: str) -> str:
+                """回滚指定环境到上一个稳定版本"""
+                return f"[模拟] {env} 已回滚"
 
-        # ---- Skill C：记忆管理（2 个工具）----
-        @tool
-        def save_memory(content: str) -> str:
-            """将用户偏好或项目决策保存到长期记忆库"""
-            return f"[模拟] 已保存记忆: {content}"
+            # ---- Skill C：记忆管理（2 个工具）----
+            @tool
+            def save_memory(content: str) -> str:
+                """将用户偏好或项目决策保存到长期记忆库"""
+                return f"[模拟] 已保存记忆: {content}"
 
-        @tool
-        def search_memories(query: str) -> str:
-            """在长期记忆库中搜索相关记忆条目"""
-            return f"[模拟] 记忆检索: {query}"
+            @tool
+            def search_memories(query: str) -> str:
+                """在长期记忆库中搜索相关记忆条目"""
+                return f"[模拟] 记忆检索: {query}"
 
-        from pydantic import BaseModel, Field
+            from pydantic import BaseModel, Field
 
-        # Skill 注册表：description 供 LLM 分类器阅读，tools 和 system_prompt 在分类后加载
-        skill_registry = {
-            "code_debug": {
-                "description": "代码调试与错误排查：处理报错信息、定位 bug 根因、运行测试验证修复",
-                "tools": [read_file, search_codebase, run_tests],
-                "system_prompt": "你是代码调试专家。先复现问题，再定位根因，最后验证修复。",
-            },
-            "deploy_ops": {
-                "description": "部署与运维操作：发布新版本到各环境、健康检查、回滚、金丝雀发布流程",
-                "tools": [deploy_staging, check_health, rollback_deploy],
-                "system_prompt": "你是部署运维专家。严格执行金丝雀发布流程，每步都要健康检查。",
-            },
-            "memory_manage": {
-                "description": "记忆管理：保存用户偏好和项目决策到长期记忆、检索历史记忆",
-                "tools": [save_memory, search_memories],
-                "system_prompt": "你是记忆管理助手。帮用户管理长期偏好和项目上下文。",
-            },
-        }
+            # Skill 注册表：description 供 LLM 分类器阅读，tools 和 system_prompt 在分类后加载
+            skill_registry = {
+                "code_debug": {
+                    "description": "代码调试与错误排查：处理报错信息、定位 bug 根因、运行测试验证修复",
+                    "tools": [read_file, search_codebase, run_tests],
+                    "system_prompt": "你是代码调试专家。先复现问题，再定位根因，最后验证修复。",
+                },
+                "deploy_ops": {
+                    "description": "部署与运维操作：发布新版本到各环境、健康检查、回滚、金丝雀发布流程",
+                    "tools": [deploy_staging, check_health, rollback_deploy],
+                    "system_prompt": "你是部署运维专家。严格执行金丝雀发布流程，每步都要健康检查。",
+                },
+                "memory_manage": {
+                    "description": "记忆管理：保存用户偏好和项目决策到长期记忆、检索历史记忆",
+                    "tools": [save_memory, search_memories],
+                    "system_prompt": "你是记忆管理助手。帮用户管理长期偏好和项目上下文。",
+                },
+            }
 
-        class SkillIntent(BaseModel):
-            """用户意图分类结果"""
-            skill_id: str = Field(description="匹配的 Skill ID，必须是 code_debug / deploy_ops / memory_manage 之一")
-            confidence: float = Field(description="分类置信度 0.0-1.0")
+            class SkillIntent(BaseModel):
+                """用户意图分类结果"""
+                skill_id: str = Field(description="匹配的 Skill ID，必须是 code_debug / deploy_ops / memory_manage 之一")
+                confidence: float = Field(description="分类置信度 0.0-1.0")
 
-        # 分类 prompt：列出所有 Skill 的 description，让 LLM 选择
-        skill_descriptions = "\n".join(
-            f"- {sid}: {s['description']}" for sid, s in skill_registry.items()
-        )
-        classify_prompt = f"""根据用户消息，从以下 Skills 中选择最匹配的一个：
+            # 分类 prompt：列出所有 Skill 的 description，让 LLM 选择
+            skill_descriptions = "\n".join(
+                f"- {sid}: {s['description']}" for sid, s in skill_registry.items()
+            )
+            classify_prompt = f"""根据用户消息，从以下 Skills 中选择最匹配的一个：
 
-        {skill_descriptions}
+            {skill_descriptions}
 
-        返回 skill_id 和 confidence。"""
+            返回 skill_id 和 confidence。"""
 
-        classifier = llm.with_structured_output(SkillIntent)
-        print("Skill 注册表和 LLM 分类器已构建")
-        print(f"分类器输入的 Skill 描述：\n{skill_descriptions}")    
-        # Skill 注册表和 LLM 分类器已构建
-        # 分类器输入的 Skill 描述：
-        # - code_debug: 代码调试与错误排查：处理报错信息、定位 bug 根因、运行测试验证修复
-        # - deploy_ops: 部署与运维操作：发布新版本到各环境、健康检查、回滚、金丝雀发布流程
-        # - memory_manage: 记忆管理：保存用户偏好和项目决策到长期记忆、检索历史记忆
+            classifier = llm.with_structured_output(SkillIntent)
+            print("Skill 注册表和 LLM 分类器已构建")
+            print(f"分类器输入的 Skill 描述：\n{skill_descriptions}")    
+            # Skill 注册表和 LLM 分类器已构建
+            # 分类器输入的 Skill 描述：
+            # - code_debug: 代码调试与错误排查：处理报错信息、定位 bug 根因、运行测试验证修复
+            # - deploy_ops: 部署与运维操作：发布新版本到各环境、健康检查、回滚、金丝雀发布流程
+            # - memory_manage: 记忆管理：保存用户偏好和项目决策到长期记忆、检索历史记忆
 
-        # === Skills 路由——步骤 3：端到端演示（分类 → 装配 → Token 对比）===
+            # === Skills 路由——步骤 3：端到端演示（分类 → 装配 → Token 对比）===
 
-        test_messages = [
-            "代码报错了，AgentManager 初始化失败",
-            "把新版本部署到 staging 环境",
-            "帮我记住：以后 code review 要检查 token 消耗",
-        ]
+            test_messages = [
+                "代码报错了，AgentManager 初始化失败",
+                "把新版本部署到 staging 环境",
+                "帮我记住：以后 code review 要检查 token 消耗",
+            ]
 
-        # 基线：如果不做 Skills 路由，Agent 需要加载全部 8 个工具的描述
-        all_tools = [t for s in skill_registry.values() for t in s["tools"]]
-        all_tools_desc = "\n".join(f"{t.name}: {t.description}" for t in all_tools)
-        all_tokens = count_tokens(all_tools_desc)
+            # 基线：如果不做 Skills 路由，Agent 需要加载全部 8 个工具的描述
+            all_tools = [t for s in skill_registry.values() for t in s["tools"]]
+            all_tools_desc = "\n".join(f"{t.name}: {t.description}" for t in all_tools)
+            all_tokens = count_tokens(all_tools_desc)
 
-        for msg in test_messages:
-            # Stage 1：LLM 意图分类
-            intent = classifier.invoke(f"{classify_prompt}\n\n用户消息: {msg}")
-            skill = skill_registry[intent.skill_id]
+            for msg in test_messages:
+                # Stage 1：LLM 意图分类
+                intent = classifier.invoke(f"{classify_prompt}\n\n用户消息: {msg}")
+                skill = skill_registry[intent.skill_id]
 
-            # Stage 2：只装配选中 Skill 的工具（Select 的核心价值）
-            skill_tools_desc = "\n".join(f"{t.name}: {t.description}" for t in skill["tools"])
-            skill_tokens = count_tokens(skill_tools_desc)
+                # Stage 2：只装配选中 Skill 的工具（Select 的核心价值）
+                skill_tools_desc = "\n".join(f"{t.name}: {t.description}" for t in skill["tools"])
+                skill_tokens = count_tokens(skill_tools_desc)
 
-            print(f'用户: "{msg}"')
-            print(f'  → LLM 分类: {intent.skill_id} (confidence={intent.confidence})')
-            print(f'    装配工具: {[t.name for t in skill["tools"]]}')
-            print(f'    系统提示: "{skill["system_prompt"][:40]}..."')
-            print(f'    Token: 全量 {all_tokens} → Skill {skill_tokens}（节省 {(1-skill_tokens/all_tokens)*100:.0f}%）')
-            print()
+                print(f'用户: "{msg}"')
+                print(f'  → LLM 分类: {intent.skill_id} (confidence={intent.confidence})')
+                print(f'    装配工具: {[t.name for t in skill["tools"]]}')
+                print(f'    系统提示: "{skill["system_prompt"][:40]}..."')
+                print(f'    Token: 全量 {all_tokens} → Skill {skill_tokens}（节省 {(1-skill_tokens/all_tokens)*100:.0f}%）')
+                print()
 
-        # ---- 真正的 Agent 构造：用最后一条消息演示上下文装配 ----
-        from langchain.agents import create_agent
-        from langchain_core.prompts import ChatPromptTemplate
+            # ---- 真正的 Agent 构造：用最后一条消息演示上下文装配 ----
+            from langchain.agents import create_agent
+            from langchain_core.prompts import ChatPromptTemplate
 
-        last_msg = test_messages[-1]  # "帮我记住：以后 code review 要检查 token 消耗"
-        intent = classifier.invoke(f"{classify_prompt}\n\n用户消息: {last_msg}")
-        selected_skill = skill_registry[intent.skill_id]
+            last_msg = test_messages[-1]  # "帮我记住：以后 code review 要检查 token 消耗"
+            intent = classifier.invoke(f"{classify_prompt}\n\n用户消息: {last_msg}")
+            selected_skill = skill_registry[intent.skill_id]
 
-        # 构造 Agent：只传入选中 Skill 的工具和系统提示
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", selected_skill["system_prompt"]),  # ← system_prompt 真正传入
-            ("placeholder", "{chat_history}"),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}"),
-        ])
+            # 构造 Agent：只传入选中 Skill 的工具和系统提示
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", selected_skill["system_prompt"]),  # ← system_prompt 真正传入
+                ("placeholder", "{chat_history}"),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}"),
+            ])
 
-        agent = create_agent(
-            llm,
-            tools=selected_skill["tools"],  # ← tools 真正传入上下文
-            prompt=prompt,
-        )
+            agent = create_agent(
+                llm,
+                tools=selected_skill["tools"],  # ← tools 真正传入上下文
+                prompt=prompt,
+            )
 
-        print(f"\n=== 真正的 Agent 调用（用户: \"{last_msg}\"）===")
-        print(f"选中 Skill: {intent.skill_id}")
-        print(f"Agent 可见工具: {[t.name for t in selected_skill['tools']]}")
-        print(f"Agent 系统提示: {selected_skill['system_prompt']}")
+            print(f"\n=== 真正的 Agent 调用（用户: \"{last_msg}\"）===")
+            print(f"选中 Skill: {intent.skill_id}")
+            print(f"Agent 可见工具: {[t.name for t in selected_skill['tools']]}")
+            print(f"Agent 系统提示: {selected_skill['system_prompt']}")
 
-        # 调用 Agent
-        from langchain.agents import AgentExecutor
-        agent_executor = AgentExecutor(agent=agent, tools=selected_skill["tools"], verbose=False)
-        result = agent_executor.invoke({"input": last_msg})
+            # 调用 Agent
+            from langchain.agents import AgentExecutor
+            agent_executor = AgentExecutor(agent=agent, tools=selected_skill["tools"], verbose=False)
+            result = agent_executor.invoke({"input": last_msg})
 
-        print(f"\nAgent 响应: {result['output']}")
-        print(f"\n✓ 验证：Agent 只能调用 {intent.skill_id} Skill 的 {len(selected_skill['tools'])} 个工具")
-        print(f"  （而非全部 {len(all_tools)} 个工具）")
-        # 用户: "代码报错了，AgentManager 初始化失败"
-        #   → LLM 分类: code_debug (confidence=0.95)
-        #     装配工具: ['read_file', 'search_codebase', 'run_tests']
-        #     系统提示: "你是代码调试专家。先复现问题，再定位根因，最后验证修复。..."
-        #     Token: 全量 139 → Skill 54（节省 61%）
+            print(f"\nAgent 响应: {result['output']}")
+            print(f"\n✓ 验证：Agent 只能调用 {intent.skill_id} Skill 的 {len(selected_skill['tools'])} 个工具")
+            print(f"  （而非全部 {len(all_tools)} 个工具）")
+            # 用户: "代码报错了，AgentManager 初始化失败"
+            #   → LLM 分类: code_debug (confidence=0.95)
+            #     装配工具: ['read_file', 'search_codebase', 'run_tests']
+            #     系统提示: "你是代码调试专家。先复现问题，再定位根因，最后验证修复。..."
+            #     Token: 全量 139 → Skill 54（节省 61%）
 
-        # 用户: "把新版本部署到 staging 环境"
-        #   → LLM 分类: deploy_ops (confidence=0.95)
-        #     装配工具: ['deploy_staging', 'check_health', 'rollback_deploy']
-        #     系统提示: "你是部署运维专家。严格执行金丝雀发布流程，每步都要健康检查。..."
-        #     Token: 全量 139 → Skill 51（节省 63%）
+            # 用户: "把新版本部署到 staging 环境"
+            #   → LLM 分类: deploy_ops (confidence=0.95)
+            #     装配工具: ['deploy_staging', 'check_health', 'rollback_deploy']
+            #     系统提示: "你是部署运维专家。严格执行金丝雀发布流程，每步都要健康检查。..."
+            #     Token: 全量 139 → Skill 51（节省 63%）
 
-        # 用户: "帮我记住：以后 code review 要检查 token 消耗"
-        #   → LLM 分类: memory_manage (confidence=0.95)
-        #     装配工具: ['save_memory', 'search_memories']
-        #     系统提示: "你是记忆管理助手。帮用户管理长期偏好和项目上下文。..."
-        #     Token: 全量 139 → Skill 32（节省 77%）
+            # 用户: "帮我记住：以后 code review 要检查 token 消耗"
+            #   → LLM 分类: memory_manage (confidence=0.95)
+            #     装配工具: ['save_memory', 'search_memories']
+            #     系统提示: "你是记忆管理助手。帮用户管理长期偏好和项目上下文。..."
+            #     Token: 全量 139 → Skill 32（节省 77%）
 
-        # === 分类后的 Agent 构造（伪代码）===
-        # # 只加载 2 个工具，而非全部 8 个
+            # === 分类后的 Agent 构造（伪代码）===
+            # # 只加载 2 个工具，而非全部 8 个
 
 
     # 🎯 Compress上下文压缩
     # 对话历史层 | 工具上下文层
     # ----------------------------------------------------------------------------------------------------------------
-    # 🚀 === compaction 压缩重启
-        """
-        注意它和前面短期记忆压缩的关键区别：短期记忆是「压缩早期 + 保留最近」，
-        而 Compaction 是全量压缩将**整个对话历史**（包括工具调用、代码修改、测试结果）
-        压缩为一条结构化的 `SystemMessage`，然后用这条摘要**替换**全部原始消息，开启新的上下文窗口继续工作：
-        """
-        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-        # ---- 步骤 1：构造一段工具密集型的 Agent 对话（模拟 Claude Code 场景）----
-        # 注意：Compaction 场景包含 user / assistant / tool 三种角色，
-        # 而短期记忆场景只有 user / assistant 两种
-        messages = [
-            HumanMessage(content="帮我重构 auth 模块，支持 OAuth2 认证流程"),
-            AIMessage(content="好的，先读取当前代码结构。\n[调用 read_file('auth.py')]"),
-            AIMessage(content="[tool result] auth.py: 340行，含 BasicAuth 类，使用 session-based 认证"),
-            AIMessage(content="分析完成。当前使用 BasicAuth，需新增 OAuth2Provider。\n"
-                     "决策：采用 refresh_token 流程，token 存储于 Redis，增加速率限制。\n"
-                     "[调用 edit_file('auth.py')]"),
-            AIMessage(content="[tool result] auth.py 已修改：+OAuth2Provider 类，+token 刷新逻辑，共新增 180 行"),
-            HumanMessage(content="再加上单元测试"),
-            AIMessage(content="编写 12 个测试用例覆盖 OAuth2 核心流程。\n[调用 write_file('test_auth.py')]"),
-            AIMessage(content="[tool result] test_auth.py 创建成功，含 12 个测试用例"),
-            HumanMessage(content="运行测试看看结果"),
-            AIMessage(content="[调用 run_tests('test_auth.py')]"),
-            AIMessage(content="[tool result] 11/12 通过，1 个 token 过期边界用例不稳定（偶发 timing issue）"),
-            AIMessage(content="测试结果：11/12 通过。不稳定用例是 test_token_expiry_boundary，"
-                     "原因是 timing 精度问题，下一步需要用 mock time 修复。"),
-        ]
+        # 🚀 === compaction 压缩重启
+            """
+            注意它和前面短期记忆压缩的关键区别：短期记忆是「压缩早期 + 保留最近」，
+            而 Compaction 是全量压缩将**整个对话历史**（包括工具调用、代码修改、测试结果）
+            压缩为一条结构化的 `SystemMessage`，然后用这条摘要**替换**全部原始消息，开启新的上下文窗口继续工作：
+            """
+            from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+            # ---- 步骤 1：构造一段工具密集型的 Agent 对话（模拟 Claude Code 场景）----
+            # 注意：Compaction 场景包含 user / assistant / tool 三种角色，
+            # 而短期记忆场景只有 user / assistant 两种
+            messages = [
+                HumanMessage(content="帮我重构 auth 模块，支持 OAuth2 认证流程"),
+                AIMessage(content="好的，先读取当前代码结构。\n[调用 read_file('auth.py')]"),
+                AIMessage(content="[tool result] auth.py: 340行，含 BasicAuth 类，使用 session-based 认证"),
+                AIMessage(content="分析完成。当前使用 BasicAuth，需新增 OAuth2Provider。\n"
+                         "决策：采用 refresh_token 流程，token 存储于 Redis，增加速率限制。\n"
+                         "[调用 edit_file('auth.py')]"),
+                AIMessage(content="[tool result] auth.py 已修改：+OAuth2Provider 类，+token 刷新逻辑，共新增 180 行"),
+                HumanMessage(content="再加上单元测试"),
+                AIMessage(content="编写 12 个测试用例覆盖 OAuth2 核心流程。\n[调用 write_file('test_auth.py')]"),
+                AIMessage(content="[tool result] test_auth.py 创建成功，含 12 个测试用例"),
+                HumanMessage(content="运行测试看看结果"),
+                AIMessage(content="[调用 run_tests('test_auth.py')]"),
+                AIMessage(content="[tool result] 11/12 通过，1 个 token 过期边界用例不稳定（偶发 timing issue）"),
+                AIMessage(content="测试结果：11/12 通过。不稳定用例是 test_token_expiry_boundary，"
+                         "原因是 timing 精度问题，下一步需要用 mock time 修复。"),
+            ]
 
-        total_tokens = sum(count_tokens(m.content) for m in messages)
-        print(f"=== Compaction 前 ===")
-        print(f"消息数: {len(messages)} 条（含 user/assistant/tool 三种角色）")
-        print(f"总 tokens: {total_tokens}")
-        # ---- 步骤 2：检测是否达到阈值，触发全量 Compaction ----
-        MAX_CONTEXT_TOKENS = 150   # 演示用小阈值（生产环境 Claude Code 用 200K * 95%）
+            total_tokens = sum(count_tokens(m.content) for m in messages)
+            print(f"=== Compaction 前 ===")
+            print(f"消息数: {len(messages)} 条（含 user/assistant/tool 三种角色）")
+            print(f"总 tokens: {total_tokens}")
+            # ---- 步骤 2：检测是否达到阈值，触发全量 Compaction ----
+            MAX_CONTEXT_TOKENS = 150   # 演示用小阈值（生产环境 Claude Code 用 200K * 95%）
 
-        # ---- 步骤 2：检测是否达到阈值，触发全量 Compaction ----
-        if total_tokens > MAX_CONTEXT_TOKENS * 0.95:
-            # 关键区别：Compaction 压缩 **全部** 消息，不保留最近消息原文
-            full_text = "\n".join(f"[{m.type}] {m.content}" for m in messages)
+            # ---- 步骤 2：检测是否达到阈值，触发全量 Compaction ----
+            if total_tokens > MAX_CONTEXT_TOKENS * 0.95:
+                # 关键区别：Compaction 压缩 **全部** 消息，不保留最近消息原文
+                full_text = "\n".join(f"[{m.type}] {m.content}" for m in messages)
 
-            # 结构化压缩提示词：要求 LLM 输出 Claude Code 风格的 Compaction Summary
-            compress_prompt = f"""请将以下 Agent 对话历史压缩为结构化摘要。
+                # 结构化压缩提示词：要求 LLM 输出 Claude Code 风格的 Compaction Summary
+                compress_prompt = f"""请将以下 Agent 对话历史压缩为结构化摘要。
 
-            对话内容：
-            {full_text}
+                对话内容：
+                {full_text}
 
-            输出要求（严格按以下五个字段输出，每个字段一行）：
-            Task: 一句话描述用户的核心任务
-            Files modified: 列出所有被修改或创建的文件及关键变更
-            Decisions: 列出做出的关键技术决策
-            Status: 当前进度和测试结果
-            Next: 下一步待做的事项"""
+                输出要求（严格按以下五个字段输出，每个字段一行）：
+                Task: 一句话描述用户的核心任务
+                Files modified: 列出所有被修改或创建的文件及关键变更
+                Decisions: 列出做出的关键技术决策
+                Status: 当前进度和测试结果
+                Next: 下一步待做的事项"""
 
-            summary = llm.invoke(compress_prompt).content # 调用大模型进行压缩
+                summary = llm.invoke(compress_prompt).content # 调用大模型进行压缩
 
-            # 关键操作：用 SystemMessage(结构化摘要) 替换 **整个** 消息列表
-            compacted = [SystemMessage(content=f"[Compaction Summary]\n{summary}")]
-        else:
-            compacted = messages
-            summary = ""
-            print("未达阈值，无需 Compaction")
-
-        # ---- 步骤 3：展示压缩结果 ----
-        compacted_tokens = sum(count_tokens(m.content) for m in compacted)
-        print(f"\n=== Compaction 后 ===")
-        print(f"消息数: {len(messages)} → {len(compacted)}"
-              f"（全部 {len(messages)} 条被压缩为 1 条 SystemMessage）")
-        print(f"Tokens: {total_tokens} → {compacted_tokens}"
-              f"（压缩率 {(1 - compacted_tokens/total_tokens)*100:.0f}%）")
-        print(f"\n--- Compaction Summary ---")
-        print(compacted[0].content)
-
-        # ---- 步骤 4：验证——压缩后 LLM 仍能回答早期问题 ----
-        verify_msgs = compacted + [HumanMessage(content="我们之前定的认证方案是什么？一句话回复")]
-        answer = llm.invoke(verify_msgs).content
-        print(f"\n=== 验证：压缩后仍能回答早期决策 ===")
-        print(f"  Q: 我们之前定的认证方案是什么？")
-        print(f"  A: {answer}")  
-
-    # 🚀 === 硬截断 trim_messages
-        """
-        trim_messages 是最直接的压缩方式——不调用 LLM，直接按 token 上限从后往前保留消息。优点是零成本零延迟，缺点是早期信息直接丢弃：
-        """
-        from langchain_core.messages import HumanMessage, AIMessage, trim_messages
-
-        # 1. 构造 12 轮对话历史（包含关键技术决策）
-        messages = []
-        decisions = ["选 PostgreSQL", "用 Redis 缓存", "JWT 认证", "Docker 部署",
-                     "pool_size=50", "GitHub Actions CI", "ELK 日志", "Sentry 监控",
-                     "slowapi 限流", "React 前端", "Zustand 状态管理", "pytest 测试"]
-        for i, decision in enumerate(decisions):
-            messages.append(HumanMessage(content=f"第{i+1}个技术决策是什么？"))
-            messages.append(AIMessage(content=f"决策{i+1}：{decision}。理由是团队熟悉度高、社区生态成熟、与现有架构兼容。"))
-
-        original_tokens = sum(count_tokens(m.content) for m in messages)
-        print(f"原始消息: {len(messages)} 条（{len(messages)//2} 轮），约 {original_tokens} tokens")
-
-        # 2. 硬截断：只保留最近 N 条消息
-        # token_counter=len 让 max_tokens 以「消息条数」为单位（LangChain 设计）
-        trimmed = trim_messages(
-            messages,
-            strategy="last",       # 从后往前保留
-            max_tokens=8,          # 保留最近 8 条消息（4 轮）
-            token_counter=len,     # len = 按消息条数计（非 token 数）
-            start_on="human",      # 确保从 human 消息开始
-        )
-
-        trimmed_tokens = sum(count_tokens(m.content) for m in trimmed)
-        kept_rounds = len(trimmed) // 2
-        lost_rounds = len(decisions) - kept_rounds
-
-        lost_list = ", ".join(decisions[:lost_rounds])                                                                               
-        kept_list = ", ".join(decisions[lost_rounds:])                                                                                             
-        print(f"\n丢失的早期决策({lost_rounds}个): {lost_list}")                                                                                   
-        print(f"保留的近期决策({kept_rounds}个): {kept_list}")                                                                                     
-        print(f"\n 硬截断的代价：前 {lost_rounds} 个关键决策（PostgreSQL、Redis 等）被直接丢弃，不可恢复")
-
-    # 🚀 === LLM 摘要压缩：SummarizatoinMiddleware
-        from langchain.agents import create_agent                                                                                                  
-        from langchain.agents.middleware import SummarizationMiddleware                                                                            
-        from langchain_core.messages import HumanMessage
-        from langgraph.checkpoint.memory import InMemorySaver                                                                                      
-                                                                                                                                                
-        checkpointer = InMemorySaver()
-           
-        # 创建带摘要中间件的 Agent
-        agent = create_agent(
-            model=llm,               # 复用前面初始化的 DeepSeek 模型
-            tools=[],                # 纯对话演示，不需要工具
-            middleware=[                                                                                                             
-                SummarizationMiddleware(                                                                                                           
-                    model=llm,                   # 同模型做摘要（生产环境可用更便宜的小模型）                                                      
-                    trigger=("tokens", 300),     # 触发阈值（演示用小值，生产通常 4000-8000）                                                      
-                    keep=("messages", 6),        # 保留最近 6 条原文不压缩                                                                         
-                )                                                                                                                                  
-            ],                                                                                                                                     
-            checkpointer=checkpointer,          # 状态持久化（摘要需要跨轮次保存）                                                                 
-        )  
-
-        # 用相同的 12 轮技术决策对话测试                                                                                                       
-        config = {"configurable": {"thread_id": "compress-demo"}}
-        decisions = ["选 PostgreSQL", "用 Redis 缓存", "JWT 认证", "Docker 部署",                                                    
-                    "pool_size=50", "GitHub Actions CI", "ELK 日志", "Sentry 监控",                                                               
-                    "slowapi 限流", "React 前端", "Zustand 状态管理", "pytest 测试"]                                                              
-                                                                                                                                            
-        print("=== 逐轮发送技术决策，观察 SummarizationMiddleware 压缩过程 ===\n")                                                                 
-        for i, decision in enumerate(decisions):                                                                                                   
-            response = agent.invoke(                                                                                                               
-                {"messages": [HumanMessage(content=f"记住第{i+1}个技术决策：{decision}。理由：团队熟悉度高、社区成熟。")]},                                                
-                config                                                                                                                             
-            )                                                                                                                                      
-            msgs = response["messages"]                                                                                                            
-            msg_count = len(msgs)                                                                                                                  
-            expected = (i + 1) * 2  # 无压缩时的预期消息数                                                                                         
-                                                                                                                                                    
-            if msg_count < expected:                                                                                                           
-                # 压缩已触发，第一条消息是摘要                                                                                                     
-                summary_preview = msgs[0].content[:200].replace('\n', ' ')                                                                         
-                latest_reply = msgs[-1].content[:100].replace('\n', ' ')                                                                           
-                print(f"轮次 {i+1:2d} | 消息数: {msg_count:3d}（无压缩应为 {expected:2d}）← 压缩中")                                               
-                print(f"         [摘要] {summary_preview}...")                                                                                   
-                print(f"         [最新] {latest_reply}...")                                                                                      
-                print()                                                                                                                            
-            else:                                                                                                                                  
-                print(f"轮次 {i+1:2d} | 消息数: {msg_count:3d}（无压缩应为 {expected:2d}）")                                                       
-                                                                                                                                                    
-        # 最终验证                                                                                                                                 
-        print("=== 验证：早期决策是否被摘要保留 ===")                                                                                              
-        final = agent.invoke({"messages": [HumanMessage(content="请列出之前所有的技术决策")]}, config)                                                                     
-        print(final["messages"][-1].content[:500])
-
-    # 🚀 === 工具结果清除 Tool Result Clearing
-        # 核心机制：工具调用完成后，将 ToolMessage 的原始返回值替换为占位符，
-        # 仅保留"调用了什么工具"的事实，依赖 Agent 的 AIMessage 携带关键结论。
-        from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-        import time
-
-        # 模拟 Agent 分析项目依赖的完整消息链（2 次工具调用）
-        original_messages = [
-            HumanMessage(content="这个项目用了哪些核心依赖？各自什么版本？有没有已知的兼容性问题？"),
-
-            # Step 1: Agent 决定查看 requirements.txt
-            AIMessage(
-                content="我先查看项目的依赖配置文件，确认核心依赖和版本信息。",
-                tool_calls=[{"name": "read_file", "args": {"path": "requirements.txt"}, "id": "call_1"}]
-            ),
-            # 工具返回完整文件内容（大量 token）
-            ToolMessage(content="""# Core dependencies
-            fastapi==0.104.1
-            uvicorn[standard]==0.24.0
-            pydantic==2.5.0
-            sqlalchemy==2.0.23
-            alembic==1.13.0
-            asyncpg==0.29.0
-
-            # Cache & Message Queue
-            redis==5.0.1
-            celery==5.3.6
-            kombu==5.3.4
-
-            # AI/ML
-            langchain==0.1.0
-            langchain-openai==0.0.2
-            openai==1.6.1
-            tiktoken==0.5.2
-            chromadb==0.4.22
-            sentence-transformers==2.2.2
-
-            # Monitoring
-            prometheus-client==0.19.0
-            sentry-sdk[fastapi]==1.39.1
-            structlog==23.2.0
-
-            # Testing
-            pytest==7.4.3
-            pytest-asyncio==0.23.2
-            httpx==0.25.2
-            factory-boy==3.3.0""", tool_call_id="call_1"),
-
-            # Step 2: Agent 进一步检查 docker-compose
-            AIMessage(
-                content="requirements.txt 显示核心依赖为 FastAPI 0.104 + SQLAlchemy 2.0 + Redis 5.0 + LangChain 0.1.0。"
-                        "接下来检查 docker-compose 确认基础设施版本。",
-                tool_calls=[{"name": "read_file", "args": {"path": "docker-compose.yml"}, "id": "call_2"}]
-            ),
-            ToolMessage(content="""version: '3.8'
-            services:
-              app:
-                build: .
-                ports: ["8000:8000"]
-                depends_on: [db, redis, chromadb]
-                environment:
-                  - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/app
-                  - REDIS_URL=redis://redis:6379/0
-                  - CHROMADB_HOST=chromadb
-              db:
-                image: postgres:16.1
-                volumes: [pgdata:/var/lib/postgresql/data]
-                environment:
-                  POSTGRES_DB: app
-                  POSTGRES_USER: user
-                  POSTGRES_PASSWORD: pass
-              redis:
-                image: redis:7.2-alpine
-                command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-              chromadb:
-                image: chromadb/chroma:0.4.22
-                volumes: [chromadata:/chroma/chroma]
-            volumes:
-              pgdata:
-              chromadata:""", tool_call_id="call_2"),
-
-            # Agent 最终结论（已浓缩所有关键信息）
-            AIMessage(content=(
-                "项目核心依赖分析完成：\n"
-                "1. **Web 框架**：FastAPI 0.104.1 + Uvicorn 0.24.0 + Pydantic 2.5.0\n"
-                "2. **数据库**：PostgreSQL 16.1 + SQLAlchemy 2.0.23 + asyncpg 0.29.0\n"
-                "3. **缓存/队列**：Redis 7.2 + Celery 5.3.6\n"
-                "4. **AI/ML**：LangChain 0.1.0 + OpenAI 1.6.1 + ChromaDB 0.4.22\n\n"
-                "兼容性风险：LangChain 0.1.0 是早期版本，与 langchain-openai 0.0.2 "
-                "的 API 可能在后续升级中出现 breaking change。建议锁定版本或关注 changelog。"
-            )),
-        ]
-
-        print(f"消息链构造完成：{len(original_messages)} 条消息（{len(original_messages)//2} 轮工具调用 + 最终结论）")
-
-        # --- 展示原始消息链中各类型的 token 占比 ---
-        print("=== 原始消息链：各消息类型 token 占比 ===\n")
-        type_tokens = {"HumanMessage": 0, "AIMessage": 0, "ToolMessage": 0}
-        for msg in original_messages:
-            t = type(msg).__name__
-            tokens = count_tokens(str(msg.content))
-            type_tokens[t] += tokens
-
-        total = sum(type_tokens.values())
-        for t, tok in type_tokens.items():
-            bar = "█" * int(tok / total * 30)
-            print(f"  {t:15s} {tok:4d} tokens ({tok/total*100:4.1f}%) {bar}")
-        print(f"  {'总计':15s} {total:4d} tokens")          
-
-
-        # --- 定义工具结果清除函数并执行 ---
-        def clear_tool_results(messages):
-            """工具调用完成后，将冗长的原始返回值压缩为一行结论性摘要"""
-            cleared = []
-            for msg in messages:
-                if isinstance(msg, ToolMessage):
-                    # 用 LLM 将工具输出压缩为一行摘要（只压缩单条输出，比整段对话压缩便宜得多）
-                    summary_resp = llm.invoke(
-                        f"用一句话（不超过80字）总结以下工具输出的关键发现：\n\n{msg.content}"
-                    )
-                    cleared.append(ToolMessage(
-                        content=f"[摘要] {summary_resp.content.strip()}",
-                        tool_call_id=msg.tool_call_id
-                    ))
-                else:
-                    cleared.append(msg)
-            return cleared
-
-        cleared_messages = clear_tool_results(original_messages)
-
-        # 展示摘要效果
-        print("=== 工具结果清除：原始输出 → 一行摘要 ===\n")
-        tool_idx = 0
-        for orig, clr in zip(original_messages, cleared_messages):
-            if isinstance(orig, ToolMessage):
-                tool_idx += 1
-                orig_tokens = count_tokens(orig.content)
-                clr_tokens = count_tokens(clr.content)
-                print(f"ToolMessage #{tool_idx}:")
-                print(f"  原始: {orig_tokens} tokens | {orig.content[:80]}...")
-                print(f"  摘要: {clr_tokens} tokens | {clr.content}")
-                print(f"  压缩率: {(1 - clr_tokens/orig_tokens)*100:.0f}%\n")
-
-        # Token 对比
-        cleared_tokens = sum(count_tokens(str(m.content)) for m in cleared_messages)
-        saved_pct = (1 - cleared_tokens / total) * 100
-        print(f"=== 整体 Token 对比 ===")
-        print(f"清除前: {total} tokens")
-        print(f"清除后: {cleared_tokens} tokens（节省 {saved_pct:.0f}%）")
-
-    # 🚀 === 观察遮蔽 Observation Masking
-        # 核心原理（JetBrains, NeurIPS 2025）：
-        # Agent 每步的 Reasoning 已自然浓缩了上一步 Observation 的关键发现，
-        # 因此遮蔽冗长的原始 Observation 不会丢失决策信息。
-
-        # 模拟 3 步工具调用链（Agent 调试数据库连接超时问题）
-        tool_chain = [
-            {
-                "action": "search_codebase('database timeout config')",
-                "reasoning": "用户报告数据库连接超时，先搜索超时相关配置定位问题范围",
-                "observation": """找到 6 处匹配：
-                db/pool.py:15 → pool_size=20, pool_timeout=30
-                db/pool.py:28 → pool_recycle=3600, pool_pre_ping=True
-                config/prod.yaml:8 → max_overflow=10, pool_timeout=30
-                config/dev.yaml:8 → max_overflow=5, pool_timeout=60
-                utils/health.py:42 → timeout=10 (健康检查专用)
-                scripts/migrate.py:8 → timeout=300 (迁移脚本专用)""",
-            },
-            {
-                "action": "read_file('db/pool.py')",
-                # ↓ reasoning 浓缩了 step1 的发现：pool_timeout=30, max_overflow=10
-                "reasoning": "搜索发现生产环境 pool_timeout=30 且 max_overflow=10，读取源码确认完整配置",
-                "observation": """import sqlalchemy
-                from sqlalchemy import create_engine
-                engine = create_engine(
-                    DATABASE_URL,
-                    pool_size=20,        # 常驻连接数                                                                                        
-                    max_overflow=10,     # 溢出连接上限                                                                                                    
-                    pool_timeout=30,     # 获取连接的等待超时                                                                                              
-                    pool_recycle=3600,   # 每小时回收连接                                                                                                  
-                    pool_pre_ping=True,  # 使用前 ping 检测                                                                                                
-                    echo=False, echo_pool=False,                                                                                                       
-                    # 注意：没有设置 connect_timeout（数据库建连超时）
-                )
-                # 连接池监控
-                from sqlalchemy import event
-                @event.listens_for(engine, 'checkout')
-                def receive_checkout(dbapi_conn, conn_record, conn_proxy):
-                    logging.info(f'Connection checked out: {conn_record}')""",
-            },
-            {
-                "action": "run_tests('pytest tests/db/test_pool.py -v')",
-                # ↓ reasoning 浓缩了 step2 的发现：缺少 connect_timeout
-                "reasoning": "源码确认 max_overflow=10 且缺少 connect_timeout，跑测试验证高并发表现",                                
-                "observation": """test_basic_connection PASSED       [20%]                                                                         
-                test_pool_size PASSED              [40%]                                                                                                   
-                test_timeout_handling PASSED       [60%]                                                                                                   
-                test_recycle PASSED                [80%]                                                                                                   
-                test_concurrent_overflow FAILED    [100%]                                                                                              
-                FAILED - sqlalchemy.exc.TimeoutError: QueuePool limit of
-                size 20 overflow 10 reached, connection timed out, timeout 30.
-                ========================= 4 passed, 1 failed in 3.2s ==========================""",
-            },
-        ]
-
-        # --- 1. 展示核心机制：Reasoning 如何浓缩上一步 Observation ---
-        print("=== 信息传递链：每步 Reasoning 浓缩了上一步 Observation 的关键发现 ===\n")
-        for i, step in enumerate(tool_chain):
-            if i > 0:
-                prev = tool_chain[i-1]
-                print(f"Step {i} Observation（{count_tokens(prev['observation'])} tokens 原始输出）")
-                print(f"  ↓ 浓缩为")
-                print(f"Step {i+1} Reasoning：「{step['reasoning']}」\n")
-
-        # --- 2. 构建完整 vs 遮蔽上下文 ---
-        full_context = ""
-        masked_context = ""
-        for step in tool_chain:
-            full_context += f"Action: {step['action']}\nReasoning: {step['reasoning']}\nObservation:\n{step['observation']}\n\n"
-            masked_context += f"Action: {step['action']}\nReasoning: {step['reasoning']}\nObservation: [已遮蔽]\n\n"
-
-        full_tokens = count_tokens(full_context)
-        masked_tokens = count_tokens(masked_context)
-        saved_pct = (1 - masked_tokens / full_tokens) * 100
-
-        print(f"=== Token 对比 ===")
-        print(f"完整上下文: {full_tokens} tokens")
-        print(f"遮蔽后:     {masked_tokens} tokens（节省 {saved_pct:.0f}%）")
-
-        # --- 3. LLM 对比：遮蔽后能否依靠 Reasoning 链定位根因 ---
-        question = "根据以上调试过程，数据库连接超时的根因是什么？建议怎么修复？"
-
-        import time
-        for label, ctx in [("完整上下文", full_context), ("遮蔽 Observation", masked_context)]:
-            prompt = f"以下是 Agent 的调试过程：\n{ctx}\n{question}"
-            start = time.time()
-            resp = llm.invoke(prompt)
-            elapsed = time.time() - start
-            print(f"\n=== {label}（{elapsed:.1f}s）===")
-            print(resp.content[:300])
-
-        print(f"\n关键发现：遮蔽 Observation 节省了 {saved_pct:.0f}% token，")
-        print(f"   但 Reasoning 链已携带关键信息（pool_timeout=30 → 缺少 connect_timeout → overflow FAILED），")
-        print(f"   LLM 仍能正确定位根因。这就是 Observation Masking 的核心原理。")
-
-
-
-
-        # 用真实的 Agent 工具调用链演示观察遮蔽原理
-        from langchain_core.tools import tool
-        from langchain_core.messages import ToolMessage, AIMessage, HumanMessage
-        from langchain.agents import create_agent
-        import time
-
-        # --- 1. 定义三个调试工具（模拟返回真实格式数据）---
-        @tool
-        def search_codebase(query: str) -> str:
-            """搜索代码库中与查询相关的代码片段和配置"""
-            return """找到 6 处匹配：
-          db/pool.py:15 → pool_size=20, pool_timeout=30
-          db/pool.py:28 → pool_recycle=3600, pool_pre_ping=True
-          config/prod.yaml:8 → max_overflow=10, pool_timeout=30
-          config/dev.yaml:8 → max_overflow=5, pool_timeout=60
-          utils/health.py:42 → timeout=10 (健康检查专用)
-          scripts/migrate.py:8 → timeout=300 (迁移脚本专用)"""
-
-        @tool
-        def read_file(file_path: str) -> str:
-            """读取指定路径的文件内容"""
-            return """import sqlalchemy
-        from sqlalchemy import create_engine
-        engine = create_engine(
-            DATABASE_URL,
-            pool_size=20,        # 常驻连接数
-            max_overflow=10,     # 溢出连接上限
-            pool_timeout=30,     # 获取连接的等待超时
-            pool_recycle=3600,   # 每小时回收连接
-            pool_pre_ping=True,  # 使用前 ping 检测
-            echo=False, echo_pool=False,
-            # 注意：没有设置 connect_timeout（数据库建连超时）
-        )
-        from sqlalchemy import event
-        @event.listens_for(engine, 'checkout')
-        def receive_checkout(dbapi_conn, conn_record, conn_proxy):
-            logging.info(f'Connection checked out: {conn_record}')"""
-
-        @tool
-        def run_tests(command: str) -> str:
-            """运行 pytest 测试并返回结果"""
-            return """test_basic_connection PASSED       [20%]
-        test_pool_size PASSED              [40%]
-        test_timeout_handling PASSED       [60%]
-        test_recycle PASSED                [80%]
-        test_concurrent_overflow FAILED    [100%]
-        FAILED - sqlalchemy.exc.TimeoutError: QueuePool limit of
-          size 20 overflow 10 reached, connection timed out, timeout 30.
-        ========================= 4 passed, 1 failed in 3.2s =========================="""
-
-        # --- 2. 创建 ReAct Agent 并执行调试任务 ---
-        debug_agent = create_agent(
-            llm, 
-            [search_codebase, read_file, run_tests],
-            system_prompt="请你作为数据库运维人员，仔细梳理数据库保存问题，并将tool工具返回的结果内容进行Reasoning链思考，需要在思考中加入tool里面核心重要的内容"
-        )
-
-        print("=== Agent 自主调试：观察完整的 Action → Observation → Reasoning 链 ===\n")
-        result = debug_agent.invoke({"messages": [HumanMessage(content=(
-            "数据库连接频繁超时，请调试定位根因。"
-            "建议：先用 search_codebase 搜索 timeout 配置，"
-            "再用 read_file 读取 db/pool.py，最后用 run_tests 跑 pytest tests/db/test_pool.py -v"
-        ))]})
-
-        # --- 3. 展示 Agent 真实轨迹（标注每条消息类型）---
-        messages = result["messages"]
-        step = 0
-        for msg in messages:
-            if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
-                step += 1
-                for tc in msg.tool_calls:
-                    args_preview = list(tc['args'].values())[0][:60] if tc['args'] else ''
-                    print(f"  Step {step} [Action]      {tc['name']}({args_preview})")
-                if msg.content:
-                    print(f"  Step {step} [Reasoning]   {msg.content[:150]}")
-            elif isinstance(msg, ToolMessage):
-                obs_tokens = count_tokens(msg.content)
-                print(f"  Step {step} [Observation] ({obs_tokens} tokens) {msg.content[:80]}...")
-                print()
-            elif isinstance(msg, AIMessage):
-                print(f"  [Final Answer] {msg.content[:200]}...")
-                print()
-
-        # --- 4. 核心操作：Observation Masking（基于信息传播链判断）---
-        # 核心逻辑：只有当 Observation[N] 后面存在 AIMessage（即 Reasoning[N+1] 已吸收其关键信息），
-        #           才能安全遮蔽。最近一轮的 Observation 尚未被后续推理吸收，必须保留。
-        print("=== 执行 Observation Masking：遮蔽已被后续推理吸收的历史 Observation ===\n")
-        masked_messages = []
-        for i, msg in enumerate(messages):
-            if isinstance(msg, ToolMessage):
-                # 检查这个 Observation 之后是否有 AIMessage 吸收了它
-                has_subsequent_reasoning = any(
-                    isinstance(messages[j], AIMessage) for j in range(i + 1, len(messages))
-                )
-                if has_subsequent_reasoning:
-                    # 信息已传播到后续 Reasoning，安全遮蔽
-                    masked_messages.append(ToolMessage(
-                        content="[Observation 已被后续推理吸收]",
-                        tool_call_id=msg.tool_call_id
-                    ))
-                else:
-                    # 最近一轮，信息尚未传播，保留完整内容
-                    masked_messages.append(msg)
+                # 关键操作：用 SystemMessage(结构化摘要) 替换 **整个** 消息列表
+                compacted = [SystemMessage(content=f"[Compaction Summary]\n{summary}")]
             else:
-                masked_messages.append(msg)
+                compacted = messages
+                summary = ""
+                print("未达阈值，无需 Compaction")
 
-        # Token 对比
-        full_tokens = sum(count_tokens(str(m.content)) for m in messages)
-        masked_tokens = sum(count_tokens(str(m.content)) for m in masked_messages)
-        saved_pct = (1 - masked_tokens / full_tokens) * 100
-        print(f"完整轨迹: {full_tokens} tokens")
-        print(f"遮蔽后:   {masked_tokens} tokens（节省 {saved_pct:.0f}%）")
+            # ---- 步骤 3：展示压缩结果 ----
+            compacted_tokens = sum(count_tokens(m.content) for m in compacted)
+            print(f"\n=== Compaction 后 ===")
+            print(f"消息数: {len(messages)} → {len(compacted)}"
+                  f"（全部 {len(messages)} 条被压缩为 1 条 SystemMessage）")
+            print(f"Tokens: {total_tokens} → {compacted_tokens}"
+                  f"（压缩率 {(1 - compacted_tokens/total_tokens)*100:.0f}%）")
+            print(f"\n--- Compaction Summary ---")
+            print(compacted[0].content)
 
-        # --- 5. 验证：用两种上下文分别提问，对比回答质量 ---
-        question = "根据以上调试过程，数据库连接超时的根因是什么？建议怎么修复？"
+            # ---- 步骤 4：验证——压缩后 LLM 仍能回答早期问题 ----
+            verify_msgs = compacted + [HumanMessage(content="我们之前定的认证方案是什么？一句话回复")]
+            answer = llm.invoke(verify_msgs).content
+            print(f"\n=== 验证：压缩后仍能回答早期决策 ===")
+            print(f"  Q: 我们之前定的认证方案是什么？")
+            print(f"  A: {answer}")  
 
-        for label, msgs in [("完整上下文", messages), ("遮蔽 Observation", masked_messages)]:
-            ctx = "\n".join(
-                f"[{type(m).__name__}] {str(m.content)[:300]}" for m in msgs
+        # 🚀 === 硬截断 trim_messages
+            """
+            trim_messages 是最直接的压缩方式——不调用 LLM，直接按 token 上限从后往前保留消息。优点是零成本零延迟，缺点是早期信息直接丢弃：
+            """
+            from langchain_core.messages import HumanMessage, AIMessage, trim_messages
+
+            # 1. 构造 12 轮对话历史（包含关键技术决策）
+            messages = []
+            decisions = ["选 PostgreSQL", "用 Redis 缓存", "JWT 认证", "Docker 部署",
+                         "pool_size=50", "GitHub Actions CI", "ELK 日志", "Sentry 监控",
+                         "slowapi 限流", "React 前端", "Zustand 状态管理", "pytest 测试"]
+            for i, decision in enumerate(decisions):
+                messages.append(HumanMessage(content=f"第{i+1}个技术决策是什么？"))
+                messages.append(AIMessage(content=f"决策{i+1}：{decision}。理由是团队熟悉度高、社区生态成熟、与现有架构兼容。"))
+
+            original_tokens = sum(count_tokens(m.content) for m in messages)
+            print(f"原始消息: {len(messages)} 条（{len(messages)//2} 轮），约 {original_tokens} tokens")
+
+            # 2. 硬截断：只保留最近 N 条消息
+            # token_counter=len 让 max_tokens 以「消息条数」为单位（LangChain 设计）
+            trimmed = trim_messages(
+                messages,
+                strategy="last",       # 从后往前保留
+                max_tokens=8,          # 保留最近 8 条消息（4 轮）
+                token_counter=len,     # len = 按消息条数计（非 token 数）
+                start_on="human",      # 确保从 human 消息开始
             )
-            start = time.time()
-            resp = llm.invoke(f"以下是 Agent 的调试轨迹：\n{ctx}\n\n{question}")
-            elapsed = time.time() - start
-            print(f"\n--- {label}（{elapsed:.1f}s）---")
-            print(resp.content[:300])
 
-        print(f"\nObservation Masking 验证完成：")
-        print(f"   历史 ToolMessage 遮蔽后节省 {saved_pct:.0f}% tokens，")
-        print(f"   关键：只遮蔽已被后续 Reasoning 吸收的 Observation，保留最近一轮完整内容。")
-        print(f"   AIMessage 中的 Reasoning 已浓缩历史 Observation 的关键发现，信息无损。")
+            trimmed_tokens = sum(count_tokens(m.content) for m in trimmed)
+            kept_rounds = len(trimmed) // 2
+            lost_rounds = len(decisions) - kept_rounds
+
+            lost_list = ", ".join(decisions[:lost_rounds])                                                                               
+            kept_list = ", ".join(decisions[lost_rounds:])                                                                                             
+            print(f"\n丢失的早期决策({lost_rounds}个): {lost_list}")                                                                                   
+            print(f"保留的近期决策({kept_rounds}个): {kept_list}")                                                                                     
+            print(f"\n 硬截断的代价：前 {lost_rounds} 个关键决策（PostgreSQL、Redis 等）被直接丢弃，不可恢复")
+
+        # 🚀 === LLM 摘要压缩：SummarizatoinMiddleware
+            from langchain.agents import create_agent                                                                                                  
+            from langchain.agents.middleware import SummarizationMiddleware                                                                            
+            from langchain_core.messages import HumanMessage
+            from langgraph.checkpoint.memory import InMemorySaver                                                                                      
+                                                                                                                                                    
+            checkpointer = InMemorySaver()
+               
+            # 创建带摘要中间件的 Agent
+            agent = create_agent(
+                model=llm,               # 复用前面初始化的 DeepSeek 模型
+                tools=[],                # 纯对话演示，不需要工具
+                middleware=[                                                                                                             
+                    SummarizationMiddleware(                                                                                                           
+                        model=llm,                   # 同模型做摘要（生产环境可用更便宜的小模型）                                                      
+                        trigger=("tokens", 300),     # 触发阈值（演示用小值，生产通常 4000-8000）                                                      
+                        keep=("messages", 6),        # 保留最近 6 条原文不压缩                                                                         
+                    )                                                                                                                                  
+                ],                                                                                                                                     
+                checkpointer=checkpointer,          # 状态持久化（摘要需要跨轮次保存）                                                                 
+            )  
+
+            # 用相同的 12 轮技术决策对话测试                                                                                                       
+            config = {"configurable": {"thread_id": "compress-demo"}}
+            decisions = ["选 PostgreSQL", "用 Redis 缓存", "JWT 认证", "Docker 部署",                                                    
+                        "pool_size=50", "GitHub Actions CI", "ELK 日志", "Sentry 监控",                                                               
+                        "slowapi 限流", "React 前端", "Zustand 状态管理", "pytest 测试"]                                                              
+                                                                                                                                                
+            print("=== 逐轮发送技术决策，观察 SummarizationMiddleware 压缩过程 ===\n")                                                                 
+            for i, decision in enumerate(decisions):                                                                                                   
+                response = agent.invoke(                                                                                                               
+                    {"messages": [HumanMessage(content=f"记住第{i+1}个技术决策：{decision}。理由：团队熟悉度高、社区成熟。")]},                                                
+                    config                                                                                                                             
+                )                                                                                                                                      
+                msgs = response["messages"]                                                                                                            
+                msg_count = len(msgs)                                                                                                                  
+                expected = (i + 1) * 2  # 无压缩时的预期消息数                                                                                         
+                                                                                                                                                        
+                if msg_count < expected:                                                                                                           
+                    # 压缩已触发，第一条消息是摘要                                                                                                     
+                    summary_preview = msgs[0].content[:200].replace('\n', ' ')                                                                         
+                    latest_reply = msgs[-1].content[:100].replace('\n', ' ')                                                                           
+                    print(f"轮次 {i+1:2d} | 消息数: {msg_count:3d}（无压缩应为 {expected:2d}）← 压缩中")                                               
+                    print(f"         [摘要] {summary_preview}...")                                                                                   
+                    print(f"         [最新] {latest_reply}...")                                                                                      
+                    print()                                                                                                                            
+                else:                                                                                                                                  
+                    print(f"轮次 {i+1:2d} | 消息数: {msg_count:3d}（无压缩应为 {expected:2d}）")                                                       
+                                                                                                                                                        
+            # 最终验证                                                                                                                                 
+            print("=== 验证：早期决策是否被摘要保留 ===")                                                                                              
+            final = agent.invoke({"messages": [HumanMessage(content="请列出之前所有的技术决策")]}, config)                                                                     
+            print(final["messages"][-1].content[:500])
+
+        # 🚀 === 工具结果清除 Tool Result Clearing
+            # 核心机制：工具调用完成后，将 ToolMessage 的原始返回值替换为占位符，
+            # 仅保留"调用了什么工具"的事实，依赖 Agent 的 AIMessage 携带关键结论。
+            from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+            import time
+
+            # 模拟 Agent 分析项目依赖的完整消息链（2 次工具调用）
+            original_messages = [
+                HumanMessage(content="这个项目用了哪些核心依赖？各自什么版本？有没有已知的兼容性问题？"),
+
+                # Step 1: Agent 决定查看 requirements.txt
+                AIMessage(
+                    content="我先查看项目的依赖配置文件，确认核心依赖和版本信息。",
+                    tool_calls=[{"name": "read_file", "args": {"path": "requirements.txt"}, "id": "call_1"}]
+                ),
+                # 工具返回完整文件内容（大量 token）
+                ToolMessage(content="""# Core dependencies
+                fastapi==0.104.1
+                uvicorn[standard]==0.24.0
+                pydantic==2.5.0
+                sqlalchemy==2.0.23
+                alembic==1.13.0
+                asyncpg==0.29.0
+
+                # Cache & Message Queue
+                redis==5.0.1
+                celery==5.3.6
+                kombu==5.3.4
+
+                # AI/ML
+                langchain==0.1.0
+                langchain-openai==0.0.2
+                openai==1.6.1
+                tiktoken==0.5.2
+                chromadb==0.4.22
+                sentence-transformers==2.2.2
+
+                # Monitoring
+                prometheus-client==0.19.0
+                sentry-sdk[fastapi]==1.39.1
+                structlog==23.2.0
+
+                # Testing
+                pytest==7.4.3
+                pytest-asyncio==0.23.2
+                httpx==0.25.2
+                factory-boy==3.3.0""", tool_call_id="call_1"),
+
+                # Step 2: Agent 进一步检查 docker-compose
+                AIMessage(
+                    content="requirements.txt 显示核心依赖为 FastAPI 0.104 + SQLAlchemy 2.0 + Redis 5.0 + LangChain 0.1.0。"
+                            "接下来检查 docker-compose 确认基础设施版本。",
+                    tool_calls=[{"name": "read_file", "args": {"path": "docker-compose.yml"}, "id": "call_2"}]
+                ),
+                ToolMessage(content="""version: '3.8'
+                services:
+                  app:
+                    build: .
+                    ports: ["8000:8000"]
+                    depends_on: [db, redis, chromadb]
+                    environment:
+                      - DATABASE_URL=postgresql+asyncpg://user:pass@db:5432/app
+                      - REDIS_URL=redis://redis:6379/0
+                      - CHROMADB_HOST=chromadb
+                  db:
+                    image: postgres:16.1
+                    volumes: [pgdata:/var/lib/postgresql/data]
+                    environment:
+                      POSTGRES_DB: app
+                      POSTGRES_USER: user
+                      POSTGRES_PASSWORD: pass
+                  redis:
+                    image: redis:7.2-alpine
+                    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+                  chromadb:
+                    image: chromadb/chroma:0.4.22
+                    volumes: [chromadata:/chroma/chroma]
+                volumes:
+                  pgdata:
+                  chromadata:""", tool_call_id="call_2"),
+
+                # Agent 最终结论（已浓缩所有关键信息）
+                AIMessage(content=(
+                    "项目核心依赖分析完成：\n"
+                    "1. **Web 框架**：FastAPI 0.104.1 + Uvicorn 0.24.0 + Pydantic 2.5.0\n"
+                    "2. **数据库**：PostgreSQL 16.1 + SQLAlchemy 2.0.23 + asyncpg 0.29.0\n"
+                    "3. **缓存/队列**：Redis 7.2 + Celery 5.3.6\n"
+                    "4. **AI/ML**：LangChain 0.1.0 + OpenAI 1.6.1 + ChromaDB 0.4.22\n\n"
+                    "兼容性风险：LangChain 0.1.0 是早期版本，与 langchain-openai 0.0.2 "
+                    "的 API 可能在后续升级中出现 breaking change。建议锁定版本或关注 changelog。"
+                )),
+            ]
+
+            print(f"消息链构造完成：{len(original_messages)} 条消息（{len(original_messages)//2} 轮工具调用 + 最终结论）")
+
+            # --- 展示原始消息链中各类型的 token 占比 ---
+            print("=== 原始消息链：各消息类型 token 占比 ===\n")
+            type_tokens = {"HumanMessage": 0, "AIMessage": 0, "ToolMessage": 0}
+            for msg in original_messages:
+                t = type(msg).__name__
+                tokens = count_tokens(str(msg.content))
+                type_tokens[t] += tokens
+
+            total = sum(type_tokens.values())
+            for t, tok in type_tokens.items():
+                bar = "█" * int(tok / total * 30)
+                print(f"  {t:15s} {tok:4d} tokens ({tok/total*100:4.1f}%) {bar}")
+            print(f"  {'总计':15s} {total:4d} tokens")          
+
+
+            # --- 定义工具结果清除函数并执行 ---
+            def clear_tool_results(messages):
+                """工具调用完成后，将冗长的原始返回值压缩为一行结论性摘要"""
+                cleared = []
+                for msg in messages:
+                    if isinstance(msg, ToolMessage):
+                        # 用 LLM 将工具输出压缩为一行摘要（只压缩单条输出，比整段对话压缩便宜得多）
+                        summary_resp = llm.invoke(
+                            f"用一句话（不超过80字）总结以下工具输出的关键发现：\n\n{msg.content}"
+                        )
+                        cleared.append(ToolMessage(
+                            content=f"[摘要] {summary_resp.content.strip()}",
+                            tool_call_id=msg.tool_call_id
+                        ))
+                    else:
+                        cleared.append(msg)
+                return cleared
+
+            cleared_messages = clear_tool_results(original_messages)
+
+            # 展示摘要效果
+            print("=== 工具结果清除：原始输出 → 一行摘要 ===\n")
+            tool_idx = 0
+            for orig, clr in zip(original_messages, cleared_messages):
+                if isinstance(orig, ToolMessage):
+                    tool_idx += 1
+                    orig_tokens = count_tokens(orig.content)
+                    clr_tokens = count_tokens(clr.content)
+                    print(f"ToolMessage #{tool_idx}:")
+                    print(f"  原始: {orig_tokens} tokens | {orig.content[:80]}...")
+                    print(f"  摘要: {clr_tokens} tokens | {clr.content}")
+                    print(f"  压缩率: {(1 - clr_tokens/orig_tokens)*100:.0f}%\n")
+
+            # Token 对比
+            cleared_tokens = sum(count_tokens(str(m.content)) for m in cleared_messages)
+            saved_pct = (1 - cleared_tokens / total) * 100
+            print(f"=== 整体 Token 对比 ===")
+            print(f"清除前: {total} tokens")
+            print(f"清除后: {cleared_tokens} tokens（节省 {saved_pct:.0f}%）")
+
+        # 🚀 === 观察遮蔽 Observation Masking
+            # 核心原理（JetBrains, NeurIPS 2025）：
+            # Agent 每步的 Reasoning 已自然浓缩了上一步 Observation 的关键发现，
+            # 因此遮蔽冗长的原始 Observation 不会丢失决策信息。
+
+            # 模拟 3 步工具调用链（Agent 调试数据库连接超时问题）
+            tool_chain = [
+                {
+                    "action": "search_codebase('database timeout config')",
+                    "reasoning": "用户报告数据库连接超时，先搜索超时相关配置定位问题范围",
+                    "observation": """找到 6 处匹配：
+                    db/pool.py:15 → pool_size=20, pool_timeout=30
+                    db/pool.py:28 → pool_recycle=3600, pool_pre_ping=True
+                    config/prod.yaml:8 → max_overflow=10, pool_timeout=30
+                    config/dev.yaml:8 → max_overflow=5, pool_timeout=60
+                    utils/health.py:42 → timeout=10 (健康检查专用)
+                    scripts/migrate.py:8 → timeout=300 (迁移脚本专用)""",
+                },
+                {
+                    "action": "read_file('db/pool.py')",
+                    # ↓ reasoning 浓缩了 step1 的发现：pool_timeout=30, max_overflow=10
+                    "reasoning": "搜索发现生产环境 pool_timeout=30 且 max_overflow=10，读取源码确认完整配置",
+                    "observation": """import sqlalchemy
+                    from sqlalchemy import create_engine
+                    engine = create_engine(
+                        DATABASE_URL,
+                        pool_size=20,        # 常驻连接数                                                                                        
+                        max_overflow=10,     # 溢出连接上限                                                                                                    
+                        pool_timeout=30,     # 获取连接的等待超时                                                                                              
+                        pool_recycle=3600,   # 每小时回收连接                                                                                                  
+                        pool_pre_ping=True,  # 使用前 ping 检测                                                                                                
+                        echo=False, echo_pool=False,                                                                                                       
+                        # 注意：没有设置 connect_timeout（数据库建连超时）
+                    )
+                    # 连接池监控
+                    from sqlalchemy import event
+                    @event.listens_for(engine, 'checkout')
+                    def receive_checkout(dbapi_conn, conn_record, conn_proxy):
+                        logging.info(f'Connection checked out: {conn_record}')""",
+                },
+                {
+                    "action": "run_tests('pytest tests/db/test_pool.py -v')",
+                    # ↓ reasoning 浓缩了 step2 的发现：缺少 connect_timeout
+                    "reasoning": "源码确认 max_overflow=10 且缺少 connect_timeout，跑测试验证高并发表现",                                
+                    "observation": """test_basic_connection PASSED       [20%]                                                                         
+                    test_pool_size PASSED              [40%]                                                                                                   
+                    test_timeout_handling PASSED       [60%]                                                                                                   
+                    test_recycle PASSED                [80%]                                                                                                   
+                    test_concurrent_overflow FAILED    [100%]                                                                                              
+                    FAILED - sqlalchemy.exc.TimeoutError: QueuePool limit of
+                    size 20 overflow 10 reached, connection timed out, timeout 30.
+                    ========================= 4 passed, 1 failed in 3.2s ==========================""",
+                },
+            ]
+
+            # --- 1. 展示核心机制：Reasoning 如何浓缩上一步 Observation ---
+            print("=== 信息传递链：每步 Reasoning 浓缩了上一步 Observation 的关键发现 ===\n")
+            for i, step in enumerate(tool_chain):
+                if i > 0:
+                    prev = tool_chain[i-1]
+                    print(f"Step {i} Observation（{count_tokens(prev['observation'])} tokens 原始输出）")
+                    print(f"  ↓ 浓缩为")
+                    print(f"Step {i+1} Reasoning：「{step['reasoning']}」\n")
+
+            # --- 2. 构建完整 vs 遮蔽上下文 ---
+            full_context = ""
+            masked_context = ""
+            for step in tool_chain:
+                full_context += f"Action: {step['action']}\nReasoning: {step['reasoning']}\nObservation:\n{step['observation']}\n\n"
+                masked_context += f"Action: {step['action']}\nReasoning: {step['reasoning']}\nObservation: [已遮蔽]\n\n"
+
+            full_tokens = count_tokens(full_context)
+            masked_tokens = count_tokens(masked_context)
+            saved_pct = (1 - masked_tokens / full_tokens) * 100
+
+            print(f"=== Token 对比 ===")
+            print(f"完整上下文: {full_tokens} tokens")
+            print(f"遮蔽后:     {masked_tokens} tokens（节省 {saved_pct:.0f}%）")
+
+            # --- 3. LLM 对比：遮蔽后能否依靠 Reasoning 链定位根因 ---
+            question = "根据以上调试过程，数据库连接超时的根因是什么？建议怎么修复？"
+
+            import time
+            for label, ctx in [("完整上下文", full_context), ("遮蔽 Observation", masked_context)]:
+                prompt = f"以下是 Agent 的调试过程：\n{ctx}\n{question}"
+                start = time.time()
+                resp = llm.invoke(prompt)
+                elapsed = time.time() - start
+                print(f"\n=== {label}（{elapsed:.1f}s）===")
+                print(resp.content[:300])
+
+            print(f"\n关键发现：遮蔽 Observation 节省了 {saved_pct:.0f}% token，")
+            print(f"   但 Reasoning 链已携带关键信息（pool_timeout=30 → 缺少 connect_timeout → overflow FAILED），")
+            print(f"   LLM 仍能正确定位根因。这就是 Observation Masking 的核心原理。")
+
+
+
+
+            # 用真实的 Agent 工具调用链演示观察遮蔽原理
+            from langchain_core.tools import tool
+            from langchain_core.messages import ToolMessage, AIMessage, HumanMessage
+            from langchain.agents import create_agent
+            import time
+
+            # --- 1. 定义三个调试工具（模拟返回真实格式数据）---
+            @tool
+            def search_codebase(query: str) -> str:
+                """搜索代码库中与查询相关的代码片段和配置"""
+                return """找到 6 处匹配：
+              db/pool.py:15 → pool_size=20, pool_timeout=30
+              db/pool.py:28 → pool_recycle=3600, pool_pre_ping=True
+              config/prod.yaml:8 → max_overflow=10, pool_timeout=30
+              config/dev.yaml:8 → max_overflow=5, pool_timeout=60
+              utils/health.py:42 → timeout=10 (健康检查专用)
+              scripts/migrate.py:8 → timeout=300 (迁移脚本专用)"""
+
+            @tool
+            def read_file(file_path: str) -> str:
+                """读取指定路径的文件内容"""
+                return """import sqlalchemy
+            from sqlalchemy import create_engine
+            engine = create_engine(
+                DATABASE_URL,
+                pool_size=20,        # 常驻连接数
+                max_overflow=10,     # 溢出连接上限
+                pool_timeout=30,     # 获取连接的等待超时
+                pool_recycle=3600,   # 每小时回收连接
+                pool_pre_ping=True,  # 使用前 ping 检测
+                echo=False, echo_pool=False,
+                # 注意：没有设置 connect_timeout（数据库建连超时）
+            )
+            from sqlalchemy import event
+            @event.listens_for(engine, 'checkout')
+            def receive_checkout(dbapi_conn, conn_record, conn_proxy):
+                logging.info(f'Connection checked out: {conn_record}')"""
+
+            @tool
+            def run_tests(command: str) -> str:
+                """运行 pytest 测试并返回结果"""
+                return """test_basic_connection PASSED       [20%]
+            test_pool_size PASSED              [40%]
+            test_timeout_handling PASSED       [60%]
+            test_recycle PASSED                [80%]
+            test_concurrent_overflow FAILED    [100%]
+            FAILED - sqlalchemy.exc.TimeoutError: QueuePool limit of
+              size 20 overflow 10 reached, connection timed out, timeout 30.
+            ========================= 4 passed, 1 failed in 3.2s =========================="""
+
+            # --- 2. 创建 ReAct Agent 并执行调试任务 ---
+            debug_agent = create_agent(
+                llm, 
+                [search_codebase, read_file, run_tests],
+                system_prompt="请你作为数据库运维人员，仔细梳理数据库保存问题，并将tool工具返回的结果内容进行Reasoning链思考，需要在思考中加入tool里面核心重要的内容"
+            )
+
+            print("=== Agent 自主调试：观察完整的 Action → Observation → Reasoning 链 ===\n")
+            result = debug_agent.invoke({"messages": [HumanMessage(content=(
+                "数据库连接频繁超时，请调试定位根因。"
+                "建议：先用 search_codebase 搜索 timeout 配置，"
+                "再用 read_file 读取 db/pool.py，最后用 run_tests 跑 pytest tests/db/test_pool.py -v"
+            ))]})
+
+            # --- 3. 展示 Agent 真实轨迹（标注每条消息类型）---
+            messages = result["messages"]
+            step = 0
+            for msg in messages:
+                if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+                    step += 1
+                    for tc in msg.tool_calls:
+                        args_preview = list(tc['args'].values())[0][:60] if tc['args'] else ''
+                        print(f"  Step {step} [Action]      {tc['name']}({args_preview})")
+                    if msg.content:
+                        print(f"  Step {step} [Reasoning]   {msg.content[:150]}")
+                elif isinstance(msg, ToolMessage):
+                    obs_tokens = count_tokens(msg.content)
+                    print(f"  Step {step} [Observation] ({obs_tokens} tokens) {msg.content[:80]}...")
+                    print()
+                elif isinstance(msg, AIMessage):
+                    print(f"  [Final Answer] {msg.content[:200]}...")
+                    print()
+
+            # --- 4. 核心操作：Observation Masking（基于信息传播链判断）---
+            # 核心逻辑：只有当 Observation[N] 后面存在 AIMessage（即 Reasoning[N+1] 已吸收其关键信息），
+            #           才能安全遮蔽。最近一轮的 Observation 尚未被后续推理吸收，必须保留。
+            print("=== 执行 Observation Masking：遮蔽已被后续推理吸收的历史 Observation ===\n")
+            masked_messages = []
+            for i, msg in enumerate(messages):
+                if isinstance(msg, ToolMessage):
+                    # 检查这个 Observation 之后是否有 AIMessage 吸收了它
+                    has_subsequent_reasoning = any(
+                        isinstance(messages[j], AIMessage) for j in range(i + 1, len(messages))
+                    )
+                    if has_subsequent_reasoning:
+                        # 信息已传播到后续 Reasoning，安全遮蔽
+                        masked_messages.append(ToolMessage(
+                            content="[Observation 已被后续推理吸收]",
+                            tool_call_id=msg.tool_call_id
+                        ))
+                    else:
+                        # 最近一轮，信息尚未传播，保留完整内容
+                        masked_messages.append(msg)
+                else:
+                    masked_messages.append(msg)
+
+            # Token 对比
+            full_tokens = sum(count_tokens(str(m.content)) for m in messages)
+            masked_tokens = sum(count_tokens(str(m.content)) for m in masked_messages)
+            saved_pct = (1 - masked_tokens / full_tokens) * 100
+            print(f"完整轨迹: {full_tokens} tokens")
+            print(f"遮蔽后:   {masked_tokens} tokens（节省 {saved_pct:.0f}%）")
+
+            # --- 5. 验证：用两种上下文分别提问，对比回答质量 ---
+            question = "根据以上调试过程，数据库连接超时的根因是什么？建议怎么修复？"
+
+            for label, msgs in [("完整上下文", messages), ("遮蔽 Observation", masked_messages)]:
+                ctx = "\n".join(
+                    f"[{type(m).__name__}] {str(m.content)[:300]}" for m in msgs
+                )
+                start = time.time()
+                resp = llm.invoke(f"以下是 Agent 的调试轨迹：\n{ctx}\n\n{question}")
+                elapsed = time.time() - start
+                print(f"\n--- {label}（{elapsed:.1f}s）---")
+                print(resp.content[:300])
+
+            print(f"\nObservation Masking 验证完成：")
+            print(f"   历史 ToolMessage 遮蔽后节省 {saved_pct:.0f}% tokens，")
+            print(f"   关键：只遮蔽已被后续 Reasoning 吸收的 Observation，保留最近一轮完整内容。")
+            print(f"   AIMessage 中的 Reasoning 已浓缩历史 Observation 的关键发现，信息无损。")
 
 
     # 🎯 Isolate下上文隔离
     # 工具上下文层 | 任务状态层
     # ----------------------------------------------------------------------------------------------------------------
-    # 🚀 === Isolate 策略：子 Agent 的上下文隔离
-        # 模拟主 Agent 的完整上下文（3000 tokens 的累积历史）
-        main_agent_history = """[系统提示] 你是 DevAssist，后端工程 AI 助手...（800 tokens）
-        [轮次1] 用户讨论了数据库选型，最终选择 PostgreSQL...
-        [轮次2] 用户要求设计 API 路由结构，生成了 15 个端点...
-        [轮次3] 用户报告了认证模块的 JWT 刷新 bug，已修复...
-        [轮次4] 用户要求添加 Redis 缓存层，完成了 Cache-Aside 实现...
-        [轮次5] 用户讨论了部署方案，选择 Docker + ECS...
-        [轮次6] 用户要求优化慢查询，分析了 3 个问题 SQL...
-        [轮次7] 用户讨论了日志方案，选择 ELK Stack...
-        [轮次8] 用户要求写单元测试，覆盖了 auth 和 db 模块..."""
+        # 🚀 === Isolate 策略：子 Agent 的上下文隔离
+            # 模拟主 Agent 的完整上下文（3000 tokens 的累积历史）
+            main_agent_history = """[系统提示] 你是 DevAssist，后端工程 AI 助手...（800 tokens）
+            [轮次1] 用户讨论了数据库选型，最终选择 PostgreSQL...
+            [轮次2] 用户要求设计 API 路由结构，生成了 15 个端点...
+            [轮次3] 用户报告了认证模块的 JWT 刷新 bug，已修复...
+            [轮次4] 用户要求添加 Redis 缓存层，完成了 Cache-Aside 实现...
+            [轮次5] 用户讨论了部署方案，选择 Docker + ECS...
+            [轮次6] 用户要求优化慢查询，分析了 3 个问题 SQL...
+            [轮次7] 用户讨论了日志方案，选择 ELK Stack...
+            [轮次8] 用户要求写单元测试，覆盖了 auth 和 db 模块..."""
 
-        # 当前子任务：生成数据库迁移脚本（只需要知道数据库相关信息）
-        subtask = "生成从 users 表添加 email_verified 字段的数据库迁移脚本（PostgreSQL, SQLAlchemy 2.0, alembic）"
+            # 当前子任务：生成数据库迁移脚本（只需要知道数据库相关信息）
+            subtask = "生成从 users 表添加 email_verified 字段的数据库迁移脚本（PostgreSQL, SQLAlchemy 2.0, alembic）"
 
-        # 方式A：继承全部历史（不隔离）
-        context_no_isolate = f"{main_agent_history}\n\n当前任务：{subtask}"
+            # 方式A：继承全部历史（不隔离）
+            context_no_isolate = f"{main_agent_history}\n\n当前任务：{subtask}"
 
-        # 方式B：只传任务描述（隔离）
-        context_isolated = f"你是数据库迁移专家。请完成以下任务：\n{subtask}"
+            # 方式B：只传任务描述（隔离）
+            context_isolated = f"你是数据库迁移专家。请完成以下任务：\n{subtask}"
 
-        tokens_full = count_tokens(context_no_isolate)
-        tokens_isolated = count_tokens(context_isolated)
+            tokens_full = count_tokens(context_no_isolate)
+            tokens_isolated = count_tokens(context_isolated)
 
-        print(f"不隔离（继承全部历史）: {tokens_full} tokens")
-        print(f"隔离（只传任务描述）:   {tokens_isolated} tokens")
-        print(f"上下文缩减: {(1-tokens_isolated/tokens_full)*100:.0f}%\n")
+            print(f"不隔离（继承全部历史）: {tokens_full} tokens")
+            print(f"隔离（只传任务描述）:   {tokens_isolated} tokens")
+            print(f"上下文缩减: {(1-tokens_isolated/tokens_full)*100:.0f}%\n")
 
-        # 对比回答质量
-        for label, ctx in [("不隔离", context_no_isolate), ("隔离", context_isolated)]:
-            resp = llm.invoke(ctx)
-            print(f"=== {label} ===")
-            print(resp.content[:250])
-            print()
+            # 对比回答质量
+            for label, ctx in [("不隔离", context_no_isolate), ("隔离", context_isolated)]:
+                resp = llm.invoke(ctx)
+                print(f"=== {label} ===")
+                print(resp.content[:250])
+                print()
 
-        print("两种方式都能正确生成迁移脚本——但隔离版本不携带 JWT bug、Redis 缓存等无关历史")
-        
-
-
-        from langchain.agents import create_agent
-        from deepagents.middleware.subagents import SubAgentMiddleware
-        from deepagents.backends import StateBackend
-        from langchain_core.messages import HumanMessage
-        from langgraph.checkpoint.memory import InMemorySaver
-
-        # 主 Agent + 子 Agent 一体化配置
-        isolate_agent = create_agent(
-            model=llm,
-            tools=[],                    # 主 Agent 自身无额外工具
-            system_prompt="你是 DevAssist 后端工程助手。数据库迁移任务请使用 task 工具委派给 db_expert。",
-            middleware=[
-                SubAgentMiddleware(
-                    backend=StateBackend(),  # 轻量级内存后端，无需文件系统
-                    subagents=[
-                        {
-                            "name": "db_expert",
-                            "description": "数据库迁移专家，处理 PostgreSQL + Alembic 相关任务",
-                            "system_prompt": "你是数据库迁移专家，精通 PostgreSQL、SQLAlchemy 2.0、Alembic。只处理数据库相关任务，输出完整可用的迁移脚本。",
-                            "model": "deepseek:deepseek-chat",  # 子 Agent 使用的模型
-                            "tools": [],
-                        }
-                    ],
-                )
-            ],
-            checkpointer=InMemorySaver(),  # 跨轮次保存主 Agent 历史
-        )
-
-        print("主 Agent 创建完成")
-        print("  中间件自动注入了 task 工具，可委派任务给 db_expert 子 Agent")
-        print("  子 Agent 每次被调用时上下文完全隔离，不继承主 Agent 历史")
+            print("两种方式都能正确生成迁移脚本——但隔离版本不携带 JWT bug、Redis 缓存等无关历史")
+            
 
 
-        # Isolate 策略实战（2/3）：积累主 Agent 对话历史 ===
-        config = {"configurable": {"thread_id": "isolate-demo"}}
+            from langchain.agents import create_agent
+            from deepagents.middleware.subagents import SubAgentMiddleware
+            from deepagents.backends import StateBackend
+            from langchain_core.messages import HumanMessage
+            from langgraph.checkpoint.memory import InMemorySaver
 
-        # 模拟 3 轮无关任务（限制回复长度以加速演示），让主 Agent 积累上下文
-        history = [
-            "帮我选择数据库，PostgreSQL 还是 MySQL？一句话给结论",
-            "JWT 刷新 token 过期后没有自动续签，一句话说修复思路",
-            "Redis 缓存穿透怎么防？一句话总结方案",
-        ]
-
-        print("=== 积累主 Agent 对话历史（3 轮简短任务）===\n")
-        for i, msg in enumerate(history):
-            result = isolate_agent.invoke(
-                {"messages": [HumanMessage(content=msg)]}, config
+            # 主 Agent + 子 Agent 一体化配置
+            isolate_agent = create_agent(
+                model=llm,
+                tools=[],                    # 主 Agent 自身无额外工具
+                system_prompt="你是 DevAssist 后端工程助手。数据库迁移任务请使用 task 工具委派给 db_expert。",
+                middleware=[
+                    SubAgentMiddleware(
+                        backend=StateBackend(),  # 轻量级内存后端，无需文件系统
+                        subagents=[
+                            {
+                                "name": "db_expert",
+                                "description": "数据库迁移专家，处理 PostgreSQL + Alembic 相关任务",
+                                "system_prompt": "你是数据库迁移专家，精通 PostgreSQL、SQLAlchemy 2.0、Alembic。只处理数据库相关任务，输出完整可用的迁移脚本。",
+                                "model": "deepseek:deepseek-chat",  # 子 Agent 使用的模型
+                                "tools": [],
+                            }
+                        ],
+                    )
+                ],
+                checkpointer=InMemorySaver(),  # 跨轮次保存主 Agent 历史
             )
-            msg_count = len(result["messages"])
-            print(f"轮次 {i+1} | 消息数: {msg_count:3d} | {msg[:35]}...")
 
-        parent_tokens = sum(count_tokens(str(m.content)) for m in result["messages"])
-        print(f"\n主 Agent 累积上下文: {parent_tokens} tokens, {len(result['messages'])} 条消息")
-        print("包含：数据库选型、JWT 修复思路、Redis 缓存方案")
+            print("主 Agent 创建完成")
+            print("  中间件自动注入了 task 工具，可委派任务给 db_expert 子 Agent")
+            print("  子 Agent 每次被调用时上下文完全隔离，不继承主 Agent 历史")
+
+
+            # Isolate 策略实战（2/3）：积累主 Agent 对话历史 ===
+            config = {"configurable": {"thread_id": "isolate-demo"}}
+
+            # 模拟 3 轮无关任务（限制回复长度以加速演示），让主 Agent 积累上下文
+            history = [
+                "帮我选择数据库，PostgreSQL 还是 MySQL？一句话给结论",
+                "JWT 刷新 token 过期后没有自动续签，一句话说修复思路",
+                "Redis 缓存穿透怎么防？一句话总结方案",
+            ]
+
+            print("=== 积累主 Agent 对话历史（3 轮简短任务）===\n")
+            for i, msg in enumerate(history):
+                result = isolate_agent.invoke(
+                    {"messages": [HumanMessage(content=msg)]}, config
+                )
+                msg_count = len(result["messages"])
+                print(f"轮次 {i+1} | 消息数: {msg_count:3d} | {msg[:35]}...")
+
+            parent_tokens = sum(count_tokens(str(m.content)) for m in result["messages"])
+            print(f"\n主 Agent 累积上下文: {parent_tokens} tokens, {len(result['messages'])} 条消息")
+            print("包含：数据库选型、JWT 修复思路、Redis 缓存方案")
 
 
     # 🎯 Cache提示缓存
@@ -12111,6 +12801,242 @@
 
 # ☎ MCP
 # ====================================================================================================================================
+    # 🚀 MCP 客户端
+        import asyncio
+        import os
+        from typing import Optional
+        from openai import OpenAI
+        from dotenv import load_dotenv
+        from contextlib import AsyncExitStack
+
+        from mcp import ClientSession, StdioServerParamters
+        from mcp.client.stdio import stdio_client
+
+        load_dotenv()
+
+        class MCPClient:
+            def __init__(self):
+                """初始化 MCP 客户端"""
+                self.openai_api_key = os.getenv("OPENAI_API_KEY")  # 读取 OpenAI API Key
+                self.base_url = os.getenv("BASE_URL")  # 读取 BASE YRL
+                self.model = os.getenv("MODEL")  # 读取model
+                self.client = OpenAI(api_key=self.openai_api_key, base_url=self.base_url)
+
+                self.session: Optional[ClientSession] = None
+                self.exit_stack = AsyncExitStack()
+
+            async def connect_to_server(self, server_script_path: str):
+                """链接到MCP服务器并列出可用工具"""
+                is_python = server_script_path.endswith(".py")
+                is_js = server_script_path.endswith('.js')
+
+                if not (is_python or is_js):
+                    raise ValueError("服务器脚本必须是.py或.js文件")
+
+                command = "python" if is_python else "node"
+                server_params = StdioServerParams(
+                    command=command,
+                    args=[server_script_path],
+                    env=None
+                )    
+
+                # 启动服务器并建立通信
+                stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+
+                # stdio 读通道  write 写通道
+                self.stdio, self.write = stdio_transport
+
+                # 创建mcp会话
+                self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+
+                # 初始化握手
+                await self.session.initialize()
+
+                # 列出MCP服务器上的工具
+                response = await self.session.list_tools()
+                tools = response.tools
+                print("\n已连接到服务器，支持以下工具", [tool.name for tool in tools])
+
+
+            async def process_query(self, query: str) -> str:
+                """
+                使用大模型处理查询并可以调用MCP工具 （Function Calling）
+                """
+                messages = [
+                    {"role": "system", "content": "你是一个智能助手，帮助用户回答问题"},
+                    {"role": "user", "content": query}
+                ]  
+
+                response = await self.session.list_tools()
+                available_tools = [{
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "input_schema": tool.inputSchema
+                    }
+                } for tool in response.tools]
+
+                try:
+                    response = self.client.completions.create(
+                        model=self.model,
+                        messages = messages,
+                        tools=available_tools
+                    )
+
+                    # 处理返回的内容
+                    content = response.choice[0]
+                    if content.finish_reason == "tool_calls":
+                        # 如果是需要使用工具，就解析工具
+                        tool_call = content.message.tool_calls[0]
+                        tool_name = tool_call.function.name
+                        tool_args = json.loads(tool_call.function.arguments)
+                        # 执行工具
+                        result = await self.session.call_tool(tool_name, tool_args)
+                        print(f"\n\n[Calling tool {tool_name} with args {tool_args}]\n\n")
+
+                        # 将模型返回的调用哪个工具数据和工具执行完成后的数据都存入messages中
+                        messages.append(content.model.model_dump())
+                        messages.append({
+                            "role": "tool",
+                            "content": result.content[0].text,
+                            "tool_call_id": tool_call.id                           
+                        }) 
+                        # 将上面的结果再返回给大模型生产最终的结果
+                        response = self.client.chat.completions.create(
+                            model=model,
+                            messages=messages
+                        )
+                        return response.choices[0].message.content
+
+                    return content.message.content    
+                        
+                except Exception as e:
+                    return f"⚠ 调用 OpenAI API 时出错: {str(e)}"  
+
+            async def chat_loop(self):
+                """运行交互式聊天循环"""
+                print("\nMCP 客户端已启动！输入 'quit' 退出")
+                while True:
+                    try:
+                        query = input("\nQuery: ").strip()
+                        if query.lower() == 'quit':
+                            break
+                        response = await self.process_query(query)
+                        print(f"\n🤖 OpenAI: {response}")
+                    except Exception as e:
+                        print(f"\n⚠ 发生错误: {str(e)}")
+
+            async def cleanup(self):
+                """清理资源"""
+                await self.exit_stack.aclose()
+
+        async def main():
+            if len(sys.argv < 2):
+                print("Usage: python client.py <path_to_server_script>")
+                sys.exit(1)
+
+            client = MCPClient()
+            try:
+                await client.connect_to_server(sys.argv[1])
+                await client.chat_loop()
+            finally:
+                await client.cleanup()
+
+        if __name__ == "__main__":
+            import sys
+            asyncio.run(main())
+
+    # 🚀 MCP 服务器
+        import json
+        import httpx
+        from typing import Any
+        from mcp.server.fastmcp import FastMCP
+
+        # 初始化mcp服务器
+        mcp = FastMCP("weatherserver") # 💡
+
+        # OpenWeather API 配置
+        OPENWEATHER_API_BASE = "https://api.openweathermap.org/data/2.5/weather"
+        API_KEY = "YOUR_API_KEY"  # 请替换为你自己的 OpenWeather API Key
+        USER_AGENT = "weather-app/1.0"
+
+        async def fetch_weather(city: str) -> dict[str, Any] | None:
+            """
+            从 OpenWeather API 获取天气信息。
+            :param city: 城市名称（需使用英文，如 Beijing）
+            :return: 天气数据字典；若出错返回包含 error 信息的字典
+            """
+            params = {
+                "q": city,
+                "appid": API_KEY,
+                "units": "metric",
+                "lang": "zh_cn"
+            }
+            headers = {"User-Agent": USER_AGENT}
+            async with httpx.AsyncClient() as client:
+                try:
+                    response = await client.get(
+                        OPENWEATHER_API_BASE,
+                        params=params,
+                        headers=headers,
+                        timeout=30.0
+                    )
+                    response.raise_for_status()
+                    return response.json() # 返回字典类型
+                except httpx.HTTPStatusErrors as e:
+                    return {"error": f"HTTP错误：{e.response.status_code}"}
+                except Exception as e 
+                    return {"error": f"请求失败: {str(e)}"}            
+
+
+        def format_weather(data: dict[str, Any] | str) -> str:
+            """
+            将天气数据格式化为易读文本
+            :param data: 天气数据（可以是字典或json字符串）
+            :return: 格式化的天气信息字符串
+            """
+            # 如果传入的是字符串，则先转换成字典
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except Exception as e:
+                    return f"无法解析天气数据： {e}"
+
+            # 如果数据中包含错误信息，直接返回错误信息
+             if "error" in data:
+                return f"⚠ {data['error']}"
+
+            # 提取数据时做容错处理
+            city = data.get("name", "未知")
+            country = data.get("sys", {}).get("country", "未知")
+            temp = data.get("main", {}).get("temp", "N/A")
+            humidity = data.get("main", {}).get("humidity", "N/A")
+            wind_speed = data.get("wind", {}).get("speed", "N/A")
+            # weather 可能为空列表，因此用 [0] 前先提供默认字典
+            weather_list = data.get("weather", [{}])
+            description = weather_list[0].get("description", "未知")
+
+            return (
+                f"🌍 {city}, {country}\n"
+                f"🌡 温度: {temp}°C\n"
+                f"💧 湿度: {humidity}%\n"
+                f"🌬 风速: {wind_speed} m/s\n"
+                f"⛅ 天气: {description}\n"
+            )            
+
+        @mcp.tool() # 💡
+        async def query_weather(city: str) -> str:
+            """
+            输入指定城市的英文名称，返回今日天气查询结果
+            :param city: 城市名称（需使用英文）
+            :return: 格式化后的天气信息
+            """
+            data = await fetch_weather(city)
+            return format_weather(data)
+
+        if __name__ == "__main__":
+            mcp.run(transport="stdio") # 💡
 
 
 # 🚄 模型微调

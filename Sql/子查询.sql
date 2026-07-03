@@ -306,9 +306,8 @@ WHERE EXISTS
          FROM employees e2
          WHERE e1.employee_id = e2.manager_id);
 
-/*
- 题目 查询departments表中，不存在于employees表中的部门的department_id和department_name
- */ # 方式一
+# 题目 查询departments表中，不存在于employees表中的部门的department_id和department_name
+# 方式一
 
 SELECT d.department_id, d.department_name
 FROM employees e
