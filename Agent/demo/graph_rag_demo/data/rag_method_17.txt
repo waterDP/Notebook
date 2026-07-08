@@ -1,0 +1,125 @@
+🩺 17. CRAG(Corrective RAG,纠错自愈)
+■ 核心思想
+检索结果也不是完全可信的。 CRAG 在生成回答之前,先对检索结果做一个置信度评估:
+- 高置信度 → 直接生成
+- 低置信度 → 尝试修正检索(重写 query、换检索源)
+- 无相关信息 → 告诉用户"没找到"而不是硬编
+■ 工作流程
+代码
+Query → 检索 → 置信度评估
+├── 高 [0.8, 1.0] → 生成回答
+├── 中 [0.5, 0.8) → 知识修正(去除噪声、补充检索)
+└── 低 [0.0, 0.5) → 重写 query 或回退到模型自身知识
+↓
+LLM 生成最终回答
+■ 代码示例
+代码
+用 LLM 打分
+让 LLM 判断每段内容是否相关
+不相关的 chunk,尝试从中提取有用信息
+如果修正后信息太少,补充检索
+1. 检索
+2. 评估置信度
+高置信度 → 直接生成
+中等置信度 → 知识修正
+低置信度 → 重写 query + 重新检索
+真没找到,诚实告知
+------------------------------------------------------------
+## 总结对比
+| 方案 | 核心思路 | 效果提升 | 实现成本 | 推荐场景 |
+| **1. Simple RAG** | 字符硬切 | ⭐ | 极低 | Demo 快速验证 |
+| **2. Semantic Chunking** | 语义边界切分 | ⭐⭐ | 低 | 内容规范但不固定 |
+| **3. Small-to-Big** | 小块检索大块回答 | ⭐⭐⭐ | 低 | 需要精确定位+完整上下文 |
+| **4. Context-Enriched** | chunk 加前缀元信息 | ⭐⭐ | 低 | 多文档混合检索 |
+| **5. Chunk-Header** | 为 chunk 加标题 | ⭐⭐ | 中 | 长文档/需要快速预览 |
+| **6. Doc-Augmentation** | 预处理增强文档 | ⭐⭐⭐ | 中 | 数据质量不佳 |
+| **7. Query-Transformation** | 改写查询 | ⭐⭐⭐ | 低 | 用户 query 质量低 |
+| **8. Rerank** | 粗筛+精排两步走 | ⭐⭐⭐⭐ | 中 | 精度要求高 |
+| **9. Sentence Window** | 带上下文的片段检索 | ⭐⭐⭐ | 低 | 句子级搜索 |
+| **10. Context Compression** | 检索结果压缩去噪 | ⭐⭐⭐ | 中 | 上下文窗口有限 |
+| **11. Feedback-Loop** | 利用用户反馈优化 | ⭐⭐⭐⭐ | 高 | 生 产环境持续优化 |
+| **12. Self-RAG** | 内省反思 | ⭐⭐⭐⭐⭐ | 高 | 结果可靠性要求极高 |
+| **13. KG RAG** | 知识图谱+实体关系 | ⭐⭐⭐⭐⭐ | 高 | 多跳推理/关系复杂 |
+| **14. Hierarchical Index** | 两级索引 | ⭐⭐⭐ | 高 | 大规模语料库 |
+| **15. HyDE** | 假想文档做检索 | ⭐⭐⭐ | 低 | query短、语义不直接 |
+| **16. Hybrid Search** | 向量+关键词混合 | ⭐⭐⭐⭐ | 低 | 通用场景全能选手 |
+| **17. CRAG** | 纠错自愈 | ⭐⭐⭐⭐⭐ | 高 | 对幻觉零容忍 |
+------------------------------------------------------------
+学习路线建议
+新手入门 → 1 → 2 → 7 → 8 → 16
+进阶提升 → 3 → 9 → 10 → 15
+高阶实战 → 11 → 12 → 17 → 13 → 14
+先别贪多,从最常见的 Simple → Rerank → Hybrid Search 这条线走起
+就够应付大部分面试和实战需求了。
+UnstructuredIO核心组件
+元素类型
+元素的元数据
+如果文档结构复杂,优先使用LlamaParse
+或者更简单的读取器
+🚀 最佳加载方案
+定义复杂文件类型(需要高精度解析)
+PDF文档(可能包含表格、图像、复杂布局)
+图片文件(需要OCR)
+Word文档(可能包含复杂格式)
+PowerPoint(复杂布局)
+Excel(表格结构)
+简单文件类型(可以用Reader直接处理)
+复杂文件使用底层解析,获得更好的结构识别
+使用hi_res模式进行高精度解析
+支持中文、英文
+推断表格结构
+将解析元素转换为Document对象
+过滤空文本
+回退到Reader
+简单文件或未知类型优先使用Reader
+直接使用Reader进行简单解析
+加载解析后的文档,返回 Document 对象列表
+回退到底层解析
+🚂 基础索引案例实现
+! pip install llama-index-embeddings-openai llama-index-llms-openai
+导入OpenAI LLM类
+加载环境变量
+设置为全局默认Embedding模型
+设置为全局默认 LLM
+解析pdf文档
+构建索引
+生成查询引擎
+测试提问
+🚀 Text Splitters 文本分割器
+🍊 TokenTextSplitter token切分器
+TokenTextSplitter按照token长度进行切分,适用于需要精确控制token数量的场景,特别是在严格token限制的嵌入模型或语言模型中使用。
+初始化TokenTextSplitter
+每chunk 目标token数(可调)
+重叠token数(可调)
+分隔符(一般用空格)
+测试文本
+🍊 SentenceSplitter句子切分器
+🍊 CodeSplitter代码切分器
+指定编程语言
+每块大约行数
+块之间重叠行数
+每块最大字符数
+🚀 File-Based Node Parser 文本型节点切分器
+🍎 MarkdownNodeParser markdown切分器
+创建Markdown解析器
+🍎 JSONNodeParser Json切分器
+创建JSON解析器
+从JSON文件创建节点
+显示切分结果
+🍎 SemanticSplitterNodeParser语义切分器
+加载环境变量
+设置为全局默认Embedding模型
+1) 中文拆句器(更鲁棒)
+将长省略号统一处理
+在常见句末标点后断句(保留标点)
+清理空白与空串
+SemanticChunker 会使用嵌入相似度来决定是否将句子合并到同一 chunk 中。
+buffer_size 用于把多少句子为一组做相似度计算。
+相似度阈值,低于该阈值的相似度会被视为断点。
+embed_model 表示用于计算嵌入的模型。
+自定义中文拆句器
+是否包含 metadata
+是否包含上一句与下一句的关系
+创建Document
+node.text: chunk 的主文本(通常是若干句子合并)
+如果 include_metadata=True,会有一些 metadata(例如原始句子索引、ch

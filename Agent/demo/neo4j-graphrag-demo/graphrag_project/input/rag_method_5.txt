@@ -1,0 +1,36 @@
+🏷️ 5. Chunk-Header(块级加标)
+■ 核心思想
+在 chunk 开头加一个 描述性摘要(header),检索时只看 header 就能决定要不要看完整 chunk。有点像书的目录。
+■ 完整流程
+代码
+文档 → 切 chunks → LLM 为每个 chunk 生成 header
+→ 存入向量库(header 放在 metadata + 内容前缀里)
+→ 检索时 header 参与匹配,提高 precision
+■ 完整代码
+代码
+让读者能快速判断是否包含所需信息:
+{chunk_text[:500]}
+标题:"""
+header + 原文一起作为检索内容
+header 单独存一份
+原始内容
+三种检索策略:
+- "header_only": 只匹配 header(在 metadata 里搜)
+- "full_text": 匹配 header + 正文一起
+- "hybrid": 先按 header_only 过滤出候选,再用 full_text 重排
+方案一:只搜 header
+直接把 query 和 header 拼接后检索
+按 header 去重,保留第一个
+返回原始内容
+方案二:header + 正文一起匹配(默认)
+方案三:混合策略 - 两步走
+Step 1: 用 header 做一轮粗筛
+Step 2: 再用 query 和候选 chunks 做精排(用原始内容)
+临时建一个小索引做精排
+把 header 贴回结果便于阅读
+■ 三种策略选哪个?
+| 策略 | 精度 | 召回 | 速度 | 适合场景 |
+| header_only | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | header 质量极高时,快速筛选 |
+| full_text | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | 默认通用方案 |
+| **hybrid** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | **推荐**,精度最高 |
+------------------------------------------------------------
