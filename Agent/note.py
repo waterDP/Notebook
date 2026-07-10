@@ -3755,7 +3755,7 @@
                 #
                 # 示例社区包含：小明、腾讯、小红、阿里、LLM论文
                 # 关系：小明->腾讯、小红->阿里、小明<->小红（合作）
-            d    #
+                #%APPDATA%\ai.opencode.desktop
                 # LLM生成的社区摘要：
                 # "本社区聚焦AI行业专业人员。包含腾讯的算法工程师小明
                 #  和阿里的产品经理小红，两人合作发表了LLM论文。"
@@ -3874,7 +3874,7 @@
         # 一句话：不要一上来就上Neo4j，先用NetworkX跑通流程
 
 
-# 🍄 Compiled RAG
+# 🏗️ Compiled RAG
 # ====================================================================================================================================
 
 
@@ -6609,7 +6609,7 @@
         """
 
 
-#  Langgraph
+# 📷 Langgraph
 # ====================================================================================================================================
 
     # 🚀 Reducer函数机制
@@ -11155,228 +11155,6 @@
         print("msg", res_msg)
 
 
-# 🐴 Harness Engineering
-# ====================================================================================================================================
-
-    # ✈ 八大机制
-        # 👑 Agent Loop 四相循环
-            MAX_ITER = 20  # 硬性上限,到点必停
-
-            def agent_loop(initial_state):
-                """四相循环主函数
-
-                Args:
-                    initial_state: 初始状态对象(含任务、历史、已完成标记)
-                Returns:
-                    final_state: 循环结束时的最终状态
-                """
-                state = initial_state
-                # for 循环代替 while True,保证最大迭代次数
-                for i in range(MAX_ITER):
-                    context = gather_context(state)    # 相 1:收集上下文
-                    action = take_action(context)      # 相 2:执行动作
-                    result = verify(action)            # 相 3:验证结果
-                    state = iterate(state, result)     # 相 4:迭代状态
-                    # 显式终止条件:状态自报完成才退出
-                    if state.is_done():
-                        break
-                return state
-
-        # 👑 Tool Use 工具编排
-            TOOL_REGISTRY = {"read_file": read_file, "write_file": write_file, "run_pytest": run_pytest}
-
-            def safe_tool_call(tool_name: str, **kwargs) -> dict:
-                """结构化工具调用包装器
-
-                Args:
-                    tool_name: 工具名(从 TOOL_REGISTRY 查表)
-                    **kwargs: 工具参数(JSON schema 约束)
-                Returns:
-                    dict: {"status": "ok"|"error", "result": 或 "error": 字符串}
-                """
-                try:
-                    # 成功路径:正常返回结果
-                    result = TOOL_REGISTRY[tool_name](**kwargs)
-                    return {"status": "ok", "result": result}
-                except Exception as e:
-                    # 关键改进:error 不是空字符串,agent 能感知失败
-                    return {"status": "error", "error": str(e)}
-
-        # 👑 Progress Tracking 进度追踪
-            import json
-            import pathlib
-
-            PROGRESS_FILE = pathlib.Path("claude-progress.json")
-
-            def save_progress(state: dict) -> None:
-                """每步完成后写进度文件,失败后可续传
-
-                Args:
-                    state: 当前 agent 状态(含已完成任务、上下文快照)
-                """
-                # 每步写磁盘,写 JSON 格式方便人类阅读和工具消费
-                PROGRESS_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False))
-
-
-            def load_progress() -> dict | None:
-                """启动时先读进度,有则续传
-
-                Returns:
-                    dict 或 None:有进度则返回状态,无则返回 None(全新开始)
-                """
-                # 存在即续传,不存在即从零开始
-                if PROGRESS_FILE.exists():
-                    return json.loads(PROGRESS_FILE.read_text())
-                return None
-
-        # 👑 Context Management 上下文管理
-            CONTEXT_THRESHOLD = 80_000  # token 阈值(示意值,按模型实际 window 调整)
-
-            def call_llm_for_summary(msgs: list) -> str:
-                """把一串 messages 压成一段摘要
-
-                真实实现会调 LLM 生成带语义的总结;此处用最朴素的"拼接+截断"演示"压缩动作的形态",
-                让学员看清 messages 从 N 条 → 1 条 summary 的数据流,而不是 LLM 本身怎么总结。
-
-                Args:
-                    msgs: 待压缩的消息列表(不含 system prompt)
-                Returns:
-                    str: 摘要字符串
-                """
-                # 仅演示形态:把所有 content 拼接后截断;真实场景请换成 LLM 摘要
-                joined = " | ".join(str(m.get("content", ""))[:80] for m in msgs)
-                return f"[前 {len(msgs)} 条消息压缩摘要] {joined[:500]}"
-
-
-            def manage_context(messages: list, token_count: int) -> list:
-                """上下文管理器:超阈值触发压缩
-
-                Args:
-                    messages: 当前消息列表(OpenAI 格式)
-                    token_count: 当前总 token 数(由上层调用方估算)
-                Returns:
-                    list: 处理后的 messages(未超阈值则原样返回)
-                """
-                # 未超阈值直接返回,保持 prompt cache 命中
-                if token_count <= CONTEXT_THRESHOLD:
-                    return messages
-                # 超阈值才触发压缩;system prompt(messages[0])永远不动以保 cache
-                summary = call_llm_for_summary(messages[1:])
-                # 返回前缀稳定 + 压缩摘要的新 messages
-                return [messages[0], {"role": "assistant", "content": summary}]
-
-        # 👑 Feature List 任务拆解
-            # 强制单次只做一件事
-            import json
-
-            # 典型 feature list 结构:id / task / status 三字段
-            feature_list = [
-                {"id": 1, "task": "读取 test_calculator.py", "status": "pending"},
-                {"id": 2, "task": "修复 add 函数的整数溢出 bug", "status": "pending"},
-                {"id": 3, "task": "运行 pytest 验证全部通过", "status": "pending"},
-            ]
-
-
-            def get_next_task(features: list) -> dict | None:
-                """取下一个 pending 任务,防止 agent 贪心多做
-
-                Args:
-                    features: feature list(字典列表)
-                Returns:
-                    dict 或 None:最早的 pending 任务,全部完成则 None
-                """
-                # 按 id 顺序取第一个 pending,强制单步执行
-                # 这里用 next + 生成器是为了短路--找到第一个立即返回,不遍历全表
-                # 如果 agent 想"一次做多件",这个函数只返回一件,它就不得不分多轮
-                return next((f for f in features if f["status"] == "pending"), None)
-
-        # 👑 Verification Loop 验证闭环
-            import subprocess
-
-            def verify_with_pytest() -> dict:
-                """pytest 真机验证
-
-                Returns:
-                    dict: {"passed": bool, "output": str}
-                """
-                # 真跑 pytest,不 mock 不 skip(mock 会让 agent 看到"假通过")
-                # --tb=short 让错误回溯简短,避免 stdout 溢出塞满 context
-                result = subprocess.run(
-                    ["pytest", "--tb=short"], capture_output=True, text=True
-                )
-                # 关键:returncode 不丢弃,作为 passed 判定依据
-                # stdout + stderr 合并返回,让 agent 能看到完整错误信息
-                return {
-                    "passed": result.returncode == 0,
-                    "output": result.stdout + result.stderr,
-                }
-
-        # 👑 Subagents 子代理分治
-            def subagent(task: str, tools: list) -> str:
-                """子代理:独立 messages 列表完成子任务
-
-                Args:
-                    task: 子任务描述(自然语言)
-                    tools: 子代理可用工具清单
-                Returns:
-                    str: 子任务的最终结论(不含中间过程)
-                """
-                # 子代理有独立的 messages,不共享主 agent 历史
-                sub_messages = [
-                    {"role": "system", "content": "你是专注于单一子任务的助手"},
-                    {"role": "user", "content": task},
-                ]
-                # 内部跑一个完整的 agent loop,但外部看不到中间步骤
-                return run_loop(sub_messages, tools)
-
-        # 👑 Generator-Evaluator 生成-评估对抗
-            def call_llm(prompt: str) -> str:
-                """LLM 调用 placeholder
-
-                真实实现是 client.chat.completions.create(...),见 cell [55] naive_agent 的 LLM 调用。
-                此处用回显保证三角色的输入-输出形态可见,让学员聚焦三角色结构而非 LLM 细节。
-                """
-                return f"[LLM 响应占位] 针对 prompt 前 60 字:{prompt[:60]}... (真实场景由 LLM 生成)"
-
-
-            def planner(task: str) -> list:
-                """规划者:把大任务拆成可评审的子任务清单
-
-                Args:
-                    task: 原始任务描述
-                Returns:
-                    list: 可评审的子任务清单
-                """
-                return call_llm(f"把任务拆成可独立评审的子任务清单:{task}")
-
-
-            def generator(subtask: str) -> str:
-                """生成者:按规划逐项产出代码或解决方案
-
-                Args:
-                    subtask: 单个子任务
-                Returns:
-                    str: 生成的代码或方案
-                """
-                return call_llm(f"请完成以下子任务:{subtask}")
-
-
-            def evaluator(code: str, criteria: str) -> dict:
-                """评价者:以怀疑者视角独立评审,不看生成过程
-
-                Args:
-                    code: Generator 的产出(不含中间过程)
-                    criteria: 评审标准
-                Returns:
-                    dict: {"approved": bool, "feedback": str}
-                """
-                # 不看生成过程,只看最终产出是否满足标准
-                # 关键:prompt 里明确"批判性",诱导 LLM 以审稿人角色挑刺而非辩护
-                verdict = call_llm(f"批判性审查以下代码是否满足标准:{criteria}\n\n{code}")
-                # 简化判定:verdict 含"通过"二字则认为 approved;工程代码应改为结构化输出(JSON)
-                return {"approved": "通过" in verdict, "feedback": verdict}
-
-
 # 🌙 Agent Scope
 # ====================================================================================================================================
     # 🚀 第一个智能体
@@ -12824,6 +12602,111 @@
             print(epoch, "参数保存成功")
 
 
+# 📝 Prompt Engineering
+# ====================================================================================================================================
+    # 🚀 Chain of Thought 思维链
+        # CoT = 让 LLM 在给出答案之前，先把推理过程一步一步写出来
+        # 🔬 原理层面 
+            # 1. 分担计算负担——步步推理的每步复杂度远低于一步到到
+            # 2. 中间校验点——每步结果可以作为查检点，错在哪步能定位
+            # 3. 激活符号推理——纯文本模型+显式推理≈模拟了符号系统的效果
+            # 4. 注意力引导 — 把 attention 导向了推理路径，而不是直接跳到输出
+
+        # 🧠 COT的几种变体
+            # 🍋 1. Zero-shot CoT — 全靠一句咒语
+                # 在 prompt 末尾加一句："Let's think step by step."（让我们一步一步思考）
+
+                f"""
+                    Q: 一箱牛奶 12 瓶，喝了 1/3，还剩几瓶？
+                    A: Let's think step by step.
+                """
+                # 这就是最经典的 Zero-shot CoT，来自 Kojima et al. (2022)，零样本就能激活推理能力。
+
+                # 中文等效："请一步一步推理"或"让我们一步步分析"
+
+                # 优点： 零成本，啥都能用
+                # 缺点： 没有示例引导，质量取决于模型本身
+
+            # 🍋 2. Few-shot CoT — 给几个推理范例
+                # 在 prompt 里给 2-3 个带推理过程的例子，最后抛真实问题：
+
+                f"""
+                    Q: 小明有 3 本书，又买了 5 本，送给朋友 2 本，还剩几本？
+                    A: 小明有 3 本。买了 5 本后，3+5=8 本。送了 2 本后，8-2=6 本。所以剩 6 本。
+
+                    Q: 一个长方形长 8cm，宽 5cm，面积是多少？
+                    A: 长方形面积=长×宽。8×5=40。所以面积是 40 平方厘米。
+
+                    Q: 温度从 -5°C 上升了 12°C，现在是几度？
+                    A:
+                """
+
+                # 优点： 引导质量高，适合复杂推理
+                # 缺点： 需要找好例子，消耗更多 token
+
+            # 🍋 3. Self-consistency Cot - 多次采样求众数
+                # 同一条 prompt 跑 N 次（通常 5-10 次），取出现频率最高的答案：
+
+                f"""
+                Run 1: 小明有5个苹果... 所以剩6个
+                Run 2: 小明有5个苹果... 所以剩6个  
+                Run 3: 小明有5个苹果... 所以剩4个（算错了）
+                Run 4: 小明有5个苹果... 所以剩6个
+                Run 5: 小明有5个苹果... 所以剩6个
+
+                → 众数答案：6个（4/5 一致）    
+                """
+
+                # 代价： 推理成本 ×N，但不需要额外标注数据
+
+            # 🍋 4. Tree of Thoughts(ToT)——思维树
+                # 不满足于一条推理链，而是构建一棵搜索树，每步生成多个可能的下一步，然后用 BFS/DFS 搜索：
+
+                f"""
+                Step 1: ① 先买票 → ② 先订酒店 → ③ 先查攻略
+                         │              │
+                Step 2: ①→查航班     ②→比较价格
+                         │              │
+                Step 3: ①→选座位     ②→看评价
+                """
+
+                # 每次用 LLM 评估每条路径的价值（"这条思路对吗？"），剪枝保留最有希望的。
+
+                # 适用场景： 需要探索和规划的复杂问题（写代码、下棋、旅行规划）
+
+            # 🍋 5. Chain of Thought with Self-Correction
+                # 在 CoT 输出的后面加一轮自纠错
+
+                f"""
+                Step 1: 推理过程
+                Step 2: 答案
+                Step 3: "看看上面的推理有没有错误？检查计算过程"
+                Step 4: 修正后的答案
+                """
+
+                # 缺点是 token 开销大，优点是能减少低级错误。
+
+        # ⚡ 参数建议
+            # 参数              建议值                 理由
+            # temperature      0.3-0.5           Self-consistency 时 0.7
+            # max_tokens       给足推理空间       数学题至少 500+
+            # top_p            0.9-1.0           同上
+
+        # 📌 什么时候用/不用
+
+            # ✅ 适合用 CoT：
+            # 数学题、逻辑题
+            # 多步推理（法律分析、代码 Debug）
+            # 需要"解释为什么"的业务场景
+            # 答案需要可审计的场合
+
+            # ❌ 不适合或用处不大：
+            # 简单事实问答（"北京是哪个国家的首都？"）
+            # 情感分析、分类任务（直接出结果更快）
+            # 创意写作（CoT 反而束缚了发散性）
+            # 极短上下文、token 预算紧张                    
+
+
 # 📜 Context Engineering
 # ====================================================================================================================================
 
@@ -12962,7 +12845,6 @@
             print(f"compressed_context 长度: {len(saved['compressed_context'])} 字符")
             print(f"messages 数量: {len(saved['messages'])} 条")
 
-
         # 🚀 === 长期记忆层的 Write:mem0.add() 选择性提取 ===
             """
             长期记忆的 Write 目标完全不同:**从对话中识别出值得跨会话保留的关键事实,结构化后写入向量数据库**。前课的 `mem0.add()`
@@ -13066,7 +12948,6 @@
             # 短期 Write:   53 tokens(压缩摘要,保留在 session 内)
             # 长期 Write:   108 tokens(4 条结构化记忆,永久存入向量库)
 
-
         # 🚀 === 任务状态层的 Write:Scratchpad / todo.md
             """
             除了记忆层的两种 Write,还有一种在生产 Agent 中极为常见的 Write 形态:把任务执行进度写入结构化文件(如 `todo.md`、`CLAUDE.md`),
@@ -13158,7 +13039,7 @@
     # 🎯 Select运行时检索
     # 记忆注入层 | 外部知识层
     # ----------------------------------------------------------------------------------------------------------------
-        # 🚀 === memo0 memory.search 向量语义搜索
+        # 🚀 === memo0 memory.search 向量语义搜索  向量招回与本次任务相关的记忆，而不是memory中的所有记忆
             # 场景:Agent 收到新任务--"帮我配置数据库连接池"
             # Select 策略:先搜索长期记忆,看项目之前做过什么技术决策
             task_query = "服务器预算"
@@ -14247,6 +14128,477 @@
         status = "缓存命中" if hit > 0 else "缓存未命中"
 
 
+# 🐴 Harness Engineering
+# ====================================================================================================================================
+
+    # ✈ 八大机制
+        # 👑 Agent Loop 四相循环
+            MAX_ITER = 20  # 硬性上限,到点必停
+
+            def agent_loop(initial_state):
+                """四相循环主函数
+
+                Args:
+                    initial_state: 初始状态对象(含任务、历史、已完成标记)
+                Returns:
+                    final_state: 循环结束时的最终状态
+                """
+                state = initial_state
+                # for 循环代替 while True,保证最大迭代次数
+                for i in range(MAX_ITER):
+                    context = gather_context(state)    # 相 1:收集上下文
+                    action = take_action(context)      # 相 2:执行动作
+                    result = verify(action)            # 相 3:验证结果
+                    state = iterate(state, result)     # 相 4:迭代状态
+                    # 显式终止条件:状态自报完成才退出
+                    if state.is_done():
+                        break
+                return state
+
+        # 👑 Tool Use 工具编排
+            TOOL_REGISTRY = {"read_file": read_file, "write_file": write_file, "run_pytest": run_pytest}
+
+            def safe_tool_call(tool_name: str, **kwargs) -> dict:
+                """结构化工具调用包装器
+
+                Args:
+                    tool_name: 工具名(从 TOOL_REGISTRY 查表)
+                    **kwargs: 工具参数(JSON schema 约束)
+                Returns:
+                    dict: {"status": "ok"|"error", "result": 或 "error": 字符串}
+                """
+                try:
+                    # 成功路径:正常返回结果
+                    result = TOOL_REGISTRY[tool_name](**kwargs)
+                    return {"status": "ok", "result": result}
+                except Exception as e:
+                    # 关键改进:error 不是空字符串,agent 能感知失败
+                    return {"status": "error", "error": str(e)}
+
+        # 👑 Progress Tracking 进度追踪
+            import json
+            import pathlib
+
+            PROGRESS_FILE = pathlib.Path("claude-progress.json")
+
+            def save_progress(state: dict) -> None:
+                """每步完成后写进度文件,失败后可续传
+
+                Args:
+                    state: 当前 agent 状态(含已完成任务、上下文快照)
+                """
+                # 每步写磁盘,写 JSON 格式方便人类阅读和工具消费
+                PROGRESS_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False))
+
+
+            def load_progress() -> dict | None:
+                """启动时先读进度,有则续传
+
+                Returns:
+                    dict 或 None:有进度则返回状态,无则返回 None(全新开始)
+                """
+                # 存在即续传,不存在即从零开始
+                if PROGRESS_FILE.exists():
+                    return json.loads(PROGRESS_FILE.read_text())
+                return None
+
+        # 👑 Context Management 上下文管理
+            CONTEXT_THRESHOLD = 80_000  # token 阈值(示意值,按模型实际 window 调整)
+
+            def call_llm_for_summary(msgs: list) -> str:
+                """把一串 messages 压成一段摘要
+
+                真实实现会调 LLM 生成带语义的总结;此处用最朴素的"拼接+截断"演示"压缩动作的形态",
+                让学员看清 messages 从 N 条 → 1 条 summary 的数据流,而不是 LLM 本身怎么总结。
+
+                Args:
+                    msgs: 待压缩的消息列表(不含 system prompt)
+                Returns:
+                    str: 摘要字符串
+                """
+                # 仅演示形态:把所有 content 拼接后截断;真实场景请换成 LLM 摘要
+                joined = " | ".join(str(m.get("content", ""))[:80] for m in msgs)
+                return f"[前 {len(msgs)} 条消息压缩摘要] {joined[:500]}"
+
+
+            def manage_context(messages: list, token_count: int) -> list:
+                """上下文管理器:超阈值触发压缩
+
+                Args:
+                    messages: 当前消息列表(OpenAI 格式)
+                    token_count: 当前总 token 数(由上层调用方估算)
+                Returns:
+                    list: 处理后的 messages(未超阈值则原样返回)
+                """
+                # 未超阈值直接返回,保持 prompt cache 命中
+                if token_count <= CONTEXT_THRESHOLD:
+                    return messages
+                # 超阈值才触发压缩;system prompt(messages[0])永远不动以保 cache
+                summary = call_llm_for_summary(messages[1:])
+                # 返回前缀稳定 + 压缩摘要的新 messages
+                return [messages[0], {"role": "assistant", "content": summary}]
+
+        # 👑 Feature List 任务拆解
+            # 强制单次只做一件事
+            import json
+
+            # 典型 feature list 结构:id / task / status 三字段
+            feature_list = [
+                {"id": 1, "task": "读取 test_calculator.py", "status": "pending"},
+                {"id": 2, "task": "修复 add 函数的整数溢出 bug", "status": "pending"},
+                {"id": 3, "task": "运行 pytest 验证全部通过", "status": "pending"},
+            ]
+
+
+            def get_next_task(features: list) -> dict | None:
+                """取下一个 pending 任务,防止 agent 贪心多做
+
+                Args:
+                    features: feature list(字典列表)
+                Returns:
+                    dict 或 None:最早的 pending 任务,全部完成则 None
+                """
+                # 按 id 顺序取第一个 pending,强制单步执行
+                # 这里用 next + 生成器是为了短路--找到第一个立即返回,不遍历全表
+                # 如果 agent 想"一次做多件",这个函数只返回一件,它就不得不分多轮
+                return next((f for f in features if f["status"] == "pending"), None)
+
+        # 👑 Verification Loop 验证闭环
+            import subprocess
+
+            def verify_with_pytest() -> dict:
+                """pytest 真机验证
+
+                Returns:
+                    dict: {"passed": bool, "output": str}
+                """
+                # 真跑 pytest,不 mock 不 skip(mock 会让 agent 看到"假通过")
+                # --tb=short 让错误回溯简短,避免 stdout 溢出塞满 context
+                result = subprocess.run(
+                    ["pytest", "--tb=short"], capture_output=True, text=True
+                )
+                # 关键:returncode 不丢弃,作为 passed 判定依据
+                # stdout + stderr 合并返回,让 agent 能看到完整错误信息
+                return {
+                    "passed": result.returncode == 0,
+                    "output": result.stdout + result.stderr,
+                }
+
+        # 👑 Subagents 子代理分治
+            def subagent(task: str, tools: list) -> str:
+                """子代理:独立 messages 列表完成子任务
+
+                Args:
+                    task: 子任务描述(自然语言)
+                    tools: 子代理可用工具清单
+                Returns:
+                    str: 子任务的最终结论(不含中间过程)
+                """
+                # 子代理有独立的 messages,不共享主 agent 历史
+                sub_messages = [
+                    {"role": "system", "content": "你是专注于单一子任务的助手"},
+                    {"role": "user", "content": task},
+                ]
+                # 内部跑一个完整的 agent loop,但外部看不到中间步骤
+                return run_loop(sub_messages, tools)
+
+        # 👑 Generator-Evaluator 生成-评估对抗
+            def call_llm(prompt: str) -> str:
+                """LLM 调用 placeholder
+
+                真实实现是 client.chat.completions.create(...),见 cell [55] naive_agent 的 LLM 调用。
+                此处用回显保证三角色的输入-输出形态可见,让学员聚焦三角色结构而非 LLM 细节。
+                """
+                return f"[LLM 响应占位] 针对 prompt 前 60 字:{prompt[:60]}... (真实场景由 LLM 生成)"
+
+
+            def planner(task: str) -> list:
+                """规划者:把大任务拆成可评审的子任务清单
+
+                Args:
+                    task: 原始任务描述
+                Returns:
+                    list: 可评审的子任务清单
+                """
+                return call_llm(f"把任务拆成可独立评审的子任务清单:{task}")
+
+
+            def generator(subtask: str) -> str:
+                """生成者:按规划逐项产出代码或解决方案
+
+                Args:
+                    subtask: 单个子任务
+                Returns:
+                    str: 生成的代码或方案
+                """
+                return call_llm(f"请完成以下子任务:{subtask}")
+
+
+            def evaluator(code: str, criteria: str) -> dict:
+                """评价者:以怀疑者视角独立评审,不看生成过程
+
+                Args:
+                    code: Generator 的产出(不含中间过程)
+                    criteria: 评审标准
+                Returns:
+                    dict: {"approved": bool, "feedback": str}
+                """
+                # 不看生成过程,只看最终产出是否满足标准
+                # 关键:prompt 里明确"批判性",诱导 LLM 以审稿人角色挑刺而非辩护
+                verdict = call_llm(f"批判性审查以下代码是否满足标准:{criteria}\n\n{code}")
+                # 简化判定:verdict 含"通过"二字则认为 approved;工程代码应改为结构化输出(JSON)
+                return {"approved": "通过" in verdict, "feedback": verdict}
+                
+
+# 🌀 Loop Engineering
+# ====================================================================================================================================
+   
+    # 🎁 loop engineering 六大核心组件
+        # Automation 用于触发循环的机制，支持手动、定时、事件等多种触发方式
+        # Worktree 为每次循环或任务创建独立的工作空间，隔离修改，便于管理和回溯
+        # Skill 将常用的流程，提示词、工具组合 形成可复用的技能，提升执行效率和一致性
+        # Plugin 扩展codex的能力，连接外部服务或工具，如浏览器、git搜索等
+        # Subagent 将复杂任务拆分成多个子代理并行或协同完成，提升整体执行能力
+        # Memory 保存跨轮次的上下文，经验和结果，让循环是具备连续性和自我改进能力
+
+    # 💥 触发方式
+        # 1. 人工触发 人主动给出目标、反馈或确认
+        # 2. 定时触发 到固定时间自动启动任务
+        # 3. 条件触发 某个外部事件、状态变化或检查结果满足条件
+
+    # ✈ Token管理： 钱怎么烧的
+        # LLM 的 context window 是有限的（16K / 32K / 128K / 1M）。但 agent 每多一步，
+            # 要追加 tool call + tool result（大量 token）
+            # 每步的 thought + action 也要存
+            # 超过窗口长度的部分直接丢失
+
+        # 后果：第 5 步以后，Agent 已经记不清第 1 步查到了什么。
+
+        # 🐢 实战方案：分层记忆管理
+        """
+            ┌─────────────────────────────────────┐
+            │          Current Step               │ ← 最新几步，完整保留
+            ├─────────────────────────────────────┤
+            │        Working Memory               │ ← 中间结果摘要压缩
+            ├─────────────────────────────────────┤
+            │        Task Context                 │ ← 原始任务+关键发现，始终保留
+            ├─────────────────────────────────────┤
+            │        Long-term Memory             │ ← 之前任务的教训，按需检索
+            └─────────────────────────────────────┘
+        """
+        def build_agent_context(task, steps, long_term_memory, max_tokens=32000):
+            """
+            构建当前 LLM 调用上下文
+            预算分配：
+            - 系统提示 + 任务描述: ~4000 tokens 固定
+            - 长程记忆（按需检索）: ~2000 tokens
+            - 当前步骤上下文: ~6000 tokens
+            - 历史步骤摘要: ~10000 tokens
+            - 留给输出的空间: ~10000 tokens
+            """
+            context = []
+            
+            # 1. 系统提示 + 任务（始终保留）
+            system = build_system_prompt(task)
+            context.append(("system", system))
+            
+            # 2. 长程记忆（按语义相似度检索最近3条）
+            memories = retrieve_relevant(long_term_memory, task, top_k=3)
+            context.append(("memory", compress_memories(memories)))
+            
+            # 3. 当前步骤 + 最近3步完整历史
+            recent = steps[-3:]
+            context.append(("history", format_recent_steps(recent)))
+            
+            # 4. 更早的历史 → 摘要压缩
+            if len(steps) > 3:
+                earlier = steps[:-3]
+                summary = summarize_steps(earlier)
+                context.append(("summary", summary))
+            
+            return assemble_messages(context)
+
+    # 🐰 循环终止检测：怎么确定该停了       
+        # 这是 Loop Engineering 最难的问题之一。很多 Agent 要么早停（活没干完就说完成了），要么死循环。
+
+        # 三类终止策略
+            # 🦊 1. 重复检测（兜圈子识别）
+                # Agent 反复尝试同样的 tool call，得到同样的结果，换句话再说一遍——这是最常见的死循环模式
+                class RepeatDetector:
+                    def __init__(self, window=5, threshold=0.85):
+                        self.history = []  # 存 (action_hash, observation_hash)
+                        self.window = window
+                        self.threshold = threshold
+                    
+                    def check(self, action, observation):
+                        entry = (hash_action(action), hash_text(observation))
+                        self.history.append(entry)
+                        
+                        if len(self.history) < self.window * 2:
+                            return False
+                        
+                        recent = self.history[-self.window:]
+                        earlier = self.history[-(self.window*2):-self.window]
+                        
+                        similarity = compute_sequence_similarity(recent, earlier)
+                        
+                        if similarity > self.threshold:
+                            return True  # 正在兜圈子！
+                        return False 
+
+            # 🦊 2. 置信度评估
+                # 让 LLM 给自己打分——"你对当前答案的把握有多大？"
+                # 这个方法看着玄学，但实测很好用。关键是 prompt 里要明确告诉 LLM 要考虑什么。
+                def evaluate_confidence(context, answer):
+                    prompt = f"""
+                    Task: {context}
+                    Current answer: {answer}
+                    
+                    Rate your confidence (0-100):
+                    - 考虑：信息是否完整？是否还有重要的未知信息？
+                    - >= 90: 可以输出最终答案
+                    - 70-89: 需要再确认1-2个点
+                    - < 70: 需要继续探索
+                    
+                    Confidence score (only output a number):
+                    """
+                    score = int(llm.chat(prompt).strip())
+                    return score  
+
+            # 🦊 3. 边际收益检测
+                # 如果这一步相比上一步没有实质新信息，就可以停了。
+                def marginal_gain(last_result, new_result):
+                    """判断新步骤是否带来实质新信息"""
+                    prompt = f"""
+                    Previous findings: {last_result}
+                    New findings: {new_result}
+                    
+                    Does the new finding contain SIGNIFICANT new information
+                    that wasn't already in previous findings? Answer YES or NO.
+                    """
+                    return llm.chat(prompt).strip() == "YES"  
+
+            # 🐢 实战中的组合策略
+                def should_stop(context, step_count, repeat_detector):
+                    # 安全阀：绝对步数上限
+                    if step_count >= max_steps:
+                        return "MAX_STEPS", "达到最大步数限制"
+                
+                    # 检测兜圈子
+                    if repeat_detector.check(context.last_action, context.last_obs):
+                        return "REPEAT_LOOP", "检测到重复循环"
+                    
+                    # 评估置信度
+                    confidence = evaluate_confidence(context)
+                    if confidence >= 90:
+                        return "HIGH_CONFIDENCE", f"置信度 {confidence}%"
+                    
+                    # 边际收益
+                    if step_count >= 3 and not marginal_gain(context.prev_summary, context.latest):
+                        return "DIMINISHING_RETURNS", "边际收益不足"
+                    
+                    return "CONTINUE", None              
+
+    # 🍬 幻觉累积：一步错，步步错
+        # 问题本质 Agent 每一步都会产生新的"事实"。问题在于——LLM 生成的东西不一定对，但后续步骤会把它当真理。
+
+        # 🐢 解决方案：事实核查层
+            # 真正有效的做法是：每一步把"工具返回的硬数据"和"LLM推理出的结论"分开放。
+            # 硬数据可信度高，推理结论需要验证才能当"事实"传给下一步。 
+
+            class FactChecker:
+                def __init__(self):
+                    self.fact_pool = {}  # claim → source_confidence
+                
+                def verify(self, claim, source):
+                    """验证一个claim的可信度"""
+                    if source == "tool_result":
+                        # 工具返回的是硬数据，高置信度
+                        confidence = 0.95
+                    elif source == "llm_reasoning":
+                        # LLM推理出来的，需要交叉验证
+                        confidence = self.cross_validate(claim)
+                    else:
+                        confidence = 0.5
+                    
+                    self.fact_pool[claim] = min(self.fact_pool.get(claim, 1.0), confidence)
+                    return confidence
+                
+                def cross_validate(self, claim):
+                    """交叉验证：让LLM用不同角度再确认一次"""
+                    prompt = f"""
+                    之前的结论：{claim}
+
+                    请回顾前几步的原始数据来验证这个结论：
+
+                    1. 原始数据中是否有**直接证据**支持这个结论？
+                    2. 是否有任何**矛盾**的地方？
+                    3. 如果原始数据不足以支撑这个结论，请指出缺失了什么
+
+                    如果你无法验证，直接回复：不确定
+                    如果发现矛盾，回复：存疑 - [具体矛盾点]
+                    如果验证通过，回复：确认 - [依据]
+                    """
+                    result = llm.chat(prompt)
+                    if "UNCERTAIN" in result or "contradiction" in result.lower():
+                        return 0.3
+                    return 0.7
+
+    # 🦎 错误恢复：别一竿子打死
+        # 工具调用一定会出问题。API 超时、参数格式错误、返回值异常、网络抖一下——这是常态。
+        """
+        关键原则        
+        - 临时性错误 → 重试（带退避）
+        - 可修复错误 → 修正后重试（让 LLM 自己读报错信息修参数）
+        - 策略性错误 → 换方案（此路不通换条路）
+        - 致命错误 → 报给人
+        """
+        class ErrorHandler:
+            def handle(self, error, step_context, retry_count):
+                severity = self.classify(error)
+                
+                if severity == "TRANSIENT":
+                    # 临时性错误（网络超时、限流）→ 重试+退避
+                    return self.retry_with_backoff(step_context, retry_count)
+                
+                elif severity == "FORMAT":
+                    # 参数格式错误 → 修正后重试
+                    fixed = self.fix_tool_call(step_context.last_action, error)
+                    return self.retry_with_fix(fixed)
+                
+                elif severity == "LOGICAL":
+                    # 逻辑错误（工具返回无效数据）→ 换策略
+                    return self.switch_strategy(step_context)
+                
+                elif severity == "FATAL":
+                    # 致命错误（API key失效、权限问题）→ 直接上报
+                    return self.escalate(error)
+            
+            def retry_with_backoff(self, context, retry_count):
+                delay = min(2 ** retry_count * 0.5, 30)  # 指数退避，上限30秒
+                time.sleep(delay)
+                return execute(context.last_action)
+            
+            def switch_strategy(self, context):
+                """换一种方式达到目的"""
+                prompt = f"""
+                Previous approach failed. Error: {context.last_error}
+                Current goal: {context.goal}
+                
+                Suggest an alternative approach to achieve the same goal.
+                """
+                new_plan = llm.chat(prompt)
+                return execute_new_plan(new_plan)
+
+        # 💰 成本控制：loop 最大的隐藏坑       
+            """
+            1. 先切模式再切模型 — 简单的一步查询用 4o-mini/DeepSeek，高难度推理才上强模型
+            2. 缓存相同的 tool call result — 同一个查询不要调两次
+            3. 预判终止 — 发现剩余步骤的收益不会超过成本，提前结束
+            4. 批处理 — 如果有多个独立查询，合并成一次调用
+            """
+
+
 # ⌛ Langchain Middleware 实例
 # ====================================================================================================================================
 
@@ -15131,7 +15483,447 @@
                 print(f"[{who}] {content[:160]}")
 
 
-# ☎ MCP
+# 🧰 Function Calling
+# ====================================================================================================================================  
+    # 🔍 工具描述向量化预筛选 
+        # 向量化预筛选解决的就是这些问题——先把无关工具过滤掉，只让 LLM 在几个候选里选。
+   
+        import chromadb
+        from openai import OpenAI
+
+        # 准备阶段：所有工具的描述向量化
+        tools = [
+            {"name": "get_weather", "description": "查询指定城市的天气情况，包括温度、湿度、风力"},
+            {"name": "calculate_expression", "description": "计算数学表达式的结果，支持加减乘除和括号"},
+            {"name": "send_email", "description": "发送电子邮件给指定收件人"},
+            {"name": "book_flight", "description": "预订航班机票，需要出发地、目的地、日期"},
+            {"name": "search_flights", "description": "搜索可用的航班信息，返回航班列表和价格"},
+            {"name": "cancel_flight", "description": "取消已预订的航班订单"},
+            # ... 一共 30 个工具
+        ]
+
+        # 1. 把所有工具描述向量法，存入数量库
+        # 可以用embedding model或者LLM自带的embedding
+        def build_tool_index(tools)
+            collection = chromadb.Collection("tools")
+            for tool in tools
+                collection.add(
+                    ids=[tool['name']],
+                    embeddings=[get_embedding(tool['description'])],
+                    metadatas=[{"name": tool['name'], "desc": tool["description"]}]
+                )
+            return collection
+            
+        # 2. 用户查询来时，先检索最相关的工具
+        def retrieve_relevant_tools(query, collection, top_k=5):
+            query_embedding = get_embedding(query)
+            results = collection.query(
+                query_embedding=[query_embedding],
+                n_results=top_k
+            )
+            return result['metadatas'][0] # 返回最相关的几个工具元数据 
+
+        # 3. 只把几个工具的schema传给LLM
+        def agent_with_retrieval(query, all_tools, tool_index):
+            # 检索阶段
+            candidate_tools = retrieval_relevant_tools(query, all_tools)
+
+            # 准备函数调用的schema
+            function_schemas = [
+                build_function_schema(tool) 
+                for tool in candidate_tools
+            ]
+
+            # LLM 决策阶段（现在选项很少，准确率大幅提升）
+            response = llm.chat(
+                messages=[{"role": "user", "content": query}],
+                tools=function_schemas  # 只传 3-5 个候选
+            )
+            
+            return response
+
+        """
+        这个方案的关键工程细节
+        1. 不是光用 description 就行 最佳实践是给工具加一个单独的 search_keywords 字段，专门用来做向量化： search_text
+        2. 混合检索（Hybrid Search）比纯向量更好 这样既捡得到语义相似的，又捡得到关键词匹配的。
+        3. Top-K 的选择要动态  
+            # 简单查询（"今天天气怎么样"）→ 1-2 个候选就够了
+            # 复杂查询（"帮我买机票然后把行程发邮件给李总"）→ 可能需要 5-7 个
+        4. 加上 Fallback 机制  万一向量检索漏掉了正确工具，LLM 应该能"自愈"：    
+        """    
+     
+    # 🚀 并行 Function Calling（Parallel Tool Calls）
+        # 用户：帮我查北京和上海的天气，然后把结果存到数据库
+        response = llm.chat([
+            {"role": "user", "content": "帮我查北京和上海的天气并存入数据库"}
+        ])
+
+        # LLM 可能一口气返回两个 tool call：
+        [
+            {"name": "get_weather", "args": {"city": "北京"}},
+            {"name": "get_weather", "args": {"city": "上海"}},
+        ]            
+
+        # 核心执行器：处理单个工具调用，带超时、重试、参数校验
+        import json
+        import asyncio
+        from typing import Any
+
+        # 工具注册表：name → handler 函数
+        TOOL_REGISTRY = {}
+
+        def register_tool(name: str, handler):
+            """注册一个可调用的工具处理器"""
+            TOOL_REGISTRY[name] = handler
+
+        async def execute_tool(tool_call) -> str:
+            """
+            执行单个工具调用
+            
+            参数:
+                tool_call: LLM 返回的 tool call 对象
+                    - .name: 工具名
+                    - .arguments: JSON 字符串参数字典
+                    - .id: 调用 ID
+            
+            返回:
+                工具执行结果的 JSON 字符串
+            """
+            tool_name = tool_call.name
+            
+            # 1. 参数解析
+            try:
+                if isinstance(tool_call.arguments, str):
+                    args = json.loads(tool_call.arguments)
+                else:
+                    args = dict(tool_call.arguments)  # 已是 dict
+            except json.JSONDecodeError as e:
+                return json.dumps({
+                    "error": f"参数解析失败: {e}",
+                    "raw_args": str(tool_call.arguments)
+                }, ensure_ascii=False)
+            
+            # 2. 查找工具
+            handler = TOOL_REGISTRY.get(tool_name)
+            if not handler:
+                return json.dumps({
+                    "error": f"未找到工具: {tool_name}",
+                    "available_tools": list(TOOL_REGISTRY.keys())
+                }, ensure_ascii=False)
+            
+            # 3. 执行（带超时保护）
+            try:
+                result = await asyncio.wait_for(
+                    handler(**args),
+                    timeout=30.0
+                )
+                return json.dumps({
+                    "success": True,
+                    "data": result
+                }, ensure_ascii=False)
+            except asyncio.TimeoutError:
+                return json.dumps({
+                    "error": f"工具 {tool_name} 执行超时 (30s)",
+                    "args": args
+                }, ensure_ascii=False)
+            except TypeError as e:
+                # 参数不匹配（缺参或多参）
+                return json.dumps({
+                    "error": f"参数错误: {e}",
+                    "args": args
+                }, ensure_ascii=False)
+            except Exception as e:
+                return json.dumps({
+                    "error": f"执行异常: {type(e).__name__}: {e}",
+                    "args": args
+                }, ensure_ascii=False)
+
+        # 并行执行器：多个工具一起跑，全部完成后合并返回
+        async def execute_parallel(tool_calls):
+            tasks = [execute_tool(tc) for tc in tool_calls]
+            results = await asyncio.gather(*tasks)
+            
+            # 告诉 LLM 哪条结果是哪个调用的
+            return [
+                {"role": "tool", "tool_call_id": tc.id, "content": r}
+                for tc, r in zip(tool_calls, results)
+            ]
+
+        """
+        拉链函数
+        a = ["北京", "上海", "广州"]
+        b = [25, 28, 30]
+
+        list(zip(a, b))
+        # → [("北京", 25), ("上海", 28), ("广州", 30)]
+        """
+ 
+    # 🚀 Function Calling 做结构化输出（比 JSON Mode 强）
+        # 很多场景你需要的不是调工具，而是让 LLM 输出格式固定的结构化数据。JSON Mode 只能约束最外层结构，
+        # 但 Function Calling 能给你嵌套的、带验证的结构化输出。  
+        # 定义一个"虚拟工具"，它不执行任何操作，只是用来约束输出格式
+        tools = [
+            {
+                "name": "extract_invoice_info",
+                "description": "从文本中提取发票信息",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "invoice_number": {"type": "string"},
+                        "date": {"type": "string", "format": "date"},
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "quantity": {"type": "integer"},
+                                    "unit_price": {"type": "number"},
+                                    "total": {"type": "number"},
+                                },
+                                "required": ["name", "quantity", "unit_price", "total"]
+                            }
+                        },
+                        "total_amount": {"type": "number"}
+                    },
+                    "required": ["invoice_number", "date", "items", "total_amount"]
+                }
+            }
+        ]
+
+        response = llm.chat("把这段发票信息提取出来：...", tools=tools, tool_choice="any")
+
+        # 返回值一定是符合 JSON Schema 的结构
+        invoice = response.tool_calls[0].args  # 直接解结构化数据     
+
+        """
+        工程价值：
+        JSON Schema 比自由格式的 output 约束强得多
+        支持嵌套、枚举、正则验证
+        LLM 对 Function Calling 的 adherence 率远高于 JSON Mode    
+        """
+
+    # 🚀 Function Calling 做路由（Intent Router）
+        # 不给 LLM 真正的工具，而是用 Function Calling 做意图分发
+        router_tools = [
+            {
+                "name": "query_weather",
+                "description": "用户想查询天气",
+                "parameters": {"type": "object", "properties": {"city": {"type": "string"}}}
+            },
+            {
+                "name": "book_ticket",
+                "description": "用户想预订票务",
+                "parameters": {"type": "object", "properties": {"type": {"type": "string"}, "date": {"type": "string"}}}
+            },
+            {
+                "name": "chitchat",
+                "description": "日常闲聊，非功能性请求",
+                "parameters": {"type": "object", "properties": {}}
+            }
+        ]
+
+        # 先走路由，再走具体业务逻辑
+        intent = llm.chat(user_input, tools=router_tools, tool_choice="auto")
+        route_to_handler(intent.name, intent.args)
+
+    # 🚀 工具调用链 & 结果传递（Multi-hop Tool Use）
+        # 一个工具的输出直接作为下一个工具的输入，LLM 自己决定链路。    
+
+        # 用户：帮我查张三的身份证号，然后用他的身份证号订一张明天去北京的机票
+
+        ① get_user_info("张三") → {"id": "510...", "name": "张三"}
+        ② LLM 看到结果后，决定：
+        ③ book_flight(id="510...", destination="北京", date="2026-07-11")
+
+        # 工程关键点： 同一种数据（身份证号）在不同的工具间流动，LLM 需要能自主建立"上一步输出 = 下一步输入"的映射关系。
+        # 更高级一点：让工具返回半结构化数据，LLM 解析后传给下一步。
+        
+        # 工具返回：{"flights": [{"id": "CA1234", "price": 800}, {"id": "CZ5678", "price": 650}]}
+        # LLM 理解后：
+        book_flight(flight_id="CZ5678", price=650)  # 选了便宜的
+
+    # 🏗️ Multi-hop Tool Use 完整可运行 Demo
+        """
+        场景：查张三最近一笔订单的物流信息
+        
+        流程链：
+        search_user("张三") → get_orders("U001") → get_logistics("ORD123") → 回答
+        
+        LLM 每一步自己决定下一步调什么工具、用什么参数
+        """
+        # pip install openai  (需要配置 OPENAI_API_KEY / DEEPSEEK_API_KEY)
+        import json
+        from openai import OpenAI
+
+        api_key = "sk-your-api-key"      # ← 换成你的 key
+        base_url = "https://api.deepseek.com/v1"  # 或 OpenAI
+        model = "deepseek-chat"          # 或 gpt-4o
+
+        # ===== 1. 定义三个关联的工具 =====
+        user_db = {
+            "张三": {"id": "U001", "name": "张三", "phone": "13800138000"},
+            "李四": {"id": "U002", "name": "李四", "phone": "13900139000"},
+        }
+        order_db = {
+            "U001": [
+                {"id": "ORD123", "amount": 299, "date": "2026-07-08", "product": "无线耳机"},
+                {"id": "ORD124", "amount": 599, "date": "2026-07-05", "product": "键盘"},
+            ],
+            "U002": [
+                {"id": "ORD125", "amount": 199, "date": "2026-07-01", "product": "鼠标"},
+            ]
+        }
+        logistics_db = {
+            "ORD123": {"status": "配送中", "carrier": "顺丰", "tracking": "SF1234567890",
+                        "eta": "2026-07-11 18:00", "history": ["已揽收", "运输中", "到达上海分拣中心"]},
+            "ORD124": {"status": "已签收", "carrier": "中通", "sign_time": "2026-07-07 14:30"},
+            "ORD125": {"status": "已发货", "carrier": "圆通", "tracking": "YT9876543210"},
+        }
+
+        # ===== 2. 注册工具（真正的 handler） =====
+        def search_user(name: str) -> dict:
+            """根据用户名查找用户信息，返回用户ID、姓名、手机号"""
+            user = user_db.get(name)
+            if not user:
+                return {"error": f"未找到用户: {name}"}
+            return user
+
+        def get_orders(user_id: str) -> list:
+            """根据用户ID查询该用户的所有订单，按时间倒序"""
+            orders = order_db.get(user_id, [])
+            if not orders:
+                return {"error": f"用户 {user_id} 没有订单"}
+            # 按日期倒序，最新的排最前
+            return sorted(orders, key=lambda o: o["date"], reverse=True)
+
+        def get_logistics(order_id: str) -> dict:
+            """根据订单ID查询物流信息，返回物流状态、承运商、预计送达时间"""
+            info = logistics_db.get(order_id)
+            if not info:
+                return {"error": f"未找到订单 {order_id} 的物流信息"}
+            return info
+
+        # ===== 3. 工具的 JSON Schema（给 LLM 的调用定义） =====
+        TOOLS = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_user",
+                    "description": "根据用户名查找用户信息，返回用户ID、姓名、手机号",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "用户名"}
+                        },
+                        "required": ["name"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_orders",
+                    "description": "根据用户ID查询该用户的所有订单，按时间倒序返回，最新的排最前",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "user_id": {"type": "string", "description": "用户ID"}
+                        },
+                        "required": ["user_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_logistics",
+                    "description": "根据订单ID查询物流信息，返回物流状态、承运商、预计送达时间",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "order_id": {"type": "string", "description": "订单ID"}
+                        },
+                        "required": ["order_id"]
+                    }
+                }
+            }
+        ]
+
+        # ===== 4. 工具名称 → 实际函数的映射表 =====
+        HANDLERS = {
+            "search_user": search_user,
+            "get_orders": get_orders,
+            "get_logistics": get_logistics,
+        }
+
+        # ===== 5. 核心 Agent 循环（Multi-hop） =====
+        def run_agent(user_query: str, max_steps: int = 10) -> str:
+            """
+            多步工具调用 Agent
+            LLM 自主决定每一步调用什么工具，直到给出最终答案
+            """
+            client = OpenAI(api_key=api_key, base_url=base_url)
+            messages = [{"role": "user", "content": user_query}]
+
+            for step in range(1, max_steps + 1):
+                print(f"\n=== Step {step} ===")
+
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    tools=TOOLS,
+                    temperature=0.1
+                )
+
+                msg = response.choices[0].message
+
+                # LLM 想调用工具
+                if msg.tool_calls:
+                    messages.append(msg)
+
+                    for tc in msg.tool_calls:
+                        tool_name = tc.function.name
+                        args = json.loads(tc.function.arguments)
+
+                        print(f"  🛠️ 调用工具: {tool_name}({json.dumps(args, ensure_ascii=False)})")
+
+                        # 执行真正的工具函数
+                        handler = HANDLERS.get(tool_name)
+                        if handler:
+                            result = handler(**args)
+                        else:
+                            result = {"error": f"未知工具: {tool_name}"}
+
+                        print(f"  📦 返回结果: {json.dumps(result, ensure_ascii=False)}")
+
+                        # 把结果塞回对话（关键！下一步 LLM 就能看到）
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": json.dumps(result, ensure_ascii=False)
+                        })
+
+                # LLM 直接回答了（信息收集够了）
+                else:
+                    print(f"  💬 最终回答: {msg.content}")
+                    return msg.content
+
+            return "⚠️ 达到最大步数限制，未完成"
+
+        # ===== 6. 运行！ =====
+        if __name__ == "__main__":
+            result = run_agent("查一下张三最近一笔订单的物流送到哪了")
+            # 预期输出：
+            # Step 1: LLM 调用 search_user(name="张三") → 拿到 U001
+            # Step 2: LLM 调用 get_orders(user_id="U001") → 拿到 ORD123
+            # Step 3: LLM 调用 get_logistics(order_id="ORD123") → 拿到物流状态
+            # Step 4: LLM 综合回答："张三最近购买的无线耳机（订单 ORD123）
+            #          正在通过顺丰配送，预计 2026-07-11 18:00 前送达，
+            #          当前状态：到达上海分拣中心"
+
+
+# 🌐 MCP
 # ====================================================================================================================================
     # 🍉 MCP 客户端
         import asyncio
@@ -15166,7 +15958,7 @@
                     raise ValueError("服务器脚本必须是.py或.js文件")
 
                 command = "python" if is_python else "node"
-                server_params = StdioServerParams(
+                server_params = StdioServerParamters(
                     command=command,
                     args=[server_script_path],
                     env=None
@@ -15175,11 +15967,11 @@
                 # 启动服务器并建立通信
                 stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
 
-                # stdio 读通道  write 写通道
-                self.stdio, self.write = stdio_transport
+                # read 读通道  write 写通道
+                self.read, self.write = stdio_transport
 
                 # 创建mcp会话
-                self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+                self.session = await self.exit_stack.enter_async_context(ClientSession(self.read, self.write))
 
                 # 初始化握手
                 await self.session.initialize()
@@ -15205,7 +15997,7 @@
                     "function": {
                         "name": tool.name,
                         "description": tool.description,
-                        "input_schema": tool.inputSchema
+                        "parameters": tool.inputSchema
                     }
                 } for tool in response.tools]
 
@@ -15285,8 +16077,7 @@
         from typing import Any
         from mcp.server.fastmcp import FastMCP
 
-        # 初始化mcp服务器
-        mcp = FastMCP("weatherserver") # 💡
+        mcp = FastMCP("weatherserver") # 💡 初始化mcp服务器
 
         # OpenWeather API 配置
         OPENWEATHER_API_BASE = "https://api.openweathermap.org/data/2.5/weather"
@@ -15357,7 +16148,14 @@
                 f"⛅ 天气: {description}\n"
             )
 
-        @mcp.tool() # 💡
+        # 💡 装饰器
+        @mcp.tool(
+            name="get_weatch",
+            description="查询城市天气",
+            parameters={
+                "city": {"type": "string", "description": "城市名称"}
+            }
+        )
         async def query_weather(city: str) -> str:
             """
             输入指定城市的英文名称,返回今日天气查询结果
@@ -15372,7 +16170,6 @@
 
     # ✨ Graph Rag MCP 服务器
         from pathlib import Path
-        from pprint import pprint
 
         import padas as pd
 
@@ -15403,7 +16200,7 @@
             community_resports = pd.read_parquet(f"{PROJECT_DIRECTORY}/output/community_resports.parquet")
 
             # 💡 进行全局搜索
-            response, context = await api.global_search(
+            response, _ = await api.global_search(
                 config=graphrag_config,
                 entities=entities,
                 communities=communities,
@@ -15462,8 +16259,8 @@
                 )
                 # 启动MCP服务器 建立通信
                 stdio_tansport = await self.exit_stack.enter_async_context(stdio_client(server_params))
-                self.stdio, self.write = stdio_transport
-                self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+                self.read, self.write = stdio_transport
+                self.session = await self.exit_stack.enter_async_context(ClientSession(self.read, self.write))
 
                 await self.session.initialize()
 
@@ -15524,7 +16321,7 @@
                     "function": {
                         "name": tool.name,
                         "description": tool.description,
-                        "input_schema": tool.inputSchema
+                        "parameters": tool.inputSchema
                     }
                 } for tool in response.tools]
 
@@ -15640,6 +16437,188 @@
                         break
 
             return response
+
+
+    # 🍉 MCP 完整版（生产级）
+    # =================================================================
+    # 整合客户端和服务端，支持：
+    #   - 并行多工具调用
+    #   - Stdio / SSE 传输
+    #   - 完善的错误处理
+    #   - 任意 OpenAI 兼容 API
+    # =================================================================
+
+    # 🚀 --- MCP Server (FastMCP) ---
+        # server.py
+        import json
+        import httpx
+        from typing import Any
+        from mcp.server.fastmcp import FastMCP
+
+        mcp = FastMCP("complete-server")
+
+        @mcp.tool()
+        async def get_weather(city: str) -> str:
+            """查询指定城市的当前天气"""
+            url = f"https://wttr.in/{city}?format=%C+%t+%h+%w"
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, timeout=10)
+                return resp.text.strip()
+
+        @mcp.tool()
+        def calculate(expr: str) -> str:
+            """执行数学计算（安全沙箱）"""
+            allowed = set("0123456789+-*/()., ")
+            if not all(c in allowed for c in expr):
+                return "表达式包含非法字符"
+            try:
+                result = eval(expr, {"__builtins__": {}}, {})
+                return str(result)
+            except Exception as e:
+                return f"计算失败: {e}"
+
+        @mcp.resource("config://app")
+        def get_config() -> str:
+            """返回应用配置"""
+            return json.dumps({
+                "version": "1.0.0",
+                "name": "MCP Complete Demo",
+                "transport": "stdio"
+            }, ensure_ascii=False, indent=2)
+
+        if __name__ == "__main__":
+            import sys
+            transport = sys.argv[1] if len(sys.argv) > 1 else "stdio"
+            mcp.run(transport=transport)
+
+    # 🚀 --- MCP Client (OpenAI Function Calling) ---
+        # client.py
+        import asyncio
+        import json
+        import os
+        import sys
+        from typing import Any
+        from contextlib import AsyncExitStack
+        from openai import OpenAI
+        from dotenv import load_dotenv
+        from mcp import ClientSession, StdioServerParameters
+        from mcp.client.stdio import stdio_client
+
+        load_dotenv()
+
+        class MCPClient:
+            """MCP 客户端，支持多工具调用 + 完整错误处理"""
+
+            def __init__(self):
+                self.session: ClientSession | None = None
+                self.exit_stack = AsyncExitStack()
+                self.llm_client = OpenAI(
+                    api_key=os.getenv("OPENAI_API_KEY"),
+                    base_url=os.getenv("BASE_URL")
+                )
+                self.model = os.getenv("MODEL", "gpt-4o")
+
+            async def connect_stdio(self, script_path: str):
+                """通过 stdio 连接 MCP 服务器"""
+                cmd = "python" if script_path.endswith(".py") else "node"
+                server_params = StdioServerParameters(
+                    command=cmd,
+                    args=[script_path],
+                    env=None
+                )
+                stdio_transport = await self.exit_stack.enter_async_context(
+                    stdio_client(server_params)
+                )
+                read, write = stdio_transport
+                self.session = await self.exit_stack.enter_async_context(
+                    ClientSession(read, write)
+                )
+                await self.session.initialize()
+
+                # 列出工具
+                result = await self.session.list_tools()
+                print(f"✅ 已连接，发现 {len(result.tools)} 个工具")
+                for t in result.tools:
+                    print(f"   - {t.name}: {t.description}")
+
+            async def process_query(self, query: str, max_turns: int = 10) -> str:
+                """处理用户查询，支持多轮并行工具调用"""
+                tools = await self._get_openai_tools()
+                messages = [
+                    {"role": "system", "content": "你是一个智能助手，可以通过MCP工具获取信息"},
+                    {"role": "user", "content": query}
+                ]
+
+                for turn in range(max_turns):
+                    response = self.llm_client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,
+                        tools=tools,
+                        tool_choice="auto"
+                    )
+                    choice = response.choices[0]
+
+                    if choice.finish_reason != "tool_calls":
+                        return choice.message.content
+
+                    # 处理并行工具调用
+                    messages.append(choice.message)
+                    for tc in choice.message.tool_calls:
+                        tool_name = tc.function.name
+                        tool_args = json.loads(tc.function.arguments)
+                        print(f"  🛠 调用: {tool_name}({tool_args})")
+
+                        try:
+                            result = await self.session.call_tool(tool_name, tool_args)
+                            content = result.content[0].text if result.content else ""
+                        except Exception as e:
+                            content = f"工具调用失败: {e}"
+
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": content
+                        })
+
+                return "⚠ 超过最大交互轮次"
+
+            async def _get_openai_tools(self) -> list[dict]:
+                """从 MCP session 获取工具定义，转为 OpenAI format"""
+                if not self.session:
+                    return []
+                result = await self.session.list_tools()
+                return [{
+                    "type": "function",
+                    "function": {
+                        "name": t.name,
+                        "description": t.description or "",
+                        "parameters": t.inputSchema
+                    }
+                } for t in result.tools]
+
+            async def cleanup(self):
+                await self.exit_stack.aclose()
+
+        async def main():
+            if len(sys.argv) < 2:
+                print("用法: python client.py <server_script.py>")
+                sys.exit(1)
+
+            client = MCPClient()
+            try:
+                await client.connect_stdio(sys.argv[1])
+                print("\n💬 MCP 交互终端（输入 quit 退出）")
+                while True:
+                    query = input("\n你: ").strip()
+                    if query.lower() in ("quit", "exit", "q"):
+                        break
+                    answer = await client.process_query(query)
+                    print(f"\n🤖 {answer}")
+            finally:
+                await client.cleanup()
+
+        if __name__ == "__main__":
+            asyncio.run(main())          
 
 
 # 🚄 模型微调
@@ -15761,5 +16740,5 @@
     """
 
 
-# 🏐 Google ADK
+# ☎ Google ADK
 # ====================================================================================================================================
