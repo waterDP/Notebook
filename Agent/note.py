@@ -2324,13 +2324,14 @@
             temperature=0.7,
         )
 
-        # 为模型添加指数退避重试策略
+    # ❌ 为模型添加指数退避重试策略
+
         model = model.with_retry(
             stop_after_attemp = 3, # 最多重试3次
             wait_exponential_jitter=True # 指数退避 + 随机抖动
         )
 
-        # 🖥 使用langchain中的向量模型
+    # 🖥 使用langchain中的向量模型
         from langchain.embeddings import init_embeddings
 
         embedding = init_embeddings(mode="text-embedding-3-small", provider="openai")
@@ -2343,7 +2344,8 @@
 
         template = PromptTemplate(
             input_variables=['product', 'feature'],
-            template="请为{product}的{feature}功能写一段文案。"
+            template="请为{product}的{feature}功能写一段文案。",
+            partial_variables={product: '笔记本电脑'} # 相当于默认值
         )
 
         prompt = template.format(
@@ -2353,82 +2355,52 @@
 
         print(prompt)
 
-    # 👉 系统提示词
+    # 👉 动态提示词
+        from langgraph.graph import StateGraph, MessagesState, START
+        from langchain_core.messages import SystemMessage, HumanMessage
+        from langchain_core.tools import tool
 
-        from langchain.agents import create_agent
-        from langchain.tools import tool
-
-        # 1. 定义一个简单的天气查询工具
+        # 1. 工具
         @tool
         def get_weather(city: str) -> str:
-            """获取指定城市的天气信息。"""
-            weather_data = {
-                "北京": "晴朗,气温25°C",
-                "上海": "多云,气温28°C",
-                "广州": "小雨,气温30°C"
+            """查询城市天气"""
+            return f"{city}: 25°C, 晴"
+
+        tools = [get_weather]
+
+        # 2. 定义一个 Node，根据 context 注入不同的 system prompt
+        async def dynamic_prompt_node(state: MessagesState) -> dict:
+            """根据 user_role 动态生成 system prompt"""
+            role = state.get("user_role", "user")  # context 存到 state 里
+            
+            prompts = {
+                "expert": "你是一个专业气象分析师，提供详细数据",
+                "beginner": "你是一个友善的导游，用简单语言解释",
             }
-            return f"{city}的天气是:{weather_data.get(city, '未知')}"
+            system_msg = SystemMessage(prompts.get(role, "你是一个简洁的天气助手"))
+            
+            return {"messages": [system_msg] + state["messages"]}
 
-        # 2. 静态 system_prompt(固定不变)
-        agent_static = create_agent(
-            model="openai:gpt-4o-mini",
-            tools=[get_weather],
-            system_prompt=(
-                "你是一个天气助手,回答不超过20字。\n"
-                "调用工具时,严格按照以下格式:\n"
-                "1. 使用 `get_weather(city: str)` 获取天气;\n"
-                "2. 仅返回天气结果,不解释过程。"
-            )
-        )
+        # 3. 构建图
+        from langgraph.prebuilt import create_react_agent
 
-        print("=== 静态 System Prompt ===")
-        response1 = agent_static.invoke({
-            "messages": [{"role": "user", "content": "北京天气"}]
+        # create_react_agent 会自动处理 llm + tools 循环
+        # 我们只需在它前面加一个 system prompt 节点
+        graph = StateGraph(MessagesState)
+        graph.add_node("inject_prompt", dynamic_prompt_node)
+        graph.add_node("agent", create_react_agent(llm, tools))  # 标准 ReAct Agent
+
+        graph.add_edge(START, "inject_prompt")
+        graph.add_edge("inject_prompt", "agent")
+
+        app = graph.compile()
+
+        # 4. 调用
+        result = app.invoke({
+            "messages": [HumanMessage("北京天气")],
+            "user_role": "expert"  # 动态控制角色
         })
-        print(f"AI: {response1['messages'][-1].content}")
 
-        # 3. 动态提示词(通过中间件实现)
-        # from langchain.agents.middleware import dynamic_prompt (removed)
-        from typing import TypedDict
-
-        # 4. 定义上下文结构
-        class Context(TypedDict):
-            user_role: str  # 用户角色
-
-        # 5. 动态提示函数
-        @dynamic_prompt
-        def role_based_prompt(request):
-            """根据用户角色生成不同提示词"""
-            user_role = request.runtime.context.get("user_role", "user")
-
-            if user_role == "expert":
-                return "你是一个专业气象分析师,提供详细数据"
-            elif user_role == "beginner":
-                return "你是一个友善的导游,用简单语言解释"
-            else:
-                return "你是一个简洁的天气助手"
-
-        # 6. 创建动态 Agent
-        agent_dynamic = create_agent(
-            model="openai:gpt-4o-mini",
-            tools=[get_weather],
-            middleware=[role_based_prompt],  # 注入动态提示
-            context_schema=Context
-        )
-
-        print("\n=== 动态 System Prompt(专家角色)===")
-        response2 = agent_dynamic.invoke(
-            {"messages": [{"role": "user", "content": "北京天气"}]},
-            context={"user_role": "expert"} # 💥
-        )
-        print(f"AI: {response2['messages'][-1].content}")
-
-        print("\n=== 动态 System Prompt(新手角色)===")
-        response3 = agent_dynamic.invoke(
-            {"messages": [{"role": "user", "content": "北京天气"}]},
-            context={"user_role": "beginner"} # 💥
-        )
-        print(f"AI: {response3['messages'][-1].content}")
 
     # 🎬 调用模型
         # 1. 单条消息
@@ -2565,6 +2537,12 @@
             from langgraph.graph.message import REMOVE_ALL_MESSAGES
 
             return Command(update={"messages": [RemoveMessages(id=REMOVE_ALL_MESSAGES)]})
+
+
+        from langgraph.prebuilt import create_react_agent
+
+        agent = create_react_agent(llm, tools=[get_weather, clear_conversation])    
+
 
     # 🚀 mcp接入LangChain
         """
@@ -2730,7 +2708,7 @@
         )
 
     # 💾 短期记忆 PostgresSaver
-        # ! pip install langgraph-checkpointer-postgres
+        # ! pip install langgraph-checkpoint-postgres
         from langgraph.checkpoint.postgres import PostgresSaver
         from langchain.agents import create_agent
 
@@ -2747,7 +2725,7 @@
         # 数据库连接字符串
         DB_URI = "postgresql://myuser:123456@localhost:5432/mydatabase"
 
-        with ProgresSaver.from_conn_string(DB_URL) as checkpointer:
+        with PostgresSaver.from_conn_string(DB_URL) as checkpointer:
             # 自动创建表结构(仅首次运行)
             checkpointer.setup()
 
@@ -2814,13 +2792,11 @@
             from pydantic import BaseModel, Field
             from langchain.agents.structured_output import ProviderStrategy
 
-
             class MeetingAction(BaseModel):
                 topic: str = Field(description="会议主题")
                 participants: list = Field(description="会议参与人员")
                 action_items: list = Field(description="会议中需要执行的操作项")
                 deadline: str = Field(description="截止时间")
-
 
             # 创建智能体
             meeting_agent = create_agent(
@@ -2849,14 +2825,12 @@
             from langchain.agents import create_agent
             from langchain.agents.structured_output import ProviderStrategy
 
-
             @dataclass
             class BookInfo:
                 title: str
                 author: str
                 isbn: str
                 year: int
-
 
             book_agent = create_agent(model=model, response_format=ProviderStrategy(BookInfo))
 
@@ -2884,7 +2858,6 @@
             print(f"导演:{movie_data['director']}")
 
         # 🌰 JSON schema
-            from langchain.agents.structured_output import ToolStrategy
 
             contact_info_schema = {
                 "type": "object",
@@ -2898,10 +2871,13 @@
             }
 
             contact_agent = create_agent(
-                model=model, response_format=ProviderStrategy(contact_info_schema)
+                model=model, 
+                response_format=ProviderStrategy(contact_info_schema)
             )
 
-            ## 智能错误处理
+            # ❌ 智能错误处理
+            from langchain.agents.structured_output import ToolStrategy
+
             agent = create_agent(
                 handle_errors=True,  # 捕获所有错误并重试
                 response_format=ToolStrategy(
@@ -2913,174 +2889,205 @@
             )
 
     # ⏳ === 内置中间件（LangGraph 版本）===
-    # ⚠️ LangChain 1.3.4 已移除 langchain.agents.middleware
-    # 以下全部为 LangGraph 等价实现
-    from langgraph.graph import StateGraph, MessagesState, START
-    from langgraph.prebuilt import ToolNode, tools_condition
-    from langgraph.checkpoint.memory import MemorySaver
-    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, RemoveMessage, ToolMessage
-    from langchain_core.tools import tool
-    from typing import Literal
+        # ⚠️ LangChain 1.3.4 已移除 langchain.agents.middleware
+        # 以下全部为 LangGraph 等价实现
+        from langgraph.graph import StateGraph, MessagesState, START
+        from langgraph.prebuilt import ToolNode, tools_condition
+        from langgraph.checkpoint.memory import MemorySaver
+        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, RemoveMessage, ToolMessage
+        from langchain_core.tools import tool
+        from typing import Literal
 
-    # ⏳ 1 Summarization → summarize node
-        THRESHOLD, KEEP = 20, 6
-        def should_summarize(s: MessagesState) -> Literal["summarize", "__end__"]:
-            return "summarize" if len(s["messages"]) > THRESHOLD else "__end__"
-        async def summarize_node(s: MessagesState) -> dict:
-            early, recent = s["messages"][:-KEEP], s["messages"][-KEEP:]
-            summary = await llm.ainvoke(f"压缩(80字):\n{"".join(str(m.content)[:100] for m in early)}")
-            return {"messages": [SystemMessage(f"[摘要]{summary.content}")] + recent}
+        # ⏳ 1 Summarization → summarize node
 
-    # ⏳ 2 ContextEditing → clean_tool node
-        def clean_tool_msgs(s: MessagesState) -> dict:
-            return {"messages": s["messages"][-6:]} if len(s["messages"]) >= 8 else s
+            THRESHOLD, KEEP = 20, 6
 
-    # ⏳ 3 FileSearch → Tool
-        @tool
-        def glob_search(p: str) -> str:
-            import glob; return "\n".join(glob.glob(p, recursive=True))
-        @tool
-        def grep_search(p: str, inc: str = "*.py") -> str:
-            import glob; r = []
-            for f in glob.glob(f"**/{inc}", recursive=True):
-                try:
-                    for i, l in enumerate(open(f, errors='ignore'), 1):
-                        if p in l: r.append(f"{f}:{i}:{l.rstrip()[:80]}")
-                except: pass
-            return "\n".join(r[:20]) or "无匹配"
+            def should_summarize(s: MessagesState) -> Literal["summarize", "__end__"]:
+                return "summarize" if len(s["messages"]) > THRESHOLD else "__end__"
 
-    # ⏳ 4 HumanInTheLoop → interrupt_before
-        # graph.compile(checkpointer=MemorySaver(), interrupt_before=["tools"])
-        # app.invoke({"messages": [HumanMessage("北京天气")]}, {"configurable":{"thread_id":"s1"}})
-        # app.invoke(None, {"configurable":{"thread_id":"s1"}})  # 继续
+            async def summarize_node(s: MessagesState) -> dict:
+                early, recent = s["messages"][:-KEEP], s["messages"][-KEEP:]
+                summary = await llm.ainvoke(f"压缩(80字):\n{"".join(str(m.content)[:100] for m in early)}")
+                return {"messages": [SystemMessage(f"[摘要]{summary.content}")] + recent}
 
-    # ⏳ 5 ToolEmulator → wrapper
-        from functools import wraps
-        def emulate_tool(model):
-            def deco(func):
-                @wraps(func)
-                async def wrapper(**kw):
-                    r = await model.ainvoke(f"模拟{func.__name__}({kw}):")
-                    return r.content
-                return wrapper
-            return deco
+            from langgrap.prebuilt import create_react_agent
+            
+            tools = [get_weather]
+            agent = create_react_agent(llm, tools)
 
-    # ⏳ 6 ToolSelector → select node
-        async def select_tool_node(s: MessagesState) -> dict:
-            names = [t.name for t in tools]
-            r = await llm.ainvoke(f"从{names}中选工具: {s['messages'][-1].content}")
-            return {"selected": r.content}
+            graph = StateGraph(MessagesState)
 
-    # ⏳ 7 ModelCallLimit → state count
-        class LimitState(MessagesState):
-            call_count: int = 0
-        def check_limit(s: LimitState) -> Literal["llm", "__end__"]:
-            return "__end__" if s["call_count"] >= 5 else "llm"
+            # 先加 agent 节点
+            graph.add_node("agent", agent)
+            # 再加 summarize 节点
+            graph.add_node("summarize", summarize_node)
 
-    # ⏳ 8 ModelFallback → try in node
-        async def fallback_node(s: MessagesState) -> dict:
-            for n in ["deepseek-chat", "gpt-4o-mini"]:
-                try:
-                    from langchain_deepseek import ChatDeepSeek
-                    m = ChatDeepSeek(model=n)
-                    return {"messages": [await m.ainvoke(s["messages"])]}
-                except: continue
-            return {"messages": [AIMessage("服务暂不可用")]}
+            # agent 结束后，走 should_summarize 判断
+            graph.add_conditional_edges(
+                "agent",
+                should_summarize,          # 判断函数
+                {"summarize": "summarize", "__end__": "__end__"}  # 路由表
+            )
 
-    # ⏳ 9 PII → sanitize node
-        import re
-        def pii_mask(t: str) -> str:
-            t = re.sub(r'[\w.-]+@[\w.-]+\.\w+', '[EMAIL]', t)
-            t = re.sub(r'\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}', '[CARD]', t)
-            t = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '[IP]', t)
-            return t
-        async def pii_node(s: MessagesState) -> dict:
-            if hasattr(s["messages"][-1], 'content'):
-                s["messages"][-1].content = pii_mask(str(s["messages"][-1].content))
-            return s
+            # summarize 完了回 agent
+            graph.add_edge("summarize", "agent")
 
-    # ⏳ 10 TodoList → state field
-        class TodoState(MessagesState):
-            todo_list: list = []
-        def todo_node(s: TodoState) -> dict:
-            return {"todo_list": s.get("todo_list", [])}
+            graph.set_entry_point("agent")
 
-    # ⏳ 11 ToolCallLimit → state count
-        class ToolLimitState(MessagesState):
-            tool_counts: dict = {}
-        def check_tool_limit(s: ToolLimitState) -> Literal["tools", "__end__"]:
-            return "__end__" if sum(s["tool_counts"].values()) > 10 else "tools"
+            app = graph.compile()    
 
-    # ⏳ 12 ToolRetry → wrapper
-        import asyncio
-        async def retry_call(func, retries=3, **kw):
-            for i in range(retries):
-                try: return await func(**kw)
-                except Exception as e:
-                    if i == retries-1: return f"失败: {e}"
-                    await asyncio.sleep(2**i)
+        # ⏳ 2 ContextEditing → clean_tool node
+
+            def clean_tool_msgs(s: MessagesState) -> dict:
+                return {"messages": s["messages"][-6:]} if len(s["messages"]) >= 8 else s
+
+        # ⏳ 3 FileSearch → Tool
+            @tool
+            def glob_search(p: str) -> str:
+                import glob; return "\n".join(glob.glob(p, recursive=True))
+                
+            @tool
+            def grep_search(p: str, inc: str = "*.py") -> str:
+                import glob; r = []
+                for f in glob.glob(f"**/{inc}", recursive=True):
+                    try:
+                        for i, l in enumerate(open(f, errors='ignore'), 1):
+                            if p in l: r.append(f"{f}:{i}:{l.rstrip()[:80]}")
+                    except: pass
+                return "\n".join(r[:20]) or "无匹配"
+
+        # ⏳ 4 HumanInTheLoop → interrupt_before
+            # graph.compile(checkpointer=MemorySaver(), interrupt_before=["tools"])
+            # app.invoke({"messages": [HumanMessage("北京天气")]}, {"configurable":{"thread_id":"s1"}})
+            # app.invoke(None, {"configurable":{"thread_id":"s1"}})  # 继续
+
+        # ⏳ 5 ToolEmulator → wrapper
+            from functools import wraps
+            def emulate_tool(model):
+                def deco(func):
+                    @ (func)
+                    async def wrapper(**kw):
+                        r = await model.ainvoke(f"模拟{func.__name__}({kw}):")
+                        return r.content
+                    return wrapper
+                return deco
+
+        # ⏳ 6 ToolSelector → select node
+            async def select_tool_node(s: MessagesState) -> dict:
+                names = [t.name for t in tools]
+                r = await llm.ainvoke(f"从{names}中选工具: {s['messages'][-1].content}")
+                return {"selected": r.content}
+
+        # ⏳ 7 ModelCallLimit → state count
+            class LimitState(MessagesState):
+                call_count: int = 0
+            def check_limit(s: LimitState) -> Literal["llm", "__end__"]:
+                return "__end__" if s["call_count"] >= 5 else "llm"
+
+        # ⏳ 8 ModelFallback → try in node
+            async def fallback_node(s: MessagesState) -> dict:
+                for n in ["deepseek-chat", "gpt-4o-mini"]:
+                    try:
+                        from langchain_deepseek import ChatDeepSeek
+                        m = ChatDeepSeek(model=n)
+                        return {"messages": [await m.ainvoke(s["messages"])]}
+                    except: continue
+                return {"messages": [AIMessage("服务暂不可用")]}
+
+        # ⏳ 9 PII → sanitize node
+            import re
+            def pii_mask(t: str) -> str:
+                t = re.sub(r'[\w.-]+@[\w.-]+\.\w+', '[EMAIL]', t)
+                t = re.sub(r'\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}', '[CARD]', t)
+                t = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '[IP]', t)
+                return t
+            async def pii_node(s: MessagesState) -> dict:
+                if hasattr(s["messages"][-1], 'content'):
+                    s["messages"][-1].content = pii_mask(str(s["messages"][-1].content))
+                return s
+
+        # ⏳ 10 TodoList → state field
+            class TodoState(MessagesState):
+                todo_list: list = []
+            def todo_node(s: TodoState) -> dict:
+                return {"todo_list": s.get("todo_list", [])}
+
+        # ⏳ 11 ToolCallLimit → state count
+            class ToolLimitState(MessagesState):
+                tool_counts: dict = {}
+            def check_tool_limit(s: ToolLimitState) -> Literal["tools", "__end__"]:
+                return "__end__" if sum(s["tool_counts"].values()) > 10 else "tools"
+
+        # ⏳ 12 ToolRetry → wrapper
+            import asyncio
+            async def retry_call(func, retries=3, **kw):
+                for i in range(retries):
+                    try: return await func(**kw)
+                    except Exception as e:
+                        if i == retries-1: return f"失败: {e}"
+                        await asyncio.sleep(2**i)
 
     # === 自定义中间件 → Node 写法 ===
 
-    # @before_agent → 入口 Node
-        async def init_node(s: MessagesState) -> dict:
-            if not s.get("user_id"): return {"messages": [AIMessage("请先登录")]}
-            return s
+        # @before_agent → 入口 Node
+            async def init_node(s: MessagesState) -> dict:
+                if not s.get("user_id"): return {"messages": [AIMessage("请先登录")]}
+                return s
 
-    # @after_agent → 出口 Node
-        async def cleanup_node(s: MessagesState) -> dict:
-            print(f"对话轮次: {len(s['messages'])}")
-            return s
+        # @after_agent → 出口 Node
+            async def cleanup_node(s: MessagesState) -> dict:
+                print(f"对话轮次: {len(s['messages'])}")
+                return s
 
-    # @before_model → 预处理 Node
-        async def pre_node(s: MessagesState) -> dict:
-            last = s["messages"][-1]
-            if hasattr(last, 'content') and len(str(last.content)) > 4000:
-                last.content = str(last.content)[:4000] + "..."
-            return s
+        # @before_model → 预处理 Node
+            async def pre_node(s: MessagesState) -> dict:
+                last = s["messages"][-1]
+                if hasattr(last, 'content') and len(str(last.content)) > 4000:
+                    last.content = str(last.content)[:4000] + "..."
+                return s
 
-    # @after_model → 后处理 Node
-        async def post_node(s: MessagesState) -> dict:
-            last = s["messages"][-1]
-            if hasattr(last, 'content') and "```" in str(last.content):
-                return {"messages": [AIMessage(str(last.content) + "\n💡 代码已复制")]}
-            return s
+        # @after_model → 后处理 Node
+            async def post_node(s: MessagesState) -> dict:
+                last = s["messages"][-1]
+                if hasattr(last, 'content') and "```" in str(last.content):
+                    return {"messages": [AIMessage(str(last.content) + "\n💡 代码已复制")]}
+                return s
 
-    # @wrap_model_call → cache node
-        _cache = {}
-        async def cached_llm(s: MessagesState) -> dict:
-            key = str(s["messages"][-1].content)[:100]
-            if key in _cache: return {"messages": [_cache[key]]}
-            r = await llm.ainvoke(s["messages"])
-            _cache[key] = r
-            return {"messages": [r]}
+        # @wrap_model_call → cache node
+            _cache = {}
+            async def cached_llm(s: MessagesState) -> dict:
+                key = str(s["messages"][-1].content)[:100]
+                if key in _cache: return {"messages": [_cache[key]]}
+                r = await llm.ainvoke(s["messages"])
+                _cache[key] = r
+                return {"messages": [r]}
 
-    # @wrap_tool_call → wrapper node
-        async def tool_wrapper(s: MessagesState) -> dict:
-            last = s["messages"][-1]
-            if not hasattr(last, 'tool_calls'): return s
-            allowed = {"get_weather", "search_db"}
-            for tc in last.tool_calls:
-                n = tc.get("name", tc.name) if hasattr(tc, 'name') else tc["name"]
-                if n not in allowed:
-                    return {"messages": [ToolMessage(f"无权限: {n}", tool_call_id=tc.id)]}
-            return s
+        # @wrap_tool_call → wrapper node
+            async def tool_wrapper(s: MessagesState) -> dict:
+                last = s["messages"][-1]
+                if not hasattr(last, 'tool_calls'): return s
+                allowed = {"get_weather", "search_db"}
+                for tc in last.tool_calls:
+                    n = tc.get("name", tc.name) if hasattr(tc, 'name') else tc["name"]
+                    if n not in allowed:
+                        return {"messages": [ToolMessage(f"无权限: {n}", tool_call_id=tc.id)]}
+                return s
 
-    # @dynamic_prompt → prompt node
-        async def dynamic_prompt(s: MessagesState) -> dict:
-            msg = str(s["messages"][-1].content)
-            for kw, r in {"代码":"Python工程师", "数据库":"DB架构师", "部署":"DevOps专家"}.items():
-                if kw in msg: return {"messages": [SystemMessage(f"你是{r}")] + s["messages"]}
-            return {"messages": [SystemMessage("你是有帮助的助手")] + s["messages"]}
+        # @dynamic_prompt → prompt node
+            async def dynamic_prompt(s: MessagesState) -> dict:
+                msg = str(s["messages"][-1].content)
+                for kw, r in {"代码":"Python工程师", "数据库":"DB架构师", "部署":"DevOps专家"}.items():
+                    if kw in msg: return {"messages": [SystemMessage(f"你是{r}")] + s["messages"]}
+                return {"messages": [SystemMessage("你是有帮助的助手")] + s["messages"]}
 
-    # 通用 Graph 构建模板
-        # graph = StateGraph(MessagesState)
-        # graph.add_node("llm", call_model)
-        # graph.add_node("tools", ToolNode(tools))
-        # graph.add_conditional_edges("llm", tools_condition)
-        # graph.add_edge("tools", "llm")
-        # graph.set_entry_point("llm")
-        # app = graph.compile()
+        # 通用 Graph 构建模板
+            # graph = StateGraph(MessagesState)
+            # graph.add_node("llm", call_model)
+            # graph.add_node("tools", ToolNode(tools))
+            # graph.add_conditional_edges("llm", tools_condition)
+            # graph.add_edge("tools", "llm")
+            # graph.set_entry_point("llm")
+            # app = graph.compile()
 
 # 🌐 MCP
 # ====================================================================================================================================
@@ -12823,7 +12830,7 @@
             display(Image(image).draw_mermaid_png())
 
 
-# 🐠 DeepAgents
+# 🤖 DeepAgents
 # ====================================================================================================================================
 
     # ✈ create_deep_agent
@@ -12940,29 +12947,17 @@
             agent = create_deep_agent(backend=composite_backend)
 
 
-        # 🚀 安全与权限控制
-        class ReadOnlyBackend(FilesystemBackend):
-            def __init__(self, read_only_paths, **kwargs):
-                super().__init__(**kwargs)
-                self.read_only_paths = read_only_paths
+        # 🚀 安全与权限控制（deepagents 0.6+ 用 permissions 参数）
+        # 替代手写 ReadOnlyBackend，原生支持：
+        # permissions=[FilesystemPermission(path="/data/secret", permission="read")]
 
-            def write(self, file_path: str, content: str) -> WriteResult:
-                for path in self.read_only_paths:
-                    if file_path.startswith(path):
-                        return WriteResult(error=f"禁止写入只读目录:{file_path}")
-                return super().write(file_path, content)
 
-            def edit(
-                self,
-                file_path: str,
-                old_string: str,
-                new_string: str,
-                replace_all: bool = False,
-            ):
-                for path in self.read_only_paths:
-                    if file_path.startswith(path):
-                        return WriteResult(error=f"禁止编辑只读目录:{file_path}")
-                return super().edit(file_path, old_string, new_string, replace_all)
+    # 🧰 新增特性（deepagents 0.6+）
+        # skills: list[str] — 微技能包，子代理可直接调用
+        # memory: list[str] — 跨会话记忆，替代 StoreBackend
+        # permissions: list[FilesystemPermission] — 文件系统权限控制
+        # interrupt_on: dict — 预设哪些操作需人工确认
+        # SandboxBackend — 真正安全的沙箱执行环境
 
     # 🚀 Subagents 子智能体
         # 使用CompiledSubAgent
