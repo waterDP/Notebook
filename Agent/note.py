@@ -848,7 +848,7 @@
     # 🔹 五大策略框架:Write写入持久化/Select运行时检索/Compress上下文压缩/Isolate下上文隔离/Cache提示缓存
 
 
-    # 环境准备
+     # 环境准备
         from langchain_deepseek import ChatDeepSeek
         from transformers import AutoTokenizer
         from dotenv import load_dotenv
@@ -1391,7 +1391,7 @@
             # skip_stemming=True:跳过英文词干提取(中文无此需求)
             # token_pattern:中文按字切分 + 英文按词切分(BM25 中文场景标准配置)
             bm25_retriever = BM25Retriever.from_defaults(
-                nodes=nodes,
+                nodes= ,
                 similarity_top_k=3,
                 skip_stemming=True,
                 token_pattern=r"[\u4e00-\u9fff]|[a-zA-Z0-9]+",
@@ -1492,6 +1492,9 @@
             skill_descriptions = "\n".join(
                 f"- {sid}: {s['description']}" for sid, s in skill_registry.items()
             )
+
+
+
             classify_prompt = f"""根据用户消息,从以下 Skills 中选择最匹配的一个:
 
             {skill_descriptions}
@@ -1507,6 +1510,7 @@
             # - deploy_ops: 部署与运维操作:发布新版本到各环境、健康检查、回滚、金丝雀发布流程
             # - memory_manage: 记忆管理:保存用户偏好和项目决策到长期记忆、检索历史记忆
 
+
             # === Skills 路由--步骤 3:端到端演示(分类 → 装配 → Token 对比)===
 
             test_messages = [
@@ -1517,7 +1521,9 @@
 
             # 基线:如果不做 Skills 路由,Agent 需要加载全部 8 个工具的描述
             all_tools = [t for s in skill_registry.values() for t in s["tools"]]
+
             all_tools_desc = "\n".join(f"{t.name}: {t.description}" for t in all_tools)
+
             all_tokens = count_tokens(all_tools_desc)
 
             for msg in test_messages:
@@ -1564,8 +1570,8 @@
             print(f"Agent 系统提示: {selected_skill['system_prompt']}")
 
             # 调用 Agent
-            from langchain.agents import AgentExecutor
-            agent_executor = AgentExecutor(agent=agent, tools=selected_skill["tools"], verbose=False)
+            # from langchain.agents import AgentExecutor (removed in 1.3.4+, use LangGraph)
+            # agent_executor = AgentExecutor(nt=agent, tools=selected_skill["tools"], verbose=False)
             result = agent_executor.invoke({"input": last_msg})
 
             print(f"\nAgent 响应: {result['output']}")
@@ -1715,7 +1721,7 @@
 
         # 🚀 === LLM 摘要压缩:SummarizatoinMiddleware
             from langchain.agents import create_agent
-            from langchain.agents.middleware import SummarizationMiddleware
+            # from langchain.agents.middleware import SummarizationMiddleware (removed in 1.3.4+)
             from langchain_core.messages import HumanMessage
             from langgraph.checkpoint.memory import InMemorySaver
 
@@ -2190,7 +2196,7 @@
 
 
             from langchain.agents import create_agent
-            from deepagents.middleware.subagents import SubAgentMiddleware
+            # from deepagents.middleware.subagents import SubAgentMiddleware (check version)
             from deepagents.backends import StateBackend
             from langchain_core.messages import HumanMessage
             from langgraph.checkpoint.memory import InMemorySaver
@@ -2293,7 +2299,6 @@
 
     # 🔥 创建agent
         from langchain.agents import create_agent
-        from redis import backoff
 
         agent = create_agent(
             model="claude-sonnet-4-5-20250929",
@@ -2383,7 +2388,7 @@
         print(f"AI: {response1['messages'][-1].content}")
 
         # 3. 动态提示词(通过中间件实现)
-        from langchain.agents.middleware import dynamic_prompt
+        # from langchain.agents.middleware import dynamic_prompt (removed)
         from typing import TypedDict
 
         # 4. 定义上下文结构
@@ -2556,7 +2561,7 @@
         @tool
         def clear_conversation() -> Command:
             """清除当前对话历史"""
-            from langchain.messages import RemoveMessages
+            from langchain_core.messages import RemoveMessages
             from langgraph.graph.message import REMOVE_ALL_MESSAGES
 
             return Command(update={"messages": [RemoveMessages(id=REMOVE_ALL_MESSAGES)]})
@@ -2727,7 +2732,7 @@
     # 💾 短期记忆 PostgresSaver
         # ! pip install langgraph-checkpointer-postgres
         from langgraph.checkpoint.postgres import PostgresSaver
-        from langchain.agent import create_agent
+        from langchain.agents import create_agent
 
         """
         生产环境使用数据库存储,支持:
@@ -2907,764 +2912,175 @@
                 ),
             )
 
-    # ⏳ === 内置中间件 ===
-
-        # ⏳ 1 SummarizationMiddleware
-            # 用于解决长对话场景下的上下文管理问题。
-            # 当对话内容接近模型的token时,它会自动总结较早的对话历史,保留关键信息的同时压缩内容
-            """
-            参数
-                model string|BaseChatModel 必须
-                trigger: 控制何时触发总结操作
-                    fraction(float) 模型上下文窗口的使用比例(0~1)
-                    tokens(int) 绝对token数量
-                    messages(int) 消息数量
-                keep: 控制总结后保留多少上下文信息
-                    fraction(float) 模型上下文窗口的使用比例(0~1)
-                    tokens(int) 绝对token 数量
-                    messages(int) 消息数量
-                trim_tokens_to_summarize: 生成总结时包含的最大token数量 默认为 4000
-                summary_prefix: 添加到总结消息的前缀文本
-                token_counter: 用于计算对话消息token数量的函数
-                summary_prompt: 用于生成对话总结的提示词
-            """
-            from langchain.agents import create_agent
-            from langchain.agents.middleware import SummarizationMiddleware, ToolRetryMiddleware
-
-            summary_prompt = """
-            请总结以下对话内容,重点关注
-            1.用户的主要问题和需求
-            2.已经提供的解决方案
-            3.尚未解决的关键问题
-            4.重要的上下文信息
-            """
-
-            agent = create_agent(
-                model=model,
-                middleware=[
-                    SummarizationMiddleware(
-                        trigger=[("fraction", 0.8)],
-                        keep=("fraction", 0.3),
-                        summary_prompt=summary_prompt,
-                    )
-                ],
-            )
-
-        # ⏳ 2 ContextEditingMiddleware
-            # 用于在达到令牌限制时清理旧的工具调用输出,同时保留最近的结果
-            # 它帮助具有大量工具调用的长对话中保持上下文的可管理性,通过智能删除不再使相关的工具输出,优化令牌使用并控制成本
-            """
-            参数
-                edits: 要应用ContextEdit策略列表
-                    edits=[ClearToolUsesEdit()] 默认值 ClearToolUsesEdit()
-                token_count_method: 令牌计数方法
-                    token_count_method="approximate" 默认值 "approximate" 选项 "approximate" "model"
-
-            ClearToolUsesEdit参数
-                trigger: 触发编辑的信息计数阈值 默认值为100000
-                clear_at_least: 编辑运行时至少回收的令牌数  默认为0 设置为0时,清除所需尽可能多的令牌
-                keep: 必须保存最近工具结果数量 默认值为3 这些工具结果将永远不会被清理
-                clear_tool_inputs: 是否清除AI消息上的工具调用参数 clear_tool_inputs=False 默认为False
-                exclude_tools: 排除在清除之外的工具名称列表
-                placeholder: 插入被清除工具输出的占们符文本 默认值: "[cleared]"
-            """
-            from langchain.agents import create_agent
-            from langchain.agents.middleware import ContextEditingMiddleware, ClearToolUsesEdit
-
-            agent = create_agent(
-                model=model,
-                middleware=[
-                    ContextEditingMiddleware(
-                        edits=[
-                            ClearToolUsesEdit(
-                                trigger=2000,
-                                keep=3,
-                                clear_tool_inputs=False,
-                                exclude_tools=[],
-                                placeholder="[cleared]",
-                            )
-                        ],
-                        token_count_method="approximate",
-                    )
-                ],
-            )
-
-        # ⏳ 3 FilesystemFileSearchMiddleware
-            # 它提供了两个强大的搜索工具:
-            # Glob(按名称查找特定类型的文件)与Grep(在文件内容中搜索特定代码和文本), 用于在文件系统中查获文件和搜索文件内容
-            """
-            参数
-                root_path: 要搜索的根系统路径,所有文件操作都相对于此路径 必填
-                use_ripgrep(默认:True) 是否使用ripgrep进行搜索,如果ripgrep不可用,则回退到Python下则表达式
-                max_file_size_mb(默认:10) 要搜索的最大文件大小(以MB为单位),大于此值将被跳过。
-            """
-            from langchain.agents import create_agent
-            from langchain.agents.middleware import FilesystemFileSearchMiddleware
-
-            agent = create_agent(
-                model=model,
-                middleware=[
-                    FilesystemFileSearchMiddleware(
-                        root_path="/workspace",
-                        use_ripgrep=True,
-                        max_file_size_mb=10
-                    )
-                ],
-            )
-
-            # 智能体现在可以使用glob_search和grep_search工具
-            result = agent.invoke(
-                {"messages": [HumanMessage(content="find all python files containing 'async def'")]}
-            )
-            # 智能体将使用:
-            # 1. glob_search(pattern="**/*.py") 查找python文件
-            # 2. grep_search(pattern="async def", include="*.py") 查找异步函数
-
-        # ⏳ 4 HumanInTheLoopMiddleware
-            # 专门为AI智能体提供人工监督机制,当AI助手需要执行可能敏感或危险的操作时,它会自动暂停执行流程
-            # 等待人工审核和决策,确保所有重要操作都在人类监督下进行。
-
-            """
-            参数
-                interrupt_on: 必需参数,定义哪些工具需要人工介入
-                    所有决策类型都允许
-                    write_file: True
-                    只允许批准和拒绝,不允许编辑
-                    "execute_sql": {"allow_decisions": ["approve", "reject"]}
-                    自动批准,无需人工介入
-                    "read_data": False
-                description_prefix: 可选参数,自定义介入消息前缀
-                    description_prefix="请确认以下操作:"
-            """
-
-            from langchain.agents import create_agent
-            from langchain.agents.middleware import HumanInTheLoopMiddleware
-            from langgraph.checkpoint.memory import InMemorySaver
-
-            # 创建人工介入中间件
-            hitl_middleware = HumanInTheLoopMiddleware(
-                interrupt_on={
-                    "write_file": True,
-                    "execute_sql": {"allow_decisions": ["approve", "reject"]},
-                    "read_data": False,
-                },
-                description_prefix="工具执行待审核",
-            )
-
-            # 创建智能体
-            agent = create_agent(model=model, middleware=[hitl_middleware])
-
-            # 处理人工介入响应
-            from langgraph.types import Command
-
-            # 必需:提供线程ID以支持中断和恢复
-            config = {"configurable": {"thread_id": "conversation-123"}}
-
-            # 运行直到中断
-            result = agent.invoke({"messages": [HumanMessage(content="删除30天前的记录")]})
-
-            if "__interrupt__" in result:
-                interrupt = result["__interrupt__"][0]
-                print(f"需要审核的操作:{interrupt.value}")
-
-                # 提供人类决策
-                human_decision = {"action_requests": [{"decision": "approve"}]}
-
-                # 继续执行
-                final_result = agent.invoke(Command(resume=human_decision), config=config)
-
-        # ⏳ 5 LLMToolEmulator
-            # 允许使用语言模型来模拟指定工具的行为,而不是实际执行这些工具
-            # 这在实际工具不可用、需要安全测试或控制API调用成本时特别有用。该中间件支持选择性地模拟特定工具,可以通过工具名称或工具实例来指定
-            """
-            参数:
-                tools: 要模拟的工具名称列表或BaseTool实例列表
-                model: 用于模拟工具行为的语言模型 默认值为 anthropic:claude-sonnet-4-5-20240229
-            """
-
-        # ⏳ 6 LLMToolSelectorMiddleware
-            # 专为智能工具选择设计的中间件,它使用LLM智能地选择相关工具,然后再调用主模型。
-            # 该中间件特别适用于,拥有大量(10+)的代理,其中大多数工具对每个查询都不相关
-            # 通过过滤不相关工具来减少信息使用;提高模型的专注度和准确性。它使用结构化输出来询问LLM哪些工具最适合当前查询。
-
-            from langchain.agents import create_agent
-            from langchain.agents.middleware import LLMToolSelectorMiddleware
-
-            # 创建智能体,包含工具选择中间件
-            agent = create_agent(
-                model="gpt-4",
-                tools=[tool1, tool2, tool3, tool4],
-                middleware=[
-                    LLMToolSelectorMiddleware(
-                        model="gpt-4o-mini", # 工具选择模型
-                        max_tools=3, # 最多可选择3个工具
-                        system_prompt="优先选择成本效益最高的工具,避免使用昂贵的API,除非绝对必要。", # 成本优化提示
-                        always_include=['search'] # 始终包含搜索工具
-                    )
-                ]
-            )
-
-            result = agent.invoke("搜索最新的AI新闻并分析市场趋势")
-
-        # ⏳ 7 ModelCallLimitMiddleware
-            # 模型调用限制中间件。它通过限制模调用次数来防止无限循环或过度成本,帮助开发者有效控制API调用成本,防止意外的费用支出
-            # 并确保系统资源得到合理利用。该中间件为API应用提供了重要的经济保护机制
-            """
-            参数:
-                thread_limit: 线程内所有运行的最大模型调用次数(可选) 默认为无限制
-                run_limit: 单次调用的最大模型调用次数(可选) 默认为无限制
-                exit_behavior: 达到限制时的行为(可选) 默认为end    end 优雅终止    error 抛出错误
-            """
-            from langchain.agents import create_agent
-            from langchain.agents.middleware import ModelCallLimitMiddleware
-
-            agent = create_agent(
-                model="gpt-4o",
-                tools=[tool1, tool2, tool3],
-                middleware=[
-                    ModelCallLimitMiddleware(
-                        thread_limit=10, # 线程内最多10次调用
-                        run_limit=5, # 单次最多调用5次
-                        exit_behavior="error", # 抛出错误
-                    )
-                ]
-            )
-
-            try:
-                result = agent.invoke({input: "需要多次调用的任务"})
-            except Exception as e:
-                print(f"达到调用限制:{e}")
-
-        # ⏳ 8 ModelFallbackMiddleware
-            # 专门用于模型故障转移的中间件。当主模型调用失败时,它会自动按顺序尝试备用模型,直到成功或者所有模型都耗尽
-
-            from langchain_openai import ChatOpenAI
-            from langchain_anthropic import ChatAnthropic
-            from langchain.agents.middleware import ModelFallbackMiddleware
-
-            gpt4_model = ChatOpenAI(model="gpt-4", temperature=0.7)
-            claude_model = ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0.5)
-            gpt35_model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3)
-
-            instance_fallback = ModelFallbackMiddleware(gpt4_model, claude_model, gpt35_model)
-
-            # 创建智能体
-            agent = create_agent(
-                model="openai:gpt-4o-mini", # 主模型
-                middleware=[instance_fallback]
-            )
-
-        # ⏳ 9 PIIMiddleware
-            # 专为个人隐私信息(PII)检测设计的中间件。它能够智能识别文本中的敏感信息,如邮箱地址,信用卡号,IP地址等
-            # 并提供多种处理策略,包括阻止、脱敏、掩码或哈希处理。该中间件支持自定义PII类型和检测器,确保在数据处理过程中充分保护用户隐私
-
-            from langchain.agents.middleware import PIIMiddleware
-            from langchain.agents import create_agent
-
-            # 脱敏用户输入中的所有邮箱地址
-            agent = create_agent(
-                "openai:gpt-5",
-                middleware=[
-                    PIIMiddleware('email', strategy="redact")
-                ]
-            )
-            # 示例:"联系我的邮箱: water.li@example.com"
-            # 输出:"联系我的邮箱: [REDACTED_email]"
-
-            # 为不同PII类型使用不同策略
-            agent = create_agent(
-                "openai:gpt-5",
-                middleware=[
-                    PIIMiddleware("credit_card", strategy="mask"), # 掩码信用卡
-                    PIIMiddleware("url", strategy="redact"), # 脱敏url
-                    PIIMiddleware("ip", strategy="hash") # 哈希IP地址
-                ]
-            )
-
-            # 我的卡号是 4534-1234-5678-9012 -> 我的卡号是****-****-****-9012
-            # 访问 http://example.com -> 访问[REDACTED_url]
-            # IP是 192.168.1.1 -> ip是<pi_hash:abc123>
-
-            """
-            参数:
-                pii_type: 要检测的PII类型
-                    email 邮箱地址
-                    credit_card 信用卡: 带luhn算法验证
-                    ip  ip地址
-                    mac_address MAC地址
-                    url  URLs(http/https和裸url)
-
-                strategy 检测到PI时的处理策略 默认是redact
-                    block 检测到PI时抛出异常
-                    redact 替换为[REDACT_TYPE]占位符
-                    mask   部分掩码
-                    hash   替换为确定性哈希
-
-                detector 自定义检测器函数或正则表达式
-
-                apply_to_input 默认为True 是否在模型调用前检查用户消息
-                apply_to_ouput 默认为False 是否在模型调用后检查AI消息
-                apply_to_tool_results 默认为False 是否在工具执行后检查工具结果消息
-            """
-
-        # ⏳ 10 TodoListMiddleware
-            # 就是给AI智能体添加一个"任务规划"的超能力,当智能体处理复杂任务时,会自动创建任务列表,并在任务完成后展示完整的执行历史
-            # 让AI的工作过程更加透明和有条理
-
-            from langchain.agents import create_agent
-            from langchain.agents.middleware import TodoListMiddleware
-
-            agent = create_agent(
-               "openai:gpt-4o",
-               middleware=[ TodoListMiddleware() ]
-            )
-
-            result = await agent.invoke({"messages": ["你的请求"]})
-
-            if "todos" in result:
-                print("任务执行历史")
-                for todo in result["todos"]
-                    print(f"-{todo['content']} ({todo['status']})")
-
-            """
-            参数
-                system_prompt 可选 自定义提示词,告诉AI如何使用任务清单功能,默认已经很智能,一般不需要改
-                todo_description 可选 write_todos工具的描述,让AI理解这个工具的任务 默认描述很清晰,通常不需要修改
-            """
-
-        # ⏳ 11 ToolCallLimitMiddleware
-            # 专为工具调用设计的限制中间件。它跟踪工具调用次数并在代理执行期间强制执行限制。支持纯种级别(跨运行持久化)和运行级别(每次调用)的调用计数
-            # 当超出限制时可以选择阻止工具、抛出异常或立即结束执行
-            """
-            参数:
-                tool_name 要限制的工具名称,如果为None则限制适用于所有工具
-                thread_limit 每个线程(会话)允许的最大工具调用次数,跨支持持久化
-                run_limit 每次运行允许的最大工具调用次数。None表示无限制,每次调用独立计数
-                exit_behavior 超出限制的处理方式
-                    continue 阻止超出的工具,让执行继续
-                    error 抛出ToolCallLimitExceededError异常
-                    end 立即停止  返回ToolMessage+AI消息
-            """
-
-            from langchain.agents.middleware import ToolCallLimitMiddleware
-
-            # 通用工具限制
-            general_limiter = ToolCallLimitMiddleware(
-                thread_limit=50,
-                run_limit=15,
-                exit_behavior="continue"
-            )
-
-            # 危险工具严格限制
-            dangerous_limiter = ToolCallLimitMiddleware(
-                tool_name="execute_code",
-                thread_limit=5,
-                run_limit=2,
-                exit_behavior="error"
-            )
-            agent = create_agent(
-                "openai:gpt-4o",
-                middleware=[general_limiter, dangerous_limiter]
-            )
-
-        # ⏳ 12 ToolRetryMiddleware
-            # 为工具重试中间件,它能够自动重试失败的工具调用,并支持可配置的退避策略
-            # 该中间件支持对特定异常进行重试,使用指数退避算法,并提供灵活的失败处理机制,确保工具调用的可靠性和稳定性。
-            """
-            参数:
-                max_retries 最大重试次数 默认值为2
-                tools 应用重试逻辑的工具列表 默认为None 所有工具
-                retry_on 重试的异常类型或判断函数,默认值为None 所有可重试异常 ConnectError TimeoutError
-                on_failure 所有重试失败后的行为,默认值为return_message
-                initial_delay 第一次重庆前的初始延迟 默认值为1.0
-                max_delay 重试间隔的最大延迟 默认值为60.0
-                backoff_factor 指数退避的乘数 默认值为2.0
-                jitter 是否添加随机拉动以避免雪崩效应 默认值为True
-            """
-
-            # 特定异常重试
-            from langchain.agents.middleware import ToolRetryMiddleware
-            from requests.exceptions import RequestException, Timeout
-
-            specific_retry = ToolRetryMiddleware(
-                max_retries=4, #最多重试4次
-                retry_on=(RequestException, Timeout),
-                backoff_factor=1.5,
-                initial_delay=0.5
-            )
-
-            # 自定义异常过滤器
-            from langchain.agents.middleware import ToolRetryMiddleware
-            from requests.exceptions import HTTPError
-
-            def should_retry(exc: Exception) -> bool:
-                # 仅对5xx错误进行重试
-                if isinstance(exc, HTTPError):
-                    return 500<= exc.status_code <= 600
-                return False
-
-            custom_filter_retry = ToolRetryMiddleware(
-                max_retries=3,
-                retry_on=should_retry
-            )
-
-    # ⏳ === 自定义中间件 ===
-
-        # 🍎 @before_agent
-            # 在智能体执行流程开始前首先执行的钩子函数 这个装饰器用于拦截智能体的初始状态,可以在智能体处理用户请求前进行必要的初始化、数据准备或权限验证等操作
-            # 装饰器参数 can_jump_to: 可选参数,是一个字符串列表,指定当前钩子函数可以跳到的节点名称。
-            """
-            回调函数参数
-                state: AgentState 当前智能体的完整状态对象,这是一字典类型,包含以下关键信息
-                    messages: 消息历史列表,包含用户输入和系统消息
-                    user_id: 用户标识(如果已设定)
-                    workflow_state: 工作流当前状态
-                    其它自定义字段
-                runntime: Runtime 当前运行时实例,提供环境上下文,包含执行环境、配置信息和可用工具等。
-            返回值:
-                None: 表示不改变状态,继续执行智能体的正常流程
-                dict[str, Any] 修改后的状态字典。可以修改现有状态字段的值,或添加新的状态字段。特别地,如果字典中包含jump_to键且其值在can_jump_to列表中,
-                        则系统会跳转到指定节点,绕过正常流程。
-            """
-
-            from langchain.agents.middleware import before_agent, AgentState
-            from langchain.messages import SystemMessage
-            from langgraph.runtime import Runtime
-            from typing import Any
-
-            @before_agent(can_jump_to=['end'])
-            def initialize_session(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-                # 检查是否为首次调用,添加系统提示
-                if not any(isinstance(msg, SystemMessage) for msg in state["messages"]):
-                    return {
-                        "messages": [
-                            SystemMessage(content="你是一个AI助手"),
-                            *state["messages"]
-                        ]
-                    }
-
-                if not state.get("user_id"):
-                    # 如果没有用户Id,拒绝处理
-                    return {
-                        "messages": state["messages"]+[SystemMessage(content="缺少必要的用户信息。")],
-                        "jump_to": "end"
-                    }
-
-                return None
-
-        # 🍎 @after_agent
-            # 在智能体执行完成后的钩子,适用于清理工作、结果汇总等场景。
-            """
-            回调函数参数
-                state: AgentState 当前智能体的状态对象
-                runntime: Runtime 当前运行时实例
-            返回值:
-                None: 继续正常执行流程
-                dict[str, Any] 修改后的状态字典。
-            """
-
-            from langchain.agents.middleware import after_agent, AgentState
-            from langchain.messages import SystemMessage
-            from langgraph.runtime import Runtime
-            from typing import Any
-            import time
-
-            @after_agent
-            def session_summary(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-                # 收集会话统计信息
-                human_messages = sum(1 for msg in state["messages"] if msg.type == "human")
-                ai_messages = sum(1 for msg in state["messages"] if msg.type == "ai")
-
-                # 创建会话摘要
-                summary = f"会话已完成。\n" \
-                          f"- 人类消息:{human_messages}\n" \
-                          f"- AI消息:{ai_messages}\n" \
-                          f"- 总消息数:{len(state['messages'])}"
-
-                # 保存会话记录
-                timetamp = time.strftime("%Y%m%d-%H%M%S")
-                session_id = f"session_{timestamp}"
-
-                # 保存会话 ^^^^^
-
-                # 添加会话结束消息
-                return {
-                    "messages": state["messages"] + [SystemMessage(content="summary")]
-                }
-
-        # 🍌 @before_model
-            # 在每次调用LLM之前执行的工具函数。这个装饰器在智能体决定调用LLM时触发,允许开发都在请求发送给模型之前对输入进行处理,优化或过滤。
-            # 它是实现输入质量和安全检查的关键环节
-
-            from langchain.agents.middleware import AgentState, before_model
-            from langchain.messages import HumanMessage, SystemMessage
-            from langchain.runtime import Runtime
-            from typing import Any
-
-            @before_model(can_jump_to=['end'])
-            def filter_sensitive_content(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
-                # 检查是否含有敏感信息
-                sensitive_words = ["敏感词1", "敏感词2"]
-
-                for msg in state["messages"]:
-                    if isinstance(msg, HumanMessage):
-                        for word in sensitive_words:
-                            if word in msg.content.lower():
-                                return {
-                                    "messages": [SystemMessage(content="检测到敏感内容,请重新输入")],
-                                    "jump_to": "end"
-                                }
-
-                # 截断过长的消息
-                processed_messages = []
-                for msg in state["messages"]:
-                    if len(msg.content) > 1000:
-                        msg.content = msg.content[:990]+"...[内容已截断]"
-
-                    processed_messages.append(msg)
-
-                return {"messages": processed_messages}
-
-        # 🍌 @after_model
-            # 在每次调用LLM生成响应后,响应返回给用户前执行的钩子函数。这个装饰器允许开发者对模型的原始输出进行后处理、优化、格式化或分析,
-            # 是实现输出质量控制、内容增强和结果优化的关键环节
-
-            from langchain.agents.middleware import after_model, AgentState
-            from langchain.messages import AIMessage, SystemMessage
-            from langgraph.runtime import Runtime
-            from typing import Any
-            import json
-            import time
-
-            @after_model
-            def format_response(state: AgentState, runtime: Runtime) -> dict[str, any] | None:
-                # 分析最后一条AI消息
-                if state["messages"] and isinstance(state["messages"][-1], AIMessages):
-                    last_message = state["messages"][-1]
-
-                    # 记录响应内容到日志
-                    with open("model_response.log" "a") as f:
-                        log_entry = {
-                            "timestamp": time.strftime("%Y%m%d-%H%M%S"),
-                            "response_length": len(last_message.content),
-                            "has_code": "```" in last_message.content
-                        }
-                        f.write(json.dumps(log_entry) + "\n")
-
-                    # 为包含代码的响应添加提示
-                    if "```" in last_message.content:
-                        enhanced_content = last_message.content+"\n\n提示: 以上代码仅供参考,请根据实际需求进行调整"
-
-                        # 创建新的消息列表,替换最后一条消息
-                        new_messages = state["messages"][:-1] + [
-                            AIMessages(content=enhanced, name=last_message.name)
-                        ]
-                        return {"messages": new_messages}
-
-                    return None
-
-        # 🍉 @wrap_model_call
-            # 包装并拦截模型调用的钩子,适用于重试、缓存、修改请求/响应等场景
-            """
-            回调函数参数:
-                request: ModelRequest 模型请求对象,包含发送给模型的参数 如messages model temperature等
-                handler: Callable[[ModelRequest], ModelResponse] 原始处理程序函数,调用此函数将执行实际的模型请求
-            返回值:
-                ModelResponse: 处理后的模型响应对象,必须包含content和model等必要字段
-
-            """
-            from langchain.agents.middleware import wrap_model_call, ModelRequest, ModelResponse
-            from typing import Callable, Dict, Any
-            import hashlib
-            import time
-
-            # 简单的内存缓存
-            response_cache: Dict[str, Dict[str, Any]] = {}
-
-            @wrap_model_call
-            def cached_model_call(
-                request: ModelRequest,
-                handler: Callable[[ModelRequest]: ModelResponse]
-            ) -> ModelResponse:
-                # 生成更可靠的缓存键,只使用消息内容和模型名称
-                separator = "<|msg_sep|>"
-                messages_content = separator.join([msg.content for msg in request.messages])
-
-                # 生成缓存键
-                raw_string = f"{messages_content}:{request.model}"
-                cache_key = hashlib.md5(raw_string.encode('utf-8')).hexdigest()
-
-
-                # 检测缓存
-                if cache_key in response_cache
-                    cached = response_cache[cache_key]
-                    if time.time() - cached["timestamp"] < 3600: # 1小时缓存
-                        print("从缓存获取")
-                        return cached["response"]
-
-                # 执行原始调用并添加缓存重试逻辑
-                for attempt in range(3):
-                    try:
-                        response = handler(request)
-                        # 缓存响应对象本身,而不是尝试访问其内部属性
-                        response_cache[cache_key] = {
-                            "response": response,
-                            "timestamp": time.time()
-                        }
-                        return response
-                    except Exception as e:
-                        if attempt == 2:  # 试完了,不要试了
-                            raise
-                        print(f"模型调用失败,第{attempt+1}次重试")
-                        time.sleep(2) # 等待后重试
-
-        # 🍉 @wrap_tool_call
-            # 包装并拦截工具调用的钩子,适用于工具调用前检查、权限控制等场景
-            """
-            回调函数参数:
-                request: ModelRequest 模型请求对象,包含发送给模型的参数 如messages model temperature等
-                handler: Callable[[ModelRequest], ModelResponse] 原始处理程序函数,调用此函数将执行实际的模型请求
-            返回值:
-                Any: 处理后的响应对象,通常是ToolMessage对象,包含content和tool_call_id等必要字段
-            """
-
-            from langchain.agents.middleware import wrap_tool_call, ModelRequest, ModelResponse
-            from typing import Any, Callable
-            from langchain.messages import ToolMessage
-
-            @wrap_tool_call
-            def tool_permission_check(
-                request: Any,
-                handler: Callable[[ModelRequest]: ModelResponse]
-            ) -> Any:
-                # 获取工具名称或参数
-                tool_name = request.tool_call.get("name")
-                tool_args = request.tool_call.get("args", [])
-
-                # 工具权限控制
-                admin_tools = ["get_weather"]
-                restricted_tools = ["payment_precessor"]
-
-                # 获取用户角色(在实际应用中,这会从上下文获取)
-                user_role = "user"
-
-                # 检查是否有权限调用该工具
-                if tool_name in admin_tools and user_role != "admin"
-                    return ToolMessage(
-                        content=f"权限不足:需要管理员权限才能使用{tool_name}工具。",
-                        tool_call_id=request.tool_call.get("id")
-                    )
-
-                # 记录工具调用 ..................
-
-                # 执行原始工具调用
+    # ⏳ === 内置中间件（LangGraph 版本）===
+    # ⚠️ LangChain 1.3.4 已移除 langchain.agents.middleware
+    # 以下全部为 LangGraph 等价实现
+    from langgraph.graph import StateGraph, MessagesState, START
+    from langgraph.prebuilt import ToolNode, tools_condition
+    from langgraph.checkpoint.memory import MemorySaver
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, RemoveMessage, ToolMessage
+    from langchain_core.tools import tool
+    from typing import Literal
+
+    # ⏳ 1 Summarization → summarize node
+        THRESHOLD, KEEP = 20, 6
+        def should_summarize(s: MessagesState) -> Literal["summarize", "__end__"]:
+            return "summarize" if len(s["messages"]) > THRESHOLD else "__end__"
+        async def summarize_node(s: MessagesState) -> dict:
+            early, recent = s["messages"][:-KEEP], s["messages"][-KEEP:]
+            summary = await llm.ainvoke(f"压缩(80字):\n{"".join(str(m.content)[:100] for m in early)}")
+            return {"messages": [SystemMessage(f"[摘要]{summary.content}")] + recent}
+
+    # ⏳ 2 ContextEditing → clean_tool node
+        def clean_tool_msgs(s: MessagesState) -> dict:
+            return {"messages": s["messages"][-6:]} if len(s["messages"]) >= 8 else s
+
+    # ⏳ 3 FileSearch → Tool
+        @tool
+        def glob_search(p: str) -> str:
+            import glob; return "\n".join(glob.glob(p, recursive=True))
+        @tool
+        def grep_search(p: str, inc: str = "*.py") -> str:
+            import glob; r = []
+            for f in glob.glob(f"**/{inc}", recursive=True):
                 try:
-                    return handler(request)
+                    for i, l in enumerate(open(f, errors='ignore'), 1):
+                        if p in l: r.append(f"{f}:{i}:{l.rstrip()[:80]}")
+                except: pass
+            return "\n".join(r[:20]) or "无匹配"
+
+    # ⏳ 4 HumanInTheLoop → interrupt_before
+        # graph.compile(checkpointer=MemorySaver(), interrupt_before=["tools"])
+        # app.invoke({"messages": [HumanMessage("北京天气")]}, {"configurable":{"thread_id":"s1"}})
+        # app.invoke(None, {"configurable":{"thread_id":"s1"}})  # 继续
+
+    # ⏳ 5 ToolEmulator → wrapper
+        from functools import wraps
+        def emulate_tool(model):
+            def deco(func):
+                @wraps(func)
+                async def wrapper(**kw):
+                    r = await model.ainvoke(f"模拟{func.__name__}({kw}):")
+                    return r.content
+                return wrapper
+            return deco
+
+    # ⏳ 6 ToolSelector → select node
+        async def select_tool_node(s: MessagesState) -> dict:
+            names = [t.name for t in tools]
+            r = await llm.ainvoke(f"从{names}中选工具: {s['messages'][-1].content}")
+            return {"selected": r.content}
+
+    # ⏳ 7 ModelCallLimit → state count
+        class LimitState(MessagesState):
+            call_count: int = 0
+        def check_limit(s: LimitState) -> Literal["llm", "__end__"]:
+            return "__end__" if s["call_count"] >= 5 else "llm"
+
+    # ⏳ 8 ModelFallback → try in node
+        async def fallback_node(s: MessagesState) -> dict:
+            for n in ["deepseek-chat", "gpt-4o-mini"]:
+                try:
+                    from langchain_deepseek import ChatDeepSeek
+                    m = ChatDeepSeek(model=n)
+                    return {"messages": [await m.ainvoke(s["messages"])]}
+                except: continue
+            return {"messages": [AIMessage("服务暂不可用")]}
+
+    # ⏳ 9 PII → sanitize node
+        import re
+        def pii_mask(t: str) -> str:
+            t = re.sub(r'[\w.-]+@[\w.-]+\.\w+', '[EMAIL]', t)
+            t = re.sub(r'\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}', '[CARD]', t)
+            t = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '[IP]', t)
+            return t
+        async def pii_node(s: MessagesState) -> dict:
+            if hasattr(s["messages"][-1], 'content'):
+                s["messages"][-1].content = pii_mask(str(s["messages"][-1].content))
+            return s
+
+    # ⏳ 10 TodoList → state field
+        class TodoState(MessagesState):
+            todo_list: list = []
+        def todo_node(s: TodoState) -> dict:
+            return {"todo_list": s.get("todo_list", [])}
+
+    # ⏳ 11 ToolCallLimit → state count
+        class ToolLimitState(MessagesState):
+            tool_counts: dict = {}
+        def check_tool_limit(s: ToolLimitState) -> Literal["tools", "__end__"]:
+            return "__end__" if sum(s["tool_counts"].values()) > 10 else "tools"
+
+    # ⏳ 12 ToolRetry → wrapper
+        import asyncio
+        async def retry_call(func, retries=3, **kw):
+            for i in range(retries):
+                try: return await func(**kw)
                 except Exception as e:
-                    return ToolMessage(
-                        content=f"工具调用失败:{str(e)}",
-                        tool_call_id=request.tool_call.get("id")
-                    )
+                    if i == retries-1: return f"失败: {e}"
+                    await asyncio.sleep(2**i)
 
-        # 🍇 @dynamic_prompt
-            # 根据请求上下文动态生成系统提示的钩子,适用于个性化提示、上下文感知提示、角色化交互等场景。这个装饰器允许开发者根据用户的输入内容
-            # 语言类型和对话主题,动态生成适合当前上下文的系统提示词,从而实现更加智能和个性化的AI交互体验
-            """
-            回调函数参数:
-                request: Any 模型请求对象,包含要发送给模型的消息和配置信息
-            返回值:
-                str: 生成动态系统提示词,将作为系统消息添加到模型输入中
-            """
+    # === 自定义中间件 → Node 写法 ===
 
-            from langchain.agents.middleware import dynamic_prompt
-            from typing import Any
-            from langchain.agetns import create_agent
-            from langchain.chat_models import init_chat_model
-            from langchain.messages import HumanMessage, ToolMessage
-            import re
+    # @before_agent → 入口 Node
+        async def init_node(s: MessagesState) -> dict:
+            if not s.get("user_id"): return {"messages": [AIMessage("请先登录")]}
+            return s
 
-            @dynamic_prompt
-            def generate_contextual_prompt(request: Any) -> str:
-                # 基础提示模板
-                base_prompt="你是一个有帮助的AI助手"
+    # @after_agent → 出口 Node
+        async def cleanup_node(s: MessagesState) -> dict:
+            print(f"对话轮次: {len(s['messages'])}")
+            return s
 
-                # 分析上下文,确定对话主题和领域
-                last_user_message = None
-                if hasattr(request, "messages"):
-                    for msg in reversed(request.messages):
-                        if isinstance(msg, HumanMessage):
-                            last_user_message = msg.content
-                            break
-                elif hasattr(request, 'state') and "messages" in request.state:
-                    for msg in reversed(request.state["messages"]):
-                        if isinstance(msg, HumanMessage):
-                            last_user_message = msg.content
+    # @before_model → 预处理 Node
+        async def pre_node(s: MessagesState) -> dict:
+            last = s["messages"][-1]
+            if hasattr(last, 'content') and len(str(last.content)) > 4000:
+                last.content = str(last.content)[:4000] + "..."
+            return s
 
+    # @after_model → 后处理 Node
+        async def post_node(s: MessagesState) -> dict:
+            last = s["messages"][-1]
+            if hasattr(last, 'content') and "```" in str(last.content):
+                return {"messages": [AIMessage(str(last.content) + "\n💡 代码已复制")]}
+            return s
 
-                if last_user_message:
-                    # 根据消息内容添加特定领域提示
-                    if re.search(r'代码|编辑|开发|python|javascript|java|c\+\+|html|css', last_user_message, re.IGNORECASE):
-                        base_prompt += "\n\n你是一名专业的编程助手,你叫吉米。请提供清晰、正确的代码示例,并解释关键概念"
-                        base_prompt += "\n确保代码具在良好的结构与注释"
-                    elif re.search(r"数学|计算|算法|统计", last_user_message, re.IGNORECASE)
-                        base_prompt += "\n\n你是一名数学家,你叫鲁班大师,请详细解释计算过程,并确保准确性"
-                        base_prompt += "\n使用适当的数学符号和公式来表达复杂概念"
-                    elif re.search(r"历史|科学|文化|艺术", last_user_message, re.IGNORECASE)
-                        base_prompt += "\n\n你是一位知道渊博的学者,名叫水哥,请提供准确,全面的信息"
-                        base_promp += "\n包含相关背景知识和关键事件"
+    # @wrap_model_call → cache node
+        _cache = {}
+        async def cached_llm(s: MessagesState) -> dict:
+            key = str(s["messages"][-1].content)[:100]
+            if key in _cache: return {"messages": [_cache[key]]}
+            r = await llm.ainvoke(s["messages"])
+            _cache[key] = r
+            return {"messages": [r]}
 
-                # 添加通用指导原则
-                base_prompt += "\n\n请始终保持礼貌,提供专业的回答。如果不确定,如实回答并提供可能的解决方案"
+    # @wrap_tool_call → wrapper node
+        async def tool_wrapper(s: MessagesState) -> dict:
+            last = s["messages"][-1]
+            if not hasattr(last, 'tool_calls'): return s
+            allowed = {"get_weather", "search_db"}
+            for tc in last.tool_calls:
+                n = tc.get("name", tc.name) if hasattr(tc, 'name') else tc["name"]
+                if n not in allowed:
+                    return {"messages": [ToolMessage(f"无权限: {n}", tool_call_id=tc.id)]}
+            return s
 
-                return base_prompt
+    # @dynamic_prompt → prompt node
+        async def dynamic_prompt(s: MessagesState) -> dict:
+            msg = str(s["messages"][-1].content)
+            for kw, r in {"代码":"Python工程师", "数据库":"DB架构师", "部署":"DevOps专家"}.items():
+                if kw in msg: return {"messages": [SystemMessage(f"你是{r}")] + s["messages"]}
+            return {"messages": [SystemMessage("你是有帮助的助手")] + s["messages"]}
 
-
-
-
-            # 🚀 类继承中间件
-            # 基于类继承中间件实现提供了更大的灵活性和功能性,特别适合需要多个钩子、状态管理或复杂的中间件
-            # 通过继承Middleware基类,可以在一个类中实现多个钩子方法
-
-            from langchain.agents.middleware import AgentMiddleware, AgentState, ModelRequest, ModelResponse
-            from langchain.agetns.middleware.types import ToolCallRequest
-            from langchain.messages import ToolMessage
-            from typing import Any, Callable
-
-            class CoreMiddlewareDemo(AgentMiddleware):
-                # 构造函数
-                def __init__(self, log_level: str = "INFO"):
-                    self.log_level = log_level
-
-                # Agent 生命周期钩子
-                def before_agent(self, state: AgentState, runtime: Any) -> dict[str, Any] | None:
-                    messages = state.get("messages", [])
-                    if len(messages == 0):
-                        print(f"[{self.log_level}]没有初始消息")
-                        return None
-                    return {"context": {"message_count": len(messages)}}
-
-                def after_agent(self, state: AgentState, runtime: Any) -> dict[str, Any] | None:
-                    print(f"{self.log_level}Agent执行完成")
-                    return None
-
-                # Model 生命周期钩子
-                def before_model(self, state: AgentState, runtime: Any) -> dict[str, Any] | None:
-                    print(f"{self.log_level}准备调用大模型")
-                    return None
-
-                def after_model(self, state: AgentState, runtime: Any) -> dict[str, Any] | None:
-                    print(f"{self.log_level}模型返回影响")
-                    return None
-
-                # 调用包装钩子
-                def wrap_model_call(
-                    self,
-                    request: ModelRequest,
-                    handler: Callable[[ModelRequest], ModelResponse]
-                ) -> ModelResponse:
-                    print(f"{self.log_level}包装模型调用")
-                    return handler(request)
-
+    # 通用 Graph 构建模板
+        # graph = StateGraph(MessagesState)
+        # graph.add_node("llm", call_model)
+        # graph.add_node("tools", ToolNode(tools))
+        # graph.add_conditional_edges("llm", tools_condition)
+        # graph.add_edge("tools", "llm")
+        # graph.set_entry_point("llm")
+        # app = graph.compile()
 
 # 🌐 MCP
 # ====================================================================================================================================
@@ -15661,7 +15077,7 @@
 
     from typing import Any
     from langchain_core.messages import ToolMessages
-    from langchain.messages import RemoveMessages
+    from langchain_core.messages import RemoveMessages
     from langchain.agents import AgentState
     from langchain.agents.middleware import AgentMiddleware
     from langgraph.graph.message import REMOVE_ALL_MESSAGES
