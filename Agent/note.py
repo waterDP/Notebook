@@ -1,6 +1,136 @@
+# 🔢 Embedding（文本向量化）
+# ====================================================================================================================================
+    # 📖 什么是 Embedding？
+        # Embedding = 把文本（词、句、段落）映射到高维向量空间的过程。
+        # 说白了就是：让计算机理解"苹果"和"香蕉"是差不多的东西，
+        #             而"苹果"和"操作系统"是两码事。
+
+        # 向量空间里的距离衡量语义相似度：
+        #   "猫" → [0.12, 0.87, -0.34, ...] → 和"狗"靠得近
+        #   "猫" → [0.12, 0.87, -0.34, ...] → 和"微积分"离得远
+        # 维度通常 256-3072，OpenAI text-embedding-3-small 是 1536 维。
+
+        # ⚡ 一句话总结：Embedding 把人类语言转成 LLM 能算距离的数学对象。
+
+    # 🚀 Embedding 模型怎么选？
+        # ┌──────────────────────┬───────────┬──────────┬──────────────────┐
+        # │ 模型                 │ 维度       │ 价格      │ 推荐场景          │
+        # ├──────────────────────┼───────────┼──────────┼──────────────────┤
+        # │ OpenAI text-emb-3-small │ 1536    │ $0.02/1M │ 通用首选，质量稳   │
+        # │ OpenAI text-emb-3-large │ 3072    │ $0.13/1M │ 高精度场景         │
+        # │ BGE-small-zh-v1.5     │ 512       │ 免费本地  │ 中文场景离线       │
+        # │ BGE-large-zh-v1.5     │ 1024      │ 免费本地  │ 中文高精度离线     │
+        # │ 通义 text-embedding-v4│ 1024      │ 免费额度  │ 阿里云生态        │
+        # │ DeepSeek emb          │ 1024      │ 需申请    │ DeepSeek 全家桶   │
+        # └──────────────────────┴───────────┴──────────┴──────────────────┘
+
+        # ■ 选型原则：
+        # 1. 开发阶段用 OpenAI text-emb-3-small（最稳，生态好）
+        # 2. 中文场景上线可以用 BGE（免费、维度低、速度快）
+        # 3. 维度不是越高越好——维度越高检索越慢，1536 对大部分场景够用
+        # 4. 同一个系统的 Embedding 模型必须统一（不同模型向量不可比较）
+
+    # 🚀 基础用法（OpenAI SDK）
+        from openai import OpenAI
+        import numpy as np
+
+        client = OpenAI(api_key="sk-xxx")  # 换成你的 key
+
+        def get_embedding(text: str, model: str = "text-embedding-3-small") -> list[float]:
+            """
+            单条文本向量化
+            Args:
+                text: 输入文本，OpenAI 限制 ~8192 tokens
+                model: Embedding 模型名
+            Returns:
+                list[float]: 1536 维向量
+            """
+            text = text.replace("\n", " ")
+            response = client.embeddings.create(input=[text], model=model)
+            return response.data[0].embedding
+
+        vec = get_embedding("今天天气真好")
+        print(f"向量维度: {len(vec)}")   # 1536
+        print(f"前 5 个值: {vec[:5]}")
+
+        # ■ 批量向量化（OpenAI 原生支持 batch，推荐）
+        def get_embeddings_batch(texts: list[str], model: str = "text-embedding-3-small") -> list[list[float]]:
+            texts = [t.replace("\n", " ") for t in texts]
+            response = client.embeddings.create(input=texts, model=model)
+            return [d.embedding for d in response.data]
+
+        texts = ["苹果很好吃", "香蕉也不错", "微积分太难了"]
+        vecs = get_embeddings_batch(texts)
+        print(f"批量返回 {len(vecs)} 条向量，维度 {len(vecs[0])}")
+
+    # 🚀 相似度计算
+        # 向量化之后最核心的操作：算距离。三种主流距离度量：
+
+        # ■ 1. 余弦相似度（Cosine Similarity）—— 最常用
+        def cosine_similarity(a: list[float], b: list[float]) -> float:
+            a, b = np.array(a), np.array(b)
+            dot = np.dot(a, b)
+            norm = np.linalg.norm(a) * np.linalg.norm(b)
+            return dot / norm if norm != 0 else 0.0
+
+        # ■ 2. 点积（Dot Product）—— 归一化后和余弦等价
+        def dot_product(a: list[float], b: list[float]) -> float:
+            return float(np.dot(a, b))
+
+        # ■ 3. 欧氏距离（Euclidean Distance）—— 看绝对距离
+        def euclidean_distance(a: list[float], b: list[float]) -> float:
+            return float(np.linalg.norm(np.array(a) - np.array(b)))
+
+        # ---- 演示 ----
+        vec_apple = get_embedding("苹果很好吃")
+        vec_banana = get_embedding("香蕉也不错")
+        vec_calc = get_embedding("微积分太难了")
+
+        print(f"苹果 vs 香蕉: cosine={cosine_similarity(vec_apple, vec_banana):.4f}")
+        print(f"苹果 vs 微积分: cosine={cosine_similarity(vec_apple, vec_calc):.4f}")
+
+    # 🚀 Chroma 向量数据库基础
+        import chromadb
+
+        client_c = chromadb.Client()
+        collection = client_c.create_collection(
+            name="food_notes",
+            metadata={"hnsw:space": "cosine"}
+        )
+
+        collection.add(
+            ids=["doc1", "doc2", "doc3"],
+            embeddings=get_embeddings_batch([
+                "苹果是蔷薇科的乔木植物",
+                "香蕉是芭蕉科的草本植物",
+                "微积分是高等数学的核心分支"
+            ]),
+            metadatas=[
+                {"category": "fruit", "source": "baike"},
+                {"category": "fruit", "source": "baike"},
+                {"category": "math", "source": "textbook"},
+            ],
+            documents=[
+                "苹果是蔷薇科的乔木植物",
+                "香蕉是芭蕉科的草本植物",
+                "微积分是高等数学的核心分支"
+            ]
+        )
+
+        query_vec = get_embedding("水果的植物学分类")
+        results = collection.query(query_embeddings=[query_vec], n_results=2)
+        print("=== Chroma 查询结果 ===")
+        for i in range(len(results["ids"][0])):
+            print(f"  ID: {results['ids'][0][i]}, Dist: {results['distances'][0][i]:.4f}")
+
+    # 🚀 FAISS 高性能检索（详见独立章节）
+        # FAISS（Facebook AI Similarity Search）是 Meta 开源的向量检索库。
+        # 支持 Flat / IVF / PQ / HNSW 四种索引类型，适合百万到亿级检索。
+        # 详细内容见下方独立章节 👉 # ⚡ FAISS 高性能检索
+
 # 🧰 Function Calling
 # ====================================================================================================================================  
-    # 🔍 工具描述向量化预筛选 
+    # 🔍 工具检索（Tool Retrieval） 
         # 向量化预筛选解决的就是这些问题——先把无关工具过滤掉，只让 LLM 在几个候选里选。
    
         import chromadb
@@ -5402,6 +5532,108 @@
         #....
         include=['embedding', "documents", "metadata", "distances"]
     )
+
+
+# ⚡ FAISS 高性能检索
+# ====================================================================================================================================
+    # 🚀 Flat 暴力搜索——最基础，小数据集首选
+        import faiss
+        import numpy as np
+
+        dimension = 1536  # 和 Embedding 模型维度一致
+
+        # IndexFlatIP：内积距离（配合归一化向量 = 余弦相似度）
+        index_ip = faiss.IndexFlatIP(dimension)
+        # IndexFlatL2：欧氏距离（适合聚类场景）
+        index_l2 = faiss.IndexFlatL2(dimension)
+
+        # Flat demo
+        texts = ["苹果很好吃", "香蕉很不错", "微积分太难", "梨子水分多"]
+        vecs = np.array(get_embeddings_batch(texts)).astype("float32")
+
+        index_ip.add(vecs)
+        print(f"FlatIP 索引中向量数量: {index_ip.ntotal}")  # 4
+
+        query = np.array([get_embedding("什么水果好吃")]).astype("float32")
+        distances, indices = index_ip.search(query, k=3)
+        print("\n=== FlatIP 检索结果 ===")
+        for i, (idx, dist) in enumerate(zip(indices[0], distances[0])):
+            print(f"  #{i+1}: {texts[idx]} (dist={dist:.4f})")
+
+        # Flat 代价：数据量越大越慢，100 万条约 50ms，1000 万条 500ms+
+
+    # 🚀 IVF 倒排索引——分桶加速
+        nlist = 100
+        quantizer = faiss.IndexFlatIP(dimension)
+        index_ivf = faiss.IndexIVFFlat(quantizer, dimension, nlist, faiss.METRIC_INNER_PRODUCT)
+        index_ivf.train(vecs)
+        index_ivf.add(vecs)
+        index_ivf.nprobe = 10
+        distances, indices = index_ivf.search(query, k=3)
+        print("\n=== IVF 检索结果 ===")
+        for i, (idx, dist) in enumerate(zip(indices[0], distances[0])):
+            print(f"  #{i+1}: {texts[idx]} (dist={dist:.4f})")
+        # nprobe 调优：越大越准但越慢，100 万条推荐 nlist=4000, nprobe=50
+
+    # 🚀 PQ 乘积量化——压缩向量，省内存
+        m = 32
+        nbits = 8
+        index_pq = faiss.IndexPQ(dimension, m, nbits)
+        index_pq.train(vecs)
+        index_pq.add(vecs)
+        distances, indices = index_pq.search(query, k=3)
+        print("\n=== PQ 检索结果 ===")
+        for i, (idx, dist) in enumerate(zip(indices[0], distances[0])):
+            print(f"  #{i+1}: {texts[idx]} (dist={dist:.4f})")
+
+        # 组合拳：IVF + PQ = IndexIVFPQ（工业级标配）
+
+    # 🚀 HNSW 分层可导航小图——精度速度王者
+        M = 32
+        ef_construction = 200
+        index_hnsw = faiss.IndexHNSWFlat(dimension, M, faiss.METRIC_INNER_PRODUCT)
+        index_hnsw.hnsw.efConstruction = ef_construction
+        index_hnsw.add(vecs)
+        index_hnsw.hnsw.efSearch = 64
+        distances, indices = index_hnsw.search(query, k=3)
+        print("\n=== HNSW 检索结果 ===")
+        for i, (idx, dist) in enumerate(zip(indices[0], distances[0])):
+            print(f"  #{i+1}: {texts[idx]} (dist={dist:.4f})")
+
+    # 🚀 IDMap——带业务 ID 的索引（生产必备）
+        ids = np.array([1001, 1002, 1003, 1004])
+        index_with_ids = faiss.IndexIDMap(index_ip)
+        index_with_ids.add_with_ids(vecs, ids)
+        distances, result_ids = index_with_ids.search(query, k=3)
+        print("\n=== IDMap 结果 ===")
+        for i, (rid, dist) in enumerate(zip(result_ids[0], distances[0])):
+            print(f"  #{i+1}: ID={rid} (dist={dist:.4f})")
+
+    # 🚀 索引保存与加载
+        import os
+        index_path = "./faiss_index.bin"
+        faiss.write_index(index_ip, index_path)
+        loaded = faiss.read_index(index_path)
+        os.remove(index_path)
+
+    # 🚀 四种索引类型选型指南
+        # ┌──────────┬──────────┬──────────┬──────────────┬─────────────────────┐
+        # │ 类型     │ 速度      │ 内存     │ 精度         │ 适合场景             │
+        # ├──────────┼──────────┼──────────┼──────────────┼─────────────────────┤
+        # │ Flat     │ 慢(全量)  │ 高(原样)  │ ⭐⭐⭐⭐⭐     │ <10万条              │
+        # │ IVF      │ 快(10x)  │ 中       │ ⭐⭐⭐⭐       │ 10万-500万条，通用首选 │
+        # │ HNSW     │ 极快      │ 高(图)   │ ⭐⭐⭐⭐⭐     │ <500万，速度+精度都要  │
+        # │ IVF+PQ   │ 快        │ 极低     │ ⭐⭐⭐        │ 500万+，内存受限      │
+        # └──────────┴──────────┴──────────┴──────────────┴─────────────────────┘
+
+        # ■ 选型三步法：
+        # 1. 看数据量：<10万 → Flat；10万-500万 → IVF 或 HNSW；>500万 → IVF+PQ
+        # 2. 看硬件：内存够+要精度 → HNSW；内存吃紧 → IVF+PQ
+        # 3. 看场景：离线 batch → IVF；在线实时 → HNSW
+
+        # ■ Chroma vs FAISS：
+        #   Chroma：开发友好，自带持久化，适合原型和 <100万条
+        #   FAISS：性能优先，无状态（需自己管存储 + 原始文本），适合百万到亿级
 
 
 # 🍅 milvus 向量数据库
