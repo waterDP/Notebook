@@ -10,7 +10,13 @@
         #   "猫" → [0.12, 0.87, -0.34, ...] → 和"微积分"离得远
         # 维度通常 256-3072，OpenAI text-embedding-3-small 是 1536 维。
 
-        # ⚡ 一句话总结：Embedding 把人类语言转成 LLM 能算距离的数学对象。
+        # ⚡ Embedding 的两个关键特性：
+        # 1. 维度固定——不管输入是"你好"还是整本《三体》，输出维度都一样（如 1536 维）
+        #    这是能批量检索的前提
+        # 2. 向量空间有结构——语义相近的文本在空间中靠得近
+        #    "苹果"和"香蕉"近，"苹果"和"微积分"远
+
+        # 一句话：Embedding 把人类语言转成 LLM 能算距离的数学对象。
 
     # 🚀 Embedding 模型怎么选？
         # ┌──────────────────────┬───────────┬──────────┬──────────────────┐
@@ -29,6 +35,7 @@
         # 2. 中文场景上线可以用 BGE（免费、维度低、速度快）
         # 3. 维度不是越高越好——维度越高检索越慢，1536 对大部分场景够用
         # 4. 同一个系统的 Embedding 模型必须统一（不同模型向量不可比较）
+        # 5. 注意领域适配——通用场景 OpenAI 够用；纯中文场景 BGE 性价比更高，可本地离线
 
     # 🚀 基础用法（OpenAI SDK）
         from openai import OpenAI
@@ -67,6 +74,7 @@
         # 向量化之后最核心的操作：算距离。三种主流距离度量：
 
         # ■ 1. 余弦相似度（Cosine Similarity）—— 最常用
+        #    只看方向不看长度，适合比较语义相似度
         def cosine_similarity(a: list[float], b: list[float]) -> float:
             a, b = np.array(a), np.array(b)
             dot = np.dot(a, b)
@@ -89,44 +97,70 @@
         print(f"苹果 vs 香蕉: cosine={cosine_similarity(vec_apple, vec_banana):.4f}")
         print(f"苹果 vs 微积分: cosine={cosine_similarity(vec_apple, vec_calc):.4f}")
 
-    # 🚀 Chroma 向量数据库基础
-        import chromadb
+        # ⚡ 向量数据库（Chroma / FAISS）内部自动算距离
+        # 具体用法见后方独立章节
 
-        client_c = chromadb.Client()
-        collection = client_c.create_collection(
-            name="food_notes",
-            metadata={"hnsw:space": "cosine"}
-        )
+    # 🚀 Embedding 在 Agent 中的四大应用场景
+        # ┌─────────────────────────────────────────────────────────────┐
+        # │ 场景                      │ 作用                           │
+        # ├─────────────────────────────────────────────────────────────┤
+        # │ ① 工具预筛选               │ 30 个工具 → 检索 top-5 传给 LLM  │
+        # │ ② 长期记忆检索             │ 从 mem0/Qdrant 中找回历史记忆    │
+        # │ ③ RAG 知识库              │ 文档拆块 → 向量化 → 语义检索     │
+        # │ ④ 意图路由                │ 用户 query 向量化 → 分类 → 路由  │
+        # └─────────────────────────────────────────────────────────────┘
 
-        collection.add(
-            ids=["doc1", "doc2", "doc3"],
-            embeddings=get_embeddings_batch([
-                "苹果是蔷薇科的乔木植物",
-                "香蕉是芭蕉科的草本植物",
-                "微积分是高等数学的核心分支"
-            ]),
-            metadatas=[
-                {"category": "fruit", "source": "baike"},
-                {"category": "fruit", "source": "baike"},
-                {"category": "math", "source": "textbook"},
-            ],
-            documents=[
-                "苹果是蔷薇科的乔木植物",
-                "香蕉是芭蕉科的草本植物",
-                "微积分是高等数学的核心分支"
-            ]
-        )
+    # 🚀 Embedding 质量评估——怎么知道自己的向量好不好？
+        # 定量评估的三个核心指标：
 
-        query_vec = get_embedding("水果的植物学分类")
-        results = collection.query(query_embeddings=[query_vec], n_results=2)
-        print("=== Chroma 查询结果 ===")
-        for i in range(len(results["ids"][0])):
-            print(f"  ID: {results['ids'][0][i]}, Dist: {results['distances'][0][i]:.4f}")
+        # ■ 1. Hit Rate（命中率）
+        #    查 100 次，正确文档出现在 top-5 里的次数。
+        #    例：85 次命中 → Hit Rate@5 = 85%。
+        #    简单说就是："我要的东西你有没有给我"
 
-    # 🚀 FAISS 高性能检索（详见独立章节）
-        # FAISS（Facebook AI Similarity Search）是 Meta 开源的向量检索库。
-        # 支持 Flat / IVF / PQ / HNSW 四种索引类型，适合百万到亿级检索。
-        # 详细内容见下方独立章节 👉 # ⚡ FAISS 高性能检索
+        # ■ 2. MRR（Mean Reciprocal Rank）
+        #    不光看有没有命中，还看排在第几位。
+        #    排第 1 → 得 1 分；排第 3 → 得 1/3 分。
+        #    适合对排序敏感的场景（如 QA：正确答案永远希望排最前面）
+
+        # ■ 3. 正反例分离度
+        #    "苹果 vs 香蕉"的相似度 vs "苹果 vs 微积分"的相似度。
+        #    差距越大，说明 Embedding 区分能力越强。
+
+    # 🚀 实用技巧合集
+
+        # ■ 技巧 1：dimensions 参数裁剪维度
+        #    OpenAI text-embedding-3-small 支持裁剪维度，减少存储和计算。
+        #    原理：OpenAI 在模型输出层加了一个 projection matrix，
+        #    可安全截断到任意长度（256 / 512 / 1024）。
+        #    效果：维度降 6 倍，检索快 6 倍，精度只掉 2-5%。
+        #    ⚠️ 必须在 API 调用时通过 dimensions 参数裁剪，不能手动截断！
+        get_embedding("test", dimensions=256)  # 返回 256 维而非 1536
+
+        # ■ 技巧 2：缓存避免重复调 API
+        #    Embedding API 有延迟和费用，缓存能省 90%+ 调用
+        import hashlib
+        EMBEDDING_CACHE = {}
+        def get_embedding_cached(text: str) -> list[float]:
+            key = hashlib.md5(text.encode()).hexdigest()
+            if key in EMBEDDING_CACHE:
+                return EMBEDDING_CACHE[key]
+            vec = get_embedding(text)
+            EMBEDDING_CACHE[key] = vec
+            return vec
+
+        # ■ 技巧 3：Query 预处理
+        #    检索时用户查询和文档库文本分布不同（查询短且口语化，文档长且书面）
+        #    常见做法：用 LLM 改写查询为检索友好的格式（Query Rewriting）
+
+        # ■ 技巧 4：Batch 大小推荐 32-64 条
+        #    OpenAI API 最多 2048 条/批，但超过 100 条时尾部延迟显著增加
+
+        # ■ 技巧 5：中英文选型
+        #    OpenAI text-emb-3-small 对中英混合不错，纯中文推荐 BGE-large-zh-v1.5
+
+        # 📌 向量数据库（Chroma / FAISS / Milvus）的具体用法见后方独立章节
+
 
 # 🧰 Function Calling
 # ====================================================================================================================================  
