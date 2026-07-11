@@ -163,7 +163,7 @@
 
 
 # 🧰 Function Calling
-# ====================================================================================================================================  
+# ====================================================================================================================================
     # 🔍 工具检索（Tool Retrieval） 
         # 向量化预筛选解决的就是这些问题——先把无关工具过滤掉，只让 LLM 在几个候选里选。
    
@@ -2671,7 +2671,6 @@
         from pydantic import BaseModel, Field
         from langchain.tools import tool
 
-
         class SearchParams(BaseModel):
             query: str = Field(description="The query to search for.")
             filters: dict = Field(
@@ -2680,7 +2679,6 @@
             limit: int = Field(
                 description="The maximum number of records to return. Defaults to 10."
             )
-
 
         @tool
         def advanced_search(params: SearchParams) -> str:
@@ -2963,9 +2961,10 @@
 
         # ⏳ 5 ToolEmulator → wrapper
             from functools import wraps
+
             def emulate_tool(model):
                 def deco(func):
-                    @ (func)
+                    @wraps(func)
                     async def wrapper(**kw):
                         r = await model.ainvoke(f"模拟{func.__name__}({kw}):")
                         return r.content
@@ -2976,11 +2975,12 @@
             async def select_tool_node(s: MessagesState) -> dict:
                 names = [t.name for t in tools]
                 r = await llm.ainvoke(f"从{names}中选工具: {s['messages'][-1].content}")
-                return {"selected": r.content}
+                return {"selected_tool": r.content.strip()}
 
         # ⏳ 7 ModelCallLimit → state count
             class LimitState(MessagesState):
                 call_count: int = 0
+
             def check_limit(s: LimitState) -> Literal["llm", "__end__"]:
                 return "__end__" if s["call_count"] >= 5 else "llm"
 
@@ -2996,11 +2996,13 @@
 
         # ⏳ 9 PII → sanitize node
             import re
+
             def pii_mask(t: str) -> str:
                 t = re.sub(r'[\w.-]+@[\w.-]+\.\w+', '[EMAIL]', t)
                 t = re.sub(r'\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}', '[CARD]', t)
                 t = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '[IP]', t)
                 return t
+
             async def pii_node(s: MessagesState) -> dict:
                 if hasattr(s["messages"][-1], 'content'):
                     s["messages"][-1].content = pii_mask(str(s["messages"][-1].content))
@@ -3009,12 +3011,14 @@
         # ⏳ 10 TodoList → state field
             class TodoState(MessagesState):
                 todo_list: list = []
+
             def todo_node(s: TodoState) -> dict:
                 return {"todo_list": s.get("todo_list", [])}
 
         # ⏳ 11 ToolCallLimit → state count
             class ToolLimitState(MessagesState):
                 tool_counts: dict = {}
+
             def check_tool_limit(s: ToolLimitState) -> Literal["tools", "__end__"]:
                 return "__end__" if sum(s["tool_counts"].values()) > 10 else "tools"
 
@@ -3088,6 +3092,7 @@
             # graph.add_edge("tools", "llm")
             # graph.set_entry_point("llm")
             # app = graph.compile()
+
 
 # 🌐 MCP
 # ====================================================================================================================================
@@ -3820,727 +3825,727 @@
 
 
     # 🐠最简单的短期记忆
-    # mini-Openclaw使用Json文件存储每个会话
-    import json
-    import os
-    import time
+        # mini-Openclaw使用Json文件存储每个会话
+        import json
+        import os
+        import time
 
-    SESSIONS_DIR="./sessions" # 会话文件存储目录
-    os.makedirs(SESSIONS_DIR, exist_ok=True)
+        SESSIONS_DIR="./sessions" # 会话文件存储目录
+        os.makedirs(SESSIONS_DIR, exist_ok=True)
 
-    def load_session(session_id: str) -> dict:
-        """加载会话,不存在则创建新会话"""
-        path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        # 新会话的初始结构
-        return {
-            "title": "",
-            "created_at": int(time.time()),
-            "updated_at": int(time.time()),
-            "compressed_context": "",   # 压缩摘要(暂时为空,3.3节会填充)
-            "messages": []              # 当前对话历史
+        def load_session(session_id: str) -> dict:
+            """加载会话,不存在则创建新会话"""
+            path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            # 新会话的初始结构
+            return {
+                "title": "",
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
+                "compressed_context": "",   # 压缩摘要(暂时为空,3.3节会填充)
+                "messages": []              # 当前对话历史
+            }
+
+
+        def save_session(session_id: str, session: dict):
+            """保存会话到 JSON 文件"""
+            session["updated_at"] = int(time.time())
+            path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(session, f, ensure_ascii=False, indent=2)
+
+        # 测试:加载会话 → 添加消息 → 保存 → 重新加载验证
+        session = load_session("test_user_001")
+        session["messages"].append({"role": "user", "content": "我叫小明"})
+        save_session("test_user_001", session)
+
+        # 重新加载,验证持久化
+        loaded = load_session("test_user_001")
+        print(f"持久化验证:{loaded['messages'][-1]['content']}")
+
+
+
+        # 🔪消息截断策略
+        MAX_HISTORY = 20  # mini-OpenClaw 默认值,可根据模型上下文窗口调整
+
+        def get_messages_for_llm(session: dict) -> list:
+            """
+            构造实际传给 LLM 的消息列表。
+            策略:如果有压缩摘要,先注入摘要;再取最近 MAX_HISTORY 条。
+            """
+            messages_to_send = []
+
+            # 如果存在压缩摘要,作为 system 消息插在最前面
+            if session.get("compressed_context"):
+                messages_to_send.append({
+                    "role": "system",
+                    "content": session["compressed_context"]
+                })
+
+            # 💥 只取最近 MAX_HISTORY 条对话
+            recent_messages = session["messages"][-MAX_HISTORY:]
+            messages_to_send.extend(recent_messages)
+
+            return messages_to_send
+
+        # 验证:超过 20 条时只取最近 20 条
+        test_session = {
+            "compressed_context": "", 
+            "messages": [{"role": "user", "content": f"消息{i}"} for i in range(30)]
         }
-
-
-    def save_session(session_id: str, session: dict):
-        """保存会话到 JSON 文件"""
-        session["updated_at"] = int(time.time())
-        path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(session, f, ensure_ascii=False, indent=2)
-
-    # 测试:加载会话 → 添加消息 → 保存 → 重新加载验证
-    session = load_session("test_user_001")
-    session["messages"].append({"role": "user", "content": "我叫小明"})
-    save_session("test_user_001", session)
-
-    # 重新加载,验证持久化
-    loaded = load_session("test_user_001")
-    print(f"持久化验证:{loaded['messages'][-1]['content']}")
-
-
-
-    # 🔪消息截断策略
-    MAX_HISTORY = 20  # mini-OpenClaw 默认值,可根据模型上下文窗口调整
-
-    def get_messages_for_llm(session: dict) -> list:
-        """
-        构造实际传给 LLM 的消息列表。
-        策略:如果有压缩摘要,先注入摘要;再取最近 MAX_HISTORY 条。
-        """
-        messages_to_send = []
-
-        # 如果存在压缩摘要,作为 system 消息插在最前面
-        if session.get("compressed_context"):
-            messages_to_send.append({
-                "role": "system",
-                "content": session["compressed_context"]
-            })
-
-        # 💥 只取最近 MAX_HISTORY 条对话
-        recent_messages = session["messages"][-MAX_HISTORY:]
-        messages_to_send.extend(recent_messages)
-
-        return messages_to_send
-
-    # 验证:超过 20 条时只取最近 20 条
-    test_session = {"compressed_context": "", "messages": [{"role": "user", "content": f"消息{i}"} for i in range(30)]}
-    result = get_messages_for_llm(test_session)
-    print(f"截断验证:传入 LLM 的消息数 = {len(result)}(应为 20)")
-    print(f"第一条内容:{result[0]['content']}(应为 消息10)")
+        result = get_messages_for_llm(test_session)
+        print(f"截断验证:传入 LLM 的消息数 = {len(result)}(应为 20)")
+        print(f"第一条内容:{result[0]['content']}(应为 消息10)")
 
 
     # 🎈压缩摘要机制
-    def compress_session(session: dict, client) -> dict:
-        """
-        压缩会话历史。
-        策略:取前 50% 的消息作为待压缩部分(至少 4 条),
-        调用 LLM 生成摘要后更新 compressed_context 字段,保留后 50% 的消息继续使用。
-        """
-        messages = session["messages"]
-        if len(messages) < 4:
-            return session  # 消息太少,不压缩
+        def compress_session(session: dict, client) -> dict:
+            """
+            压缩会话历史。
+            策略:取前 50% 的消息作为待压缩部分(至少 4 条),
+            调用 LLM 生成摘要后更新 compressed_context 字段,保留后 50% 的消息继续使用。
+            """
+            messages = session["messages"]
+            if len(messages) < 4:
+                return session  # 消息太少,不压缩
 
-        # 取前 50% 作为待压缩部分(至少 4 条)
-        compress_count = max(4, len(messages) // 2)
-        to_compress = messages[:compress_count]
-        to_keep = messages[compress_count:]
+            # 取前 50% 作为待压缩部分(至少 4 条)
+            compress_count = max(4, len(messages) // 2)
+            to_compress = messages[:compress_count]
+            to_keep = messages[compress_count:]
 
-        # 构造压缩 prompt
-        history_text = "\n".join(
-            f"{m['role'].upper()}: {m['content']}" for m in to_compress
-        )
-        # 滚动摘要:把已有摘要 + 新消息一起压缩成统一摘要
-        existing = session.get("compressed_context", "")
-        if existing:
-            to_compress_text = f"[之前的摘要]\n{existing}\n\n[新增对话]\n{history_text}"
-        else:
-            to_compress_text = history_text
+            # 构造压缩 prompt
+            history_text = "\n".join(
+                f"{m['role'].upper()}: {m['content']}" for m in to_compress
+            )
+            # 滚动摘要:把已有摘要 + 新消息一起压缩成统一摘要
+            existing = session.get("compressed_context", "")
+            if existing:
+                to_compress_text = f"[之前的摘要]\n{existing}\n\n[新增对话]\n{history_text}"
+            else:
+                to_compress_text = history_text
 
-        compress_prompt = f"""
-        请将以下内容压缩成一段简洁的统一摘要,保留所有关键信息(用户身份、重要决策、技术细节、未完成的任务)。
+            compress_prompt = f"""
+            请将以下内容压缩成一段简洁的统一摘要,保留所有关键信息(用户身份、重要决策、技术细节、未完成的任务)。
 
-        对话历史:
-        {to_compress_text}
+            对话历史:
+            {to_compress_text}
 
-        要求:
-        - 用第三人称描述(「用户」「助手」)
-        - 保留所有关键事实,不遗漏重要细节
-        - 100-200字以内
-        - 以「[以下是之前对话的摘要]」开头
-        """
+            要求:
+            - 用第三人称描述(「用户」「助手」)
+            - 保留所有关键事实,不遗漏重要细节
+            - 100-200字以内
+            - 以「[以下是之前对话的摘要]」开头
+            """
 
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": compress_prompt}],
-            timeout=30
-        )
-        summary = response.choices[0].message.content
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=[{"role": "user", "content": compress_prompt}],
+                timeout=30
+            )
+            summary = response.choices[0].message.content
 
-        # 用新的统一摘要替换旧的(不追加)
-        session["compressed_context"] = summary
-        session["messages"] = to_keep
-        return session
+            # 用新的统一摘要替换旧的(不追加)
+            session["compressed_context"] = summary
+            session["messages"] = to_keep
+            return session
 
-    # 演示压缩效果
-    test_session = {
-        "compressed_context": "",
-        "messages": [
-            {"role": "user", "content": "我叫小明,我在学 Python 数据科学"},
-            {"role": "assistant", "content": "你好小明!Python 数据科学很有前途。"},
-            {"role": "user", "content": "我已经学完了 pandas 的 groupby"},
-            {"role": "assistant", "content": "很好!下一步可以学 sklearn。"},
-            {"role": "user", "content": "sklearn 的 Pipeline 怎么用?"},
-            {"role": "assistant", "content": "Pipeline 是 sklearn 的核心工具..."},
-        ]
-    }
-    print(f"压缩前:{len(test_session['messages'])} 条消息")
-    compressed = compress_session(test_session, client)  # 取消注释可实际运行
-    print(f"压缩后:{len(compressed['messages'])} 条消息")
-    print(f"摘要内容:{compressed['compressed_context']}")
-    print("压缩函数定义完成(取消注释可实际调用 LLM 执行压缩)")
+        # 演示压缩效果
+        test_session = {
+            "compressed_context": "",
+            "messages": [
+                {"role": "user", "content": "我叫小明,我在学 Python 数据科学"},
+                {"role": "assistant", "content": "你好小明!Python 数据科学很有前途。"},
+                {"role": "user", "content": "我已经学完了 pandas 的 groupby"},
+                {"role": "assistant", "content": "很好!下一步可以学 sklearn。"},
+                {"role": "user", "content": "sklearn 的 Pipeline 怎么用?"},
+                {"role": "assistant", "content": "Pipeline 是 sklearn 的核心工具..."},
+            ]
+        }
+        print(f"压缩前:{len(test_session['messages'])} 条消息")
+        compressed = compress_session(test_session, client)  # 取消注释可实际运行
+        print(f"压缩后:{len(compressed['messages'])} 条消息")
+        print(f"摘要内容:{compressed['compressed_context']}")
+        print("压缩函数定义完成(取消注释可实际调用 LLM 执行压缩)")
 
 
     # 🐢 长期记忆
-    # 🚂 向量化数据
-    from llama_index.core import Document, VectorStoreIndex
-    from llama_index.core.node_parser import SentenceSplitter
-    from llama_index.core.settings import Settings
-    from llama_index.embeddings.openai import OpenAIEmbedding
-    from dotenv import load_dotenv
-    import os
+        # 🚂 向量化数据
+            from llama_index.core import Document, VectorStoreIndex
+            from llama_index.core.node_parser import SentenceSplitter
+            from llama_index.core.settings import Settings
+            from llama_index.embeddings.openai import OpenAIEmbedding
+            from dotenv import load_dotenv
+            import os
 
-    load_dotenv()
-
-
-    # 配置 Embedding 模型(与 mini-OpenClaw memory_indexer.py 一致)
-    # 注意:Embedding 用 OPENAI_API_KEY,与 LLM 的 DEEPSEEK_API_KEY 分开
-    Settings.embed_model = OpenAIEmbedding(
-        model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-    )
-
-    # 构造记忆条目(模拟 Agent 积累的用户画像)
-    memory_texts = [
-        "用户叫小明,是一名 Python 开发者,主要做数据分析",
-        "用户正在学习 LangChain,上次讨论到 RAG 架构",
-        "用户不喜欢 SQL,更偏向用 Pandas 处理数据",
-        "用户的项目用 FastAPI 作为后端框架",
-        "用户有 3 年 Python 经验,对机器学习基础了解",
-    ]
-
-    # 用 Document + SentenceSplitter 构建索引(与 memory_indexer.py 相同流程)
-    docs = [Document(text=t) for t in memory_texts]
-    splitter = SentenceSplitter(chunk_size=256, chunk_overlap=32)
-    nodes = splitter.get_nodes_from_documents(docs)
-    index = VectorStoreIndex(nodes)
-    print(f"向量索引创建完成,共 {len(nodes)} 个节点")
-
-    # 语义检索:用 retriever 找最相关的 2 条记忆
-    retriever = index.as_retriever(similarity_top_k=2)
-    query = "用户用什么数据处理工具"
-    results = retriever.retrieve(query)
-
-    print(f"\n查询:'{query}'")
-    print("\n检索结果(分数越高越相似):")
-    for node in results:
-        print(f"  [{node.score:.4f}] {node.text}")
+            load_dotenv()
 
 
+            # 配置 Embedding 模型(与 mini-OpenClaw memory_indexer.py 一致)
+            # 注意:Embedding 用 OPENAI_API_KEY,与 LLM 的 DEEPSEEK_API_KEY 分开
+            Settings.embed_model = OpenAIEmbedding(
+                model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+                api_key=os.getenv("OPENAI_API_KEY"),
+                api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            )
 
-    # ✈KV存储,精确Key检索
-    import json
-    import os
+            # 构造记忆条目(模拟 Agent 积累的用户画像)
+            memory_texts = [
+                "用户叫小明,是一名 Python 开发者,主要做数据分析",
+                "用户正在学习 LangChain,上次讨论到 RAG 架构",
+                "用户不喜欢 SQL,更偏向用 Pandas 处理数据",
+                "用户的项目用 FastAPI 作为后端框架",
+                "用户有 3 年 Python 经验,对机器学习基础了解",
+            ]
 
-    SESSIONS_DIR = "sessions"
-    os.makedirs(SESSIONS_DIR, exist_ok=True)
+            # 用 Document + SentenceSplitter 构建索引(与 memory_indexer.py 相同流程)
+            docs = [Document(text=t) for t in memory_texts]
+            splitter = SentenceSplitter(chunk_size=256, chunk_overlap=32)
+            nodes = splitter.get_nodes_from_documents(docs)
+            index = VectorStoreIndex(nodes)
+            print(f"向量索引创建完成,共 {len(nodes)} 个节点")
 
-    def kv_save(key: str, value: dict) -> None:
-        """KV 写入:key → JSON 文件"""
-        path = os.path.join(SESSIONS_DIR, f"{key}.json")
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(value, f, ensure_ascii=False, indent=2)
+            # 语义检索:用 retriever 找最相关的 2 条记忆
+            retriever = index.as_retriever(similarity_top_k=2)
+            query = "用户用什么数据处理工具"
+            results = retriever.retrieve(query)
 
-    def kv_load(key: str) -> dict:
-        """KV 读取:通过 key 精确取回 value"""
-        path = os.path.join(SESSIONS_DIR, f"{key}.json")
-        if not os.path.exists(path):
-            return {}  # key 不存在,返回空
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            print(f"\n查询:'{query}'")
+            print("\n检索结果(分数越高越相似):")
+            for node in results:
+                print(f"  [{node.score:.4f}] {node.text}")
 
-    # 演示:用 user_id 作为 key,存储用户画像
-    kv_save("user_xiaoming", {
-        "name": "小明",
-        "role": "Python 开发者",
-        "preferences": ["Pandas", "FastAPI"],
-        "skill_level": "中级"
-    })
+        # ✈KV存储,精确Key检索
+            import json
+            import os
 
-    profile = kv_load("user_xiaoming")
-    print(f"用户画像:{profile}")
+            SESSIONS_DIR = "sessions"
+            os.makedirs(SESSIONS_DIR, exist_ok=True)
 
+            def kv_save(key: str, value: dict) -> None:
+                """KV 写入:key → JSON 文件"""
+                path = os.path.join(SESSIONS_DIR, f"{key}.json")
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(value, f, ensure_ascii=False, indent=2)
+
+            def kv_load(key: str) -> dict:
+                """KV 读取:通过 key 精确取回 value"""
+                path = os.path.join(SESSIONS_DIR, f"{key}.json")
+                if not os.path.exists(path):
+                    return {}  # key 不存在,返回空
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+
+            # 演示:用 user_id 作为 key,存储用户画像
+            kv_save("user_xiaoming", {
+                "name": "小明",
+                "role": "Python 开发者",
+                "preferences": ["Pandas", "FastAPI"],
+                "skill_level": "中级"
+            })
+
+            profile = kv_load("user_xiaoming")
+            print(f"用户画像:{profile}")
 
 
     # ⚖ 写入机制: 判断Agent何时写入长期记忆
-    from langchain_deepseek import ChatDeepSeek
-    from langchain_core.messages import HumanMessage
-    from dotenv import load_dotenv
-    import json
-    import os
+        from langchain_deepseek import ChatDeepSeek
+        from langchain_core.messages import HumanMessage
+        from dotenv import load_dotenv
+        import json
+        import os
 
-    load_dotenv()
+        load_dotenv()
 
-    # LLM 工厂函数:统一管理连接配置,仅 temperature 按场景不同
-    def create_llm(temperature: float = 0.7) -> ChatDeepSeek:
-        return ChatDeepSeek(
-            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
-            base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-            temperature=temperature,
-        )
+        # LLM 工厂函数:统一管理连接配置,仅 temperature 按场景不同
+        def create_llm(temperature: float = 0.7) -> ChatDeepSeek:
+            return ChatDeepSeek(
+                model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+                api_key=os.getenv("DEEPSEEK_API_KEY"),
+                base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+                temperature=temperature,
+            )
 
-    # 记忆筛选用低 temperature(0.1),减少随机性
-    llm_judge = create_llm(0.1)
+        # 记忆筛选用低 temperature(0.1),减少随机性
+        llm_judge = create_llm(0.1)
 
-    def is_worth_memorizing(conversation_snippet: str) -> tuple[bool, str]:
-        """
-        判断对话片段是否值得写入长期记忆。
-        返回:(是否写入, 提炼后的记忆文本)
-        """
-        prompt = f"""
-        你是一个记忆筛选助手。请分析以下对话片段,判断其中是否包含值得长期记忆的信息。
+        def is_worth_memorizing(conversation_snippet: str) -> tuple[bool, str]:
+            """
+            判断对话片段是否值得写入长期记忆。
+            返回:(是否写入, 提炼后的记忆文本)
+            """
+            prompt = f"""
+            你是一个记忆筛选助手。请分析以下对话片段,判断其中是否包含值得长期记忆的信息。
 
-        值得长期记忆的信息特征:
-        - 用户的身份、职业、技术背景
-        - 用户的明确偏好或厌恶
-        - 正在进行的项目的关键背景
-        - 用户提出的明确要求或约束
+            值得长期记忆的信息特征:
+            - 用户的身份、职业、技术背景
+            - 用户的明确偏好或厌恶
+            - 正在进行的项目的关键背景
+            - 用户提出的明确要求或约束
 
-        不值得长期记忆的信息:
-        - 临时性的任务(「帮我写一段代码」执行完就结束了)
-        - 常识性问题的问答
-        - 纯粹的闲聊
+            不值得长期记忆的信息:
+            - 临时性的任务(「帮我写一段代码」执行完就结束了)
+            - 常识性问题的问答
+            - 纯粹的闲聊
 
-        对话片段:
-        {conversation_snippet}
+            对话片段:
+            {conversation_snippet}
 
-        请严格用 JSON 格式回复,不要输出其他内容:
-        {{"worth_memorizing": true/false, "memory_text": "如果值得记忆,提炼成一句话;否则留空"}}
-        """
+            请严格用 JSON 格式回复,不要输出其他内容:
+            {{"worth_memorizing": true/false, "memory_text": "如果值得记忆,提炼成一句话;否则留空"}}
+            """
 
-        result = llm_judge.invoke([HumanMessage(content=prompt)])
-        parsed = json.loads(result.content)
-        return parsed["worth_memorizing"], parsed.get("memory_text", "")
+            result = llm_judge.invoke([HumanMessage(content=prompt)])
+            parsed = json.loads(result.content)
+            return parsed["worth_memorizing"], parsed.get("memory_text", "")
 
-    # 测试:两个对话片段,一个值得记忆,一个不值得
-    snippet1 = "用户:我叫小明,做了 3 年 Python,现在在做一个 FastAPI 项目。\nAgent:了解!"
-    snippet2 = "用户:Python 的 list comprehension 怎么写?\nAgent:[x for x in range(10)] 这样写。"
+        # 测试:两个对话片段,一个值得记忆,一个不值得
+        snippet1 = "用户:我叫小明,做了 3 年 Python,现在在做一个 FastAPI 项目。\nAgent:了解!"
+        snippet2 = "用户:Python 的 list comprehension 怎么写?\nAgent:[x for x in range(10)] 这样写。"
 
-    for snippet in [snippet1, snippet2]:
-        worth, text = is_worth_memorizing(snippet)
-        print(f"值得记忆:{worth}")
-        if worth:
-            print(f"记忆内容:{text}")
-        print()
+        for snippet in [snippet1, snippet2]:
+            worth, text = is_worth_memorizing(snippet)
+            print(f"值得记忆:{worth}")
+            if worth:
+                print(f"记忆内容:{text}")
+            print()
 
 
     # 🚀 Direct注入:全文读取注入System Prompt
-    import hashlib
-    import os
+        import hashlib
+        import os
 
-    # === 配置常量 ===
-    MEMORY_FILE = "MEMORY.md"
+        # === 配置常量 ===
+        MEMORY_FILE = "MEMORY.md"
 
-    # 当 MEMORY.md 的估算 Token 数超过此阈值时,从 Direct 注入切换为 RAG 检索
-    # 阈值设置依据:主流模型 System Prompt 上限约 4K tokens,预留一半给对话历史
-    MEMORY_TOKEN_THRESHOLD = 2000
+        # 当 MEMORY.md 的估算 Token 数超过此阈值时,从 Direct 注入切换为 RAG 检索
+        # 阈值设置依据:主流模型 System Prompt 上限约 4K tokens,预留一半给对话历史
+        MEMORY_TOKEN_THRESHOLD = 2000
+
+        def load_memory_direct() -> str:
+            """
+            Direct 注入模式:读取 MEMORY.md 全文,拼接到 System Prompt 中。
+
+            返回值:记忆全文字符串,由调用方拼接到 System Prompt 末尾
+            """
+            if not os.path.exists(MEMORY_FILE):
+                return ""
+
+            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+
+            return content
+
+        def append_to_memory(memory_text: str) -> None:
+            """
+            向 MEMORY.md 追加一条记忆。
+            写入后立即使缓存失效(md5 置空),确保下次 load 能读到最新内容。
+            """
+            with open(MEMORY_FILE, "a", encoding="utf-8") as f:
+                f.write(f"- {memory_text}\n")
+
+        def estimate_tokens(text: str) -> int:
+            """
+            粗估 Token 数(不依赖 tiktoken,零依赖实现)。
+            中文约 1.5 字符/token,英文约 0.75 词/token。
+            生产环境建议用 tiktoken 精确计算。
+            """
+            return int(len(text) / 1.5)
+
+        def should_use_rag() -> bool:
+            """
+            判断是否应从 Direct 切换为 RAG 模式。
+            当 MEMORY.md 内容超过 MEMORY_TOKEN_THRESHOLD 时返回 True。
+            调用方根据此结果决定:
+            - False → load_memory_direct() 全文注入 System Prompt
+            - True  → 走 RAG 检索路径,只注入相关片段
+            """
+            content = load_memory_direct()
+            return estimate_tokens(content) > MEMORY_TOKEN_THRESHOLD
 
 
-    def load_memory_direct() -> str:
-        """
-        Direct 注入模式:读取 MEMORY.md 全文,拼接到 System Prompt 中。
-
-        工作流程:
-        1. 计算当前文件 MD5
-        2. 与缓存 MD5 比较--相同则直接返回缓存(跳过磁盘读取)
-        3. 不同则重新读取文件,更新缓存
-
-        返回值:记忆全文字符串,由调用方拼接到 System Prompt 末尾
-        """
+        # === 演示:模拟 Agent 写入和读取长期记忆 ===
+        # 确保 MEMORY.md 存在(首次运行时创建)
         if not os.path.exists(MEMORY_FILE):
-            return ""
+            with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+                f.write("# 长期记忆\n\n")
 
-        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
+        # 模拟 Agent 在对话中积累的用户画像
+        append_to_memory("用户叫小明,Python 开发者,3 年经验")
+        append_to_memory("用户偏好 FastAPI + Pandas,不喜欢 SQL")
 
-        # 更新缓存:下次调用时如果 MD5 相同就不再读磁盘
-        # 这里不读磁盘有什么意义?
-        _memory_cache["content"] = content
-        _memory_cache["md5"] = current_md5
-        return content
+        # 读取并展示当前记忆状态
+        memory = load_memory_direct()
+        print(f"当前记忆内容({estimate_tokens(memory)} tokens 估算):")
+        print(memory)
+        print(f"\n是否需要切换 RAG 模式:{should_use_rag()}")
 
 
-    def append_to_memory(memory_text: str) -> None:
+        # 🚀 RAG注入 语义检索后注入 MEMORY.md体积超过时, Dirct注入的成本开始变得不可接受
+
+        from llama_index.core import Document, VectorStoreIndex
+        from llama_index.core.node_parser import SentenceSplitter
+        from llama_index.core.settings import Settings
+        from llama_index.embeddings.openai import OpenAIEmbedding
+        import os, hashlib
+
+        # Cell 2:文档切分(Chunking)
+        content = open(MEMORY_FILE, "r", encoding="utf-8").read()
+
+        # 将整个文件包装成 LlamaIndex Document
+        doc = Document(text=content, metadata={"source": "MEMORY.md"})
+
+        # SentenceSplitter:按句子边界切割
+        # chunk_size=256   → 每块最多 256 个 token
+        # chunk_overlap=32 → 相邻块重叠 32 token,防止语义在边界处断裂
+        splitter = SentenceSplitter(chunk_size=256, chunk_overlap=32)
+        nodes = splitter.get_nodes_from_documents([doc])
+
+        print(f"切分结果:共 {len(nodes)} 个文本块\n")
+        print("=" * 50)
+
+        # Cell 3:对每个 Node 做 Embedding,打印向量形状与前几个维度
+        Settings.embed_model = OpenAIEmbedding(
+            model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
+            api_key=os.getenv("OPENAI_API_KEY"),
+            api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+        )
+
+        print("正在调用 Embedding API,请稍候...\n")
+        # Cell 4:构建向量索引,执行语义检索,展示召回结果的溯源信息
+        # 构建索引(内部自动对所有 Node 做 Embedding 并建立向量数据库)
+        index = VectorStoreIndex(nodes)
+        print("✅ 向量索引构建完成\n")
+
+        # 执行语义检索
+        query = "用户用什么工具做数据处理"
+        retriever = index.as_retriever(similarity_top_k=2)  # 召回最相似的 2 个 Node
+        result_nodes = retriever.retrieve(query)
+        print(f"Query: {query}\n")
+        print("=" * 50)
+        print(f"召回 {len(result_nodes)} 个文本块:\n")
+
+
+        # Cell 5:组装最终注入 LLM 的记忆字符串
+        def format_rag_memory(result_nodes) -> str:
+            """
+            将检索结果格式化为 Markdown 字符串。
+            该字符串会被拼接到 LLM 的 system prompt 头部,
+            让 LLM 在回答时"记得"用户的历史信息。
+            """
+            if not result_nodes:
+                return ""
+            lines = [f"- {n.node.get_text().strip()}" for n in result_nodes]
+            return "## 相关记忆(语义检索)\n" + "\n".join(lines)
+
+
+        injected_memory = format_rag_memory(result_nodes)
+
+        print("最终注入 LLM 的记忆字符串(放入 system prompt):")
+        print("-" * 50)
+        print(injected_memory)
+        print("-" * 50)
+
+        # 模拟拼接 system prompt(实际 Agent 代码中的用法)
+        system_prompt = f"""你是一个智能助手。以下是用户的历史记忆,请结合这些信息回答问题:
+
+        {injected_memory}
+
+        请根据以上记忆,回答用户的问题。
         """
-        向 MEMORY.md 追加一条记忆。
-        写入后立即使缓存失效(md5 置空),确保下次 load 能读到最新内容。
-        """
-        with open(MEMORY_FILE, "a", encoding="utf-8") as f:
-            f.write(f"- {memory_text}\n")
-
-
-    def estimate_tokens(text: str) -> int:
-        """
-        粗估 Token 数(不依赖 tiktoken,零依赖实现)。
-        中文约 1.5 字符/token,英文约 0.75 词/token。
-        生产环境建议用 tiktoken 精确计算。
-        """
-        return int(len(text) / 1.5)
-
-
-    def should_use_rag() -> bool:
-        """
-        判断是否应从 Direct 切换为 RAG 模式。
-        当 MEMORY.md 内容超过 MEMORY_TOKEN_THRESHOLD 时返回 True。
-        调用方根据此结果决定:
-        - False → load_memory_direct() 全文注入 System Prompt
-        - True  → 走 RAG 检索路径,只注入相关片段
-        """
-        content = load_memory_direct()
-        return estimate_tokens(content) > MEMORY_TOKEN_THRESHOLD
-
-
-    # === 演示:模拟 Agent 写入和读取长期记忆 ===
-    # 确保 MEMORY.md 存在(首次运行时创建)
-    if not os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            f.write("# 长期记忆\n\n")
-
-    # 模拟 Agent 在对话中积累的用户画像
-    append_to_memory("用户叫小明,Python 开发者,3 年经验")
-    append_to_memory("用户偏好 FastAPI + Pandas,不喜欢 SQL")
-
-    # 读取并展示当前记忆状态
-    memory = load_memory_direct()
-    print(f"当前记忆内容({estimate_tokens(memory)} tokens 估算):")
-    print(memory)
-    print(f"\n是否需要切换 RAG 模式:{should_use_rag()}")
-
-
-
-
-    # 🚀 RAG注入 语义检索后注入 MEMORY.md体积超过时, Dirct注入的成本开始变得不可接受
-
-    from llama_index.core import Document, VectorStoreIndex
-    from llama_index.core.node_parser import SentenceSplitter
-    from llama_index.core.settings import Settings
-    from llama_index.embeddings.openai import OpenAIEmbedding
-    import os, hashlib
-
-    # Cell 2:文档切分(Chunking)
-    content = open(MEMORY_FILE, "r", encoding="utf-8").read()
-
-    # 将整个文件包装成 LlamaIndex Document
-    doc = Document(text=content, metadata={"source": "MEMORY.md"})
-
-    # SentenceSplitter:按句子边界切割
-    # chunk_size=256   → 每块最多 256 个 token
-    # chunk_overlap=32 → 相邻块重叠 32 token,防止语义在边界处断裂
-    splitter = SentenceSplitter(chunk_size=256, chunk_overlap=32)
-    nodes = splitter.get_nodes_from_documents([doc])
-
-    print(f"切分结果:共 {len(nodes)} 个文本块\n")
-    print("=" * 50)
-
-    # Cell 3:对每个 Node 做 Embedding,打印向量形状与前几个维度
-
-    Settings.embed_model = OpenAIEmbedding(
-        model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        api_base=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-    )
-
-    embed_model = Settings.embed_model
-
-    print("正在调用 Embedding API,请稍候...\n")
-    # Cell 4:构建向量索引,执行语义检索,展示召回结果的溯源信息
-    # 构建索引(内部自动对所有 Node 做 Embedding 并建立向量数据库)
-    index = VectorStoreIndex(nodes)
-    print("✅ 向量索引构建完成\n")
-
-    # 执行语义检索
-    query = "用户用什么工具做数据处理"
-    retriever = index.as_retriever(similarity_top_k=2)  # 召回最相似的 2 个 Node
-    result_nodes = retriever.retrieve(query)
-    print(f"Query: {query}\n")
-    print("=" * 50)
-    print(f"召回 {len(result_nodes)} 个文本块:\n")
-
-
-    # Cell 5:组装最终注入 LLM 的记忆字符串
-    def format_rag_memory(result_nodes) -> str:
-        """
-        将检索结果格式化为 Markdown 字符串。
-        该字符串会被拼接到 LLM 的 system prompt 头部,
-        让 LLM 在回答时"记得"用户的历史信息。
-        """
-        if not result_nodes:
-            return ""
-        lines = [f"- {n.node.get_text().strip()}" for n in result_nodes]
-        return "## 相关记忆(语义检索)\n" + "\n".join(lines)
-
-
-    injected_memory = format_rag_memory(result_nodes)
-
-    print("最终注入 LLM 的记忆字符串(放入 system prompt):")
-    print("-" * 50)
-    print(injected_memory)
-    print("-" * 50)
-
-    # 模拟拼接 system prompt(实际 Agent 代码中的用法)
-    system_prompt = f"""你是一个智能助手。以下是用户的历史记忆,请结合这些信息回答问题:
-
-    {injected_memory}
-
-    请根据以上记忆,回答用户的问题。
-    """
-    print("\n组装后的 system_prompt 示例(前200字):")
-    print(system_prompt[:200], "...")
+        print("\n组装后的 system_prompt 示例(前200字):")
+        print(system_prompt[:200], "...")
 
 
 
     # 🏆 sleep-time agent: 离线记忆重组
-    """
-    实时写入解决了「有价值的信息能及时存入记忆」的问题,但随着时间积累,`MEMORY.md` 会出现新的质量问题:同一个事实被多次写入(「用户喜欢
-    Python」在不同会话中反复出现)、早期的记忆已经过时(用户当时在做 A 项目,现在已经换成 B
-    项目了)、部分记忆措辞混乱需要整理。这些问题无法在实时写入阶段解决,因为实时写入追求的是速度,没有时间做全局扫描。
-
-    sleep-time agent 是解决这个问题的经典模式:Agent 在「非工作时间」(两次对话之间的空闲期)异步运行一个整理任务,对 `MEMORY.md`
-    进行全量扫描、去重、提炼和重组。它不参与实时对话,只做「记忆质量维护」这一件事。
-    """
-
-    # Cell 1:构造一份包含"重复、矛盾、冗余"的脏记忆文件
-    # 目标:为 sleep-time 重组提供有明显整理空间的测试数据
-    MEMORY_FILE = "MEMORY.md"
-
-    # 故意设计以下几类问题(用注释标出,实际文件不含注释):
-    #   [重复] 用户偏好 Pandas 出现了两次
-    #   [矛盾] 用户喜欢 SQL vs 不喜欢 SQL
-    #   [冗余] 用户信息分散在多条而非一条
-    #   [过时] 用户"正在学习 Python"vs"已有 3 年经验"
-
-    dirty_memory = """# 长期记忆
-
-    - 用户叫小明
-    - 用户是 Python 开发者
-    - 用户有大约 3 年的 Python 开发经验
-    - 用户正在学习 Python 基础(过时)
-    - 用户偏好使用 Pandas 做数据处理
-    - 用户不喜欢写 SQL,更喜欢用 Pandas 操作数据
-    - 用户喜欢用 SQL 做数据查询(与上条矛盾)
-    - 用户在开发一个数据分析 API 项目
-    - 用户的项目使用 FastAPI 作为后端框架
-    - 用户正在开发基于 FastAPI 的数据分析接口(与上条重复)
-    - 用户上次讨论了 LangChain RAG 架构
-    - 用户对 LangChain 的 RAG 实现方式很感兴趣(与上条重复)
-    - 用户习惯用 conda 管理 Python 环境
-    - 用户使用 conda 创建虚拟环境(与上条重复)
-    - 用户询问过如何优化向量检索速度
-    - 用户希望部署到云端,询问过 AWS 和阿里云的费用对比
-    - 用户表示预算有限,倾向于选择性价比高的方案
-    """
-
-    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-        f.write(dirty_memory)
-
-    # Cell 2:执行 sleep-time 记忆重组
-    # 流程:读取 MEMORY.md → 构造整理 prompt → 调用 LLM → 备份原文件 → 写回整理结果
-    from langchain_deepseek import ChatDeepSeek
-    from langchain_core.messages import HumanMessage
-    from dotenv import load_dotenv
-    import os
-
-    load_dotenv()
-
-    def create_llm(temperature: float = 0.7) -> ChatDeepSeek:
         """
-        LLM 工厂函数。
-        temperature=0.2:低随机性,保证整理结果稳定、不乱发挥
+        实时写入解决了「有价值的信息能及时存入记忆」的问题,但随着时间积累,`MEMORY.md` 会出现新的质量问题:
+        同一个事实被多次写入(「用户喜欢Python」在不同会话中反复出现)、
+        早期的记忆已经过时(用户当时在做 A 项目,现在已经换成 B项目了)、
+        部分记忆措辞混乱需要整理。
+        这些问题无法在实时写入阶段解决,因为实时写入追求的是速度,没有时间做全局扫描。
+
+        sleep-time agent 是解决这个问题的经典模式:Agent 在「非工作时间」(两次对话之间的空闲期)异步运行一个整理任务,对 `MEMORY.md`
+        进行全量扫描、去重、提炼和重组。它不参与实时对话,只做「记忆质量维护」这一件事。
         """
-        return ChatDeepSeek(
-            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-            base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-            temperature=temperature,
-        )
 
-    # 整理任务用低 temperature,避免 LLM 随机删掉重要条目
-    llm_organizer = create_llm(0.2)
+        # Cell 1:构造一份包含"重复、矛盾、冗余"的脏记忆文件
+        # 目标:为 sleep-time 重组提供有明显整理空间的测试数据
+        MEMORY_FILE = "MEMORY.md"
 
+        # 故意设计以下几类问题(用注释标出,实际文件不含注释):
+        #   [重复] 用户偏好 Pandas 出现了两次
+        #   [矛盾] 用户喜欢 SQL vs 不喜欢 SQL
+        #   [冗余] 用户信息分散在多条而非一条
+        #   [过时] 用户"正在学习 Python"vs"已有 3 年经验"
 
-    def sleep_time_reorganize() -> str:
+        dirty_memory = """# 长期记忆
+
+        - 用户叫小明
+        - 用户是 Python 开发者
+        - 用户有大约 3 年的 Python 开发经验
+        - 用户正在学习 Python 基础(过时)
+        - 用户偏好使用 Pandas 做数据处理
+        - 用户不喜欢写 SQL,更喜欢用 Pandas 操作数据
+        - 用户喜欢用 SQL 做数据查询(与上条矛盾)
+        - 用户在开发一个数据分析 API 项目
+        - 用户的项目使用 FastAPI 作为后端框架
+        - 用户正在开发基于 FastAPI 的数据分析接口(与上条重复)
+        - 用户上次讨论了 LangChain RAG 架构
+        - 用户对 LangChain 的 RAG 实现方式很感兴趣(与上条重复)
+        - 用户习惯用 conda 管理 Python 环境
+        - 用户使用 conda 创建虚拟环境(与上条重复)
+        - 用户询问过如何优化向量检索速度
+        - 用户希望部署到云端,询问过 AWS 和阿里云的费用对比
+        - 用户表示预算有限,倾向于选择性价比高的方案
         """
-        sleep-time 记忆重组主函数。
 
-        整理策略(通过 prompt 指令 LLM 执行):
-        1. 去重:相同含义的条目只保留一条
-        2. 去矛盾:时间靠后或更具体的信息优先
-        3. 去冗余:把分散的同一主题信息合并为一条
-        4. 精炼:每条压缩为一句话
-        5. 限制总量:最多 20 条,强制聚焦核心信息
-        """
-        if not os.path.exists(MEMORY_FILE):
-            return ""
+        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+            f.write(dirty_memory)
+
+        # Cell 2:执行 sleep-time 记忆重组
+        # 流程:读取 MEMORY.md → 构造整理 prompt → 调用 LLM → 备份原文件 → 写回整理结果
+        from langchain_deepseek import ChatDeepSeek
+        from langchain_core.messages import HumanMessage
+        from dotenv import load_dotenv
+        import os
+
+        load_dotenv()
+
+        def create_llm(temperature: float = 0.7) -> ChatDeepSeek:
+            """
+            LLM 工厂函数。
+            temperature=0.2:低随机性,保证整理结果稳定、不乱发挥
+            """
+            return ChatDeepSeek(
+                model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+                base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+                temperature=temperature,
+            )
+
+        # 整理任务用低 temperature,避免 LLM 随机删掉重要条目
+        llm_organizer = create_llm(0.2)
+
+
+        def sleep_time_reorganize() -> str:
+            """
+            sleep-time 记忆重组主函数。
+
+            整理策略(通过 prompt 指令 LLM 执行):
+            1. 去重:相同含义的条目只保留一条
+            2. 去矛盾:时间靠后或更具体的信息优先
+            3. 去冗余:把分散的同一主题信息合并为一条
+            4. 精炼:每条压缩为一句话
+            5. 限制总量:最多 20 条,强制聚焦核心信息
+            """
+            if not os.path.exists(MEMORY_FILE):
+                return ""
+
+            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+                current_memory = f.read().strip()
+
+            # 内容太少(<100字符)说明刚写入,不值得整理
+            if not current_memory or len(current_memory) < 100:
+                return current_memory
+
+            # ---- 构造整理 prompt ----
+            # 关键:用明确的规则约束 LLM 的整理行为,避免随意删改
+            prompt = f"""你是一个记忆整理助手。请对以下 Agent 长期记忆进行整理:
+
+            整理规则:
+            1. 去除重复信息,合并相似条目
+            2. 删除过时或矛盾的信息(保留更新的、更具体的)
+            3. 将每条记忆精炼为一句话,以 '- ' 开头
+            4. 保留文件头 '# 长期记忆'
+            5. 最多保留 20 条最重要的记忆
+
+            当前记忆:
+            {current_memory}
+
+            请直接输出整理后的完整 Markdown 内容,不要添加任何解释。"""
+
+            print("正在调用 LLM 进行记忆整理,请稍候...\n")
+            result = llm_organizer.invoke([HumanMessage(content=prompt)])
+            reorganized = result.content.strip()
+
+            # ---- 写回前备份原始内容 ----
+            # 防止 LLM 整理出错时无法恢复
+            backup_path = MEMORY_FILE + ".bak"
+            with open(backup_path, "w", encoding="utf-8") as f:
+                f.write(current_memory)
+
+            # 写回整理后的内容
+            with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+                f.write(reorganized)
+
+            before_lines = current_memory.count("\n")
+            after_lines  = reorganized.count("\n")
+            print(f" 整理完成:{before_lines} 行 → {after_lines} 行(压缩率 {(1 - after_lines/before_lines)*100:.0f}%)")
+            print(f" 原始备份:{backup_path}")
+            return reorganized
+
+        reorganized = sleep_time_reorganize()
+
+        # 实际开发中这里这个主进程开一个子进程直接调用 
+        import threading
+        import time
+
+        def start_background_task():
+            def loop():
+                while True:
+                    sleep_time_recoranize()
+                    time.sleep(6*3600) # 6小时跑一次
+            t = threading.Thread(target=loop, daemon=True)
+            t.start()    
+
+        if __name__ == "__main__":
+            start_background_tasks()  # 后台线程跑整理任务
+            run_agent()               # 主线程跑你的 Agent    
+
+
+        # Cell 3:整理前后对比,量化整理效果
+
+        # 读取备份(整理前)和当前文件(整理后)
+        with open(MEMORY_FILE + ".bak", "r", encoding="utf-8") as f:
+            before = f.read().strip()
 
         with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-            current_memory = f.read().strip()
+            after = f.read().strip()
 
-        # 内容太少(<100字符)说明刚写入,不值得整理
-        if not current_memory or len(current_memory) < 100:
-            return current_memory
+        # 提取条目列表(以"- "开头的行)
+        before_items = [l.strip() for l in before.split("\n") if l.strip().startswith("- ")]
+        after_items  = [l.strip() for l in after.split("\n")  if l.strip().startswith("- ")]
 
-        # ---- 构造整理 prompt ----
-        # 关键:用明确的规则约束 LLM 的整理行为,避免随意删改
-        prompt = f"""你是一个记忆整理助手。请对以下 Agent 长期记忆进行整理:
+        # ---- 打印对比报告 ----
+        print("=" * 60)
+        print(" sleep-time 记忆重组效果对比")
+        print("=" * 60)
 
-        整理规则:
-        1. 去除重复信息,合并相似条目
-        2. 删除过时或矛盾的信息(保留更新的、更具体的)
-        3. 将每条记忆精炼为一句话,以 '- ' 开头
-        4. 保留文件头 '# 长期记忆'
-        5. 最多保留 20 条最重要的记忆
+        print(f"\n【数量变化】")
+        print(f"  整理前:{len(before_items)} 条")
+        print(f"  整理后:{len(after_items)} 条")
+        print(f"  减少了:{len(before_items) - len(after_items)} 条({(1 - len(after_items)/len(before_items))*100:.0f}% 压缩)")
 
-        当前记忆:
-        {current_memory}
+        print(f"\n【字符量变化】")
+        print(f"  整理前:{len(before)} 字符")
+        print(f"  整理后:{len(after)} 字符")
 
-        请直接输出整理后的完整 Markdown 内容,不要添加任何解释。"""
+        print("\n" + "-" * 60)
+        print("整理前(原始脏记忆):")
+        print("-" * 60)
+        for i, item in enumerate(before_items, 1):
+            print(f"  {i:2d}. {item}")
 
-        print("正在调用 LLM 进行记忆整理,请稍候...\n")
-        result = llm_organizer.invoke([HumanMessage(content=prompt)])
-        reorganized = result.content.strip()
+        print("\n" + "-" * 60)
+        print("整理后(LLM 提炼结果):")
+        print("-" * 60)
+        for i, item in enumerate(after_items, 1):
+            print(f"  {i:2d}. {item}")
 
-        # ---- 写回前备份原始内容 ----
-        # 防止 LLM 整理出错时无法恢复
-        backup_path = MEMORY_FILE + ".bak"
-        with open(backup_path, "w", encoding="utf-8") as f:
-            f.write(current_memory)
-
-        # 写回整理后的内容
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            f.write(reorganized)
-
-        before_lines = current_memory.count("\n")
-        after_lines  = reorganized.count("\n")
-        print(f" 整理完成:{before_lines} 行 → {after_lines} 行(压缩率 {(1 - after_lines/before_lines)*100:.0f}%)")
-        print(f" 原始备份:{backup_path}")
-        return reorganized
-
-    reorganized = sleep_time_reorganize()
-
-
-    # Cell 3:整理前后对比,量化整理效果
-
-    # 读取备份(整理前)和当前文件(整理后)
-    with open(MEMORY_FILE + ".bak", "r", encoding="utf-8") as f:
-        before = f.read().strip()
-
-    with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-        after = f.read().strip()
-
-    # 提取条目列表(以"- "开头的行)
-    before_items = [l.strip() for l in before.split("\n") if l.strip().startswith("- ")]
-    after_items  = [l.strip() for l in after.split("\n")  if l.strip().startswith("- ")]
-
-    # ---- 打印对比报告 ----
-    print("=" * 60)
-    print(" sleep-time 记忆重组效果对比")
-    print("=" * 60)
-
-    print(f"\n【数量变化】")
-    print(f"  整理前:{len(before_items)} 条")
-    print(f"  整理后:{len(after_items)} 条")
-    print(f"  减少了:{len(before_items) - len(after_items)} 条({(1 - len(after_items)/len(before_items))*100:.0f}% 压缩)")
-
-    print(f"\n【字符量变化】")
-    print(f"  整理前:{len(before)} 字符")
-    print(f"  整理后:{len(after)} 字符")
-
-    print("\n" + "-" * 60)
-    print("整理前(原始脏记忆):")
-    print("-" * 60)
-    for i, item in enumerate(before_items, 1):
-        print(f"  {i:2d}. {item}")
-
-    print("\n" + "-" * 60)
-    print("整理后(LLM 提炼结果):")
-    print("-" * 60)
-    for i, item in enumerate(after_items, 1):
-        print(f"  {i:2d}. {item}")
-
-    print("\n" + "-" * 60)
-    print("  预期效果验证:")
-    print("   重复条目(Pandas/FastAPI/conda/LangChain)是否合并为 1 条?")
-    print("   矛盾条目(喜欢SQL vs 不喜欢SQL)是否保留了正确的一条?")
-    print("   过时条目(正在学习Python基础)是否被删除?")
-    print("   分散的用户信息是否合并为一条?")
+        print("\n" + "-" * 60)
+        print("  预期效果验证:")
+        print("   重复条目(Pandas/FastAPI/conda/LangChain)是否合并为 1 条?")
+        print("   矛盾条目(喜欢SQL vs 不喜欢SQL)是否保留了正确的一条?")
+        print("   过时条目(正在学习Python基础)是否被删除?")
+        print("   分散的用户信息是否合并为一条?")
 
 
     # 🤖 短期与长期记忆协同--Memory Manager架构
-    import json, os
-    from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+        import json, os
+        from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-    class MemoryManagerSkeleton:
-        """最小可运行的 MemoryManager 骨架:只实现三阶段主链路"""
+        class MemoryManagerSkeleton:
+            """最小可运行的 MemoryManager 骨架:只实现三阶段主链路"""
 
-        def __init__(self, session_dir="sessions", memory_file="MEMORY.md", max_history=20):
-            self.session_dir = session_dir
-            self.memory_file = memory_file
-            self.max_history = max_history
-            os.makedirs(session_dir, exist_ok=True)
+            def __init__(self, session_dir="sessions", memory_file="MEMORY.md", max_history=20):
+                self.session_dir = session_dir
+                self.memory_file = memory_file
+                self.max_history = max_history
+                os.makedirs(session_dir, exist_ok=True)
 
-        def load(self, session_id: str, user_query: str) -> tuple[dict, str]:
-            """阶段一:加载短期记忆(session)+ 长期记忆(MEMORY.md 全文)"""
-            # 短期记忆:从 JSON 文件加载
-            path = os.path.join(self.session_dir, f"{session_id}.json")
-            if os.path.exists(path):
-                with open(path, "r", encoding="utf-8") as f:
-                    session = json.load(f)
-            else:
-                session = {"messages": [], "compressed_context": ""}
+            def load(self, session_id: str, user_query: str) -> tuple[dict, str]:
+                """阶段一:加载短期记忆(session)+ 长期记忆(MEMORY.md 全文)"""
+                # 短期记忆:从 JSON 文件加载
+                path = os.path.join(self.session_dir, f"{session_id}.json")
+                if os.path.exists(path):
+                    with open(path, "r", encoding="utf-8") as f:
+                        session = json.load(f)
+                else:
+                    session = {"messages": [], "compressed_context": ""}
 
-            # 长期记忆:Direct 全文读取(骨架版不含 RAG 切换)
-            long_term = ""
-            if os.path.exists(self.memory_file):
-                with open(self.memory_file, "r", encoding="utf-8") as f:
-                    long_term = f.read().strip()
+                # 长期记忆:Direct 全文读取(骨架版不含 RAG 切换)
+                long_term = ""
+                if os.path.exists(self.memory_file):
+                    with open(self.memory_file, "r", encoding="utf-8") as f:
+                        long_term = f.read().strip()
 
-            return session, long_term
+                return session, long_term
 
-        def get_messages_for_llm(self, session: dict, long_term_context: str,
-                                  system_base: str = "你是一个有记忆能力的 AI 助手。") -> list:
-            """阶段二:构造 LangChain Message 列表(直接传给 ChatDeepSeek)"""
-            messages = []
+            def get_messages_for_llm(self, session: dict, long_term_context: str,
+                                      system_base: str = "你是一个有记忆能力的 AI 助手。") -> list:
+                """阶段二:构造 LangChain Message 列表(直接传给 ChatDeepSeek)"""
+                messages = []
 
-            # System Prompt = 基础指令 + 长期记忆
-            system_content = system_base
-            if long_term_context:
-                system_content += f"\n\n## 关于用户的长期记忆\n{long_term_context}"
-            messages.append(SystemMessage(content=system_content))
+                # System Prompt = 基础指令 + 长期记忆
+                system_content = system_base
+                if long_term_context:
+                    system_content += f"\n\n## 关于用户的长期记忆\n{long_term_context}"
+                messages.append(SystemMessage(content=system_content))
 
-            # 压缩摘要(若有)
-            if session.get("compressed_context"):
-                messages.append(SystemMessage(content=f"## 早期对话摘要\n{session['compressed_context']}"))
+                # 压缩摘要(若有)
+                if session.get("compressed_context"):
+                    messages.append(SystemMessage(content=f"## 早期对话摘要\n{session['compressed_context']}"))
 
-            # 最近 N 条对话历史(dict → LangChain Message)
-            for msg in session["messages"][-self.max_history:]:
-                if msg["role"] == "user":
-                    messages.append(HumanMessage(content=msg["content"]))
-                elif msg["role"] == "assistant":
-                    messages.append(AIMessage(content=msg["content"]))
+                # 最近 N 条对话历史(dict → LangChain Message)
+                for msg in session["messages"][-self.max_history:]:
+                    if msg["role"] == "user":
+                        messages.append(HumanMessage(content=msg["content"]))
+                    elif msg["role"] == "assistant":
+                        messages.append(AIMessage(content=msg["content"]))
 
-            return messages
+                return messages
 
-        def update(self, session_id: str, session: dict,
-                   user_input: str, assistant_response: str) -> None:
-            """阶段三:追加本轮对话 + 保存 session"""
-            session["messages"].append({"role": "user", "content": user_input})
-            session["messages"].append({"role": "assistant", "content": assistant_response})
+            def update(self, session_id: str, session: dict,
+                       user_input: str, assistant_response: str) -> None:
+                """阶段三:追加本轮对话 + 保存 session"""
+                session["messages"].append({"role": "user", "content": user_input})
+                session["messages"].append({"role": "assistant", "content": assistant_response})
 
-            # 保存到文件
-            path = os.path.join(self.session_dir, f"{session_id}.json")
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(session, f, ensure_ascii=False, indent=2)
+                # 保存到文件
+                path = os.path.join(self.session_dir, f"{session_id}.json")
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(session, f, ensure_ascii=False, indent=2)
 
 
 
-    # ── 验证三阶段主链路 ──────────────────────────────────────
-    mm = MemoryManagerSkeleton(session_dir="./sessions", memory_file="MEMORY.md")
+        # ── 验证三阶段主链路 ──────────────────────────────────────
+        mm = MemoryManagerSkeleton(session_dir="./sessions", memory_file="MEMORY.md")
 
-    # 阶段一:加载(首次为空)
-    session, long_term = mm.load("test_session", "你好")
-    print(f"短期记忆:{len(session['messages'])} 条消息")
-    print(f"长期记忆:{'有内容' if long_term else '空'}")
+        # 阶段一:加载(首次为空)
+        session, long_term = mm.load("test_session", "你好")
+        print(f"短期记忆:{len(session['messages'])} 条消息")
+        print(f"长期记忆:{'有内容' if long_term else '空'}")
 
-    # 阶段二:构造 LLM 输入
-    messages = mm.get_messages_for_llm(session, long_term)
-    print(f"\n传给 LLM 的消息数:{len(messages)}")
-    for msg in messages:
-        print(f"  [{type(msg).__name__}] {msg.content[:50]}...")
+        # 阶段二:构造 LLM 输入
+        messages = mm.get_messages_for_llm(session, long_term)
+        print(f"\n传给 LLM 的消息数:{len(messages)}")
+        for msg in messages:
+            print(f"  [{type(msg).__name__}] {msg.content[:50]}...")
 
-    # 阶段三:模拟更新
-    mm.update("test_session", session, "我叫小明", "你好小明!")
-    print(f"\n更新后消息数:{len(session['messages'])}")
+        # 阶段三:模拟更新
+        mm.update("test_session", session, "我叫小明", "你好小明!")
+        print(f"\n更新后消息数:{len(session['messages'])}")
 
-    # 验证持久化:重新 load 看数据是否保存
-    session2, _ = mm.load("test_session", "")
-    print(f"重新加载后消息数:{len(session2['messages'])}(持久化验证通过)")
+        # 验证持久化:重新 load 看数据是否保存
+        session2, _ = mm.load("test_session", "")
+        print(f"重新加载后消息数:{len(session2['messages'])}(持久化验证通过)")
 
-    # 清理
-    import shutil
-    shutil.rmtree("/tmp/sessions", ignore_errors=True)
+        # 清理
+        import shutil
+        shutil.rmtree("/tmp/sessions", ignore_errors=True)
 
 
 # ✍ Mem0
@@ -5011,6 +5016,15 @@
 
         # IndexFlatIP：内积距离（配合归一化向量 = 余弦相似度）
         index_ip = faiss.IndexFlatIP(dimension)
+
+    # 🚀 预处理归一化——提升精度的小技巧
+        # FAISS 的 METRIC_INNER_PRODUCT(内积)配合归一化向量 = 余弦相似度
+        # 不归一化的话,长向量的内积天然偏大,搜索结果会偏好长文本
+        faiss.normalize_L2(vecs)  # 原地修改,每条向量归一化为单位长度
+        # 查询向量也要归一化:
+        faiss.normalize_L2(query)
+        # 归一化后,内积和余弦相似度等价,精度提升明显
+        # 注意:如果用的是 L2 距离(Euclidean),不需要归一化
         # IndexFlatL2：欧氏距离（适合聚类场景）
         index_l2 = faiss.IndexFlatL2(dimension)
 
@@ -5076,6 +5090,17 @@
         for i, (rid, dist) in enumerate(zip(result_ids[0], distances[0])):
             print(f"  #{i+1}: ID={rid} (dist={dist:.4f})")
 
+    # 🚀 IndexFactory——一行字符串建索引（生产最爱）
+        # 不用手写各种 Index 类,一条字符串搞定
+        # 格式: "算法名参数,量化方式参数"
+        index = faiss.index_factory(dim, "Flat", faiss.METRIC_INNER_PRODUCT)
+        index = faiss.index_factory(dim, "IVF100,PQ32", faiss.METRIC_INNER_PRODUCT)
+        index = faiss.index_factory(dim, "HNSW32", faiss.METRIC_INNER_PRODUCT)
+        # IVF+SQ8 省内存: "IVF256,SQ8"
+        # IVF+PQ 极致压缩: "IVF100,PQ32"
+        # HNSW 最高精度: "HNSW32"
+        # 注意:用 index_factory 后需手动 train(如果是 IVF/PQ 等需要训练的索引)
+
     # 🚀 索引保存与加载
         import os
         index_path = "./faiss_index.bin"
@@ -5103,8 +5128,177 @@
         #   FAISS：性能优先，无状态（需自己管存储 + 原始文本），适合百万到亿级
 
 
-# 🍅 milvus 向量数据库
+# 🍅 Milvus — 生产级向量数据库
 # ====================================================================================================================================
+
+    # 📌 Milvus 定位
+    #    vs Chroma/FAISS:
+    #      Chroma → 原型玩具,开箱即用,<100万条
+    #      FAISS  → 算法库(无状态),需自己管存储,百万到亿级
+    #      Milvus → 完整分布式向量数据库,自带 CRUD/权限/高可用,百万到亿级生产首选
+
+    # 🚀 索引算法全景
+    #    决定了检索速度和精度的取舍。Milvus 支持以下几大类:
+
+    # ─── 一、暴力遍历:不建索引,逐条算距离 ───
+    #   FLAT
+    #     唯一不建索引的"索引"。数据量小(<1万)时反而最快。
+    #     适合:原型验证、小数据集、数据量不确定时兜底
+
+    # ─── 二、基于量化的:省内存用精度换速度 ───
+    #   IVF_FLAT  (倒排文件)
+    #     把向量聚类成 N 个桶,搜时先找最近的几个桶,再暴力搜。
+    #     参数: nlist=桶数量,  nprobe=搜几个桶(越大越准越慢)
+    #     适合:1万~50万条,精度和速度的平衡选择
+
+    #   IVF_SQ8   (量化版)
+    #     浮点数压缩成 8bit 整数,内存省 4 倍,精度略降。
+    #     适合:50万~500万条,内存有限但精度不能太差
+
+    #   IVF_PQ    (乘积量化)
+    #     向量切段分别压缩,内存省 N 倍(取决于 m 参数),精度降更多。
+    #     参数: m=切几段, nbit=每段几个bit
+    #     适合:500万+,内存极度紧张的大规模场景
+    #     压缩率: IVF_PQ > IVF_SQ8 > IVF_FLAT
+
+    # ─── 三、基于图的:精度最高的王者 ───
+    #   HNSW (分层小世界图)
+    #     多层图结构:顶层粗搜定位,底层精搜。精度+速度的王者。
+    #     参数: M=每个节点邻居数(越大越准越慢,默认16)
+    #           efConstruction=建图搜索范围(越大图越好但建图慢,默认200)
+    #           ef=搜索候选数(越大越准越慢,默认10)
+    #     适合:追求最高精度,内存够用(相比量化类索引更耗内存)
+
+    #   HNSW_SQ8  (量化版 HNSW)
+    #     HNSW + SQ8 量化,省内存的同时保留不错的精度。
+
+    # ─── 四、其他(特定场景) ───
+    #   GPU_IVF_FLAT   → IVF_FLAT 的 GPU 版,几百万级别飞一般
+    #   BIN_FLAT/BIN_IVF_FLAT → 二进制向量专用(人脸匹配等)
+    #   DISKANN        → 基于 SSD 的索引,内存不够时把索引放磁盘
+    #   AUTOINDEX      → Milvus Cloud 自动选,省心但不灵活
+
+    # 🚀 选型速查表
+    #   ┌────────────────┬────────────────┬─────────────────────────────┐
+    #   │ 数据量          │ 推荐索引        │ 理由                        │
+    #   ├────────────────┼────────────────┼─────────────────────────────┤
+    #   │ < 1万           │ FLAT           │ 不建索引最省事               │
+    #   │ 1万 ~ 50万      │ IVF_FLAT       │ 快,精度还行                 │
+    #   │ 50万 ~ 500万    │ IVF_SQ8        │ 省内存,精度可接受            │
+    #   │ 500万+          │ IVF_PQ / HNSW  │ HNSW精度最高,PQ最省内存      │
+    #   │ 追求最高精度     │ HNSW           │ 稳稳的王者                  │
+    #   │ 内存很紧张       │ IVF_PQ / IVF_SQ8 │ 量化压缩省几倍内存         │
+    #   │ 有 GPU          │ GPU_IVF_FLAT   │ 飞一般的感觉                │
+    #   └────────────────┴────────────────┴─────────────────────────────┘
+
+    # 🎯 标准使用流程(创建 → 索引 → 写入 → 搜索)
+    #   示例:搜索新闻文章
+    from pymilvus import MilvusClient, DataType
+    client = MilvusClient(uri="http://localhost:19530", token="root:root")
+
+    # ── Step 1: 定义 Schema ──
+    schema = MilvusClient.create_schema(description="文章集合", enable_dynamic_field=True)
+    schema.add_field(name="id", datatype=DataType.INT64, is_primary=True, auto_id=True)
+    schema.add_field(name="title", datatype=DataType.VARCHAR, max_length=256)
+    schema.add_field(name="content", datatype=DataType.VARCHAR, max_length=65535)
+    schema.add_field(name="content_vector", datatype=DataType.FLOAT_VECTOR, dim=1024)
+    # 标量数据类型: VARCHAR(短文本) TEXT(长文本) INT64/FLOAT(数值)
+    # BOOL(布尔) JSON(半结构化) ARRAY(数组) BLOB(二进制) GEOMETRY(地理位置)
+
+    # ── Step 2: 配置索引(以 HNSW 为例) ──
+    index_params = client.prepare_index_params()
+    index_params.add_index(
+        field_name="content_vector",
+        index_type="HNSW",           # 索引算法
+        metric_type="COSINE",        # 距离度量: COSINE / L2 / IP(内积)
+        params={"M": 128, "efConstruction": 4096},
+    )
+
+    # ── Step 3: 创建集合 ──
+    client.create_collection(
+        collection_name="articles",
+        schema=schema,
+        index_params=index_params,
+    )
+    client.load_collection("articles")
+
+    # ── Step 4: 写入 ──
+    data = [
+        {"title": "AI 入门", "content": "人工智能基础概念...", "content_vector": [0.1]*1024},
+        {"title": "Python 教程", "content": "Python 入门指南...", "content_vector": [0.2]*1024},
+    ]
+    client.insert(collection_name="articles", data=data)
+
+    # ── Step 5: 搜索 ──
+    query_vector = [0.15]*1024
+    res = client.search(
+        collection_name="articles",
+        data=[query_vector],
+        anns_field="content_vector",
+        limit=3,
+        search_params={"metric_type": "COSINE"},
+        output_fields=["title", "content"],
+    )
+    for hits in res:
+        for hit in hits:
+            print(f"id:{hit['id']}, distance: {hit['distance']:.4f}")
+
+
+    # 🚀 高级功能速查
+    # ── 搜索变体 ──
+        # 分区搜索  : client.search(..., partition_names=["p1"])
+        # 分页搜索  : client.search(..., limit=3, offset=10)
+        # 排序搜索  : client.search(..., order_by_fields=[{"field":"price","order":"asc"}])
+        # 过滤搜索  : client.search(..., filter='price > 100')
+        # 批量搜索  : client.search(data=[vec1, vec2, ...], ...)
+
+    # ── 增删改 ──
+        # 更新: client.upsert("articles", data=[...])
+        # 合并更新: client.upsert("articles", data=[...], partial_update=True)
+        # 批量删除: client.delete("articles", filter='color in ["red","blue"]')
+        # 主键删除: client.delete("articles", ids=[19, 20])
+        # 分区删除: client.delete("articles", ids=[19, 20], partition_name="p1")
+
+    # ── 管理 ──
+        # 别名: client.create_alias("articles", alias="production_articles")
+        # 数据库: client.create_database("my_project") / .use_database() / .drop_database()
+        # 修改字段: client.alter_collection_field("articles", "title", {"max_length":256})
+        # 新增字段: client.add_collection_field("articles", "priority_level", ...)
+        # 查看: client.describe_collection("articles")
+
+    # ── 数组/JSON 高级过滤 ──
+        # ARRAY_CONTAINS(tags, 'rock')
+        # ARRAY_LENGTH(tags) > 2
+        # ARRAY_CONTAINS_ANY(tags, ['rock', 'pop'])
+
+    # ── TTL(自动过期) ──
+        # 集合级: create_collection(..., properties={"collection.ttl.seconds": 1209600})
+        # 实体级: 加 TIMESTAMPTZ 字段,设置 properties={"ttl_field": "expire_at"}
+        # 取消:   client.drop_collection_properties(..., ["collection.ttl.seconds"])
+
+    # 🚀 特殊场景
+    # ── 地理位置搜索 ──
+        # st_within(geo, 'POLYGON((...))')  /  st_dwithin(geo, 'POINT(x y)', radius)
+        # 空间索引: index_type="RTREE"
+    # ── 稀疏向量 ──
+        # schema.add_field("sparse_vector", datatype=DataType.SPARSE_FLOAT_VECTOR)
+    # ── 文本分析器 ──
+        # 分词器: standard / jieba / whitespace
+        # 过滤器: lowercase, stop, length, regex, cn_char_only ...
+    # ── IVF_FLAT 参数参考 ──
+        # nlist=桶数量, nprobe=搜索桶数
+    # ── IVF_PQ 参数参考 ──
+        # m=子空间数, nbit=每段bit数
+
+    # ⚡ 分区使用流程
+        # 创建: client.create_partition("articles", "p1")
+        # 删除前释放: client.release_partitions("articles", ["p1"])
+        # 删除: client.drop_partition("articles", "p1")
+        # 插入: client.insert("articles", data, partition_name="p1")
+
+    # ⚡ TTL 转换流程
+        # 集合级→实体级: 删集合TTL属性,加TIMESTAMPTZ字段,设ttl_field
+        # 实体级→集合级: 删ttl_field,加collection.ttl.seconds属性
 
     from pymilvus import MilvusClient, DataType
 
@@ -10405,12 +10599,10 @@
     # 一句话:Ragas 就是你的 RAG 质检员。faithfulness 防幻觉,
     # context_recall 看检索,answer_relevancy 看生成对不对路。
     # 配上 Langfuse 就是完整的 eval + observe 方案。
-    """
 
 
 # 📈 Langfuse: AI应用的链路追踪与观测体系
 # ====================================================================================================================================
-    """
     from langfuse import get_client, propagate_attributes
     from langfuse.callback import CallbackHandler
     import os
@@ -10617,7 +10809,6 @@
 
 
     # ⚖打分与评估
-    #--------------------------------------------------------------------------
     # 🤔人工评分
     # 在代码里记录评分
     trace = langfuse.trace(name="qa_chat", user_id="user_001")
@@ -10702,6 +10893,15 @@
 # 📷 Langgraph
 # ====================================================================================================================================
 
+    # ⚠️ 版本说明
+        # 当前安装: langgraph==1.2.4 (2026.7)
+        # 如果你的版本不同,请注意以下版本差异:
+        # - v0.x → v1.0: MessageGraph 已废弃, set_finish_point 已废弃
+        # - v1.0+ : 推荐使用 Command API + interrupt() 替代 interrupt_before
+        # - v1.1+ : Functional API (@entrypoint / @task) 可用
+        # - v1.2+ : Persistence API 统一化
+        # 以下标注了 ⚠️ 的内容表示在更高版本中可能不兼容
+
     # 🚀 Reducer函数机制
         # LangGraph内部原理是:State中的每个key都有自己独立的Reducer函数,通过指定的reducer函数应用判断值更新
 
@@ -10777,16 +10977,17 @@
 
             result = graph.invoke(input_message)
 
-    # 🚀 MessageGraph
-        from langgraph.graph.message import REMOVE_ALL_MESSAGES, MessageGraph
-        builder = MessageGraph()
-        builder.add_node("chatbot", lambda state: [("assistant", "你好,最帅气的人!")])
-        builder.set_entry_point("chatbot")
-        builder.set_finish_point("chatbot")
-        graph = builder.compile()
-        graph.invoke([("user", "你好,请你介绍一下你自己.")])
-
-
+    # 🚀 MessageGraph ⚠️ 已废弃
+        # 
+        # MessageGraph 在 LangGraph 1.0.0 中已废弃,将在 2.0.0 移除
+        # 替代方案:直接用 StateGraph + add_messages
+        # 
+        # ❌ 旧版(不再使用):
+        #   from langgraph.graph.message import MessageGraph
+        #   builder = MessageGraph()
+        #   builder.add_node(...)
+        #
+        # ✅ 新版(推荐):
         from typing import Annotated, TypedDict
         from langgraph.graph import StateGraph, START, END
         from langgraph.graph.message import add_messages
@@ -10797,8 +10998,7 @@
         graph_builder = StateGraph(State)
 
     # 🎯 路由代理
-        from langgraph.graph import START, StateGraph, END
-        from langgraph.graph import StateGraph
+        from langgraph.graph import StateGraph, START, END
 
         def node_a(state):
             return {"x": state["x"] + 1}
@@ -10809,7 +11009,7 @@
         def node_c(state):
             return {"x": state["x"] + 1}
 
-        def routing_function():
+        def routing_function(state):
             if state["x"] == 10:
                 return True
             else:
@@ -10821,7 +11021,9 @@
         builder.add_node("node_b", node_b)
         builder.add_node("node_c", node_c)
 
-        builder.set_entry_point("node_a")
+        # ⚠️ set_entry_point 仍可用,但推荐用 add_edge(START, node)
+        # builder.set_entry_point("node_a")  # 旧写法
+        builder.add_edge(START, "node_a")  # ✅ 新版推荐写法
 
         # 构建节点之间的边
         builder.add_conditional_edges("node_a", routing_function, {True: "node_b", False: "node_c"})
@@ -10842,6 +11044,19 @@
         - 输出解析器:采用后处理的方法从大模型的响应中提取结构化数据
         - 工具调用:利用一些内置工具调用功能来生成结构化输出
         """
+
+    # 💡 小知识: StateGraph 初始化参数
+        # StateGraph(state_schema, context_schema=None, input_schema=None, output_schema=None)
+        # - state_schema: 图的状态模式(必填)
+        # - context_schema: 运行上下文(可选,现在更推荐直接用 Command/Store)
+        # - input_schema: 定义图入口接收的数据结构
+        # - output_schema: 定义图最终的输出数据结构
+        #
+        # ✅ 推荐的分层 State 实践:
+        #   class OverallState(TypedDict):  # 全局共享
+        #       messages: Annotated[list, add_messages]
+        #   class PrivateState(TypedDict):  # 节点私有
+        #       internal_cache: str
 
     # 🚀 提示工程
         from langchain_core.prompts import ChatPromptTemplate
@@ -11104,7 +11319,7 @@
               "num": 1,
             })
             headers = {
-              'X-API-KEY': 'fb165ecfaaab69a115ccae620c21576980309eed',
+              'X-API-KEY': os.getenv('SERPER_API_KEY', 'your-key-here'),  # ⚠️ 改为环境变量,不要硬编码
               'Content-Type': 'application/json'
             }
 
@@ -11414,7 +11629,7 @@
               "num": 1,
             })
             headers = {
-              'X-API-KEY': 'cd872fca99047eb9165242365c65b858bc8970c0',
+              'X-API-KEY': os.getenv('SERPER_API_KEY', 'your-key-here'),  # ⚠️ 改为环境变量
               'Content-Type': 'application/json'
             }
 
@@ -11592,7 +11807,18 @@
                     if msg.tool_call_chunks:
                         print(gathered.tool_calls)
 
-    # 💾 LangGraph长短期记忆实现机制及检查点的使用
+    # 💾 LangGraph检查点(Checkpoint)机制 — 短期记忆
+        # LangGraph 的检查点(checkpoint)机制是跨轮次对话记忆的基础。
+        # 每执行一个节点后,LangGraph 自动保存状态快照到 checkpointer。
+        # 使用 thread_id 区分不同对话线程,实现多轮对话记忆。
+
+        # 当前支持的 checkpointer 类型:
+        # - MemorySaver (内存): 开发测试用,进程重启后丢失
+        # - SqliteSaver (SQLite): 单机持久化,适合原型
+        # - PostgresSaver (PostgreSQL): 生产推荐,支持并发
+        # - RedisSaver (Redis): 低延迟场景
+
+    # 💾 LangGraph长短期记忆实现机制及检查点的使用(基础)
         import getpass
         import os
         from langchain_openai import ChatOpenAI
@@ -11668,80 +11894,22 @@
 
         from langgraph.checkpoint.sqlite import SqliteSaver
 
-        # 创建一个内存中的检查点
-        # memory = SqliteSaver.from_conn_string(":memory:") # :memory: 是一个固定参数,表示这个sqliteSaver保存在内存中ss
+        # 📌 关键:大部分场景你不需要手动调用 checkpointer.put/list
+        #    只要在 compile() 时传入 checkpointer,
+        #    LangGraph 会自动管理 checkpoint 的保存和恢复。
+        #
+        #    下面演示的是 手动操作 checkpoint 的低级 API,
+        #    了解原理即可,生产代码中极少用到。
 
-        # 构建checkpointer
-        # 这里为了演示`SqliteSaver`的执行原理,我们手动构建一个测试的`checkpointer`,其默认实现的是从`State`中进行提取。
-        checkpoint_data = {
-            "thread_id": "muyu123",
-            "thread_ts": "2024-10-30T07:23:38.656547+00:00",
-            "checkpoint": {
-                "id": "1ef968fe-1eb4-6049-bfff",
-            },
-            "metadata": {"timestamp": "2024-10-30T07:23:38.656547+00:00"}
-        }
-
-        # 存储checkpointer
         with SqliteSaver.from_conn_string(":memory:") as memory:
-            # 保存检查点,包括时间戳
-            saved_config = memory.put(
-                config={"configurable":
-                    {"thread_id": checkpoint_data["thread_id"], "thread_ts": checkpoint_data["thread_ts"], "checkpoint_ns": ""}},
-                checkpoint=checkpoint_data["checkpoint"],
-                metadata=checkpoint_data["metadata"],
-                new_versions= {"writes": {"key": "value"}}
-            )
+            pass  # 实际使用: checkpointer=SqliteSaver.from_conn_string("checkpoints.db")
 
-        # 除此之外,还可以通过list方法查看thread_id下所有检查点信息
-        with SqliteSaver.from_conn_string(":memory:") as memory:
-            # 保存检查点,包括时间戳
-            saved_config = memory.put(
-                config={"configurable": {"thread_id": checkpoint_data["thread_id"], "thread_ts": checkpoint_data["thread_ts"], "checkpoint_ns": ""}},
-                checkpoint=checkpoint_data["checkpoint"],
-                metadata=checkpoint_data["metadata"],
-                new_versions= {"writes": {"key": "value"}}
-            )
-
-            # 检索检查点的数据
-            config = {"configurable": {"thread_id": checkpoint_data["thread_id"]}}
-
-            # 获取给定 thread_id 的所有检查点
-            checkpoints = list(memory.list(config))
-            for checkpoint in checkpoints:
-                print(checkpoint)
-
-    # 💾 创建持久化的sqlite存储
-        import sqlite3
+        # 💾 创建持久化的sqlite存储
         from langgraph.checkpoint.sqlite import SqliteSaver
 
-        with SqliteSaver.from_conn_string("checkpoints20241101.sqlite") as memory: # 本地存在文件名
-            # 保存检查点,包括时间戳
-            saved_config = memory.put(
-                config={"configurable": {"thread_id": checkpoint_data["thread_id"], "thread_ts": checkpoint_data["thread_ts"], "checkpoint_ns": ""}},
-                checkpoint=checkpoint_data["checkpoint"],
-                metadata=checkpoint_data["metadata"],
-                new_versions= {"writes": {"key": "value"}}
-            )
-
-            # 检索检查点的数据
-            config = {"configurable": {"thread_id": checkpoint_data["thread_id"]}}
-
-            # 获取给定 thread_id 的所有检查点
-            checkpoints = list(memory.list(config))
-            for checkpoint in checkpoints:
-                print(checkpoint)
-
-
-        # 可以使用标准的SQL语法直接与数据库进行交互
-        # 建立数据库连接
-        conn = sqlite3.connect("checkpoints20241101.sqlite")
-        # 创建一个游标对象来执行你的SQL查询
-        cursor = conn.cursor()
-        # 查询数据库中所有表的名称
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        # 获取查询结果
-        tables = cursor.fetchall()
+        # ✅ 推荐用法(编译图时直接传入)
+        # checkpointer = SqliteSaver.from_conn_string("checkpoints.db")
+        # graph = builder.compile(checkpointer=checkpointer)
 
     # 💾 创建ReAct代理时,添加Memory
         from langgraph.checkpoint.sqlite import SqliteSaver
@@ -11783,6 +11951,17 @@
         from contextlib import AsyncExitStack
         from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
+        # ⚠️ ExitStack/AsyncExitStack 模式是旧版 workaround
+        # 新版 LangGraph 的 SqliteSaver 可以直接作为 context manager 使用:
+        # with SqliteSaver.from_conn_string("checkpoints.db") as memory:
+        #     graph = create_react_agent(llm, tools=tools, checkpointer=memory)
+        #
+        # 或者直接创建再编译(最简洁):
+        # memory = SqliteSaver.from_conn_string("checkpoints.db")
+        # graph = create_react_agent(llm, tools=tools, checkpointer=memory)
+
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
         stack = AsyncExitStack()
         memory = await stack.enter_async_context(AsyncSqliteSaver.from_conn_string(":memory:"))
 
@@ -11795,7 +11974,15 @@
 
         await stack.aclose()
 
-    # 🔒 长期记忆和Store(仓库)
+    # 🔒 长期记忆和Store(仓库) — InMemoryStore
+        # Store 是 LangGraph 的长期记忆层,存储跨对话/跨用户的结构化数据。
+        # 与 Checkpointer(短期记忆/会话内)不同,Store 是**跨会话持久化**的。
+        #
+        # 关键概念:
+        # - namespace: 命名空间,类似文件夹路径,如 ("memories", user_id)
+        # - key: 每条记忆的唯一标识(通常用 uuid)
+        # - value: 存储的内容(dict)
+
         from langgraph.store.memory import InMemoryStore
 
         in_memory_store = InMemoryStore()
@@ -11845,6 +12032,12 @@
         class State(TypedDict):
             messages: Annotated[list, add_messages]
 
+        # ⚠️ Runtime + context_schema 模式说明
+        # LangGraph 1.2.x 仍然支持该模式,但推荐新项目使用以下替代方案:
+        # 1. 直接通过 Command API 传参: Command(resume=..., update={"user_id": "xxx"})
+        # 2. 用 Store 作为持久化层,不依赖 Runtime.context
+        # 3. 在 State 里直接加 user_id 字段(最简单)
+        #
         # 定义 Runtime Context 模式
         @dataclass
         class AppContext:
@@ -12119,7 +12312,7 @@
                   "num": 1,
                 })
                 headers = {
-                  'X-API-KEY': '4699ef7b10e45569b5da67d707a8dce99174821d',
+                  'X-API-KEY': os.getenv('SERPER_API_KEY', 'your-key-here'),  # ⚠️ 改为环境变量
                   'Content-Type': 'application/json'
                 }
                 response = requests.post(url, headers=headers, data=payload)
@@ -12175,11 +12368,9 @@
 
             # 定义一个Router Function 用来根据大模型的实时响应判断是执行外部函数调用还是直接输出最终的响应
             def should_continue(state):
-                last_messages = state["messages"][-1]
-                # 如果没有 工具调用,则输出至最终节点
+                last_message = state["messages"][-1]  # 🔧 fix: 变量名 typo (原版 last_messages vs last_message 不匹配)
                 if not last_message.tool_calls:
                     return "end"
-                # 如果还有子任务需要继续执行工具调用的话,则继续等待执行
                 else:
                     return "continue"
 
@@ -12828,6 +13019,175 @@
             from IPython.display import Image, display
             image = graph.get_graph(xray=True)
             display(Image(image).draw_mermaid_png())
+
+
+    # ===== 🆕 新版 LangGraph 补充内容 (v1.0+) =====
+
+    # 🚀 Command API + interrupt() — HIL 新标准
+        # LangGraph 1.0+ 推荐使用 Command + interrupt() 替代 interrupt_before/interrupt_after。
+        # 优势:在节点内部主动触发中断,无需编译时设置断点,更灵活。
+        from langgraph.types import Command, interrupt
+        from langgraph.graph import StateGraph, START, END
+        from typing_extensions import TypedDict
+
+        class State(TypedDict):
+            messages: list
+            user_approved: bool
+
+        def human_approval_node(state: State):
+            # 在节点内部主动弹出,等待人工输入
+            user_input = interrupt({
+                "question": "是否允许执行该操作?",
+                "context": state["messages"][-1]
+            })
+            # 用户输入(是/否)会通过 resume 传回
+            return {"user_approved": user_input == "是"}
+
+        def process_node(state: State):
+            if state.get("user_approved"):
+                return {"messages": ["操作已执行"]}
+            else:
+                return {"messages": ["操作已取消"]}
+
+        builder = StateGraph(State)
+        builder.add_node("approval", human_approval_node)
+        builder.add_node("process", process_node)
+        builder.add_edge(START, "approval")
+        builder.add_edge("approval", "process")
+        builder.add_edge("process", END)
+
+        graph = builder.compile(checkpointer=MemorySaver())
+
+        # 第一轮:触发 interrupt,暂停
+        config = {"configurable": {"thread_id": "1"}}
+        for chunk in graph.stream({"messages": ["删除敏感数据"]}, config):
+            pass  # 图在 approval 节点暂停
+
+        # 第二轮:用 Command(resume=...) 恢复
+        graph.stream(Command(resume="是"), config)
+
+
+    # 🚀 Functional API (@entrypoint / @task)
+        # LangGraph 1.1+ 引入的声明式写法,适合比较简单的图逻辑。
+        # 不需要手动定义 State 类、节点函数、建边,用装饰器即可。
+        from langgraph.func import entrypoint, task
+        from langgraph.checkpoint.memory import MemorySaver
+
+        @task
+        def fetch_weather(city: str) -> str:
+            return f"{city}天气:晴,24°C"
+
+        @task
+        def analyze(data: str) -> str:
+            return f"分析结果:{data},适合出行"
+
+        @entrypoint(checkpointer=MemorySaver())
+        def weather_workflow(city: str) -> dict:
+            weather = fetch_weather(city).result()
+            analysis = analyze(weather).result()
+            return {"weather": weather, "analysis": analysis}
+
+        # 调用
+        result = weather_workflow.invoke("北京", {"configurable": {"thread_id": "1"}})
+
+        # ⚠️ 适用场景: 简单流水线,不需要复杂路由/条件分支
+        #   复杂场景还是用 StateGraph 更灵活
+
+
+    # 🚀 Map-Reduce (并行分支) 模式
+        # 将一个任务拆分为多个并行子任务,然后合并结果。
+        # 生产级 Agent 最常用的模式之一:同时查询多个数据源。
+        import operator
+        from typing import Annotated, List
+
+        class MapReduceState(TypedDict):
+            cities: List[str]
+            weather_results: Annotated[List[str], operator.add]  # ⚡ 用 add reducer 自动合并
+            final_report: str
+
+        def fetch_all_weather(state: MapReduceState):
+            # ⚡ Send() API: 为每个城市发送一个独立状态到目标节点
+            from langgraph.types import Send
+            return [
+                Send("fetch_one", {"city": city})
+                for city in state["cities"]
+            ]
+
+        def fetch_one(state: dict):
+            # 每个城市独立执行
+            return {"weather_results": [f"{state['city']}: 晴,24°C"]}
+
+        def merge_results(state: MapReduceState):
+            # 所有结果自动合并到 weather_results
+            return {"final_report": "\n".join(state["weather_results"])}
+
+        builder = StateGraph(MapReduceState)
+        builder.add_node("fetch_all", fetch_all_weather)
+        builder.add_node("fetch_one", fetch_one)
+        builder.add_node("merge", merge_results)
+        builder.add_edge(START, "fetch_all")
+        # ⚡ 关键:fetch_all 的条件边路由到 fetch_one
+        builder.add_conditional_edges("fetch_all", lambda s: ["fetch_one"])
+        builder.add_edge("fetch_one", "merge")
+        builder.add_edge("merge", END)
+        graph = builder.compile()
+
+
+    # 🚀 Persistence API — 生产级持久化
+        # LangGraph 1.2+ 统一了 checkpointer 和 store 的持久化 API。
+        # 生产推荐用 PostgresSaver,支持并发和水平扩展。
+
+        # pip install langgraph-checkpoint-postgres
+
+        from langgraph.checkpoint.postgres import PostgresSaver
+
+        # ✅ 生产推荐: PostgreSQL
+        # connection_string = "postgresql://user:pass@host:5432/langgraph?sslmode=require"
+        # checkpointer = PostgresSaver.from_conn_string(connection_string)
+
+        # 当前版本 checkpointer 选择指南:
+        # ┌────────────────┬───────────┬─────────────┬──────────────┐
+        # │ 类型            │ 持久化     │ 并发         │ 适用场景       │
+        # ├────────────────┼───────────┼─────────────┼──────────────┤
+        # │ MemorySaver    │ ❌        │ ✅          │ 开发/测试      │
+        # │ SqliteSaver    │ ✅        │ ⚠️ 单线程    │ 原型/单机      │
+        # │ PostgresSaver  │ ✅        │ ✅          │ 生产推荐       │
+        # │ RedisSaver     │ ✅        │ ✅          │ 低延迟场景     │
+        # └────────────────┴───────────┴─────────────┴──────────────┘
+
+
+    # 🚀 State 模式最佳实践 — 分层 State
+        # 生产级 Agent 需要对 State 进行精细控制:
+
+        class InputState(TypedDict):
+            """图入口:只接收用户输入"""
+            user_query: str
+
+        class OverallState(TypedDict):
+            """全局共享:所有节点可读写"""
+            messages: Annotated[list, add_messages]
+            user_id: str
+
+        class PrivateState(TypedDict):
+            """节点私有:只有该节点能读写"""
+            internal_cache: dict
+            retry_count: int
+
+        class OutputState(TypedDict):
+            """图出口:只输出最终结果"""
+            final_answer: str
+
+        # 用法:
+        # builder = StateGraph(OverallState, input=InputState, output=OutputState)
+        # 特定节点可标注 PrivateState: add_node("search", search_fn, private=PrivateState)
+
+
+    # 📌 学习建议
+        # 以上内容按优先级排列:
+        # 🥇 必须掌握    — Command API, interrupt(), 流式输出, 检查点, create_react_agent
+        # 🥈 建议掌握    — Map-Reduce, Functional API, 分层 State
+        # 🥉 了解即可    — Store 长期记忆, Supervisor 多 Agent, Subgraph
+        # ❌ 可跳过     — MessageGraph(已废弃), 手动 SqliteSaver put/list(极少用)
 
 
 # 🤖 DeepAgents
