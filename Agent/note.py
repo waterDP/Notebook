@@ -102,12 +102,12 @@
 
     # 🚀 Embedding 在 Agent 中的四大应用场景
         # ┌─────────────────────────────────────────────────────────────┐
-        # │ 场景                      │ 作用                           │
+        # │ 场景                      │ 作用                             │
         # ├─────────────────────────────────────────────────────────────┤
         # │ ① 工具预筛选               │ 30 个工具 → 检索 top-5 传给 LLM  │
         # │ ② 长期记忆检索             │ 从 mem0/Qdrant 中找回历史记忆    │
-        # │ ③ RAG 知识库              │ 文档拆块 → 向量化 → 语义检索     │
-        # │ ④ 意图路由                │ 用户 query 向量化 → 分类 → 路由  │
+        # │ ③ RAG 知识库               │ 文档拆块 → 向量化 → 语义检索     │
+        # │ ④ 意图路由                 │ 用户 query 向量化 → 分类 → 路由  │
         # └─────────────────────────────────────────────────────────────┘
 
     # 🚀 Embedding 质量评估——怎么知道自己的向量好不好？
@@ -341,6 +341,8 @@
         # 很多场景你需要的不是调工具，而是让 LLM 输出格式固定的结构化数据。JSON Mode 只能约束最外层结构，
         # 但 Function Calling 能给你嵌套的、带验证的结构化输出。  
         # 定义一个"虚拟工具"，它不执行任何操作，只是用来约束输出格式
+        # Function Calling 的 JSON Schema 支持嵌套结构、枚举、正则验证
+        # LLM 对 FC 的 adherence 率远高于 JSON Mode
         tools = [
             {
                 "name": "extract_invoice_info",
@@ -405,6 +407,14 @@
         # 先走路由，再走具体业务逻辑
         intent = llm.chat(user_input, tools=router_tools, tool_choice="auto")
         route_to_handler(intent.name, intent.args)
+
+        # token 消耗方面： FC 路由的 tool schema 比纯文本描述更 verbose（JSON Schema 格式更啰嗦），所以实际上可能还多耗几个 token。
+
+        # Function Calling 路由真正的优势是三点：
+
+            # -输出稳定 — LLM 对 FC 的 adherence 率远高于文本输出，不会出现你叫它输出"天气查询"它给你输出"查询天气"
+            # -天然带参数 — 路由的同时可以顺带提取参数（如上例的 city），一箭双雕
+            # -不用二次解析 — 文本输出你还要 string match，FC 直接拿 tool_call.name 就完事了
 
     # 🚀 工具调用链 & 结果传递（Multi-hop Tool Use）
         # 一个工具的输出直接作为下一个工具的输入，LLM 自己决定链路。    
