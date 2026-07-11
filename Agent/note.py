@@ -14987,444 +14987,656 @@
 # ☀ 多智能体协作
 # ====================================================================================================================================
 
-    """
-    🍊 Workflow 流程编排
-    🍇 Supervisor 集中调试
-    🍋 Hierachical 分层协同
-    🍉 Swarm 自主协作
-    """
-
     # 🍊 Workflow 流程编排
     #-------------------------------------------------------------------------------------------------------------------
-    # 🚀 Langgraph StateGraph串行边
-    from typing import TypedDict  # 给 LangGraph 的图状态定义带类型的字段结构
-    from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
-    from langchain_core.tools import tool    # 把普通函数包成 LangChain 工具,挂给 agent
-    from langgraph.graph import StateGraph, START, END  # 建图核心:StateGraph 定状态图,START/END 是起止虚拟节点
-    from langgraph.prebuilt import create_react_agent   # 把"模型 + 工具"组装成能自主调工具的 agent
+        # 🚀 Langgraph StateGraph串行边
+        from typing import TypedDict  # 给 LangGraph 的图状态定义带类型的字段结构
+        from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
+        from langchain_core.tools import tool    # 把普通函数包成 LangChain 工具,挂给 agent
+        from langgraph.graph import StateGraph, START, END  # 建图核心:StateGraph 定状态图,START/END 是起止虚拟节点
+        from langgraph.prebuilt import create_react_agent   # 把"模型 + 工具"组装成能自主调工具的 agent
 
-    # 把 env-prep 里的搜索函数包成 LangChain 工具
-    @tool
-    def web_search(query: str) -> str:
-        """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
-        return web_search_raw(query)
+        # 把 env-prep 里的搜索函数包成 LangChain 工具
+        @tool
+        def web_search(query: str) -> str:
+            """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
+            return web_search_raw(query)
 
-    llm = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3)
+        llm = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3)
 
-    # 三道工序各是一个带搜索工具的真 agent:能自主决定要不要搜、搜什么--这才叫 agent
-    researcher = create_react_agent(llm, tools=[web_search],
-        prompt="你是研究员。先用 web_search 搜索一两次主题资料,再提炼 3 个最该写进技术博客的要点,逗号分隔,只输出要点。")
-    writer = create_react_agent(llm, tools=[web_search],
-        prompt="你是技术撰稿人。根据研究要点写一段 80 字以内的博客片段,只输出正文。")
-    editor = create_react_agent(llm, tools=[web_search],
-        prompt="你是编辑。把博客片段精简润色成一句 25 字以内的导读,只输出这句话。")
+        # 三道工序各是一个带搜索工具的真 agent:能自主决定要不要搜、搜什么--这才叫 agent
+        researcher = create_react_agent(llm, tools=[web_search],
+            prompt="你是研究员。先用 web_search 搜索一两次主题资料,再提炼 3 个最该写进技术博客的要点,逗号分隔,只输出要点。")
+        writer = create_react_agent(llm, tools=[web_search],
+            prompt="你是技术撰稿人。根据研究要点写一段 80 字以内的博客片段,只输出正文。")
+        editor = create_react_agent(llm, tools=[web_search],
+            prompt="你是编辑。把博客片段精简润色成一句 25 字以内的导读,只输出这句话。")
 
-    # State 是流水线上传递的一张共享表,每个节点把对应 agent 的产出填进去
-    class State(TypedDict):
-        topic: str       # 输入:写作主题
-        points: str      # 研究员产出:研究要点
-        draft: str       # 写作者产出:博客初稿
-        final: str       # 编辑产出:精简定稿
+        # State 是流水线上传递的一张共享表,每个节点把对应 agent 的产出填进去
+        class State(TypedDict):
+            topic: str       # 输入:写作主题
+            points: str      # 研究员产出:研究要点
+            draft: str       # 写作者产出:博客初稿
+            final: str       # 编辑产出:精简定稿
 
-    def research(state: State):                              # 工序一:研究员 agent 搜资料、提要点
-        print("【研究员】启动")
-        r = researcher.invoke({"messages": [("user", f"主题:{state['topic']}")]})
-        out = r["messages"][-1].content
-        print(f"【研究员】产出:{out}\n")
-        return {"points": out}
+        def research(state: State):                              # 工序一:研究员 agent 搜资料、提要点
+            print("【研究员】启动")
+            r = researcher.invoke({"messages": [("user", f"主题:{state['topic']}")]})
+            out = r["messages"][-1].content
+            print(f"【研究员】产出:{out}\n")
+            return {"points": out}
 
-    def write(state: State):                                 # 工序二:撰稿 agent 据要点写初稿
-        print("【写作者】启动")
-        r = writer.invoke({"messages": [("user", f"研究要点:{state['points']}")]})
-        out = r["messages"][-1].content
-        print(f"【写作者】产出:{out}\n")
-        return {"draft": out}
+        def write(state: State):                                 # 工序二:撰稿 agent 据要点写初稿
+            print("【写作者】启动")
+            r = writer.invoke({"messages": [("user", f"研究要点:{state['points']}")]})
+            out = r["messages"][-1].content
+            print(f"【写作者】产出:{out}\n")
+            return {"draft": out}
 
-    def edit(state: State):                                  # 工序三:编辑 agent 精简定稿
-        print("【编辑】启动")
-        r = editor.invoke({"messages": [("user", f"博客片段:{state['draft']}")]})
-        out = r["messages"][-1].content
-        print(f"【编辑】产出:{out}\n")
-        return {"final": out}
+        def edit(state: State):                                  # 工序三:编辑 agent 精简定稿
+            print("【编辑】启动")
+            r = editor.invoke({"messages": [("user", f"博客片段:{state['draft']}")]})
+            out = r["messages"][-1].content
+            print(f"【编辑】产出:{out}\n")
+            return {"final": out}
 
-    # 三道工序按顺序焊死在边里--这就是 Workflow:每个工位是带工具的 agent,但工位顺序由代码定死
-    g = StateGraph(State)
-    g.add_node("research", research)
-    g.add_node("write", write)
-    g.add_node("edit", edit)
+        # 三道工序按顺序焊死在边里--这就是 Workflow:每个工位是带工具的 agent,但工位顺序由代码定死
+        g = StateGraph(State)
+        g.add_node("research", research)
+        g.add_node("write", write)
+        g.add_node("edit", edit)
 
-    g.add_edge(START, "research")
-    g.add_edge("research", "write")
-    g.add_edge("write", "edit")
-    g.add_edge("edit", END)
-    app = g.compile()  # 把状态图编译成可执行的图
+        g.add_edge(START, "research")
+        g.add_edge("research", "write")
+        g.add_edge("write", "edit")
+        g.add_edge("edit", END)
+        app = g.compile()  # 把状态图编译成可执行的图
 
-    result = app.invoke({"topic": "多智能体协作模式"})
-    print("【研究要点】", result["points"])
-    print("【博客初稿】", result["draft"])
-    print("【精简定稿】", result["final"])
-
-
-    # ✈ CrewAI:Process.sequential
-    from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套:Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
-    from crewai.tools import tool as crew_tool          # CrewAI 的工具装饰器,把普通函数注册成 agent 可调的工具
-
-    # 把 env-prep 里的搜索函数包成 CrewAI 工具
-    @crew_tool("web_search")
-    def web_search(query: str) -> str:
-        """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
-        return web_search_raw(query)
-
-    # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀,这是 CrewAI 这条链路的硬要求
-    llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
-    os.environ.setdefault("OPENAI_API_KEY", KEY)             # CrewAI 部分组件会读 OPENAI_API_KEY,兜底设一下
-
-    # 三个角色,每个都配上搜索工具--能自主决定要不要搜、搜什么,这才叫 agent
-    researcher = Agent(role="内容研究员", goal="就给定主题先联网搜索、再提炼最该写进技术博客的核心要点",
-                       backstory="你擅长先查资料再下笔。", llm=llm, tools=[web_search], verbose=False)
-    writer = Agent(role="技术写作者", goal="把研究要点写成一段通俗的技术博客",
-                   backstory="你写的技术博客准确又好读。", llm=llm, tools=[web_search], verbose=False)
-    editor = Agent(role="文字编辑", goal="把一段博客精简成一句导读",
-                   backstory="你能把一整段讲解收成一句话。", llm=llm, tools=[web_search], verbose=False)
-
-    # Task.description 必须明确"先用 web_search 工具搜索",否则 agent 可能跳过工具直接答
-    t_research = Task(description="先用 web_search 工具搜索一两次「{topic}」,再提炼 3 个最该写进技术博客的核心要点,逗号分隔。",
-                      expected_output="3 个核心要点,逗号分隔。", agent=researcher)
-    t_write = Task(description="根据上一步的要点,写一段 80 字以内的技术博客片段。",
-                   expected_output="一段 80 字以内的博客片段。", agent=writer)
-    t_edit = Task(description="把上一步的博客精简成一句 25 字以内的导读。",
-                  expected_output="一句 25 字以内的导读。", agent=editor)
-
-    crew = Crew(agents=[researcher, writer, editor],  # 把一组 agent + task 编成一个团队
-                tasks=[t_research, t_write, t_edit],
-                process=Process.sequential, verbose=False)   # sequential = 流程编排
-
-    result = await crew.kickoff_async(inputs={"topic": "多智能体协作模式"})  # Jupyter 自带事件循环,须用异步版启动(过程中 web_search 被调用时会打印)
-    print("\n【各工序产出】")
-    for t in [t_research, t_write, t_edit]:
-        print(f"【{t.agent.role}】产出:", t.output.raw if t.output else "(无)")
-    print("\n【最终导读】", result)
+        result = app.invoke({"topic": "多智能体协作模式"})
+        print("【研究要点】", result["points"])
+        print("【博客初稿】", result["draft"])
+        print("【精简定稿】", result["final"])
 
 
-    # 🚢 OpenAI Agents SDK: 代码驱动编排
-    from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
-    # 多导入 function_tool:把普通函数包成 agent 可调的工具
-    from agents import Agent, Runner, OpenAIChatCompletionsModel, function_tool, set_tracing_disabled
+        # ✈ CrewAI:Process.sequential
+        from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套:Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
+        from crewai.tools import tool as crew_tool          # CrewAI 的工具装饰器,把普通函数注册成 agent 可调的工具
 
-    set_tracing_disabled(True)                               # 关掉默认连 OpenAI 的 tracing,走第三方端点必须
-    client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
-    model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+        # 把 env-prep 里的搜索函数包成 CrewAI 工具
+        @crew_tool("web_search")
+        def web_search(query: str) -> str:
+            """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
+            return web_search_raw(query)
 
-    # 把 env-prep 里的搜索函数包成 OpenAI SDK 工具
-    @function_tool
-    def web_search(query: str) -> str:
-        """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
-        return web_search_raw(query)
+        # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀,这是 CrewAI 这条链路的硬要求
+        llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
+        os.environ.setdefault("OPENAI_API_KEY", KEY)             # CrewAI 部分组件会读 OPENAI_API_KEY,兜底设一下
 
-    # 三个 Agent 各管一道工序,每个都挂上搜索工具;它们之间没有 handoff,纯靠下面的代码把输出接力下去
-    researcher = Agent(name="researcher", model=model, tools=[web_search],
-                       instructions="先用 web_search 搜索一两次用户给的主题,再提炼 3 个最该写进技术博客的核心要点,逗号分隔,不要解释。")
-    writer = Agent(name="writer", model=model, tools=[web_search],
-                   instructions="根据用户给的研究要点,写一段 80 字以内的技术博客片段。")
-    editor = Agent(name="editor", model=model, tools=[web_search],
-                   instructions="把用户给的博客片段精简成一句 25 字以内的导读。")
+        # 三个角色,每个都配上搜索工具--能自主决定要不要搜、搜什么,这才叫 agent
+        researcher = Agent(role="内容研究员", goal="就给定主题先联网搜索、再提炼最该写进技术博客的核心要点",
+                           backstory="你擅长先查资料再下笔。", llm=llm, tools=[web_search], verbose=False)
+        writer = Agent(role="技术写作者", goal="把研究要点写成一段通俗的技术博客",
+                       backstory="你写的技术博客准确又好读。", llm=llm, tools=[web_search], verbose=False)
+        editor = Agent(role="文字编辑", goal="把一段博客精简成一句导读",
+                       backstory="你能把一整段讲解收成一句话。", llm=llm, tools=[web_search], verbose=False)
 
-    async def main():
-        topic = "多智能体协作模式"
-        print("【研究员】启动")
-        r1 = await Runner.run(researcher, topic)             # 工序一:研究
-        print(f"【研究员】产出:{r1.final_output}\n")
-        print("【写作者】启动")
-        r2 = await Runner.run(writer, r1.final_output)       # 上一步产出当这一步输入
-        print(f"【写作者】产出:{r2.final_output}\n")
-        print("【编辑】启动")
-        r3 = await Runner.run(editor, r2.final_output)       # 再接力一棒
-        print(f"【编辑】产出:{r3.final_output}\n")
+        # Task.description 必须明确"先用 web_search 工具搜索",否则 agent 可能跳过工具直接答
+        t_research = Task(description="先用 web_search 工具搜索一两次「{topic}」,再提炼 3 个最该写进技术博客的核心要点,逗号分隔。",
+                          expected_output="3 个核心要点,逗号分隔。", agent=researcher)
+        t_write = Task(description="根据上一步的要点,写一段 80 字以内的技术博客片段。",
+                       expected_output="一段 80 字以内的博客片段。", agent=writer)
+        t_edit = Task(description="把上一步的博客精简成一句 25 字以内的导读。",
+                      expected_output="一句 25 字以内的导读。", agent=editor)
 
-    await main()
+        crew = Crew(agents=[researcher, writer, editor],  # 把一组 agent + task 编成一个团队
+                    tasks=[t_research, t_write, t_edit],
+                    process=Process.sequential, verbose=False)   # sequential = 流程编排
+
+        result = await crew.kickoff_async(inputs={"topic": "多智能体协作模式"})  # Jupyter 自带事件循环,须用异步版启动(过程中 web_search 被调用时会打印)
+        print("\n【各工序产出】")
+        for t in [t_research, t_write, t_edit]:
+            print(f"【{t.agent.role}】产出:", t.output.raw if t.output else "(无)")
+        print("\n【最终导读】", result)
+
+
+        # 🚢 OpenAI Agents SDK: 代码驱动编排
+        from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
+        # 多导入 function_tool:把普通函数包成 agent 可调的工具
+        from agents import Agent, Runner, OpenAIChatCompletionsModel, function_tool, set_tracing_disabled
+
+        set_tracing_disabled(True)                               # 关掉默认连 OpenAI 的 tracing,走第三方端点必须
+        client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
+        model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+        # 把 env-prep 里的搜索函数包成 OpenAI SDK 工具
+        @function_tool
+        def web_search(query: str) -> str:
+            """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
+            return web_search_raw(query)
+
+        # 三个 Agent 各管一道工序,每个都挂上搜索工具;它们之间没有 handoff,纯靠下面的代码把输出接力下去
+        researcher = Agent(name="researcher", model=model, tools=[web_search],
+                           instructions="先用 web_search 搜索一两次用户给的主题,再提炼 3 个最该写进技术博客的核心要点,逗号分隔,不要解释。")
+        writer = Agent(name="writer", model=model, tools=[web_search],
+                       instructions="根据用户给的研究要点,写一段 80 字以内的技术博客片段。")
+        editor = Agent(name="editor", model=model, tools=[web_search],
+                       instructions="把用户给的博客片段精简成一句 25 字以内的导读。")
+
+        async def main():
+            topic = "多智能体协作模式"
+            print("【研究员】启动")
+            r1 = await Runner.run(researcher, topic)             # 工序一:研究
+            print(f"【研究员】产出:{r1.final_output}\n")
+            print("【写作者】启动")
+            r2 = await Runner.run(writer, r1.final_output)       # 上一步产出当这一步输入
+            print(f"【写作者】产出:{r2.final_output}\n")
+            print("【编辑】启动")
+            r3 = await Runner.run(editor, r2.final_output)       # 再接力一棒
+            print(f"【编辑】产出:{r3.final_output}\n")
+
+        await main()
 
 
     # 🍇 Supervisor 集中调试
     # -------------------------------------------------------------------------------------------------------------------
-    # 🚀 Langgraph
-    import os  # 读环境变量(密钥、模型名)
-    from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型,LangGraph 节点里用它调 LLM
-    from langgraph.prebuilt import create_react_agent          # 本课锁定 1.2.4,从 prebuilt 导入即可,当前版本可用
-    from langgraph_supervisor import create_supervisor  # LangGraph 官方扩展:一键装配"主管 + 一组专家"的集中调度结构
+        # 🚀 Langgraph
+        import os  # 读环境变量(密钥、模型名)
+        from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型,LangGraph 节点里用它调 LLM
+        from langgraph.prebuilt import create_react_agent          # 本课锁定 1.2.4,从 prebuilt 导入即可,当前版本可用
+        from langgraph_supervisor import create_supervisor  # LangGraph 官方扩展:一键装配"主管 + 一组专家"的集中调度结构
 
-    # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
-    model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+        # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
+        model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
 
-    # 两个专家 agent(无外部工具,凭模型知识各管一个维度);name 是主管派单时的寻址依据
-    tech_expert = create_react_agent(model, tools=[], name="tech_expert",  # 造一个会自主推理、按需调工具的 ReAct 智能体
-        prompt="你是技术专家。只从技术原理和架构角度回答问题,80 字以内。")
-    apply_expert = create_react_agent(model, tools=[], name="apply_expert",
-        prompt="你是应用专家。只从落地场景和典型案例角度回答问题,80 字以内。")
+        # 两个专家 agent(无外部工具,凭模型知识各管一个维度);name 是主管派单时的寻址依据
+        tech_expert = create_react_agent(model, tools=[], name="tech_expert",  # 造一个会自主推理、按需调工具的 ReAct 智能体
+            prompt="你是技术专家。只从技术原理和架构角度回答问题,80 字以内。")
+        apply_expert = create_react_agent(model, tools=[], name="apply_expert",
+            prompt="你是应用专家。只从落地场景和典型案例角度回答问题,80 字以内。")
 
-    # 主管:create_supervisor 自动给它注入 transfer_to_tech_expert / transfer_to_apply_expert 派单工具
-    supervisor = create_supervisor(  # 一键装配"主管 + 一组专家"的星形集中调度
-        agents=[tech_expert, apply_expert],
-        model=model,
-        prompt=("你是研究主管。把用户问题的技术维度交给 tech_expert,应用维度交给 apply_expert,"
-                "两份都收齐后,综合成一段 150 字以内的研究简报。")
-    ).compile()  # 把状态图编译成可执行的图
+        # 主管:create_supervisor 自动给它注入 transfer_to_tech_expert / transfer_to_apply_expert 派单工具
+        supervisor = create_supervisor(  # 一键装配"主管 + 一组专家"的星形集中调度
+            agents=[tech_expert, apply_expert],
+            model=model,
+            prompt=("你是研究主管。把用户问题的技术维度交给 tech_expert,应用维度交给 apply_expert,"
+                    "两份都收齐后,综合成一段 150 字以内的研究简报。")
+        ).compile()  # 把状态图编译成可执行的图
 
-    # 用 stream 边跑边打印--messages 是共享状态(黑板),跑完再打顺序是按对话结构整理的;要看真实时间线得流式看
-    seen = set()                                                # 记录已打印的消息,去重
-    for _, state in supervisor.stream(
-            {"messages": [{"role": "user", "content": "多智能体协作模式在 2026 年的现状"}]},
-            subgraphs=True, stream_mode="values"):              # subgraphs=True 才看得到专家子图内部的事件
-        for m in state.get("messages", []):
-            if m.id in seen: continue
-            seen.add(m.id)
-            who = getattr(m, "name", None) or m.type
-            content = m.content if isinstance(m.content, str) else str(m.content)
-            if content.strip():
-                print(f"[{who}] {content[:220]}")
+        # 用 stream 边跑边打印--messages 是共享状态(黑板),跑完再打顺序是按对话结构整理的;要看真实时间线得流式看
+        seen = set()                                                # 记录已打印的消息,去重
+        for _, state in supervisor.stream(
+                {"messages": [{"role": "user", "content": "多智能体协作模式在 2026 年的现状"}]},
+                subgraphs=True, stream_mode="values"):              # subgraphs=True 才看得到专家子图内部的事件
+            for m in state.get("messages", []):
+                if m.id in seen: continue
+                seen.add(m.id)
+                who = getattr(m, "name", None) or m.type
+                content = m.content if isinstance(m.content, str) else str(m.content)
+                if content.strip():
+                    print(f"[{who}] {content[:220]}")
 
 
-    # 🚢 OpenAI Agents SDK: agents-as-tools
-    import asyncio  # 驱动异步的 agent 调用
-    from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
-    from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+        # 🚢 OpenAI Agents SDK: agents-as-tools
+        import asyncio  # 驱动异步的 agent 调用
+        from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
+        from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
 
-    set_tracing_disabled(True)                                  # 关掉 SDK 默认上报,走第三方端点时必须
-    client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)        # 复用环境准备 cell 的 BASE_URL/KEY
-    model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+        set_tracing_disabled(True)                                  # 关掉 SDK 默认上报,走第三方端点时必须
+        client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)        # 复用环境准备 cell 的 BASE_URL/KEY
+        model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
 
-    # 两个专家 Agent
-    tech_expert = Agent(name="tech_expert", model=model,
-                        instructions="你是技术专家。只从技术原理和架构角度回答,80 字以内。")
-    apply_expert = Agent(name="apply_expert", model=model,
-                         instructions="你是应用专家。只从落地场景和典型案例角度回答,80 字以内。")
+        # 两个专家 Agent
+        tech_expert = Agent(name="tech_expert", model=model,
+                            instructions="你是技术专家。只从技术原理和架构角度回答,80 字以内。")
+        apply_expert = Agent(name="apply_expert", model=model,
+                             instructions="你是应用专家。只从落地场景和典型案例角度回答,80 字以内。")
 
-    # 主管:把两个专家 as_tool 挂成自己的工具;主管自己决定何时调哪个、最后综合(控制权不转移)
-    manager = Agent(
-        name="manager",
-        model=model,
-        instructions=("你是研究主管。用 ask_tech 工具问技术维度,用 ask_apply 工具问应用维度,"
-                      "两个都问完后综合成一段 150 字以内的研究简报。"),
-        tools=[
-            tech_expert.as_tool(tool_name="ask_tech", tool_description="就问题咨询技术专家"),  # 把一个 agent 包装成另一个 agent 可调用的工具(agents-as-tools)
-            apply_expert.as_tool(tool_name="ask_apply", tool_description="就问题咨询应用专家"),
-        ]
-    )
+        # 主管:把两个专家 as_tool 挂成自己的工具;主管自己决定何时调哪个、最后综合(控制权不转移)
+        manager = Agent(
+            name="manager",
+            model=model,
+            instructions=("你是研究主管。用 ask_tech 工具问技术维度,用 ask_apply 工具问应用维度,"
+                          "两个都问完后综合成一段 150 字以内的研究简报。"),
+            tools=[
+                tech_expert.as_tool(tool_name="ask_tech", tool_description="就问题咨询技术专家"),  # 把一个 agent 包装成另一个 agent 可调用的工具(agents-as-tools)
+                apply_expert.as_tool(tool_name="ask_apply", tool_description="就问题咨询应用专家"),
+            ]
+        )
 
-    async def main():
-        r = await Runner.run(manager, "多智能体协作模式在 2026 年的现状")  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
-        print("【研究简报】", r.final_output)
+        async def main():
+            r = await Runner.run(manager, "多智能体协作模式在 2026 年的现状")  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
+            print("【研究简报】", r.final_output)
 
-    await main()       # Jupyter 里直接 await
+        await main()       # Jupyter 里直接 await
 
-    # ✈ CrewAI: Process.hierachical
-    import os  # 读环境变量(密钥、模型名)
-    from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套:Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
+        # ✈ CrewAI: Process.hierachical
+        import os  # 读环境变量(密钥、模型名)
+        from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套:Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
 
-    os.environ.setdefault("OPENAI_API_KEY", KEY)               # CrewAI 底层 litellm 会查这个变量
-    # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀,这是 CrewAI 这条链路的硬要求
-    llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
+        os.environ.setdefault("OPENAI_API_KEY", KEY)               # CrewAI 底层 litellm 会查这个变量
+        # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀,这是 CrewAI 这条链路的硬要求
+        llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
 
-    # 两个专家;hierarchical 模式下不绑 Task,由 manager 决定派给谁
-    tech_expert = Agent(role="技术专家", goal="从技术原理和架构角度分析问题",
-                        backstory="你精通多智能体协作模式的技术机制。", llm=llm, verbose=False)
-    apply_expert = Agent(role="应用专家", goal="从落地场景和典型案例角度分析问题",
-                         backstory="你熟悉多智能体协作模式的产业落地。", llm=llm, verbose=False)
+        # 两个专家;hierarchical 模式下不绑 Task,由 manager 决定派给谁
+        tech_expert = Agent(role="技术专家", goal="从技术原理和架构角度分析问题",
+                            backstory="你精通多智能体协作模式的技术机制。", llm=llm, verbose=False)
+        apply_expert = Agent(role="应用专家", goal="从落地场景和典型案例角度分析问题",
+                             backstory="你熟悉多智能体协作模式的产业落地。", llm=llm, verbose=False)
 
-    # Task 不绑具体 agent,交给 manager 调度
-    task = Task(description="就「多智能体协作模式在 2026 年的现状」产出一份研究简报,综合技术与应用两个维度。",
-                expected_output="一段 150 字以内的研究简报。")
+        # Task 不绑具体 agent,交给 manager 调度
+        task = Task(description="就「多智能体协作模式在 2026 年的现状」产出一份研究简报,综合技术与应用两个维度。",
+                    expected_output="一段 150 字以内的研究简报。")
 
-    # Process.hierarchical + manager_llm:CrewAI 自动建一个 manager 负责派单和汇总
-    crew = Crew(agents=[tech_expert, apply_expert], tasks=[task],  # 把一组 agent + task 编成一个团队
-                process=Process.hierarchical, manager_llm=llm, verbose=False)  # CrewAI 层级编排:主管自动调度下属
+        # Process.hierarchical + manager_llm:CrewAI 自动建一个 manager 负责派单和汇总
+        crew = Crew(agents=[tech_expert, apply_expert], tasks=[task],  # 把一组 agent + task 编成一个团队
+                    process=Process.hierarchical, manager_llm=llm, verbose=False)  # CrewAI 层级编排:主管自动调度下属
 
-    result = await crew.kickoff_async()  # Jupyter 自带事件循环,须用异步版启动
-    print("【研究简报】", result)
-
+        result = await crew.kickoff_async()  # Jupyter 自带事件循环,须用异步版启动
+        print("【研究简报】", result)
 
 
     # 🍋 Hierachical 分层协同
     # -------------------------------------------------------------------------------------------------------------------
-    # 🚀 Langgraph
-    from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
-    from langgraph.prebuilt import create_react_agent     # 造底层 worker(会自主推理的 ReAct 智能体)
-    from langgraph_supervisor import create_supervisor    # 装配主管;它的产物可以再被上层 create_supervisor 嵌套
+        # 🚀 Langgraph
+        from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
+        from langgraph.prebuilt import create_react_agent     # 造底层 worker(会自主推理的 ReAct 智能体)
+        from langgraph_supervisor import create_supervisor    # 装配主管;它的产物可以再被上层 create_supervisor 嵌套
 
-    # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
-    model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+        # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
+        model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
 
-    # ---- 最底层:四个 worker,各管一摊 ----
-    fe_ui = create_react_agent(model, tools=[], name="fe_ui",
-        prompt="你是前端界面工程师。给出待办应用的界面与交互实现,60 字以内。")
-    fe_state = create_react_agent(model, tools=[], name="fe_state",
-        prompt="你是前端状态工程师。给出待办应用的前端状态管理与数据持久化方案,60 字以内。")
-    be_api = create_react_agent(model, tools=[], name="be_api",
-        prompt="你是后端接口工程师。给出待办应用的 REST 接口设计,60 字以内。")
-    be_db = create_react_agent(model, tools=[], name="be_db",
-        prompt="你是后端存储工程师。给出待办应用的数据库表与存储方案,60 字以内。")
+        # ---- 最底层:四个 worker,各管一摊 ----
+        fe_ui = create_react_agent(model, tools=[], name="fe_ui",
+            prompt="你是前端界面工程师。给出待办应用的界面与交互实现,60 字以内。")
+        fe_state = create_react_agent(model, tools=[], name="fe_state",
+            prompt="你是前端状态工程师。给出待办应用的前端状态管理与数据持久化方案,60 字以内。")
+        be_api = create_react_agent(model, tools=[], name="be_api",
+            prompt="你是后端接口工程师。给出待办应用的 REST 接口设计,60 字以内。")
+        be_db = create_react_agent(model, tools=[], name="be_db",
+            prompt="你是后端存储工程师。给出待办应用的数据库表与存储方案,60 字以内。")
 
-    # ---- 中间层:两个团队主管,各自管两个 worker(这一层 LLM 自主派单),编译时起 name 供上层寻址 ----
-    frontend_team = create_supervisor(
-        model=model,
-        agents=[fe_ui, fe_state],
-        prompt="你是前端组长。把界面交互交给 fe_ui,状态与持久化交给 fe_state,两份都收齐后用一句话汇报前端方案。",
-        supervisor_name="fe_lead",
-    ).compile(name="frontend_team")     # 编译成"一个 agent",名字叫 frontend_team
+        # ---- 中间层:两个团队主管,各自管两个 worker(这一层 LLM 自主派单),编译时起 name 供上层寻址 ----
+        frontend_team = create_supervisor(
+            model=model,
+            agents=[fe_ui, fe_state],
+            prompt="你是前端组长。把界面交互交给 fe_ui,状态与持久化交给 fe_state,两份都收齐后用一句话汇报前端方案。",
+            supervisor_name="fe_lead",
+        ).compile(name="frontend_team")     # 编译成"一个 agent",名字叫 frontend_team
 
-    backend_team = create_supervisor(
-        model=model,
-        agents=[be_api, be_db],
-        prompt="你是后端组长。把接口设计交给 be_api,存储方案交给 be_db,两份都收齐后用一句话汇报后端方案。",
-        supervisor_name="be_lead",
-    ).compile(name="backend_team")
+        backend_team = create_supervisor(
+            model=model,
+            agents=[be_api, be_db],
+            prompt="你是后端组长。把接口设计交给 be_api,存储方案交给 be_db,两份都收齐后用一句话汇报后端方案。",
+            supervisor_name="be_lead",
+        ).compile(name="backend_team")
 
-    # ---- 最顶层:CTO 主管把两个团队主管当 agent 管起来(顶层 LLM 自主派单)----
-    top = create_supervisor(
-        model=model,
-        agents=[frontend_team, backend_team],  # 注意:传进来的是两个"主管",不是 worker--这就是嵌套
-        prompt=("你是技术总监。把前端相关工作交给 frontend_team,后端相关工作交给 backend_team,"
-                "两个团队都汇报完后,综合成一段 120 字以内的交付简报。"),
-        supervisor_name="cto",
-    ).compile()
+        # ---- 最顶层:CTO 主管把两个团队主管当 agent 管起来(顶层 LLM 自主派单)----
+        top = create_supervisor(
+            model=model,
+            agents=[frontend_team, backend_team],  # 注意:传进来的是两个"主管",不是 worker--这就是嵌套
+            prompt=("你是技术总监。把前端相关工作交给 frontend_team,后端相关工作交给 backend_team,"
+                    "两个团队都汇报完后,综合成一段 120 字以内的交付简报。"),
+            supervisor_name="cto",
+        ).compile()
 
-    # 同 3.2:stream 流式打印才是真实时间线(嵌套图要 subgraphs=True 才看得到组内事件)
-    seen = set()
-    for _, state in top.stream(
-            {"messages": [{"role": "user", "content": "做一个待办事项小应用"}]},
-            subgraphs=True, stream_mode="values"):
-        for m in state.get("messages", []):
-            if m.id in seen: continue
-            seen.add(m.id)
-            who = getattr(m, "name", None) or m.type
-            content = m.content if isinstance(m.content, str) else str(m.content)
-            if content.strip():
-                print(f"[{who}] {content[:200]}")
+        # 同 3.2:stream 流式打印才是真实时间线(嵌套图要 subgraphs=True 才看得到组内事件)
+        seen = set()
+        for _, state in top.stream(
+                {"messages": [{"role": "user", "content": "做一个待办事项小应用"}]},
+                subgraphs=True, stream_mode="values"):
+            for m in state.get("messages", []):
+                if m.id in seen: continue
+                seen.add(m.id)
+                who = getattr(m, "name", None) or m.type
+                content = m.content if isinstance(m.content, str) else str(m.content)
+                if content.strip():
+                    print(f"[{who}] {content[:200]}")
 
 
-    # 🚢 OpenAI Agents SDK: 嵌套agents-as-tools
-    import asyncio  # 驱动异步的 agent 调用
-    from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
-    from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+        # 🚢 OpenAI Agents SDK: 嵌套agents-as-tools
+        import asyncio  # 驱动异步的 agent 调用
+        from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
+        from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
 
-    set_tracing_disabled(True)                              # 关掉 SDK 默认上报,走第三方端点时必须
-    client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)    # 复用第二章环境准备 cell 的 BASE_URL/KEY
-    model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+        set_tracing_disabled(True)                              # 关掉 SDK 默认上报,走第三方端点时必须
+        client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)    # 复用第二章环境准备 cell 的 BASE_URL/KEY
+        model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
 
-    def make_lead(side: str) -> Agent:                      # 组长:把工程师当工具挂上(第一层嵌套)
-        eng = Agent(name=f"{side}_eng", model=model,
-                    instructions=f"你是{side}工程师,给出{side}实现方案,80 字以内。")
-        return Agent(name=f"{side}_lead", model=model,
-                     instructions=f"你是{side}组长。用工具问{side}工程师拿实现方案,然后一句话汇报本组结论。",
-                     tools=[eng.as_tool(tool_name=f"ask_{side}_eng", tool_description=f"问{side}工程师实现方案")])  # 把一个 agent 包装成另一个 agent 可调用的工具(agents-as-tools)
+        def make_lead(side: str) -> Agent:                      # 组长:把工程师当工具挂上(第一层嵌套)
+            eng = Agent(name=f"{side}_eng", model=model,
+                        instructions=f"你是{side}工程师,给出{side}实现方案,80 字以内。")
+            return Agent(name=f"{side}_lead", model=model,
+                         instructions=f"你是{side}组长。用工具问{side}工程师拿实现方案,然后一句话汇报本组结论。",
+                         tools=[eng.as_tool(tool_name=f"ask_{side}_eng", tool_description=f"问{side}工程师实现方案")])  # 把一个 agent 包装成另一个 agent 可调用的工具(agents-as-tools)
 
-    fe_lead = make_lead("前端")
-    be_lead = make_lead("后端")
-    # 总监:把两个组长当工具挂上(第二层嵌套)
-    cto = Agent(name="cto", model=model,
-                instructions="你是技术总监。用工具分别问前端组长、后端组长拿本组结论,综合成 100 字以内交付简报。",
-                tools=[fe_lead.as_tool(tool_name="ask_fe_lead", tool_description="问前端组长本组结论"),
-                       be_lead.as_tool(tool_name="ask_be_lead", tool_description="问后端组长本组结论")])
+        fe_lead = make_lead("前端")
+        be_lead = make_lead("后端")
+        # 总监:把两个组长当工具挂上(第二层嵌套)
+        cto = Agent(name="cto", model=model,
+                    instructions="你是技术总监。用工具分别问前端组长、后端组长拿本组结论,综合成 100 字以内交付简报。",
+                    tools=[fe_lead.as_tool(tool_name="ask_fe_lead", tool_description="问前端组长本组结论"),
+                           be_lead.as_tool(tool_name="ask_be_lead", tool_description="问后端组长本组结论")])
 
-    async def main():
-        # max_turns 要给够:两层嵌套意味着总监一次调用会触发组长再调工程师,工具调用轮次成倍增加
-        r = await Runner.run(cto, "做一个待办事项小应用", max_turns=20)  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
-        print("【技术总监交付简报】", r.final_output)
+        async def main():
+            # max_turns 要给够:两层嵌套意味着总监一次调用会触发组长再调工程师,工具调用轮次成倍增加
+            r = await Runner.run(cto, "做一个待办事项小应用", max_turns=20)  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
+            print("【技术总监交付简报】", r.final_output)
 
-    await main()       # Jupyter 里直接 await
+        await main()       # Jupyter 里直接 await
 
 
     # 🍉 Swarm 自主协作
     # -------------------------------------------------------------------------------------------------------------------
-    # 🚀 OpenAI Agents SDK: handoffs是它的招牌
-    import asyncio  # 驱动异步的 agent 调用
-    from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
-    from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+        # 🚀 OpenAI Agents SDK: handoffs是它的招牌
+        import asyncio  # 驱动异步的 agent 调用
+        from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
+        from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
 
-    set_tracing_disabled(True)                              # 走 OpenRouter 第三方端点,必须关掉回传 OpenAI 的追踪
-    client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
-    model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+        set_tracing_disabled(True)                              # 走 OpenRouter 第三方端点,必须关掉回传 OpenAI 的追踪
+        client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
+        model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
 
-    # name 必须英文:handoff 底层是 transfer_to_&lt;name&gt; 工具,中文名会撞名崩溃;中文角色说明放 instructions/handoff_description
-    refund = Agent(
-        name="refund",
-        model=model,
-        handoff_description="处理退款申请",
-        instructions="你是退款专员,处理退款。如果用户反映商品有质量问题、需要先做技术鉴定,转交给技术专员。一句话回复。",
-        handoffs: [tech]
-    )
-    tech = Agent(
-        name="tech",
-        model=model,
-        handoff_description="商品质量技术鉴定",
-        instructions="你是技术专员,负责商品质量技术鉴定,给出鉴定结论。一句话回复。"
-    )
-    triage = Agent(
-        name="triage",
-        model=model,
-        instructions="你是客服分诊台,只负责判断用户问题类型并转给对应专员:退款相关转 refund,纯技术问题转 tech。不要自己回答业务问题。",
-        handoffs=[refund, tech]
-    )   # 分诊台能转给退款、技术两个专员
+        # name 必须英文:handoff 底层是 transfer_to_&lt;name&gt; 工具,中文名会撞名崩溃;中文角色说明放 instructions/handoff_description
+        refund = Agent(
+            name="refund",
+            model=model,
+            handoff_description="处理退款申请",
+            instructions="你是退款专员,处理退款。如果用户反映商品有质量问题、需要先做技术鉴定,转交给技术专员。一句话回复。",
+            handoffs: [tech]
+        )
+        tech = Agent(
+            name="tech",
+            model=model,
+            handoff_description="商品质量技术鉴定",
+            instructions="你是技术专员,负责商品质量技术鉴定,给出鉴定结论。一句话回复。"
+        )
+        triage = Agent(
+            name="triage",
+            model=model,
+            instructions="你是客服分诊台,只负责判断用户问题类型并转给对应专员:退款相关转 refund,纯技术问题转 tech。不要自己回答业务问题。",
+            handoffs=[refund, tech]
+        )   # 分诊台能转给退款、技术两个专员
 
-    async def main():
-        # max_turns 是保险丝:万一两个专员互踢死循环,到上限强制停下
-        result = await Runner.run(triage, "我买的手机有质量问题,想退款", max_turns=10)  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
-        print("【最终回复】", result.final_output)
-        print("\n【接力轨迹】")
-        for item in result.new_items:                        # 遍历运行产生的事件,打印 handoff 发生在哪些 agent 之间
-            cls = item.__class__.__name__
-            if "Handoff" in cls:                             # 一次控制权转交事件
-                print(f"  - 发生 handoff:{cls}")
-            elif cls == "MessageOutputItem":                 # 某个 agent 产出了一段回复
-                who = getattr(item.agent, "name", "?")
-                print(f"  - {who} 回复")
+        async def main():
+            # max_turns 是保险丝:万一两个专员互踢死循环,到上限强制停下
+            result = await Runner.run(triage, "我买的手机有质量问题,想退款", max_turns=10)  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
+            print("【最终回复】", result.final_output)
+            print("\n【接力轨迹】")
+            for item in result.new_items:                        # 遍历运行产生的事件,打印 handoff 发生在哪些 agent 之间
+                cls = item.__class__.__name__
+                if "Handoff" in cls:                             # 一次控制权转交事件
+                    print(f"  - 发生 handoff:{cls}")
+                elif cls == "MessageOutputItem":                 # 某个 agent 产出了一段回复
+                    who = getattr(item.agent, "name", "?")
+                    print(f"  - {who} 回复")
 
-    await main()       # Jupyter 里直接 await,不要再套 asyncio.run(环境准备 cell 已开 nest_asyncio)
-
-
-    # ✈ Langgraph: langgraph-swarm 官方双件套之一
-    from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型,LangGraph 节点里用它调 LLM
-    from langgraph.prebuilt import create_react_agent  # LangGraph 预制件:造一个会自主推理、按需调工具的 ReAct 智能体
-    from langgraph_swarm import create_swarm, create_handoff_tool  # langgraph-swarm 扩展:create_swarm 建去中心化群组 / create_handoff_tool 造平级转交工具
-    from langgraph.checkpoint.memory import InMemorySaver  # 把图执行状态存进内存的 checkpointer,支持 interrupt 暂停后恢复
-
-    # 复用环境准备 cell 的 MODEL/BASE_URL/KEY
-    model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
-
-    # 每个专员挂一件 handoff 工具,能把控制权转给另一个专员(平级,无中心)
-    refund = create_react_agent(
-        model,
-        name="refund",  # 造一个会自主推理、按需调工具的 ReAct 智能体
-        tools=[
-            create_handoff_tool(agent_name="tech", description="商品有质量问题、需技术鉴定时转给技术专员") # 造一个"把控制权转交给某 agent"的自主协作工具
-        ],
-        prompt="你是退款专员,处理退款。商品质量问题需要技术鉴定时转给 tech。一句话回复。"
-    )
-    tech = create_react_agent(
-        model,
-        name="tech",
-        tools=[
-            create_handoff_tool(agent_name="refund", description="鉴定完转回退款专员")
-        ],
-        prompt="你是技术专员,做商品质量技术鉴定并给结论。一句话回复。")
+        await main()       # Jupyter 里直接 await,不要再套 asyncio.run(环境准备 cell 已开 nest_asyncio)
 
 
-    checkpointer = InMemorySaver() # swarm 几乎必配:记住 active_agent,否则跨轮丢"现在轮到谁"
-    # create_swarm 把两个专员装配成互联群组,default_active_agent 指定初始接待者
-    swarm = create_swarm(agents=[refund, tech], default_active_agent="refund").compile(checkpointer=checkpointer)  # 编译图并挂上 checkpointer,状态才能存档、之后恢复
+        # ✈ Langgraph: langgraph-swarm 官方双件套之一
+        from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型,LangGraph 节点里用它调 LLM
+        from langgraph.prebuilt import create_react_agent  # LangGraph 预制件:造一个会自主推理、按需调工具的 ReAct 智能体
+        from langgraph_swarm import create_swarm, create_handoff_tool  # langgraph-swarm 扩展:create_swarm 建去中心化群组 / create_handoff_tool 造平级转交工具
+        from langgraph.checkpoint.memory import InMemorySaver  # 把图执行状态存进内存的 checkpointer,支持 interrupt 暂停后恢复
 
-    config = {"configurable": {"thread_id": "1"}}            # thread_id 标识一次会话,checkpointer 按它存取 active_agent
-    # 同 3.2:stream 流式打印接力轨迹的真实时间线
-    seen = set()
-    for _, state in swarm.stream(
-            {"messages": [{"role": "user", "content": "我的手机有质量问题,想退款"}]},
-            config, subgraphs=True, stream_mode="values"):
-        for m in state.get("messages", []):
-            if m.id in seen: continue
-            seen.add(m.id)
-            who = getattr(m, "name", None) or m.type
-            content = m.content if isinstance(m.content, str) else str(m.content)
-            if content.strip():
-                print(f"[{who}] {content[:160]}")
+        # 复用环境准备 cell 的 MODEL/BASE_URL/KEY
+        model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+
+        # 每个专员挂一件 handoff 工具,能把控制权转给另一个专员(平级,无中心)
+        refund = create_react_agent(
+            model,
+            name="refund",  # 造一个会自主推理、按需调工具的 ReAct 智能体
+            tools=[
+                create_handoff_tool(agent_name="tech", description="商品有质量问题、需技术鉴定时转给技术专员") # 造一个"把控制权转交给某 agent"的自主协作工具
+            ],
+            prompt="你是退款专员,处理退款。商品质量问题需要技术鉴定时转给 tech。一句话回复。"
+        )
+        tech = create_react_agent(
+            model,
+            name="tech",
+            tools=[
+                create_handoff_tool(agent_name="refund", description="鉴定完转回退款专员")
+            ],
+            prompt="你是技术专员,做商品质量技术鉴定并给结论。一句话回复。")
+
+
+        checkpointer = InMemorySaver() # swarm 几乎必配:记住 active_agent,否则跨轮丢"现在轮到谁"
+        # create_swarm 把两个专员装配成互联群组,default_active_agent 指定初始接待者
+        swarm = create_swarm(agents=[refund, tech], default_active_agent="refund").compile(checkpointer=checkpointer)  # 编译图并挂上 checkpointer,状态才能存档、之后恢复
+
+        config = {"configurable": {"thread_id": "1"}}            # thread_id 标识一次会话,checkpointer 按它存取 active_agent
+        # 同 3.2:stream 流式打印接力轨迹的真实时间线
+        seen = set()
+        for _, state in swarm.stream(
+                {"messages": [{"role": "user", "content": "我的手机有质量问题,想退款"}]},
+                config, subgraphs=True, stream_mode="values"):
+            for m in state.get("messages", []):
+                if m.id in seen: continue
+                seen.add(m.id)
+                who = getattr(m, "name", None) or m.type
+                content = m.content if isinstance(m.content, str) else str(m.content)
+                if content.strip():
+                    print(f"[{who}] {content[:160]}")
+
+
+    # 🎯 多 Agent 通信模式：Pub/Sub 事件驱动
+    # -------------------------------------------------------------------------------------------------------------------
+
+        """
+        当多 Agent 一多,Agent 之间直接调用很快变成一团乱麻。
+        Pub/Sub(发布/订阅)模式就此登场：
+
+        ❌ 强耦合版：DataAgent 直接调 AnalysisAgent + NotifyAgent + ...
+           加一个新消费方就得改 DataAgent 的代码。
+
+        ✅ Pub/Sub 版：DataAgent 只管往 Event Bus 丢事件，谁爱接谁接。
+           加新 Agent → 新增订阅者就行,不用改已有代码。
+        """
+
+        # 🚀 轻量实现：Python 内存事件总线（零依赖）
+        # 单进程场景够用，不用搭 Redis/Kafka
+
+        class EventBus:
+            """内存版事件总线——零依赖,适合单进程多 Agent"""
+            def __init__(self):
+                self._subscribers = {}  # channel → [handler_func, ...]
+
+            def subscribe(self, channel: str, handler):
+                """订阅一个频道"""
+                self._subscribers.setdefault(channel, []).append(handler)
+
+            async def publish(self, channel: str, event: dict):
+                """发布事件到频道,所有订阅者异步执行"""
+                handlers = self._subscribers.get(channel, [])
+                for handler in handlers:
+                    await handler(event)
+
+            def subscribe_pattern(self, pattern: str, handler):
+                """通配符订阅: data.* → data.updated, data.deleted 都能收到"""
+                self._subscribers.setdefault(pattern, []).append(handler)
+
+
+        # 🚀 完整示例
+        # ────────────────────────────────────────────────────────────────────────────────────
+
+        bus = EventBus()
+
+        # ── Agent A：数据采集,产生事件 ──
+        class DataAgent:
+            async def process(self, data_id: str):
+                new_data = {"id": data_id, "value": 42, "status": "updated"}
+                # 发布事件——谁爱听谁听,DataAgent 不关心
+                await bus.publish("data.updated", {
+                    "type": "data.updated",
+                    "payload": new_data,
+                    "source": "data_agent"
+                })
+                print(f"[DataAgent] 发布了 data.updated: {data_id}")
+
+        # ── Agent B：数据分析,订阅 data.updated ──
+        class AnalysisAgent:
+            async def handle(self, event: dict):
+                data = event["payload"]
+                result = f"分析完成: {data['value'] * 2}"
+                print(f"[AnalysisAgent] {result}")
+
+        # ── Agent C：通知服务,也订阅 data.updated ──
+        class NotifyAgent:
+            async def handle(self, event: dict):
+                print(f"[NotifyAgent] 发送通知: {event['payload']['id']} 已更新")
+
+        # ── 装配 ──
+        bus.subscribe("data.updated", AnalysisAgent().handle)
+        bus.subscribe("data.updated", NotifyAgent().handle)
+
+        # ── 运行 ──
+        import asyncio
+        async def demo():
+            agent = DataAgent()
+            await agent.process("order_001")
+            await agent.process("order_002")
+        # asyncio.run(demo())
+        # 输出:
+        # [DataAgent] 发布了 data.updated: order_001
+        # [AnalysisAgent] 分析完成: 84
+        # [NotifyAgent] 发送通知: order_001 已更新
+        # [DataAgent] 发布了 data.updated: order_002
+        # ...
+
+
+        # 🚀 Redis 版（跨进程轻量）
+        # ────────────────────────────────────────────────────────────────────────────────────
+            # 用 Redis Pub/Sub 代替内存 EventBus,实现跨进程/跨机器的多 Agent 通信。
+            # pip install redis
+            import redis.asyncio as redis
+            
+            class RedisEventBus:
+                def __init__(self, url="redis://localhost:6379"):
+                    self.redis = redis.from_url(url)
+            
+                async def publish(self, channel: str, event: dict):
+                    await self.redis.publish(channel, json.dumps(event))
+            
+                async def subscribe(self, channel: str):
+                    pubsub = self.redis.pubsub()
+                    await pubsub.subscribe(channel)
+                    return pubsub  # async for msg in pubsub.listen(): ...
+
+        # 🚀 Kafka 版（生产级，高吞吐/持久化/重放）
+        # ────────────────────────────────────────────────────────────────────────────────────
+            # 相比 Redis Pub/Sub 的优势：
+            # - 消息持久化：Agent 挂了重启后还能消费未处理的消息
+            # - 消息回溯：支持从指定 offset 重新消费（排查问题用）
+            # - 分区并行：同一个事件可以被多个同组消费者负载均衡消费
+            # - 高吞吐：每秒百万级，远超 Redis Pub/Sub
+            #
+            # 适合场景：
+            # - 事件不能丢（订单、支付等关键链路）
+            # - 新 Agent 上线后要消费「历史事件」
+            # - 多个同类型 Agent 需要负载均衡
+            #
+            # pip install confluent-kafka  # 或 kafka-python(asyncio 支持较弱)
+            #
+            from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
+            import json
+            
+            # ── 生产者 ──
+            class KafkaEventBus:
+                BOOTSTRAP_SERVERS = "localhost:9092"
+            
+                def __init__(self):
+                    self.producer = AIOKafkaProducer(
+                        bootstrap_servers=self.BOOTSTRAP_SERVERS
+                    )
+            
+                async def start(self):
+                    await self.producer.start()
+            
+                async def publish(self, topic: str, event: dict):
+                    # Kafka 用 topic 对应 Redis 的 channel
+                    await self.producer.send_and_wait(
+                        topic,
+                        json.dumps(event).encode()
+                    )
+            
+                async def stop(self):
+                    await self.producer.stop()
+            
+            
+            # ── 消费者 ──
+            class AnalysisAgent:
+                async def run(self):
+                    consumer = AIOKafkaConsumer(
+                        "data.updated",          # topic
+                        bootstrap_servers="localhost:9092",
+                        group_id="analysis_group",  # 消费者组：同组负载均衡
+                        auto_offset_reset="earliest",  # 从最早的消息开始消费
+                    )
+                    await consumer.start()
+                    try:
+                        async for msg in consumer:
+                            event = json.loads(msg.value)
+                            data = event["payload"]
+                            print(f"[AnalysisAgent] {data['value'] * 2}")
+                    finally:
+                        await consumer.stop()
+            
+            # ── 启动 ──
+            async def main():
+                bus = KafkaEventBus()
+                await bus.start()
+            
+                # 启动消费者（后台任务）
+                asyncio.create_task(AnalysisAgent().run())
+                await asyncio.sleep(1)
+            
+                # 生产者发布
+                await bus.publish("data.updated", {"type": "data.updated", "payload": {"id": "001", "value": 42}})
+                await bus.publish("data.updated", {"type": "data.updated", "payload": {"id": "002", "value": 99}})
+            
+                await asyncio.sleep(2)
+                await bus.stop()
+
+
+        # 🚀 三种 EventBus 选型
+        # ────────────────────────────────────────────────────────────────────────────────────
+        #                 内存版              Redis Pub/Sub         Kafka
+        # ──────────────────────────────────────────────────────────────────
+        # 进程范围        单进程              跨进程/跨机器         跨进程/跨机器
+        # 持久化          ❌                  ❌                    ✅(磁盘)
+        # 回溯消费        ❌                  ❌                    ✅
+        # 吞吐量          内存级别             10万/秒              100万+/秒
+        # 消费者组        ❌                   ❌                    ✅负载均衡
+        # 运维成本         零                  Redis 服务            ZK/KRaft集群
+        # 适合场景        开发测试/原型         小规模生产            核心链路/高要求
+
+
+        # 🚀 Pub/Sub vs 直接调用 对比
+        # ────────────────────────────────────────────────────────────────────────────────────
+        #
+        #                 直接调用                     Pub/Sub
+        # ───────────────────────────────────────────────────────────────
+        # A 调 B         A 得等 B 回来                A 发事件就走,不管谁收
+        # 加新消费方      改 A 代码                    新增订阅者
+        # 一个挂了        调用链断了                    不影响其他
+        # 调试           看调用栈                     看事件流
+        #
+        # ✅ 适合 Pub/Sub:                      ❌ 不适合:
+        #    一个事件→多个消费者                   请求-响应模式(需等结果)
+        #    解耦跨模块通信                       强依赖链(A做完B才能做)
+        #    异步通知/日志/监控                    低延迟要求极高
+        #    新 Agent 随时加入                    调用关系简单
+
+
+        # 🚀 典型事件设计
+        # ────────────────────────────────────────────────────────────────────────────────────
+        #   事件名            发布者            订阅者
+        #   data.updated      DataAgent        分析Agent、通知Agent、存储Agent
+        #   data.deleted      DataAgent        通知Agent、备份Agent
+        #   user.login        AuthAgent        日志Agent、推荐Agent
+        #   order.placed      OrderAgent       库存Agent、支付Agent、通知Agent
+        #   task.completed    WorkerAgent      调度Agent、监控Agent
+        #   system.error      任何Agent        监控Agent、告警Agent
 
 
 # ⌛ Langchain Middleware 实例
