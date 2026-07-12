@@ -52,21 +52,15 @@ tools = [
 ]
 
 # ===== Agent =====
-PROMPT_TEMPLATE = """你是一个知识问答助手。用中文回答。
+PROMPT_TEMPLATE = """你是一个知识问答助手。
 
-你有以下工具可以使用:
+历史对话:
+{chat_history}
+
+你有以下工具:
 {tools}
 
-使用格式:
-Question: 用户的输入
-Thought: 思考是否需要工具
-Action: 工具名称
-Action Input: 工具的输入
-Observation: 系统返回的结果
-...（可以重复多轮）...
-Thought: 我现在知道答案了
-Final Answer: 最终回答
-
+Question: {input}
 {agent_scratchpad}"""
 
 prompt = PromptTemplate.from_template(PROMPT_TEMPLATE)
@@ -87,6 +81,7 @@ def chat(question: str, history: list | None = None) -> str:
     executor = AgentExecutor(
         agent=agent,
         memory=memory,
+        tools=tools,
         verbose=False,
         max_iterations=3,
         handle_parsing_errors=True,
