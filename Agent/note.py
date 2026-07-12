@@ -13498,7 +13498,7 @@
 
         @tool("search_web")
         def search_web(query: str) -> str:
-            \"\"\"搜索互联网获取最新信息\"\"\"
+            """搜索互联网获取最新信息"""
             # 这里接入你的搜索API
             return f"搜索结果: {query}"
 
@@ -13591,7 +13591,198 @@
         # 6. 长任务建议加 timeout,防止死循环
 
 
-    # 📊 多Agent框架对比
+    
+
+    # 🚀 CrewOutput 详解
+
+        # crew.kickoff() 的返回值是 CrewOutput 对象:
+
+        # result = crew.kickoff()
+        # print(type(result))        # <class 'crewai.crew_output.CrewOutput'>
+
+        # result.raw                 # 原始文本输出(最常用)
+        # result.json_dict           # 如果输出是JSON格式,自动解析为字典
+        # result.tasks_output        # 每个Task的独立输出列表
+        #   tasks_output[0].raw      # 第一个Task的输出
+        #   tasks_output[0].agent    # 执行这个Task的Agent名
+        #   tasks_output[0].description  # Task的描述
+
+        # 实际项目中一般直接:
+        # result = crew.kickoff()
+        # print(result.raw)
+
+
+    # 🎯 回调与事件监控
+
+        # Crew 运行时可以监听各种事件:
+
+        def on_step_end(agent, task, output):
+            print(f"{agent.role} 完成: {task.description[:20]}...")
+
+        crew = Crew(
+            agents=[...],
+            tasks=[...],
+            step_callback=on_step_end,     # 每步完成时触发
+        )
+
+        # 可用来做: 实时日志 / Token统计 / 结果入库 / 提前终止
+
+
+    # 💾 缓存机制
+
+        # CrewAI 默认开启 LLM 调用缓存:
+
+        # crew = Crew(..., cache=True)         # 开启(默认)
+        # crew = Crew(..., cache=False)        # 关闭
+
+        # 缓存键 = (model, prompt, temperature)
+        # 缓存位置 = 内存(进程重启丢失)
+
+        # 开发调试: 开缓存,省成本
+        # 生产环境: 按需开,时效性敏感则关
+        # 绕过缓存: crew.kickoff(cache_bypass=True)
+
+
+    # 🙋 人工介入 (Human Input)
+
+        from crewai import Task
+
+        task = Task(
+            description="分析数据生成报告",
+            expected_output="报告",
+            agent=analyst,
+            human_input=True,   # 执行到此处暂停,等用户确认
+        )
+
+        # 运行时终端显示: "请审核以下内容,输入 Y 继续, N 重试:"
+
+
+    # ⚡ 并行任务
+
+        task1 = Task(description="查A公司", expected_output="报告", agent=researcher)
+        task2 = Task(description="查B公司", expected_output="报告", agent=researcher)
+        task3 = Task(description="对比AB", expected_output="对比表", agent=writer,
+                    context=[task1, task2])
+
+        # task1 和 task2 无依赖,自动并行
+        # task3 等 task1+task2 都完成后才启动
+
+
+    # 🔧 错误处理与重试
+
+        # crew.kickoff() 默认重试失败的 Task,最多 2 次,指数退避
+
+        agent = Agent(
+            role="研究员",
+            goal="...",
+            backstory="...",
+            max_retry_limit=3,      # 默认2,这里改为3
+        )
+
+        # 全部重试失败:
+        #   sequential: 整个 Crew 停,抛异常
+        #   hierarchical: manager 尝试重新分配
+
+
+    # 📈 Token 用量追踪
+
+        result = crew.kickoff()
+        if hasattr(result, 'token_usage') and result.token_usage:
+            u = result.token_usage
+            print(f"总Tokens: {getattr(u, 'total_tokens', 'N/A')}")
+
+
+    # 🔗 CrewAI + LangChain 集成
+
+        from langchain.tools import tool
+
+        @tool
+        def search_db(query: str) -> str:
+            """查询数据库"""
+            return "查询结果"
+
+        agent = Agent(
+            role="数据分析师",
+            goal="查询分析数据",
+            backstory="擅长数据分析",
+            tools=[search_db],           # LangChain tool 直接用
+        )
+
+        # Task 的 tools 同样兼容 LangChain tools
+
+
+    # ⚙️ 实战完整示例: 技术调研流水线
+
+        from crewai import Agent, Task, Crew, Process
+        from crewai.tools import tool
+
+        @tool("web_search")
+        def web_search(query: str) -> str:
+            """搜索互联网获取信息"""
+            return f"搜索结果: {query}"
+
+        searcher = Agent(
+            role="技术调研员",
+            goal="收集最新技术资料",
+            backstory="你有10年调研经验,擅长快速找到核心信息。",
+            tools=[web_search],
+            verbose=True,
+        )
+
+        writer = Agent(
+            role="技术作者",
+            goal="写出清晰易懂的技术文章",
+            backstory="你擅长把复杂技术讲简单。",
+            verbose=True,
+        )
+
+        reviewer = Agent(
+            role="技术审核官",
+            goal="确保技术内容准确",
+            backstory="资深架构师,一眼看出技术错误。",
+            verbose=True,
+        )
+
+        t1 = Task(
+            description="调研CrewAI和LangGraph最新版本功能和适用场景",
+            expected_output="500字调研报告",
+            agent=searcher,
+        )
+        t2 = Task(
+            description="基于调研写成技术对比博客",
+            expected_output="800字博客",
+            agent=writer,
+            context=[t1],
+        )
+        t3 = Task(
+            description="审核博客技术准确性",
+            expected_output="审核意见+修正后终稿",
+            agent=reviewer,
+            context=[t2],
+        )
+
+        crew = Crew(
+            agents=[searcher, writer, reviewer],
+            tasks=[t1, t2, t3],
+            process=Process.sequential,
+            verbose=True,
+        )
+
+        result = crew.kickoff()
+        print(result.raw)
+
+
+    # ⚠️ 注意事项补充
+
+        # 1. verbose=True 输出很多,每轮 Thought/Action 都打印
+        # 2. 每个 Task 独立调 LLM,N个=N次调用,成本线性增长
+        # 3. hierarchical 额外多一次 manager 调用
+        # 4. 工具描述要写清楚,Agent 靠描述决定用什么工具
+        # 5. 如果 Agent 不使用工具,检查描述是否足够明确
+        # 6. backstory 对输出影响很大,值得花时间打磨
+        # 7. CrewAI 1.0+ 相比 0.x API 变化较大,参考最新文档
+
+# 📊 多Agent框架对比
 
         #           CrewAI          LangGraph       AutoGen
         # ─────────────────────────────────────────────────
