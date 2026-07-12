@@ -13890,7 +13890,252 @@
             #   需要Agent间自由对话 → AutoGen
 
 
+
+
+
+
+# 🏫 AutoGen — 微软多Agent对话框架
+# ====================================================================================================================================
+
+    # 📌 AutoGen 定位
+    #   AutoGen = 微软推出的多Agent对话框架。
+    #   核心理念:Agent之间通过对话协作完成任务。
+    #   版本:当前安装 autogen-agentchat 0.7.5 / autogen-ext 0.7.5
+    #   对比:
+    #     CrewAI     → 角色分工+任务编排(像团队)
+    #     LangGraph  → 图状态机+精确控制(像流程图)
+    #     AutoGen    → Agent间自由对话(像群聊)
+
+    # ⚠️ 注意:0.7.x API 与旧版 0.2.x 完全不同
+    #   网上很多教程用的是旧版API(ConversableAgent/GroupChat)
+    #   新版API使用 AssistantAgent/RoundRobinGroupChat/SelectorGroupChat
+
+
+    # 🚀 核心概念
+
+    #   AssistantAgent   — 由LLM驱动的智能体
+    #   UserProxyAgent   — 人工代理(可选)
+    #   RoundRobinGroupChat — 轮流发言的群聊团队
+    #   SelectorGroupChat   — LLM自动选择下一个发言者
+    #   TextMentionTermination — 检测关键词后终止
+    #   MaxMessageTermination  — 到达最大消息数后终止
+    #   model_client     — 模型客户端(如OpenAIChatCompletionClient)
+
+    # 工作流程:
+    #   创建Agent → 建Team → 设终止条件 → team.run() → 拿到结果
+
+
+    # 🚀 完整入门代码
+
+        import asyncio
+        import os
+        from autogen_ext.models.openai import OpenAIChatCompletionClient
+        from autogen_agentchat.agents import AssistantAgent
+        from autogen_agentchat.teams import RoundRobinGroupChat
+        from autogen_agentchat.conditions import TextMentionTermination
+
+        # 读key
+        api_key = ""
+        with open("E:\\Notebook\\Agent\\.env.local", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip().startswith("deepseek"):
+                    api_key = line.strip().split()[-1]
+                    break
+
+        # 1. 模型客户端(非OpenAI模型需传model_info)
+        model = OpenAIChatCompletionClient(
+            model="deepseek-chat",
+            base_url="https://api.deepseek.com/v1",
+            api_key=api_key,
+            model_info={
+                "vision": False,
+                "function_calling": True,
+                "json_output": True,
+                "structured_output": True,
+                "family": "unknown",
+            },
+        )
+
+        # 2. Agent(名字只能用英文+数字+下划线)
+        researcher = AssistantAgent(
+            "researcher",
+            model,
+            system_message="你是技术研究员,擅长查找和分析信息。用中文回答。讨论充分后回复 TERMINATE。",
+        )
+        writer = AssistantAgent(
+            "writer",
+            model,
+            system_message="你是技术作者,擅长把复杂概念讲清楚。用中文回答。",
+        )
+
+        # 3. 终止条件
+        termination = TextMentionTermination("TERMINATE")
+
+        # 4. 建团队(轮流发言)
+        team = RoundRobinGroupChat(
+            [researcher, writer],
+            max_turns=4,
+            termination_condition=termination,
+        )
+
+        # 5. 运行(异步)
+        async def main():
+            result = await team.run(task="简单说一下RAG和Agentic RAG的区别")
+            for msg in result.messages:
+                print(f"[{msg.source}] {msg.content[:80]}")
+
+        asyncio.run(main())
+
+        # 结果:
+        # [user] 简单说一下RAG和Agentic RAG的区别
+        # [researcher] RAG=检索增强生成,先搜后答...
+        # [writer] 简单说,RAG是"查了再答"...
+
+
+    # 👥 SelectorGroupChat — 自动选人发言
+
+        # RoundRobinGroupChat 轮流发言。如果想由LLM决定谁下一个说,用 SelectorGroupChat:
+
+        from autogen_agentchat.teams import SelectorGroupChat
+
+        team = SelectorGroupChat(
+            [researcher, writer, critic],       # 更多Agent
+            model_client=model,                  # 选择器用的模型
+            max_turns=6,
+            termination_condition=termination,
+        )
+
+        # SelectorGroupChat 每次会问LLM:"下一个谁发言?"
+        # 适合:讨论型任务,需要最合适的人接话
+
+
+    # 🛑 多种终止条件
+
+        from autogen_agentchat.conditions import (
+            TextMentionTermination,     # 提到关键词时终止
+            MaxMessageTermination,      # 到达最大消息数
+            TimeoutTermination,          # 超时终止
+            StopMessageTermination,      # 收到StopMessage时
+        )
+
+        # 可以组合使用:
+        termination = TextMentionTermination("TERMINATE") | MaxMessageTermination(10)
+        # 满足任一条件即终止
+
+        # 常用组合:
+        #   开发调试: TextMentionTermination("TERMINATE") + 大max_turns兜底
+        #   生产环境: 加 TimeoutTermination(seconds=120) 防卡死
+
+
+    # 🧰 工具调用
+
+        # Agent可以调用工具:
+
+        from autogen_agentchat.agents import ToolUseAssistantAgent
+
+        def search_kb(query: str) -> str:
+            """检索知识库"""
+            kb = {"RAG": "RAG=检索增强生成。", "AutoGen": "AutoGen=微软多Agent框架。"}
+            return kb.get(query, "没找到")
+
+        agent = ToolUseAssistantAgent(
+            "searcher",
+            model,
+            tools=[search_kb],
+            system_message="用工具查信息。讨论充分后回复 TERMINATE。",
+        )
+
+        # ⚠️ ToolUseAssistantAgent 在0.7.x中是新类,旧版在AssistantAgent中直接用tool参数
+
+
+    # 🔄 人机协作
+
+        # AutoGen 支持用户参与对话:
+
+        from autogen_agentchat.agents import UserProxyAgent
+
+        user = UserProxyAgent("user")  # 等待用户输入
+
+        team = RoundRobinGroupChat(
+            [researcher, user, writer],
+            max_turns=6,
+        )
+        # 运行时会在终端等待用户输入
+
+
+    # ⚙️ 实战完整示例:研究讨论小组
+
+        import asyncio, os
+        from autogen_ext.models.openai import OpenAIChatCompletionClient
+        from autogen_agentchat.agents import AssistantAgent
+        from autogen_agentchat.teams import SelectorGroupChat
+        from autogen_agentchat.conditions import TextMentionTermination
+
+        # 配置
+        api_key = ""
+        with open("E:\\Notebook\\Agent\\.env.local", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip().startswith("deepseek"):
+                    api_key = line.strip().split()[-1]
+                    break
+
+        MODEL_INFO = {"vision":False,"function_calling":True,"json_output":True,"structured_output":True,"family":"unknown"}
+        model = OpenAIChatCompletionClient(model="deepseek-chat", base_url="https://api.deepseek.com/v1",
+                                           api_key=api_key, model_info=MODEL_INFO)
+
+        # Agent
+        researcher = AssistantAgent("researcher", model, system_message="你是研究员,负责收集信息。用中文。充分后回复 TERMINATE。")
+        analyst = AssistantAgent("analyst", model, system_message="你是分析师,负责分析信息背后的规律。用中文。")
+        summarizer = AssistantAgent("summarizer", model, system_message="你负责总结,输出简洁的结论。用中文。")
+
+        # 团队
+        term = TextMentionTermination("TERMINATE") | TextMentionTermination("DONE")
+        team = SelectorGroupChat([researcher, analyst, summarizer], model_client=model,
+                                 max_turns=8, termination_condition=term)
+
+        async def run():
+            result = await team.run(task="讨论:2026年Agent开发最重要的框架有哪些?")
+            print("\\n=== 最终总结 ===")
+            for msg in result.messages:
+                if msg.source == "summarizer":
+                    print(msg.content)
+
+        asyncio.run(run())
+
+
+    # 📊 三框架对比(完整版)
+
+        #               CrewAI(v1.15.2)     LangGraph(v1.2.4)    AutoGen(v0.7.5)
+        # ─────────────────────────────────────────────────────────────────────────
+        # 出品方        CrewAI Inc.         LangChain            微软
+        # 核心思想      角色分工+任务编排    图状态机+精确控制     Agent间自由对话
+        # 上手难度      ⭐ 最简单            ⭐⭐⭐               ⭐⭐
+        # 灵活性        ⭐⭐                ⭐⭐⭐⭐⭐            ⭐⭐⭐⭐
+        # 流程控制      sequential/hierarchical  有向图          轮次/自动选人
+        # 终止条件      Task完成即停        END节点              TextMention/Max等
+        # 异步          ⚠️ sync同步         sync/async           纯async异步
+        # 版本成熟度    1.x稳定             1.x稳定              0.x仍在快速迭代
+        # 社区          活跃                最活跃               中等
+
+        # 一句话:
+        #   要团队协作 → CrewAI | 要流程控制 → LangGraph | 要自由对话 → AutoGen
+
+
+    # ⚠️ 注意事项
+
+        # 1. Agent名字只能用英文+数字+下划线(不能中文)
+        # 2. 非OpenAI模型必须传 model_info 参数
+        # 3. 新版0.7.x API完全异步(asyncio),不是旧版同步
+        # 4. 旧版API(ConversableAgent/GroupChat)已废弃,不要参考老教程
+        # 5. 当前安装: autogen-agentchat 0.7.5 / autogen-ext 0.7.5
+        # 6. DeepSeek的base_url是 https://api.deepseek.com/v1 (注意带v1)
+        # 7. max_turns 设太小不够讨论,设太大浪费token
+        # 8. SelectorGroupChat依赖LLM选人,偶尔会选错
+
+
 # 🌙 Agent Scope
+# 🌙 Agent Scope
+
 # ====================================================================================================================================
     # 🚀 第一个智能体
         import asyncio
