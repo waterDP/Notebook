@@ -13902,10 +13902,6 @@
     #     LangGraph  → 图状态机+精确控制(像流程图)
     #     AutoGen    → Agent间自由对话(像群聊)
 
-    # ⚠️ 注意:0.7.x API 与旧版 0.2.x 完全不同
-    #   网上很多教程用的是旧版API(ConversableAgent/GroupChat)
-    #   新版API使用 AssistantAgent/RoundRobinGroupChat/SelectorGroupChat
-
 
     # 🚀 核心概念
 
@@ -14139,7 +14135,6 @@
 
         # Swarm 适合:客服分流、技术工单、流水线型任务
 
-
     # 🔬 MagenticOneGroupChat — 微软最新研究模式
 
         # Magentic-One 是微软研究院2025年发布的多Agent架构:
@@ -14158,7 +14153,6 @@
         # MagenticOne 的优势:Orchestrator能动态调整计划
         # 适合:复杂多步骤任务(如"帮我做一个市场分析报告")
 
-
     # 💻 CodeExecutorAgent — 代码执行
 
         # AutoGen 支持Agent写代码并自动执行:
@@ -14172,7 +14166,6 @@
 
         # Agent 可以在对话中写Python代码,executor会自动运行并返回结果
         # 适合:数据分析、图表生成、自动化脚本
-
 
     # 🧠 SocietyOfMindAgent — 多模型集成
 
@@ -14188,7 +14181,6 @@
 
         society = SocietyOfMindAgent("society", team=inner_team)
         # society.get_response(task) 让内部团队讨论后输出综合结果
-
 
     # 🛑 更多终止条件
 
@@ -14214,7 +14206,6 @@
             TimeoutTermination(60)
         )
 
-
     # ⚡ Streaming 流式输出
 
         # AutoGen 支持实时流式输出:
@@ -14227,7 +14218,6 @@
 
         # 用 run_stream 替代 run,可以在生成过程中实时看到输出
         # 适合:聊天应用、需要展示思考过程
-
 
     # 🔄 并发执行多个Team
 
@@ -14242,6 +14232,139 @@
 
         # 适合:需要并行调研多个主题,最后汇总
 
+    # 🕸️ DiGraph / GraphFlow — 自定义图流程
+
+        # 除了内置的 RoundRobin/Selector/Swarm,AutoGen 还支持自定义有向图:
+
+        from autogen_agentchat.teams import DiGraph, DiGraphBuilder
+
+        builder = DiGraphBuilder()
+        builder.add_node(researcher, "research_task")
+        builder.add_node(analyst, "analyze_task")
+        builder.add_node(summarizer, "summarize_task")
+        builder.add_edge("research_task", "analyze_task")    # 研究→分析
+        builder.add_edge("analyze_task", "summarize_task")   # 分析→总结
+        # builder.add_conditional_edge("analyze_task", router_func, {"繼續":"summarize_task", "重做":"research_task"})
+
+        graph = builder.build()
+
+        # 适合:需要精细控制流程,又有AutoGen对话能力
+        # 相当于在AutoGen里用LangGraph的思路搭流程
+
+
+    # 📬 MessageFilterAgent — 消息拦截与过滤
+
+        # 可以在消息传递给下一个Agent之前拦截/修改:
+
+        from autogen_agentchat.agents import MessageFilterAgent, MessageFilterConfig
+
+        # 过滤掉超过200字的冗长消息
+        filter_agent = MessageFilterAgent(
+            "filter",
+            config=MessageFilterConfig(max_message_length=200),
+        )
+
+        # 或者自定义过滤函数:
+        def my_filter(msg) -> bool:
+            """只保留包含关键字的message"""
+            return "代码" in msg.content or "BUG" in msg.content
+
+        # 适合:生产环境中控制消息质量、去噪
+
+
+    # 🛠️ 自定义工具:Web搜索
+
+        import httpx
+        from autogen_agentchat.agents import ToolUseAssistantAgent
+
+        # 真实的Web搜索工具
+        async def web_search(query: str) -> str:
+            """搜索互联网获取最新信息"""
+            async with httpx.AsyncClient() as client:
+                try:
+                    # 这里接入你的搜索API
+                    # 比如 Brave Search / SerpAPI / Bing Search
+                    resp = await client.get(
+                        "https://api.search.brave.com/res/v1/web/search",
+                        params={"q": query, "count": 3},
+                        headers={"Accept": "application/json",
+                                 "Accept-Encoding": "gzip",
+                                 "X-Subscription-Token": os.environ.get("BRAVE_API_KEY", "")},
+                        timeout=10,
+                    )
+                    return resp.text[:2000]
+                except Exception as e:
+                    return f"搜索失败: {e}"
+
+        search_agent = ToolUseAssistantAgent(
+            "searcher", model,
+            tools=[web_search],
+            system_message="用Web搜索获取信息。说中文。回复 TERMINATE 结束。",
+        )
+
+        # 注意:ToolUseAssistantAgent 要求工具函数必须是async
+        # 同步函数用 @tool 装饰器包装后也可以
+
+
+    # 🧩 Agent 间消息结构
+
+        # AutoGen 中每条消息都有固定结构:
+
+        msg = TextMessage(
+            content="你好",
+            source="user",         # 谁发的
+        )
+
+        # 内置消息类型:
+        #   TextMessage     — 普通文本
+        #   ToolCallMessage  — 工具调用请求
+        #   ToolCallResultMessage — 工具执行结果
+        #   StopMessage     — 停止信号
+        #   HandoffMessage  — 交接信号
+
+        # 可以通过 type(msg).__name__ 判断消息类型:
+        # for msg in result.messages:
+        #     print(f"[{type(msg).__name__}] {msg.source}: {msg.content[:50]}")
+
+
+    # 💾 持久化:保存和恢复对话
+
+        # AutoGen 支持序列化/反序列化对话状态:
+
+        import json
+
+        # 保存(将对话转为字典)
+        dump = {
+            "task": task_text,
+            "messages": [
+                {"source": msg.source, "content": msg.content, "type": type(msg).__name__}
+                for msg in result.messages
+            ],
+        }
+        with open("chat_history.json", "w", encoding="utf-8") as f:
+            json.dump(dump, f, ensure_ascii=False, indent=2)
+
+        # 适用于:断点续聊、日志审计、分析对话质量
+
+
+    # 💰 成本追踪
+
+        # AutoGen 可以在运行时统计 token 消耗:
+
+        result = await team.run(task="...")
+
+        total_cost = 0
+        for msg in result.messages:
+            if hasattr(msg, 'models_usage') and msg.models_usage:
+                usage = msg.models_usage
+                if hasattr(usage, 'prompt_tokens'):
+                    pt = usage.prompt_tokens or 0
+                    ct = usage.completion_tokens or 0
+                    print(f"[{msg.source}] prompt={pt}, completion={ct}")
+                    total_cost += ct * 0.000002  # 按deepseek费率粗略估算
+
+        print(f"估算成本: ${total_cost:.4f}")
+
 
     # ⚡ 实战最佳实践
 
@@ -14254,6 +14377,8 @@
         #    OpenAIChatCompletionClient(model="deepseek-v4-flash", ...)
         # 7. run_stream 比 run 更友好(实时看到输出)
         # 8. 每个Agent的system_message决定了行为,值得反复调
+        # 9. 异步工具用async def,同步工具用@tool装饰器
+        # 10. 生产环境加TraceId,便于追踪整条调用链
 
 
     # ⚠️ 注意事项
@@ -14269,322 +14394,180 @@
         # 9. 运行时若看到 model mismatch warning,换成实际运行的模型名
 
 
-# 🌙 Agent Scope
+# 🌙 Agent Scope — 阿里Agent框架
 # ====================================================================================================================================
-    # 🚀 第一个智能体
-        import asyncio
-        import os
+
+    # 📌 AgentScope 定位
+    #   AgentScope = 阿里巴巴达摩院开源的智能体框架。
+    #   核心理念:从Agent开发到分布式部署的全链路支持。
+    #   特点:支持本地模型+API模型、分布式Agent、内置工具集、事件驱动。
+    #   适用:需要分布式Agent编排的企业级应用。
+    #   版本:agentscope
+
+    # 🚀 核心概念
+
+    #   Agent        — 基础智能体类,可自定义行为和工具
+    #   Pipeline     — Agent间串行/并行/条件执行
+    #   Toolkit      — 内置工具集(Bash/Read/Write/Edit等)
+    #   ModelWrapper — 模型封装(支持本地+API混合)
+    #   Distributed  — 分布式Agent部署
+    #   Event        — 事件驱动机制
+
+    # 🚀 快速入门
 
         from agentscope.agent import Agent
-        from agentscope.credential import DashScopeCredential
-        from agentscope.event import EventType
-        from agentscope.message import UserMsg
         from agentscope.model import DashScopeChatModel
+        from agentscope.credential import DashScopeCredential
+        from agentscope.message import UserMsg
+
+        # 1. 创建Agent
+        agent = Agent(
+            name="Friday",
+            system_prompt="You are a helpful assistant.",
+            model=...,
+        )
+
+        # 2. 对话
+        msg = UserMsg(name="user", content="Hello!")
+        reply = agent.reply(msg)
+        print(reply)
+
+    # 🔧 模型配置
+
+        # AgentScope 支持多种模型:
+
+        # ── 阿里通义千问(推荐)──
+        from agentscope.model import DashScopeChatModel
+        model = DashScopeChatModel(
+            config_name="qwen",
+            model_name="qwen-plus",
+            api_key="sk-xxx",
+        )
+
+        # ── OpenAI 兼容接口(DeepSeek等)──
+        from agentscope.model import OpenAIWrapper
+        model = OpenAIWrapper(
+            config_name="deepseek",
+            model_name="deepseek-chat",
+            api_key="sk-xxx",
+            base_url="https://api.deepseek.com",
+        )
+
+        # ── 本地模型(Ollama)──
+        from agentscope.model import OllamaChatModel
+        model = OllamaChatModel(
+            config_name="local",
+            model_name="qwen2.5:7b",
+        )
+
+    # 🛠️ 工具集成
+
         from agentscope.tool import Toolkit, Bash, Read, Write, Edit
 
-        async def main() -> None:
-            agent = Agent(
-                name="Friday",
-                system_prompt="You are a helpful assistant named Friday.",
-                model=DashScopeChatModel(
-                    credential=DashScopeCredential(
-                        api_key=os.getenv("DASHSCOPE_API_KEY"),
-                    ),
-                    model="qwen-plus",
-                ),
-                toolkit=Toolkit(tools=[Bash(), Read(), Write(), Edit()]),
-            )
-
-            user_msg = UserMsg(name="user", content="Hello, who are you?")
-
-            # 方式一:等待最终的助手消息。
-            reply_msg = await agent.reply(user_msg)
-            # `reply_msg` 是一个 `AssistantMsg`,其 `content` 是一组内容块。
-            # 可按需检查文本块、工具调用等。
-            ...
-
-            # 方式二:流式获取增量事件(文本片段、工具调用等)。
-            async for event in agent.reply_stream(user_msg):
-                # 根据 `event.type` 分发处理 -- 每个分支对应一种事件类型。
-                match event.type:
-                    case EventType.TEXT_BLOCK_DELTA:
-                        # 模型返回的流式文本片段 -- 追加到界面或标准输出。
-                        ...
-                    case EventType.TOOL_CALL_START:
-                        # 智能体即将调用工具 -- 展示调用信息。
-                        ...
-                    case _:
-                        # 其他事件:思考块、工具结果、回复结束等。
-                        ...
-
-
-        asyncio.run(main())
-
-    # 🚀 创建文本消息
-        from agentscope.message import UserMsg, SystemMsg, AssistantMsg
-
-        # 用户消息
-        user_msg = UserMsg(
-            name="user",
-            content="这张图片里有什么?"
-        )
-
-        # 系统消息,仅用于系统提示(System prompt)
-        system_msg = SystemMsg(
-            name="system",
-            content="你是一个名为 Friday 的 AI 助手。"
-        )
-
-        # 助手消息
-        assistant_msg = AssistantMsg(
-            name="Friday",
-            content="你好,有什么我可以帮你的吗?"
-        )
-
-    # 🚀 创建多模态消息
-        from agentscope.message import UserMsg, TextBlock, DataBlock, Base64Source
-
-        # 用户消息
-        user_msg = UserMsg(
-            name="user",
-            content=[
-                TextBlock(text="描述这张图片:"),
-                DataBlock(
-                    source=Base64Source(
-                        data="...",
-                        media_type="image/png"
-                    )
-                ),
-            ],
-        )
-
-    # 🚀 创建工具调用消息
-        from agentscope.message import AssistantMsg, ThinkingBlock, TextBlock, ToolCallBlock, ToolCallState, ToolResultBlock, ToolResultState
-
-        assistant_msg = AssistantMsg(
-            name="Friday",
-            content=[
-                ThinkingBlock(thinking="我应该调用工具来查询天气。"),
-                TextBlock(text="让我查询下北京的天气。"),
-                ToolCallBlock(
-                    id="tool_call_1",
-                    name="weather_search",
-                    input='{"city": "Beijing"}',
-                    state=ToolCallState.FINISHED,
-                ),
-                ToolResultBlock(
-                    id="tool_call_1",
-                    name="weather_search",
-                    output="北京的天气是晴天,温度 25°C。",
-                    state=ToolResultState.SUCCESS,
-                ),
-            ]
-        )
-
-    # 💡 配置智能体
-        import os
-        from agentscope.agent import Agent, ContextConfig
-        from agentscope.tool import Toolkit, Bash, Edit, Grep, Read, Write
-        from agentscope.mcp import MCPClient, HttpMCPConfig
-        from agentscope.model import DashScopeChatModel
-        from agentscope.credential import DashScopeCredential
-
         agent = Agent(
-            name="my_agent",
-            system_prompt="你是一个AI助手。",
-            model=DashScopeChatModel(
-                credential=DashScopeCredential(api_key="YOUR_API_KEY"),
-                model="qwen-max",
-            ),
-            toolkit=Toolkit(
-                tools=[Bash(), Edit(), Grep(), Read(), Write()],
-                mcps=[
-                    MCPClient(
-                        name="amap",
-                        is_stateful=False,
-                        mcp_config=HttpMCPConfig(
-                            url=f"https://mcp.amap.com/mcp?key={os.environ['AMAP_API_KEY']}",
-                        ),
-                    ),
-                ],
-                skills_or_loaders=["./skills"],
-            ),
-            context_config=ContextConfig(
-                trigger_ratio=0.7,       # 使用 70% 上下文时触发压缩
-                reserve_ratio=0.2,       # 压缩后保留最近 20% 的内容
-                tool_result_limit=1000,  # 工具结果超过 1000 token 时截断
-            )
+            name="coder",
+            system_prompt="You are a coding assistant.",
+            model=model,
+            toolkit=Toolkit(tools=[Bash(), Read(), Write(), Edit()]),
         )
 
-    # ✈ 压缩上下文
-        """
-        当 token 数量超过 context_config.trigger_ratio × model.context_length 时,智能体会自动压缩上下文。
-        压缩会对较旧的消息进行摘要,如果配置了 offloader,还会将其卸载到磁盘。
+        # Agent 可以在对话中执行 Bash 命令、读写文件等
+        # 适合:代码生成、自动化脚本
 
-        也可以手动触发压缩:
-        """
-        from agentscope.agent import ContextConfig
+    # 🔄 Pipeline — Agent流水线
 
-        # 使用智能体的默认配置
-        await agent.compress_context()
+        from agentscope.pipeline import Pipeline
 
-        # 或为本次调用传入自定义配置
-        await agent.compress_context(
-            ContextConfig(
-                trigger_ratio=0.6,
-                reserve_ratio=0.2,
-            )
+        # 串行执行
+        pipeline = Pipeline()
+        pipeline.add_agent(agent1)
+        pipeline.add_agent(agent2)
+        pipeline.add_agent(agent3)
+
+        result = pipeline.run(input_msg)
+        # agent1 → agent2 → agent3 依次处理
+
+    # 🌐 分布式Agent
+
+        # AgentScope 支持将Agent部署到不同机器:
+
+        from agentscope.distributed import RpcAgentServer
+
+        # 服务端启动Agent
+        server = RpcAgentServer(
+            agent=my_agent,
+            host="0.0.0.0",
+            port=8000,
         )
+        server.start()
 
-    # 💬 人机交互
-        # 当权限系统判断某个工具调用需要用户批准时,智能体会发出 RequireUserConfirmEvent 并暂停。
+        # 客户端远程调用
+        from agentscope.distributed import RpcAgentClient
+        client = RpcAgentClient("http://remote_host:8000")
+        reply = client(msg)
 
-        # 1 接收 RequireUserConfirmEvent
-            from agentscope.event import RequireUserConfirmEvent
+        # 适合:把Agent部署为微服务
 
-            async for event in agent.reply_stream(msg):
-                if isinstance(event, RequireUserConfirmEvent):
-                    for tc in event.tool_calls:
-                        print(f"工具: {tc.name}, 输入: {tc.input}")
-                        print(f"建议规则: {tc.suggested_rules}")
+    # 🎯 Multi-Agent 协作
 
-        # 2 构建确认结果
-            # 为每个待处理的工具调用创建 ConfirmResult,指明是否允许执行。也可以修改工具调用输入或接受建议的权限规则:
-            from agentscope.event import ConfirmResult, UserConfirmResultEvent
+        from agentscope.agents import DialogAgent, UserAgent
 
-            confirm_results = []
-            for tc in event.tool_calls:
-                confirm_results.append(
-                    ConfirmResult(
-                        confirmed=True,           # 或 False 表示拒绝
-                        tool_call=tc,             # 传回(可选择修改)
-                        rules=tc.suggested_rules, # 接受规则以便未来自动允许
-                    )
-                )
+        # Agent 间可以对话协作
+        agent_a = DialogAgent(name="Alice", model=model, system_prompt="你是研究员。")
+        agent_b = DialogAgent(name="Bob", model=model, system_prompt="你是评论家。")
 
-        # 3 恢复智能体
-            # 将 UserConfirmResultEvent 传回 reply 或 reply_stream:
-            confirm_event = UserConfirmResultEvent(
-                reply_id=event.reply_id,
-                confirm_results=confirm_results,
-            )
-            result = await agent.reply(confirm_event)
-            """
-            - 已确认的工具调用立即执行,智能体继续推理
-            - 已拒绝的工具调用会产生 LLM 可见的错误结果,LLM 可能会用不同方式重试
-            - 已接受的规则会持久化到权限引擎中--匹配的未来调用将自动允许,无需再次提示
-            """
+        # 通过 Pipeline 或手动消息传递实现协作
 
-    # 🚀 持久化智能体状态
+    # ⚙️ 实战示例
+
         import asyncio
         from agentscope.agent import Agent
-        from agentscope.state import AgentState
-        from agentscope.model import DashScopeChatModel
-        from agentscope.credential import DashScopeCredential
-        from agentscope.message import UserMsg
-        from agentscope.app.storage import RedisStorage
-
-        USER_ID = "user_123"
-        AGENT_ID = "agent_456"
-        SESSION_ID = "session_789"
-
-        async def main():
-            async with RedisStorage(host="localhost", port=6379) as storage:
-                # 从存储中加载状态,若不存在则使用全新状态
-                record = await storage.get_session(
-                    user_id=USER_ID,
-                    agent_id=AGENT_ID,
-                    session_id=SESSION_ID,
-                )
-                state = record.state if record else AgentState()
-
-                # 使用恢复的状态创建智能体
-                agent = Agent(
-                    name="my_agent",
-                    system_prompt="你是一个有帮助的助手。",
-                    model=DashScopeChatModel(
-                        credential=DashScopeCredential(api_key="YOUR_API_KEY"),
-                        model="qwen-max",
-                    ),
-                    state=state,
-                )
-
-                # 执行一轮 reply
-                result = await agent.reply(
-                    UserMsg(name="user", content="继续之前的任务。"),
-                )
-                print(result.get_text_content())
-
-                # 将更新后的状态持久化回 Redis
-                await storage.update_session_state(
-                    user_id=USER_ID,
-                    agent_id=AGENT_ID,
-                    session_id=SESSION_ID,
-                    state=agent.state,
-                )
-
-        asyncio.run(main())
-
-    # 🚀 调用ChatModel
-        """
-        返回类型取决于模型的 stream 设置:
-        - stream=False -- 返回单个 ChatResponse,承载完整输出。
-        - stream=True -- 返回 AsyncGenerator[ChatResponse, None]。
-            中间 chunk(is_last=False)只携带增量内容。
-            为了让开发者无需自行累积增量,AgentScope 会在末尾追加一个 is_last=True 的 chunk,承载完整的累积内容。
-        """
-        import asyncio
-        import os
-        from agentscope.model import DashScopeChatModel
-        from agentscope.credential import DashScopeCredential
+        from agentscope.model import OpenAIWrapper
+        from agentscope.tool import Toolkit, Bash, Read, Write
         from agentscope.message import UserMsg
 
-        async def main():
-            model = DashScopeChatModel(
-                credential=DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"]),
-                model="qwen-plus",
-                stream=True,
-            )
-            msgs = [UserMsg(name="user", content="Count from 1 to 5.")]
+        # 配置(用DeepSeek)
+        model = OpenAIWrapper(
+            config_name="deepseek",
+            model_name="deepseek-chat",
+            api_key="sk-xxx",
+            base_url="https://api.deepseek.com",
+        )
 
-            async for chunk in await model(msgs):
-                if chunk.is_last:
-                    print("Final:", chunk.content)   # 完整累积内容
-                else:
-                    print("Delta:", chunk.content)   # 仅增量
+        # 带工具的Agent
+        agent = Agent(
+            name="helper",
+            system_prompt="你是有帮助的助手。",
+            model=model,
+            toolkit=Toolkit(tools=[Bash(), Read()]),
+        )
 
-        asyncio.run(main())
+        # 单轮对话
+        msg = UserMsg(name="user", content="列出当前目录的文件")
+        reply = agent.reply(msg)
+        print(reply)
 
-    # 🚀 生成结构化输出
-        """
-        当需要返回符合 Pydantic 模型或 JSON schema 的结构化结果时,调用 generate_structured_output 而非 __call__。
-        它返回一个 StructuredResponse,其 content 是经过 schema 校验的 dict:
-        """
-        import asyncio
-        import os
-        from pydantic import BaseModel
-        from agentscope.model import DashScopeChatModel
-        from agentscope.credential import DashScopeCredential
-        from agentscope.message import UserMsg
+    # 📊 与其他框架对比
 
-        class WeatherInfo(BaseModel):
-            city: str
-            temperature: float
-            unit: str
+        #           AgentScope         CrewAI              LangGraph
+        # ────────────────────────────────────────────────────────────
+        # 出品方     阿里巴巴             CrewAI Inc.          LangChain
+        # 核心思想    全链路Agent平台      角色分工+编排         图状态机
+        # 本地模型    ✅ 原生支持          有限                  有限
+        # 分布式      ✅ 原生支持          ❌ 不支持             ❌ 不支持
+        # 工具集      内置Bash/Read等      通过@tool扩展         通过Tool扩展
+        # 学习曲线    ⭐⭐⭐                ⭐                    ⭐⭐⭐
+        # 生态        阿里系为主           社区活跃              最活跃
+        # 适合场景    企业级部署            快速原型              复杂Workflow
 
-        async def main():
-            model = DashScopeChatModel(
-                credential=DashScopeCredential(api_key=os.environ["DASHSCOPE_API_KEY"]),
-                model="qwen-plus",
-                stream=False,
-            )
-            response = await model.generate_structured_output(
-                messages=[UserMsg(name="user", content="What's the weather in Shanghai?")],
-                structured_model=WeatherInfo,
-            )
-            print(response.content)  # 符合 WeatherInfo 的 dict
+    # ⚠️ 注意事项
 
-        asyncio.run(main())
+        # 1. AgentScope 是阿里系框架,对阿里云/通义千问兼容最好
+        # 2. 使用DeepSeek需用OpenAIWrapper,不是DashScopeChatModel
+        # 3. 分布式功能需要额外配置网络环境
+        # 4. Pipeline 目前只支持串行,不支持条件分支
+        # 5. 社区相对较小,文档以英文为主
+        # 6. 版本迭代较快,API可能变化
 
 
 # 🏀 Agents SDK
