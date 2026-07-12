@@ -3031,33 +3031,33 @@
                         if i == retries-1: return f"失败: {e}"
                         await asyncio.sleep(2**i)
 
-    # === 自定义中间件 → Node 写法 ===
+    # ⏳ === 自定义中间件 → Node 写法 ===
 
-        # @before_agent → 入口 Node
+        # ⏳ @before_agent → 入口 Node
             async def init_node(s: MessagesState) -> dict:
                 if not s.get("user_id"): return {"messages": [AIMessage("请先登录")]}
                 return s
 
-        # @after_agent → 出口 Node
+        # ⏳ @after_agent → 出口 Node
             async def cleanup_node(s: MessagesState) -> dict:
                 print(f"对话轮次: {len(s['messages'])}")
                 return s
 
-        # @before_model → 预处理 Node
+        # ⏳ @before_model → 预处理 Node
             async def pre_node(s: MessagesState) -> dict:
                 last = s["messages"][-1]
                 if hasattr(last, 'content') and len(str(last.content)) > 4000:
                     last.content = str(last.content)[:4000] + "..."
                 return s
 
-        # @after_model → 后处理 Node
+        # ⏳ @after_model → 后处理 Node
             async def post_node(s: MessagesState) -> dict:
                 last = s["messages"][-1]
                 if hasattr(last, 'content') and "```" in str(last.content):
                     return {"messages": [AIMessage(str(last.content) + "\n💡 代码已复制")]}
                 return s
 
-        # @wrap_model_call → cache node
+        # ⏳ @wrap_model_call → cache node
             _cache = {}
             async def cached_llm(s: MessagesState) -> dict:
                 key = str(s["messages"][-1].content)[:100]
@@ -3066,7 +3066,7 @@
                 _cache[key] = r
                 return {"messages": [r]}
 
-        # @wrap_tool_call → wrapper node
+        # ⏳ @wrap_tool_call → wrapper node
             async def tool_wrapper(s: MessagesState) -> dict:
                 last = s["messages"][-1]
                 if not hasattr(last, 'tool_calls'): return s
@@ -3077,14 +3077,14 @@
                         return {"messages": [ToolMessage(f"无权限: {n}", tool_call_id=tc.id)]}
                 return s
 
-        # @dynamic_prompt → prompt node
+        # ⏳ @dynamic_prompt → prompt node
             async def dynamic_prompt(s: MessagesState) -> dict:
                 msg = str(s["messages"][-1].content)
                 for kw, r in {"代码":"Python工程师", "数据库":"DB架构师", "部署":"DevOps专家"}.items():
                     if kw in msg: return {"messages": [SystemMessage(f"你是{r}")] + s["messages"]}
                 return {"messages": [SystemMessage("你是有帮助的助手")] + s["messages"]}
 
-        # 通用 Graph 构建模板
+        # ⏳ 通用 Graph 构建模板
             # graph = StateGraph(MessagesState)
             # graph.add_node("llm", call_model)
             # graph.add_node("tools", ToolNode(tools))
@@ -3095,47 +3095,73 @@
 
 
     # 🔧 AgentExecutor 参数详解
-    #   AgentExecutor = 封装了 ReAct 循环的执行器,替你做以下工作:
-    #     ① 填变量({input}/{tools}/{chat_history}/{agent_scratchpad})
-    #     ② 调 LLM
-    #     ③ 解析 LLM 输出(调工具还是回答)
-    #     ④ 执行工具并结果填回上下文
-    #     ⑤ 循环直到 Final Answer 或达到上限
+        from langchain.agents import create_react_agent, AgentExecutor
+        from langchain.prompts import PromptTemplate
+        from langchain.memory import ConversationBufferMemory
 
-    #   agent （必需）→ Agent 对象,由 create_react_agent() 创建
-    #   tools （建议不传）→ 工具列表,能从 agent.tools 推断
-    #   memory（可选）→ 对话记忆,如 ConversationBufferMemory
-    #   verbose（默认 False）→ 打印每轮 Thought/Action/Observation
+        PROMPT_TEMPLATE = """你是一个知识问答助手。
 
-    #   max_iterations（默认 15,建议 3~5）→ 最大 LLM 调用轮数
-    #     LLM 每输出一次(不管调工具还是直接回答)都算 1 轮
-    #     典型消耗: 简单问题1轮搜+1轮答=2轮,复杂3~4轮,死循环防御
-    #     超过后执行 early_stopping_method
+        历史对话:
+        {chat_history}
 
-    #   max_execution_time（默认 None）→ 最大执行秒数
-    #     墙上时钟,不按轮数算。30 秒超时直接停,生产环境双保险
+        你有以下工具:
+        {tools}
 
-    #   early_stopping_method（默认 "force"）→ 到上限了怎么办
-    #     "force" → 强行要求 LLM 输出 Final Answer(兜底总结)
-    #     "generate" → 基于已有信息自行生成回答(不再调工具)
+        Question: {input}
+        {agent_scratchpad}"""
 
-    #   handle_parsing_errors（默认 False,建议 True）→ 解析失败自动重试
-    #     True → 自动把错误消息喂回 LLM 要求重试
-    #     也可以传自定义错误消息字符串
+        prompt = PromptTemplate.from_template(PROMPT_TEMPLATE)
+        agent = create_react_agent(llm=llm, tools=tools, prompt=prompt)
+        memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+        executor = AgentExecutor(
+            agent=agent,
+            memory=memory,
+            verbose=True,           # 调试时开
+            max_iterations=3,       # 防死循环
+            handle_parsing_errors=True,  # LLM 乱输出自动重试
+        )
+        #   AgentExecutor = 封装了 ReAct 循环的执行器,替你做以下工作:
+        #     ① 填变量({input}/{tools}/{chat_history}/{agent_scratchpad})
+        #     ② 调 LLM
+        #     ③ 解析 LLM 输出(调工具还是回答)
+        #     ④ 执行工具并结果填回上下文
+        #     ⑤ 循环直到 Final Answer 或达到上限
 
-    #   return_intermediate_steps（默认 False）→ 返回中间步骤
-    #     开的话 result 里会多一个 intermediate_steps 字段
-    #     包含每一步的工具调用和结果,调试好用
+        #   agent （必需）→ Agent 对象,由 create_react_agent() 创建
+        #   tools （建议不传）→ 工具列表,能从 agent.tools 推断
+        #   memory（可选）→ 对话记忆,如 ConversationBufferMemory
+        #   verbose（默认 False）→ 打印每轮 Thought/Action/Observation
 
-    #   callbacks（默认 None）→ 高级监听回调,生产日志用
+        #   max_iterations（默认 15,建议 3~5）→ 最大 LLM 调用轮数
+        #     LLM 每输出一次(不管调工具还是直接回答)都算 1 轮
+        #     典型消耗: 简单问题1轮搜+1轮答=2轮,复杂3~4轮,死循环防御
+        #     超过后执行 early_stopping_method
 
-    #   ⚡ 实战推荐:
-    #     executor = AgentExecutor(
-    #         agent=agent,
-    #         verbose=True,              # 调试时开
-    #         max_iterations=3,           # 防死循环
-    #         handle_parsing_errors=True, # LLM 乱输出自动重试
-    #     )
+        #   max_execution_time（默认 None）→ 最大执行秒数
+        #     墙上时钟,不按轮数算。30 秒超时直接停,生产环境双保险
+
+        #   early_stopping_method（默认 "force"）→ 到上限了怎么办
+        #     "force" → 强行要求 LLM 输出 Final Answer(兜底总结)
+        #     "generate" → 基于已有信息自行生成回答(不再调工具)
+
+        #   handle_parsing_errors（默认 False,建议 True）→ 解析失败自动重试
+        #     True → 自动把错误消息喂回 LLM 要求重试
+        #     也可以传自定义错误消息字符串
+
+        #   return_intermediate_steps（默认 False）→ 返回中间步骤
+        #     开的话 result 里会多一个 intermediate_steps 字段
+        #     包含每一步的工具调用和结果,调试好用
+
+        #   callbacks（默认 None）→ 高级监听回调,生产日志用
+
+        #   ⚡ 实战推荐:
+        #     executor = AgentExecutor(
+        #         agent=agent,
+        #         verbose=True,              # 调试时开
+        #         max_iterations=3,           # 防死循环
+        #         handle_parsing_errors=True, # LLM 乱输出自动重试
+        #     )
+
 
 # 🌐 MCP
 # ====================================================================================================================================
