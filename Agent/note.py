@@ -14394,181 +14394,358 @@
         # 9. 运行时若看到 model mismatch warning,换成实际运行的模型名
 
 
-# 🌙 Agent Scope — 阿里Agent框架
+# 🌙 AgentScope — 阿里全链路Agent框架
 # ====================================================================================================================================
 
     # 📌 AgentScope 定位
-    #   AgentScope = 阿里巴巴达摩院开源的智能体框架。
-    #   核心理念:从Agent开发到分布式部署的全链路支持。
-    #   特点:支持本地模型+API模型、分布式Agent、内置工具集、事件驱动。
-    #   适用:需要分布式Agent编排的企业级应用。
-    #   版本:agentscope
+    #   AgentScope = 阿里巴巴达摩院开源的智能体全链路开发框架。
+    #   不止是Agent框架,而是覆盖 Agent开发 → 模型管理 → 工具集成 → 多Agent协作 → 服务部署 → 监控观测
+    #   AgentScope 2.0 相比1.x有了重大架构升级,支持分布式Agent和更灵活的管线机制。
+    #   特点:
+    #     ① 多模型支持: 通义千问(原生)/OpenAI兼容/Ollama本地/自建模型
+    #     ② 工具丰富: 内置Bash/Read/Write/Edit/代码执行/Web搜索
+    #     ③ Pipeline: Agent间串行/并行/条件执行
+    #     ④ 分布式: Agent可以跨机器部署,RPC通信
+    #     ⑤ Msghub: 消息总线,Agent间广播/订阅通信
+    #     ⑥ 可观测: 内置Monitor和事件追踪
+    #   适用场景:企业级Agent应用/分布式多Agent系统/需要本地模型部署
+    #   当前版本: agentscope
 
-    # 🚀 核心概念
+    # 🚀 核心概念一览
 
-    #   Agent        — 基础智能体类,可自定义行为和工具
-    #   Pipeline     — Agent间串行/并行/条件执行
-    #   Toolkit      — 内置工具集(Bash/Read/Write/Edit等)
-    #   ModelWrapper — 模型封装(支持本地+API混合)
-    #   Distributed  — 分布式Agent部署
-    #   Event        — 事件驱动机制
+    #   Agent            — 智能体基础类,一切起点
+    #   ModelWrapper     — 模型封装层(本地/API/混合)
+    #   Toolkit          — 工具集(内置Bash/Read/Write/Edit/Code)
+    #   Pipeline         — Agent串行/并行/条件管线
+    #   Msghub           — 消息总线,Agent间通信中心
+    #   Service          — Agent服务化部署
+    #   Monitor          — 运行时监控
+    #   ReActAgent       — 内置ReAct思考-行动循环
+    #   DialogAgent      — 对话型Agent(多轮对话)
+    #   PipelineNode     — Pipeline中的节点
 
     # 🚀 快速入门
 
         from agentscope.agent import Agent
         from agentscope.model import DashScopeChatModel
-        from agentscope.credential import DashScopeCredential
         from agentscope.message import UserMsg
 
-        # 1. 创建Agent
-        agent = Agent(
-            name="Friday",
-            system_prompt="You are a helpful assistant.",
-            model=...,
-        )
-
-        # 2. 对话
-        msg = UserMsg(name="user", content="Hello!")
-        reply = agent.reply(msg)
-        print(reply)
-
-    # 🔧 模型配置
-
-        # AgentScope 支持多种模型:
-
-        # ── 阿里通义千问(推荐)──
-        from agentscope.model import DashScopeChatModel
         model = DashScopeChatModel(
             config_name="qwen",
             model_name="qwen-plus",
-            api_key="sk-xxx",
+            api_key="***",
         )
 
-        # ── OpenAI 兼容接口(DeepSeek等)──
+        agent = Agent(
+            name="Friday",
+            system_prompt="You are a helpful assistant.",
+            model=model,
+        )
+
+        msg = UserMsg(name="user", content="你好!")
+        reply = agent.reply(msg)
+        print(reply)
+
+
+    # 🔧 模型配置（5种方式）
+
+        # ── 1. 阿里通义千问(原生最佳兼容)──
+        from agentscope.model import DashScopeChatModel
+        model = DashScopeChatModel(
+            config_name="qwen",
+            model_name="qwen-plus",       # qwen-turbo / qwen-plus / qwen-max
+            api_key="***",
+        )
+
+        # ── 2. OpenAI 兼容接口(DeepSeek/Moonshot等)──
         from agentscope.model import OpenAIWrapper
         model = OpenAIWrapper(
             config_name="deepseek",
             model_name="deepseek-chat",
-            api_key="sk-xxx",
+            api_key="***",
             base_url="https://api.deepseek.com",
         )
 
-        # ── 本地模型(Ollama)──
+        # ── 3. 本地模型(Ollama)──
         from agentscope.model import OllamaChatModel
         model = OllamaChatModel(
-            config_name="local",
+            config_name="local_model",
             model_name="qwen2.5:7b",
         )
 
-    # 🛠️ 工具集成
+        # ── 4. 本地模型(HuggingFace)──
+        from agentscope.model import HuggingFaceChatModel
+        model = HuggingFaceChatModel(
+            config_name="hf_model",
+            model_name="Qwen/Qwen2.5-7B-Instruct",
+            device="cuda",    # cpu / cuda
+        )
 
-        from agentscope.tool import Toolkit, Bash, Read, Write, Edit
+        # ── 5. 多模型配置(可切换)──
+        from agentscope.models import ModelPool
+        pool = ModelPool()
+        pool.add("qwen", qwen_model)
+        pool.add("deepseek", deepseek_model)
+        pool.add("local", local_model)
+        # 在Agent中通过 model_name 参数指定
+
+
+    # 🛠️ 工具集成(完整版)
+
+        # ── 内置工具集 ──
+        from agentscope.tool import (
+            Toolkit,
+            Bash,           # Shell命令执行
+            Read,           # 文件读取
+            Write,          # 文件写入
+            Edit,           # 文件编辑
+            PythonCodeExecutor,  # Python代码执行
+        )
+
+        toolkit = Toolkit(tools=[Bash(), Read(), Write(), Edit(), PythonCodeExecutor()])
 
         agent = Agent(
             name="coder",
-            system_prompt="You are a coding assistant.",
             model=model,
-            toolkit=Toolkit(tools=[Bash(), Read(), Write(), Edit()]),
+            toolkit=toolkit,
+            system_prompt="你是编程助手,可以用Bash和Python帮用户解决问题。",
         )
 
-        # Agent 可以在对话中执行 Bash 命令、读写文件等
-        # 适合:代码生成、自动化脚本
+        # ── 自定义工具(@tool装饰器)──
+        from agentscope.tool import tool
 
-    # 🔄 Pipeline — Agent流水线
+        @tool
+        def search_weather(city: str) -> dict:
+            \"\"\"查询城市天气\"\"\"
+            # 调用天气API
+            return {"city": city, "temp": 25, "weather": "晴"}
 
-        from agentscope.pipeline import Pipeline
+        @tool
+        def calculate(expr: str) -> float:
+            \"\"\"执行数学运算\"\"\"
+            return eval(expr)
 
-        # 串行执行
-        pipeline = Pipeline()
-        pipeline.add_agent(agent1)
-        pipeline.add_agent(agent2)
-        pipeline.add_agent(agent3)
+        toolkit = Toolkit(tools=[search_weather, calculate])
 
-        result = pipeline.run(input_msg)
-        # agent1 → agent2 → agent3 依次处理
+        # ── Agent级 vs 全局级工具 ──
+        #   Agent级工具: 只有该Agent可用(推荐)
+        #   全局工具: 所有Agent共享
+        #   通过 Toolkit(tools=[...], global_tools=[...]) 区分
 
-    # 🌐 分布式Agent
 
-        # AgentScope 支持将Agent部署到不同机器:
+    # 🔄 Pipeline — Agent管线(核心编排能力)
 
-        from agentscope.distributed import RpcAgentServer
+        # ── 1. 串行Pipeline(Sequential)──
+        from agentscope.pipeline import Pipeline, PipelineNode
 
-        # 服务端启动Agent
+        node1 = PipelineNode("research", agent_researcher)
+        node2 = PipelineNode("write", agent_writer)
+        node3 = PipelineNode("review", agent_reviewer)
+
+        pipe = Pipeline()
+        pipe.add_node(node1)
+        pipe.add_node(node2)
+        pipe.add_node(node3)
+
+        result = pipe.run(UserMsg("user", content="写一篇关于RAG的文章"))
+        # 输出: researcher → writer → reviewer 依次处理
+
+        # ── 2. 带条件的Pipeline(Conditional)──
+        def check_satisfaction(msg) -> bool:
+            return "满意" in msg.content
+
+        pipe.add_condition(
+            source="review",           # 从review节点出发
+            target="write",            # 不满意则回到write重写
+            condition=check_satisfaction,
+            negate=True,               # 条件不满足时执行
+        )
+        pipe.add_fallback("review", "end")  # 满意则结束
+
+        # ── 3. 并行执行 ──
+        # Pipeline 支持 asyncio.gather 风格:
+        # node_a.run(input_msg) 和 node_b.run(input_msg) 同时执行
+        # 适合:同时调研多个方向
+
+
+    # 💬 Msghub — 消息总线
+
+        # Msghub 是AgentScope 2.0的核心通信机制:
+
+        from agentscope.msghub import Msghub
+
+        # 创建消息总线
+        hub = Msghub()
+
+        # Agent注册到总线
+        agent_a.join(hub)
+        agent_b.join(hub)
+        agent_c.join(hub)
+
+        # 广播消息
+        hub.broadcast(UserMsg("system", "开始讨论新需求"))
+
+        # 订阅特定消息
+        hub.subscribe(agent_a, msg_type="分析报告")
+
+        # Msghub 支持:
+        #   - 广播: 所有订阅者收到
+        #   - 点对点: 指定目标Agent
+        #   - 组播: 指定组内所有Agent
+        #   - 消息过滤: 只接收特定类型的消息
+
+
+    # 🧠 内置Agent类型
+
+        # ── ReActAgent(思考-行动循环)──
+        from agentscope.agents import ReActAgent
+
+        react_agent = ReActAgent(
+            name="react_agent",
+            model=model,
+            toolkit=Toolkit(tools=[search_weather, calculate]),
+            system_prompt="你通过思考-行动循环来回答问题。",
+            max_iters=5,  # 最多5步
+        )
+
+        # ── DialogAgent(多轮对话)──
+        from agentscope.agents import DialogAgent
+
+        dialog_agent = DialogAgent(
+            name="chatbot",
+            model=model,
+            system_prompt="你是一个友善的对话助手。",
+        )
+        # DialogAgent 自动维护对话历史
+
+        # ── UserAgent(模拟用户)──
+        from agentscope.agents import UserAgent
+        user = UserAgent()
+        # 用于测试,模拟用户输入
+
+
+    # 🌐 分布式Agent部署
+
+        # AgentScope 支持将Agent作为RPC服务运行:
+
+        from agentscope.distributed import RpcAgentServer, RpcAgentClient
+
+        # ── 服务端 ──
         server = RpcAgentServer(
             agent=my_agent,
             host="0.0.0.0",
             port=8000,
+            max_pool_size=10,  # 最大连接池
         )
         server.start()
 
-        # 客户端远程调用
-        from agentscope.distributed import RpcAgentClient
-        client = RpcAgentClient("http://remote_host:8000")
-        reply = client(msg)
+        # ── 客户端 ──
+        client = RpcAgentClient("http://server_ip:8000")
+        result = client.call(UserMsg("user", "你好"))
+        print(result)
 
-        # 适合:把Agent部署为微服务
+        # 分布式适用场景:
+        #   - 多个Agent运行在不同机器上
+        #   - Agent作为微服务单独部署
+        #   - 负载均衡和高可用
 
-    # 🎯 Multi-Agent 协作
 
-        from agentscope.agents import DialogAgent, UserAgent
-
-        # Agent 间可以对话协作
-        agent_a = DialogAgent(name="Alice", model=model, system_prompt="你是研究员。")
-        agent_b = DialogAgent(name="Bob", model=model, system_prompt="你是评论家。")
-
-        # 通过 Pipeline 或手动消息传递实现协作
-
-    # ⚙️ 实战示例
+    # ⚙️ 实战完整示例: 研究写作助手
 
         import asyncio
         from agentscope.agent import Agent
         from agentscope.model import OpenAIWrapper
-        from agentscope.tool import Toolkit, Bash, Read, Write
-        from agentscope.message import UserMsg
+        from agentscope.tool import Toolkit, tool
+        from agentscope.message import UserMsg, AgentMsg
+        from agentscope.pipeline import Pipeline, PipelineNode
+        from agentscope.agents import ReActAgent, DialogAgent
 
-        # 配置(用DeepSeek)
+        # 模型配置
         model = OpenAIWrapper(
             config_name="deepseek",
             model_name="deepseek-chat",
-            api_key="sk-xxx",
+            api_key="***",
             base_url="https://api.deepseek.com",
         )
 
-        # 带工具的Agent
-        agent = Agent(
-            name="helper",
-            system_prompt="你是有帮助的助手。",
+        # 工具
+        @tool
+        def search_web(query: str) -> str:
+            \"\"\"搜索互联网信息\"\"\"
+            return f"搜索结果: {query}的相关资料"
+
+        @tool
+        def calc(expr: str) -> float:
+            \"\"\"执行计算\"\"\"
+            return eval(expr)
+
+        # Agent1: 研究员(ReAct)
+        researcher = ReActAgent(
+            name="researcher",
             model=model,
-            toolkit=Toolkit(tools=[Bash(), Read()]),
+            toolkit=Toolkit(tools=[search_web]),
+            system_prompt="你是研究员,通过搜索和分析来回答问题。用中文。",
+            max_iters=5,
         )
 
-        # 单轮对话
-        msg = UserMsg(name="user", content="列出当前目录的文件")
-        reply = agent.reply(msg)
-        print(reply)
+        # Agent2: 写作者
+        writer = DialogAgent(
+            name="writer",
+            model=model,
+            system_prompt="你是写作者,基于研究结果写出清晰的文章。用中文。",
+        )
 
-    # 📊 与其他框架对比
+        # Agent3: 审核官
+        reviewer = DialogAgent(
+            name="reviewer",
+            model=model,
+            system_prompt="你是审核官,检查文章的技术准确性。用中文。",
+        )
 
-        #           AgentScope         CrewAI              LangGraph
-        # ────────────────────────────────────────────────────────────
-        # 出品方     阿里巴巴             CrewAI Inc.          LangChain
-        # 核心思想    全链路Agent平台      角色分工+编排         图状态机
-        # 本地模型    ✅ 原生支持          有限                  有限
-        # 分布式      ✅ 原生支持          ❌ 不支持             ❌ 不支持
-        # 工具集      内置Bash/Read等      通过@tool扩展         通过Tool扩展
-        # 学习曲线    ⭐⭐⭐                ⭐                    ⭐⭐⭐
-        # 生态        阿里系为主           社区活跃              最活跃
-        # 适合场景    企业级部署            快速原型              复杂Workflow
+        # Pipeline编排
+        node1 = PipelineNode("research", researcher)
+        node2 = PipelineNode("write", writer)
+        node3 = PipelineNode("review", reviewer)
+
+        pipe = Pipeline()
+        pipe.add_node(node1)
+        pipe.add_node(node2)
+        pipe.add_node(node3)
+
+        # 运行
+        result = pipe.run(UserMsg("user", content="LangGraph和CrewAI各有什么特点?"))
+        print(f"最终输出: {result}")
+
+
+    # 📊 框架对比
+
+        #               AgentScope 2.x      CrewAI 1.x          LangGraph 1.x
+        # ─────────────────────────────────────────────────────────────────────
+        # 出品方         阿里巴巴            CrewAI Inc.          LangChain
+        # 核心思路       Agent全链路平台      角色分工+任务编排     图状态机
+        # 本地模型       ✅ 原生支持           ⚠️ 有限              ⚠️ 需配置
+        # 分布式         ✅ 原生RPC            ❌                  ❌
+        # 内置工具       Bash/Read/Write等     @tool扩展            @tool扩展
+        # Pipeline       ✅串行/条件/并行      sequential/hierarchical  任意有向图
+        # Msghub         ✅广播/订阅/点对点    ❌                  ❌
+        # 学习曲线       ⭐⭐⭐                ⭐                  ⭐⭐⭐
+        # 社区生态       阿里系为主            活跃                 最活跃
+        # 最适合场景     企业级分布式Agent     快速原型             复杂Workflow
+
+        # 一句话: 阿里系的CrewAI+LangGraph结合体,分布式是最大差异化优势
+
 
     # ⚠️ 注意事项
 
-        # 1. AgentScope 是阿里系框架,对阿里云/通义千问兼容最好
-        # 2. 使用DeepSeek需用OpenAIWrapper,不是DashScopeChatModel
-        # 3. 分布式功能需要额外配置网络环境
-        # 4. Pipeline 目前只支持串行,不支持条件分支
-        # 5. 社区相对较小,文档以英文为主
-        # 6. 版本迭代较快,API可能变化
-
+        # 1. AgentScope 对阿里云/通义千问兼容性最佳,其他模型可能有细微差异
+        # 2. 使用DeepSeek等非阿里模型需用 OpenAIWrapper,不是DashScopeChatModel
+        # 3. Pipeline不支持条件分支(需要自己用Python if/else实现)
+        # 4. Msghub是AgentScope 2.0新增功能,旧版本没有
+        # 5. 分布式部署需要额外的网络配置(防火墙/端口映射等)
+        # 6. 社区主要以中文为主,文档有中英双语
+        # 7. 版本迭代快,2.0相比1.x API变化较大
+        # 8. 如果面试被问AgentScope,说\"了解,阿里系框架,适合分布式部署\"即可
+        # 9. 实际项目选型时,考虑团队技术栈:阿里系用AgentScope,其他用CrewAI/LangGraph
 
 # 🏀 Agents SDK
 # ====================================================================================================================================
