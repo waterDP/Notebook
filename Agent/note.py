@@ -3094,6 +3094,49 @@
             # app = graph.compile()
 
 
+    # 🔧 AgentExecutor 参数详解
+    #   AgentExecutor = 封装了 ReAct 循环的执行器,替你做以下工作:
+    #     ① 填变量({input}/{tools}/{chat_history}/{agent_scratchpad})
+    #     ② 调 LLM
+    #     ③ 解析 LLM 输出(调工具还是回答)
+    #     ④ 执行工具并结果填回上下文
+    #     ⑤ 循环直到 Final Answer 或达到上限
+
+    #   agent （必需）→ Agent 对象,由 create_react_agent() 创建
+    #   tools （建议不传）→ 工具列表,能从 agent.tools 推断
+    #   memory（可选）→ 对话记忆,如 ConversationBufferMemory
+    #   verbose（默认 False）→ 打印每轮 Thought/Action/Observation
+
+    #   max_iterations（默认 15,建议 3~5）→ 最大 LLM 调用轮数
+    #     LLM 每输出一次(不管调工具还是直接回答)都算 1 轮
+    #     典型消耗: 简单问题1轮搜+1轮答=2轮,复杂3~4轮,死循环防御
+    #     超过后执行 early_stopping_method
+
+    #   max_execution_time（默认 None）→ 最大执行秒数
+    #     墙上时钟,不按轮数算。30 秒超时直接停,生产环境双保险
+
+    #   early_stopping_method（默认 "force"）→ 到上限了怎么办
+    #     "force" → 强行要求 LLM 输出 Final Answer(兜底总结)
+    #     "generate" → 基于已有信息自行生成回答(不再调工具)
+
+    #   handle_parsing_errors（默认 False,建议 True）→ 解析失败自动重试
+    #     True → 自动把错误消息喂回 LLM 要求重试
+    #     也可以传自定义错误消息字符串
+
+    #   return_intermediate_steps（默认 False）→ 返回中间步骤
+    #     开的话 result 里会多一个 intermediate_steps 字段
+    #     包含每一步的工具调用和结果,调试好用
+
+    #   callbacks（默认 None）→ 高级监听回调,生产日志用
+
+    #   ⚡ 实战推荐:
+    #     executor = AgentExecutor(
+    #         agent=agent,
+    #         verbose=True,              # 调试时开
+    #         max_iterations=3,           # 防死循环
+    #         handle_parsing_errors=True, # LLM 乱输出自动重试
+    #     )
+
 # 🌐 MCP
 # ====================================================================================================================================
     # 🍉 MCP 客户端
