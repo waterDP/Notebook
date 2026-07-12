@@ -13890,10 +13890,6 @@
             #   需要Agent间自由对话 → AutoGen
 
 
-
-
-
-
 # 🏫 AutoGen — 微软多Agent对话框架
 # ====================================================================================================================================
 
@@ -14121,6 +14117,145 @@
         #   要团队协作 → CrewAI | 要流程控制 → LangGraph | 要自由对话 → AutoGen
 
 
+    # 🐝 Swarm — 智能体蜂群模式
+
+        # Swarm 模式下,Agent可以主动把任务交给另一个Agent(Handoff):
+
+        from autogen_agentchat.teams import Swarm
+        from autogen_agentchat.conditions import HandoffTermination
+
+        agent1 = AssistantAgent(
+            "support", model,
+            system_message="你是客服。如需技术问题,handoff给tech_team。说中文。用 HANDOFF 交办。",
+            handoffs=["tech_team"],
+        )
+        agent2 = AssistantAgent(
+            "tech_team", model,
+            system_message="你是技术专家。解决问题后回复 TERMINATE。说中文。",
+        )
+
+        termination = HandoffTermination()  # handoff时暂停
+        team = Swarm([agent1, agent2], termination_condition=termination)
+
+        # Swarm 适合:客服分流、技术工单、流水线型任务
+
+
+    # 🔬 MagenticOneGroupChat — 微软最新研究模式
+
+        # Magentic-One 是微软研究院2025年发布的多Agent架构:
+        #   一个 Orchestrator(指挥者) + 多个 Specialist(专家)
+        #   Orchestrator 负责任务分解、分配、跟踪进度
+        #   Specialist 各司其职(搜索/编码/分析等)
+
+        from autogen_agentchat.teams import MagenticOneGroupChat
+
+        team = MagenticOneGroupChat(
+            [researcher, coder, analyst],
+            model_client=model,  # Orchestrator用的模型
+            max_turns=10,
+        )
+
+        # MagenticOne 的优势:Orchestrator能动态调整计划
+        # 适合:复杂多步骤任务(如"帮我做一个市场分析报告")
+
+
+    # 💻 CodeExecutorAgent — 代码执行
+
+        # AutoGen 支持Agent写代码并自动执行:
+
+        from autogen_agentchat.agents import CodeExecutorAgent
+        from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
+
+        # 本地代码执行器
+        executor = LocalCommandLineCodeExecutor(work_dir="code_output")
+        code_agent = CodeExecutorAgent("executor", code_executor=executor)
+
+        # Agent 可以在对话中写Python代码,executor会自动运行并返回结果
+        # 适合:数据分析、图表生成、自动化脚本
+
+
+    # 🧠 SocietyOfMindAgent — 多模型集成
+
+        # 多个Agent分别思考,然后汇总:
+
+        from autogen_agentchat.agents import SocietyOfMindAgent
+
+        inner_agents = [
+            AssistantAgent("gpt4", gpt4_model, system_message="..."),
+            AssistantAgent("deepseek", deepseek_model, system_message="..."),
+        ]
+        inner_team = RoundRobinGroupChat(inner_agents, max_turns=2)
+
+        society = SocietyOfMindAgent("society", team=inner_team)
+        # society.get_response(task) 让内部团队讨论后输出综合结果
+
+
+    # 🛑 更多终止条件
+
+        # 函数式条件:
+        from autogen_agentchat.conditions import (
+            FunctionCallTermination,      # Agent调用了指定函数时终止
+            TokenUsageTermination,        # Token超限时终止
+            TimeoutTermination,           # 超时终止
+            SourceMatchTermination,       # 特定来源的消息
+            StopMessageTermination,        # StopMessage类型
+        )
+
+        # Token超限:
+        term = TokenUsageTermination(max_total_token=10000)
+
+        # 超时(防卡死):
+        term = TimeoutTermination(seconds=120)
+
+        # 组合所有条件:
+        term = (
+            TextMentionTermination("TERMINATE") |  # 或
+            MaxMessageTermination(10) |
+            TimeoutTermination(60)
+        )
+
+
+    # ⚡ Streaming 流式输出
+
+        # AutoGen 支持实时流式输出:
+
+        async for event in team.run_stream(task="写一首诗"):
+            if isinstance(event, TaskResult):
+                print("\n=== 完成 ===")
+            elif hasattr(event, 'content'):
+                print(event.content, end='', flush=True)
+
+        # 用 run_stream 替代 run,可以在生成过程中实时看到输出
+        # 适合:聊天应用、需要展示思考过程
+
+
+    # 🔄 并发执行多个Team
+
+        import asyncio
+
+        async def run_multiple():
+            # 同时并行多个讨论小组
+            task1 = team1.run(task="研究框架A")
+            task2 = team2.run(task="研究框架B")
+            results = await asyncio.gather(task1, task2)
+            return results
+
+        # 适合:需要并行调研多个主题,最后汇总
+
+
+    # ⚡ 实战最佳实践
+
+        # 1. 先用 RoundRobinGroupChat 调试,再换 SelectorGroupChat
+        # 2. 开发时 termination 设宽松(多轮),上线后设严格(防浪费)
+        # 3. 始终加 TimeoutTermination 防卡死
+        # 4. Agent名字用英文,简短(base/summary/analyst/coder/critic)
+        # 5. model_info 对非OpenAI模型必传,否则报错
+        # 6. DeepSeek的model建议用 deepseek-v4-flash(当前运行时识别到的型号)
+        #    OpenAIChatCompletionClient(model="deepseek-v4-flash", ...)
+        # 7. run_stream 比 run 更友好(实时看到输出)
+        # 8. 每个Agent的system_message决定了行为,值得反复调
+
+
     # ⚠️ 注意事项
 
         # 1. Agent名字只能用英文+数字+下划线(不能中文)
@@ -14131,11 +14266,10 @@
         # 6. DeepSeek的base_url是 https://api.deepseek.com/v1 (注意带v1)
         # 7. max_turns 设太小不够讨论,设太大浪费token
         # 8. SelectorGroupChat依赖LLM选人,偶尔会选错
+        # 9. 运行时若看到 model mismatch warning,换成实际运行的模型名
 
 
 # 🌙 Agent Scope
-# 🌙 Agent Scope
-
 # ====================================================================================================================================
     # 🚀 第一个智能体
         import asyncio
