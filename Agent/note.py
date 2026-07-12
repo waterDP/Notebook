@@ -4892,7 +4892,7 @@
 
     collection = client.get_or_create_collection(
         name="my-collection",
-        metadata={"hnsw:space": "cosine"}
+        metadata={"hnsw:space": "cosine"} # l2, ip, consine
     )
 
     # 添加文档到集合
@@ -4908,102 +4908,121 @@
         n_results=2
     )
 
+
+    # 🚀 Chroma 默认用的是 all-MiniLM-L6-v2（英文模型），中文稀烂。你要换中文 embedding 还得自己配：
+        from chromadb.utils import embedding_functions
+
+        # 如果你不配，Chroma 就用默认的，中文语义一塌糊涂
+        collection = client.create_collection(
+            name="my_collection"
+        )  # ❌ 默认英文 embedding
+
+        # 正确的做法：
+        ef = embedding_functions.OpenAIEmbeddingFunction(
+            api_key="sk-xxx",
+            model_name="text-embedding-3-small"
+        )
+        collection = client.create_collection(
+            name="my_collection",
+            embedding_function=ef
+        )  # ✅ 指定中文友好的 embedding
+
     # 🚀 三种模式
-    # 1. 临时客户端
-    import chromadb
-    client = chromadb.EphemeralClient()
+        # 1. 临时客户端
+        import chromadb
+        client = chromadb.EphemeralClient()
 
-    # 2. 持久客户端
-    client = chromadb.PersistentClient(path="/path/to/save/to")
+        # 2. 持久客户端
+        client = chromadb.PersistentClient(path="/path/to/save/to")
 
-    # 3. 客户端服务器模式
-    client = chromadb.HttpClient(host="localhost", port=8000)
+        # 3. 客户端服务器模式
+        client = chromadb.HttpClient(host="localhost", port=8000)
 
     # 🚀 多模态数据添加示例
-    collection.add(
-        ids=['img1', 'img2', 'img3'],
-        uris=['/path/to/img1.jpg', '/path/to/image2.png', None], # 图像通过URI引用
-        documents=[None, None, "纯文本数据"],
-        metadatas={
-            {"type": "image", "format": "jpg"},
-            {"type": "image", "format": "png"},
-            {"type": "text", "format": "内部文档"}
-        }
-    )
+        collection.add(
+            ids=['img1', 'img2', 'img3'],
+            uris=['/path/to/img1.jpg', '/path/to/image2.png', None], # 图像通过URI引用
+            documents=[None, None, "纯文本数据"],
+            metadatas={
+                {"type": "image", "format": "jpg"},
+                {"type": "image", "format": "png"},
+                {"type": "text", "format": "内部文档"}
+            }
+        )
 
     # 🚀 复杂数据查询
-    result = collection.query(
-        query_texts=["尝试学习的最新进展"],
-        n_results=5,
-        where={
-            "$and": [
-                {"content_type": "article"},
-                {"publish_data": {"$gte": "2024-01-01"}},
-                {"word_content": {"$lte": 2000}},
-                {"language": "zh"},
-                {"topic": {"$in": ["机器学习", "人工智能"]}}
-            ]
-        }
-    )
+        result = collection.query(
+            query_texts=["尝试学习的最新进展"],
+            n_results=5,
+            where={
+                "$and": [
+                    {"content_type": "article"},
+                    {"publish_date": {"$gte": "2024-01-01"}},
+                    {"word_content": {"$lte": 2000}},
+                    {"language": "zh"},
+                    {"topic": {"$in": ["机器学习", "人工智能"]}}
+                ]
+            }
+        )
 
 
     # 🚀 删除数据
     # 按ID直接删除数据
-    collection.delete(ids=["id1", "id2"])
+        collection.delete(ids=["id1", "id2"])
 
-    # 按元数据条件删除
-    collection.delete(where={"cotegory": {"$eq": "临时"}})
+        # 按元数据条件删除
+        collection.delete(where={"cotegory": {"$eq": "临时"}})
 
-    # 按文档内容删除
-    collection.delete(where_document={"$contains": "草稿"})
+        # 按文档内容删除
+        collection.delete(where_document={"$contains": "草稿"})
 
-    # 组合条件删除
-    collection.delete(
-        where={"timestamp": {"$lt": "2023-01-01"}},
-        where_document={"$contains": "过期内容"}
-    )
+        # 组合条件删除
+        collection.delete(
+            where={"timestamp": {"$lt": "2023-01-01"}},
+            where_document={"$contains": "过期内容"}
+        )
 
     # 🔍 精确查询 get
-    # 获取所有文档
-    all_docs = collection.get()
+        # 获取所有文档
+        all_docs = collection.get()
 
-    # 根据ID查询特定文档
-    docs_by_id = collection.get(ids=["id1", "id2"])
+        # 根据ID查询特定文档
+        docs_by_id = collection.get(ids=["id1", "id2"])
 
-    # 使用条件过滤
-    filter_docs = collection.get(
-        where={"category": {"$in": ["科技", "旅游"]}},
-        where_document={"$contains": "介绍"}
-    )
+        # 使用条件过滤
+        filter_docs = collection.get(
+            where={"category": {"$in": ["科技", "旅游"]}},
+            where_document={"$contains": "介绍"}
+        )
 
     # 🔍 相似性搜索 query
-    results = collection.query(
-        query_texts=["查询文本"], # ChromaDB会自动转为向量
-        n_results=5,
-        where={"status": "已发布"}, # 元数据过滤
-        where_document={"$not_contains": "内部"} # 文档内部过滤
-    )
+        results = collection.query(
+            query_texts=["查询文本"], # ChromaDB会自动转为向量
+            n_results=5,
+            where={"status": "已发布"}, # 元数据过滤
+            where_document={"$not_contains": "内部"} # 文档内部过滤
+        )
 
 
     # ✒ 修改数据
-    collection.update(
-        ids=["id1", 'id2'],
-        documents=["id1的更新内容", "id2的更新内容"],
-        metadata=[{"status": "更新"}, {"status": "更新"}]
-    )
+        collection.update(
+            ids=["id1", 'id2'],
+            documents=["id1的更新内容", "id2的更新内容"],
+            metadata=[{"status": "更新"}, {"status": "更新"}]
+        )
 
     # 🔍 控制查询返回字段
-    # 只返回文档与元数据
-    results = collection.query(
-        #......
-        include=["documents", "metadata", "distances"]
-    )
+        # 只返回文档与元数据
+            results = collection.query(
+                #......
+                include=["documents", "metadata", "distances"]
+            )
 
-    # 返回所有信息(包含嵌入向量)
-    results = collection.query(
-        #....
-        include=['embedding', "documents", "metadata", "distances"]
-    )
+        # 返回所有信息(包含嵌入向量)
+        results = collection.query(
+            #....
+            include=['embedding', "documents", "metadata", "distances"]
+        )
 
 
 # ⚡ FAISS 高性能检索
@@ -5047,8 +5066,8 @@
         nlist = 100
         quantizer = faiss.IndexFlatIP(dimension)
         index_ivf = faiss.IndexIVFFlat(quantizer, dimension, nlist, faiss.METRIC_INNER_PRODUCT)
-        index_ivf.train(vecs)
-        index_ivf.add(vecs)
+        index_ivf.train(vecs) # 先设计装安装数据的架子
+        index_ivf.add(vecs) # 来把，装上来
         index_ivf.nprobe = 10
         distances, indices = index_ivf.search(query, k=3)
         print("\n=== IVF 检索结果 ===")
@@ -5060,8 +5079,8 @@
         m = 32
         nbits = 8
         index_pq = faiss.IndexPQ(dimension, m, nbits)
-        index_pq.train(vecs)
-        index_pq.add(vecs)
+        index_pq.train(vecs) # 先设计装安装数据的架子
+        index_pq.add(vecs) # 来把，装上来
         distances, indices = index_pq.search(query, k=3)
         print("\n=== PQ 检索结果 ===")
         for i, (idx, dist) in enumerate(zip(indices[0], distances[0])):
@@ -5069,7 +5088,7 @@
 
         # 组合拳：IVF + PQ = IndexIVFPQ（工业级标配）
 
-    # 🚀 HNSW 分层可导航小图——精度速度王者
+    # 🚀 HNSW 分层可导航小图——精度速度王者 无训练w
         M = 32
         ef_construction = 200
         index_hnsw = faiss.IndexHNSWFlat(dimension, M, faiss.METRIC_INNER_PRODUCT)
@@ -5276,6 +5295,96 @@
         # 实体级: 加 TIMESTAMPTZ 字段,设置 properties={"ttl_field": "expire_at"}
         # 取消:   client.drop_collection_properties(..., ["collection.ttl.seconds"])
 
+    # 🎯 标量索引与 Filter 过滤（详解）
+
+        # 为什么需要标量索引？
+        #   filter="doc_id in [1,2,3]" 这个条件,没有索引的话 Milvus 要全量扫描所有
+        #    segment 找符合条件的行。有了倒排索引后,直接查索引表,速度差几个数量级。
+
+        # ‼️ filter 在索引层生效,不是先搜后滤
+        #   Milvus 在 HNSW 图搜索过程中用 bitmask 标记被过滤的节点:
+        #     搜到节点 → 查 bitmask → 被过滤则跳过 → 否则算距离
+        #   不需要先搜一堆再手动过滤,整个过程是原子操作。
+
+        # ── Step 1: 定义 Schema（标量字段也要定义）──
+        from pymilvus import MilvusClient, DataType
+        client = MilvusClient(uri="http://localhost:19530", token="root:root")
+
+        schema = MilvusClient.create_schema(description="文章集合", enable_dynamic_field=True)
+        schema.add_field(name="id", datatype=DataType.INT64, is_primary=True, auto_id=True)
+        schema.add_field(name="doc_id", datatype=DataType.INT64)        # ← 标量字段,要用来filter
+        schema.add_field(name="category", datatype=DataType.VARCHAR, max_length=64)  # ← 另一个标量字段
+        schema.add_field(name="content", datatype=DataType.VARCHAR, max_length=65535)
+        schema.add_field(name="content_vector", datatype=DataType.FLOAT_VECTOR, dim=768)
+
+        # ── Step 2: 建索引——向量索引 + 标量索引（分开建）──
+
+        # 2a. 向量索引
+        index_params = client.prepare_index_params()
+        index_params.add_index(
+            field_name="content_vector",
+            index_type="HNSW",
+            metric_type="COSINE",
+            params={"M": 32, "efConstruction": 200},
+        )
+
+        # 2b. ⭐ 标量索引——建在 filter 常用的字段上
+        index_params.add_index(
+            field_name="doc_id",          # 标量字段
+            index_type="INVERTED"         # 倒排索引,适合等值/IN/范围查询
+        )
+        index_params.add_index(
+            field_name="category",        # 字符串字段也能建
+            index_type="INVERTED"
+        )
+
+        # ── Step 3: 建集合 ──
+        client.create_collection(
+            collection_name="articles",
+            schema=schema,
+            index_params=index_params,
+        )
+        client.load_collection("articles")
+
+        # ── Step 4: 写入数据 ──
+        data = [
+            {"doc_id": 1, "category": "AI",    "content": "人工智能基础...", "content_vector": [0.1]*768},
+            {"doc_id": 1, "category": "Python", "content": "Python入门...",   "content_vector": [0.2]*768},
+            {"doc_id": 2, "category": "AI",    "content": "机器学习...",      "content_vector": [0.3]*768},
+        ]
+        client.insert(collection_name="articles", data=data)
+
+        # ── Step 5: 搜索 + 过滤 ⭐──
+        query_vector = [0.15]*768
+
+        # 5a. 先搜摘要找到目标 doc_id → 再 filter
+        res = client.search(
+            collection_name="articles",
+            data=[query_vector],
+            anns_field="content_vector",
+            limit=3,
+            search_params={"metric_type": "COSINE"},
+            filter="doc_id in [1, 2]",         # ← 走 INVERTED 倒排索引
+            output_fields=["title", "content"],
+        )
+
+        # 5b. 多条件组合过滤
+        res = client.search(
+            collection_name="articles",
+            data=[query_vector],
+            anns_field="content_vector",
+            limit=3,
+            search_params={"metric_type": "COSINE"},
+            filter="doc_id in [1] AND category == 'AI'",  # 多个条件
+            output_fields=["title", "content"],
+        )
+
+        # ⚡ 总结：Chroma vs Milvus 的 filter
+        #   Chroma: filter 在索引层查 bitmask → 搜的时候跳过不符合的节点
+        #   Milvus: 同样是索引层操作,但 Milvus 的 bitmask 是持久化在 segment 里的,
+        #           还可以给 filter 字段单独建倒排索引,大数据量表现更好
+        #   FAISS:  不支持 filter,只能先搜再手动过滤
+
     # 🚀 特殊场景
     # ── 地理位置搜索 ──
         # st_within(geo, 'POLYGON((...))')  /  st_dwithin(geo, 'POINT(x y)', radius)
@@ -5388,13 +5497,14 @@
     ## 分区
     partition_name = "partition_A"
     # 🚀 创建分区
-    # 检查分区是否已存在
-    if not client.has_partition(collection_name="articles", partition_name=partition_name):
-        # 创建分区
-        client.create_partition(collection_name="articles", partition_name=partition_name)
-        print(f"Partition '{partition_name}' created.")
-    else:
-        print(f"Partition '{partition_name}' already exists.")
+        def create_partition(collection_name: str, partition_name: str): 
+            # 检查分区是否已存在
+            if not client.has_partition(collection_name=collection_name, partition_name=partition_name):
+                # 创建分区
+                client.create_partition(collection_name=collection, partition_name=partition_name)
+                print(f"Partition '{partition_name}' created.")
+            else:
+                print(f"Partition '{partition_name}' already exists.")
 
 
     # 🚀 删除分区
@@ -5542,7 +5652,7 @@
     )
 
 
-    # # -------- TTL -------------------------------------------------------
+    # ⏰ -------- TTL -------------------------------------------------------
 
     # 🌰 集合级TTL 创建集合时 通过properties参数传入
     client.create_collection(
@@ -6261,1396 +6371,1401 @@
 
     # 🔥 17种RAG方案
 
-    # ✂️ 1. Simple RAG(固定字数硬切)
+        # ✂️ 1. Simple RAG(固定字数硬切)
 
-        # ■ 核心思想
-        # 最朴素的 RAG:拿一个文本切割器,按固定字符数(比如 512、1024)把文档切成 chunks,
-        # 然后做向量检索。不考虑语义边界,一刀切。
+            # ■ 核心思想
+            # 最朴素的 RAG:拿一个文本切割器,按固定字符数(比如 512、1024)把文档切成 chunks,
+            # 然后做向量检索。不考虑语义边界,一刀切。
 
-        # ■ 适用场景
-        # - 快速验证、Demo 阶段
-        # - 文档结构规整、内容简单
-        # - 对精确度要求不高
+            # ■ 适用场景
+            # - 快速验证、Demo 阶段
+            # - 文档结构规整、内容简单
+            # - 对精确度要求不高
 
-        # ■ 优缺点
-        # | 优点 | 缺点 |
-        # | 实现简单,一行代码 | 切断语义完整的段落 |
-        # | 速度快 | 检索召回率一般 |
+            # ■ 优缺点
+            # | 优点 | 缺点 |
+            # | 实现简单,一行代码 | 切断语义完整的段落 |
+            # | 速度快 | 检索召回率一般 |
 
-        # ■ 代码示例
+            # ■ 代码示例
 
-        # ============================================================
-        # ！ pip install langchain-text-splitters
-        from langchain_text_splitter import RecursiveCharacterTextSplitter
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        from langchain_community.vectorstores import Chroma
+            # ============================================================
+            # ！ pip install langchain-text-splitters
+            from langchain_text_splitter import RecursiveCharacterTextSplitter
+            from langchain_community.embeddings import HuggingFaceEmbeddings
+            from langchain_community.vectorstores import Chroma
 
-        # 1. 固定字数切分
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=512,
-            chunk_overlap=50,
-            separators=["\n\n", "\n", "。", "!", "?", " ", ""]
-        )
+            # 1. 固定字数切分
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=512,
+                chunk_overlap=50,
+                separators=["\n\n", "\n", "。", "!", "?", " ", ""]
+            )
 
-        # 2. 加载文档
-        from langchain_community.document_loaders import TextLoader
-        loader = TextLoader("data.txt")
-        docs = loader.load()
-        chunks = text_splitter.split_documents(docs)
+            # 2. 加载文档
+            from langchain_community.document_loaders import TextLoader
+            loader = TextLoader("data.txt")
+            docs = loader.load()
+            chunks = text_splitter.split_documents(docs)
 
-        # 3. 向量化 + 存库
-        embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
-        vectorstore = Chroma.from_documents(chunks, embeddings)
+            # 3. 向量化 + 存库
+            embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
+            vectorstore = Chroma.from_documents(chunks, embeddings)
 
-        # 4. 检索
-        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-        results = retriever.invoke("什么是 RAG?")
+            # 4. 检索
+            retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+            results = retriever.invoke("什么是 RAG?")
 
-        for r in results:
-            print(f"[Score: {r.metadata.get('score', 'N/A')}] {r.page_content[:100]}...")
+            for r in results:
+                print(f"[Score: {r.metadata.get('score', 'N/A')}] {r.page_content[:100]}...")
 
-        # ------------------------------------------------------------
-
-
-    # 🧠 2. Semantic Chunking(语义切分)
-
-        # ■ 核心思想
-        # 不按字数切,按语义完整度切。用 embedding 相似度判断句子之间的"断裂点"--
-        # 语义变化大的地方就是 chunk 的分界。
-
-        # ■ 原理
-        # 1. 先把文档拆成句子
-        # 2. 把相邻句子分别做 embedding
-        # 3. 算余弦相似度
-        # 4. 相似度骤降的地方就是分界点
-
-        # ■ 代码示例
-
-        # ============================================================
-
-        import numpy as np
-        from sentence_transformers import SentenceTransformer
-
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-
-        def semantic_chunk(text, threshold=0.6):
-            sentences = text.replace("。", "。\n").replace("!", "!\n").replace("?", "?\n").split("\n")
-            sentences = [s.strip() for s in sentences if s.strip()]
-            embeddings = model.encode(sentences)
-            similarities = []
-            for i in range(len(embeddings) - 1):
-                sim = np.dot(embeddings[i], embeddings[i+1]) / (
-                    np.linalg.norm(embeddings[i]) * np.linalg.norm(embeddings[i+1])
-                )
-                similarities.append(sim)
-            chunks = []
-            current = [sentences[0]]
-            for i, sim in enumerate(similarities):
-                if sim < threshold:
-                    chunks.append("".join(current))
-                    current = [sentences[i+1]]
-                else:
-                    current.append(sentences[i+1])
-            chunks.append("".join(current))
-            return chunks
-
-        # 使用
-        text = """人工智能是一门研究如何制造智能机器的学科。
-        它涉及计算机科学、心理学、哲学等多个领域。
-        机器学习是 AI 的一个重要分支。
-        深度学习又是机器学习的一个子集。
-        今天天气很好,适合出去玩。
-        阳光明媚,万里无云。"""
-        chunks = semantic_chunk(text, threshold=0.5)
-        for i, chunk in enumerate(chunks):
-            print(f"--- Chunk {i+1} ---\n{chunk}\n")
-
-        # ------------------------------------------------------------
+            # ------------------------------------------------------------
 
 
-    # 🔍 3. Small-to-Big Retrieval(小块找,大块答)
+        # 🧠 2. Semantic Chunking(语义切分)
 
-        # ■ 核心思想
-        # 用细粒度的小 chunk 做检索(精准命中),
-        # 但把检索到的小 chunk 所在的更大上下文拿给 LLM 回答。
-        # 解决了"小块太碎片化缺少上下文,大块太粗糙检索不准"的矛盾。
+            # ■ 核心思想
+            # 不按字数切,按语义完整度切。用 embedding 相似度判断句子之间的"断裂点"--
+            # 语义变化大的地方就是 chunk 的分界。
 
-        # ■ 原理
-        # 文档 → 大块(用于 LLM)→ 小块(用于检索),子块 → 父块映射
+            # ■ 原理
+            # 1. 先把文档拆成句子
+            # 2. 把相邻句子分别做 embedding
+            # 3. 算余弦相似度
+            # 4. 相似度骤降的地方就是分界点
 
-        # ■ 代码示例
+            # ■ 代码示例
 
-        # ============================================================
+            # ============================================================
 
+            import numpy as np
+            from sentence_transformers import SentenceTransformer
 
-        # 1. 同时维护两种切分粒度
-        parent_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
-        child_splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=30)
+            model = SentenceTransformer("all-MiniLM-L6-v2")
 
-        # 2. 加载文档
-        with open("data.txt") as f:
-            text = f.read()
+            def semantic_chunk(text, threshold=0.6):
+                sentences = text.replace("。", "。\n").replace("!", "!\n").replace("?", "?\n").split("\n")
+                sentences = [s.strip() for s in sentences if s.strip()]
+                embeddings = model.encode(sentences)
+                similarities = []
+                for i in range(len(embeddings) - 1):
+                    sim = np.dot(embeddings[i], embeddings[i+1]) / (
+                        np.linalg.norm(embeddings[i]) * np.linalg.norm(embeddings[i+1])
+                    )
+                    similarities.append(sim)
+                chunks = []
+                current = [sentences[0]]
+                for i, sim in enumerate(similarities):
+                    if sim < threshold:
+                        chunks.append("".join(current))
+                        current = [sentences[i+1]]
+                    else:
+                        current.append(sentences[i+1])
+                chunks.append("".join(current))
+                return chunks
 
-        parent_chunks = parent_splitter.split_text(text)
-        child_chunks = []
-        parent_map = {}  # 子块 → 父块映射
-
-        for pid, parent in enumerate(parent_chunks):
-            children = child_splitter.split_text(parent)
-            for child in children:
-                child_chunks.append(child)
-                parent_map[child] = parent  # 记录子块属于哪个父块
-
-        # 3. 子块向量化(只建子块的索引)
-        embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
-        vectorstore = Chroma.from_texts(child_chunks, embeddings)
-
-        # 4. 检索:用子块搜,但返回父块
-        query = "RAG 有哪些常见方案?"
-        results = vectorstore.similarity_search(query, k=3)
-
-        # 映射回父块(去重)
-        parent_results = []
-        seen = set()
-        for r in results:
-            parent = parent_map[r.page_content]
-            if parent not in seen:
-                parent_results.append(parent)
-                seen.add(parent)
-
-        for i, p in enumerate(parent_results):
-            print(f"--- 父块 {i+1} ---\n{p[:200]}...\n")
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 📋 4. Context-Enriched Chunking(上下文增强)
-
-
-        # ■ 核心思想
-
-        # 每个 chunk 不仅存自己的内容,还在前面加上文档标题、章节名、前后文摘要等元信息。 检索时匹配的信息更丰富,提高命中率。
-
-        # ■ 原理
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # 原始 chunk:
-        #   "使用了 LoRA 微调方法"
-
-        # 增强后 chunk:
-        #   "[文档: LLM 微调指南 > 第三章: 高效微调方法] 使用了 LoRA 微调方法"
-
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from langchain.schema import Document
-
-        def enrich_chunks(chunks, doc_title, section_titles):
-            """给 chunks 添加上下文前缀"""
-            enriched = []
+            # 使用
+            text = """人工智能是一门研究如何制造智能机器的学科。
+            它涉及计算机科学、心理学、哲学等多个领域。
+            机器学习是 AI 的一个重要分支。
+            深度学习又是机器学习的一个子集。
+            今天天气很好,适合出去玩。
+            阳光明媚,万里无云。"""
+            chunks = semantic_chunk(text, threshold=0.5)
             for i, chunk in enumerate(chunks):
-                # 找到这个 chunk 属于哪一节
-                section = ""
-                for title, start, end in section_titles:
-                    if start <= i < end:
-                        section = title
-                        break
+                print(f"--- Chunk {i+1} ---\n{chunk}\n")
 
-                # 拼接上下文
-                prefix = f"[文档: {doc_title} > {section}] " if section else f"[文档: {doc_title}] "
-                enriched_content = prefix + chunk.page_content
+            # ------------------------------------------------------------
 
-                enriched.append(Document(
-                    page_content=enriched_content,
+
+        # 🔍 3. Small-to-Big Retrieval(小块找,大块答)
+
+            # ■ 核心思想
+            # 用细粒度的小 chunk 做检索(精准命中),
+            # 但把检索到的小 chunk 所在的更大上下文拿给 LLM 回答。
+            # 解决了"小块太碎片化缺少上下文,大块太粗糙检索不准"的矛盾。
+
+            # ■ 原理
+            # 文档 → 大块(用于 LLM)→ 小块(用于检索),子块 → 父块映射
+
+            # ■ 代码示例
+
+            # ============================================================
+
+
+            # 1. 同时维护两种切分粒度
+            parent_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
+            child_splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=30)
+
+            # 2. 加载文档
+            with open("data.txt") as f:
+                text = f.read()
+
+            parent_chunks = parent_splitter.split_text(text)
+            child_chunks = []
+            parent_map = {}  # 子块 → 父块映射
+
+            for pid, parent in enumerate(parent_chunks):
+                children = child_splitter.split_text(parent)
+                for child in children:
+                    child_chunks.append(child)
+                    parent_map[child] = parent  # 记录子块属于哪个父块
+
+            # 3. 子块向量化(只建子块的索引)
+            embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
+            vectorstore = Chroma.from_texts(child_chunks, embeddings)
+
+            # 4. 检索:用子块搜,但返回父块
+            query = "RAG 有哪些常见方案?"
+            results = vectorstore.similarity_search(query, k=3)
+
+            # 映射回父块(去重)
+            parent_results = []
+            seen = set()
+            for r in results:
+                parent = parent_map[r.page_content]
+                if parent not in seen:
+                    parent_results.append(parent)
+                    seen.add(parent)
+
+            for i, p in enumerate(parent_results):
+                print(f"--- 父块 {i+1} ---\n{p[:200]}...\n")
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 📋 4. Context-Enriched Chunking(上下文增强)
+
+
+            # ■ 核心思想
+
+            # 每个 chunk 不仅存自己的内容,还在前面加上文档标题、章节名、前后文摘要等元信息。 检索时匹配的信息更丰富,提高命中率。
+
+            # ■ 原理
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # 原始 chunk:
+            #   "使用了 LoRA 微调方法"
+
+            # 增强后 chunk:
+            #   "[文档: LLM 微调指南 > 第三章: 高效微调方法] 使用了 LoRA 微调方法"
+
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from langchain.schema import Document
+
+            def enrich_chunks(chunks, doc_title, section_titles):
+                """给 chunks 添加上下文前缀"""
+                enriched = []
+                for i, chunk in enumerate(chunks):
+                    # 找到这个 chunk 属于哪一节
+                    section = ""
+                    for title, start, end in section_titles:
+                        if start <= i < end:
+                            section = title
+                            break
+
+                    # 拼接上下文
+                    prefix = f"[文档: {doc_title} > {section}] " if section else f"[文档: {doc_title}] "
+                    enriched_content = prefix + chunk.page_content
+
+                    enriched.append(Document(
+                        page_content=enriched_content,
+                        metadata={
+                            "original": chunk.page_content,
+                            "doc_title": doc_title,
+                            "section": section,
+                            "chunk_index": i
+                        }
+                    ))
+                return enriched
+
+            # 使用
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=50)
+            chunks = text_splitter.split_documents(loader.load())
+
+            enriched = enrich_chunks(
+                chunks,
+                doc_title="RAG 技术白皮书",
+                section_titles=[
+                    ("基础概念", 0, 5),
+                    ("检索策略", 5, 12),
+                    ("生成优化", 12, 20)
+                ]
+            )
+
+            # 检索时自动带上上下文信息
+            embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
+            vectorstore = Chroma.from_documents(enriched, embeddings)
+
+            # ------------------------------------------------------------
+
+
+        # 🏷️ 5. Chunk-Header(块级加标)
+
+
+            # ■ 核心思想
+
+            # 在 chunk 开头加一个 描述性摘要(header),检索时只看 header 就能决定要不要看完整 chunk。有点像书的目录。
+
+            # ■ 完整流程
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # 文档 → 切 chunks → LLM 为每个 chunk 生成 header
+            #      → 存入向量库(header 放在 metadata + 内容前缀里)
+            #      → 检索时 header 参与匹配,提高 precision
+
+
+            # ■ 完整代码
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from langchain.text_splitter import RecursiveCharacterTextSplitter
+            from langchain_community.document_loaders import TextLoader
+            from langchain_community.embeddings import HuggingFaceEmbeddings
+            from langchain_community.vectorstores import Chroma
+            from langchain.schema import Document
+            from langchain_openai import ChatOpenAI
+            import os
+
+            # ========== 1. 准备数据 ==========
+            loader = TextLoader("data.txt")
+            docs = loader.load()
+
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=512,
+                chunk_overlap=50
+            )
+            raw_chunks = text_splitter.split_documents(docs)
+
+            # ========== 2. 用 LLM 为每个 chunk 生成 header ==========
+            llm = ChatOpenAI(model="gpt-4o-mini")
+
+            def generate_header(chunk_text):
+                """为 chunk 生成一句话标题"""
+                prompt = f"""为以下文本生成一句话标题(20字以内),
+            # 让读者能快速判断是否包含所需信息:
+
+            # {chunk_text[:500]}
+
+            # 标题:"""
+                response = llm.invoke(prompt)
+                return response.content.strip()
+
+            chunk_docs = []
+            for chunk in raw_chunks:
+                header = generate_header(chunk.page_content)
+
+                chunk_docs.append(Document(
+                    # header + 原文一起作为检索内容
+                    page_content=f"【{header}】\n{chunk.page_content}",
                     metadata={
-                        "original": chunk.page_content,
-                        "doc_title": doc_title,
-                        "section": section,
-                        "chunk_index": i
+                        "header": header,              # header 单独存一份
+                        "original": chunk.page_content, # 原始内容
+                        "source": chunk.metadata.get("source", "")
                     }
                 ))
-            return enriched
 
-        # 使用
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=50)
-        chunks = text_splitter.split_documents(loader.load())
-
-        enriched = enrich_chunks(
-            chunks,
-            doc_title="RAG 技术白皮书",
-            section_titles=[
-                ("基础概念", 0, 5),
-                ("检索策略", 5, 12),
-                ("生成优化", 12, 20)
-            ]
-        )
-
-        # 检索时自动带上上下文信息
-        embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
-        vectorstore = Chroma.from_documents(enriched, embeddings)
-
-        # ------------------------------------------------------------
-
-
-    # 🏷️ 5. Chunk-Header(块级加标)
-
-
-        # ■ 核心思想
-
-        # 在 chunk 开头加一个 描述性摘要(header),检索时只看 header 就能决定要不要看完整 chunk。有点像书的目录。
-
-        # ■ 完整流程
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # 文档 → 切 chunks → LLM 为每个 chunk 生成 header
-        #      → 存入向量库(header 放在 metadata + 内容前缀里)
-        #      → 检索时 header 参与匹配,提高 precision
-
-
-        # ■ 完整代码
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
-        from langchain_community.document_loaders import TextLoader
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        from langchain_community.vectorstores import Chroma
-        from langchain.schema import Document
-        from langchain_openai import ChatOpenAI
-        import os
-
-        # ========== 1. 准备数据 ==========
-        loader = TextLoader("data.txt")
-        docs = loader.load()
-
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=512,
-            chunk_overlap=50
-        )
-        raw_chunks = text_splitter.split_documents(docs)
-
-        # ========== 2. 用 LLM 为每个 chunk 生成 header ==========
-        llm = ChatOpenAI(model="gpt-4o-mini")
-
-        def generate_header(chunk_text):
-            """为 chunk 生成一句话标题"""
-            prompt = f"""为以下文本生成一句话标题(20字以内),
-        # 让读者能快速判断是否包含所需信息:
-
-        # {chunk_text[:500]}
-
-        # 标题:"""
-            response = llm.invoke(prompt)
-            return response.content.strip()
-
-        chunk_docs = []
-        for chunk in raw_chunks:
-            header = generate_header(chunk.page_content)
-
-            chunk_docs.append(Document(
-                # header + 原文一起作为检索内容
-                page_content=f"【{header}】\n{chunk.page_content}",
-                metadata={
-                    "header": header,              # header 单独存一份
-                    "original": chunk.page_content, # 原始内容
-                    "source": chunk.metadata.get("source", "")
-                }
-            ))
-
-        # ========== 3. 向量化入库 ==========
-        embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
-        vectorstore = Chroma.from_documents(chunk_docs, embeddings)
-
-        # ========== 4. 检索(三种策略) ==========
-
-        def retrieve_with_header(query, k=3, strategy="hybrid"):
-            """
-        #     三种检索策略:
-        #     - "header_only": 只匹配 header(在 metadata 里搜)
-        #     - "full_text": 匹配 header + 正文一起
-        #     - "hybrid": 先按 header_only 过滤出候选,再用 full_text 重排
-            """
-            if strategy == "header_only":
-                # 方案一:只搜 header
-                # 直接把 query 和 header 拼接后检索
-                results = vectorstore.similarity_search(query, k=k * 3)
-                # 按 header 去重,保留第一个
-                seen_headers = set()
-                filtered = []
-                for r in results:
-                    h = r.metadata["header"]
-                    if h not in seen_headers:
-                        seen_headers.add(h)
-                        # 返回原始内容
-                        r.page_content = r.metadata["original"]
-                        filtered.append(r)
-                return filtered[:k]
-
-            elif strategy == "full_text":
-                # 方案二:header + 正文一起匹配(默认)
-                return vectorstore.similarity_search(query, k=k)
-
-            else:
-                # 方案三:混合策略 - 两步走
-                # Step 1: 用 header 做一轮粗筛
-                header_results = vectorstore.similarity_search(query, k=k * 2)
-                # Step 2: 再用 query 和候选 chunks 做精排(用原始内容)
-                candidates = []
-                for r in header_results:
-                    candidates.append(Document(
-                        page_content=r.metadata["original"],
-                        metadata=r.metadata
-                    ))
-                # 临时建一个小索引做精排
-                temp_db = Chroma.from_documents(candidates, embeddings)
-                final = temp_db.similarity_search(query, k=k)
-                # 把 header 贴回结果便于阅读
-                for r in final:
-                    r.page_content = f"【{r.metadata['header']}】\n{r.metadata['original']}"
-                return final
-
-        # ========== 5. 测试三种策略 ==========
-        query = "向量数据库怎么选型?"
-
-        print("=== 策略1:仅匹配 header ===")
-        for r in retrieve_with_header(query, strategy="header_only"):
-            print(f"📌 {r.metadata['header']}")
-            print(r.metadata["original"][:150])
-            print()
-
-        print("=== 策略3:混合策略(推荐) ===")
-        for r in retrieve_with_header(query, strategy="hybrid"):
-            print(r.page_content[:200])
-            print()
-
-
-        # ■ 三种策略选哪个?
-
-        # | 策略 | 精度 | 召回 | 速度 | 适合场景 |
-        # | header_only | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | header 质量极高时,快速筛选 |
-        # | full_text | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | 默认通用方案 |
-        # | **hybrid** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | **推荐**,精度最高 |
-
-
-        # ------------------------------------------------------------
-
-
-    # 📄 6. Document-Augmentation(文档增强)
-
-
-        # ■ 核心思想
-
-        # 在文档入库之前,先让 LLM 对文档做预处理:生成摘要、提取关键词、补充相关知识点、改写为 Q&A 对。把"脏活"前置,让检索更准。
-
-        # ■ 常见操作
-
-        # - 为文档生成摘要,作为额外 chunk 存入
-        # - 从文档中提取 Q&A 对
-        # - 把口语化文档改写为结构化文本
-        # - 补充专业术语解释
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from langchain_openai import ChatOpenAI
-
-        llm = ChatOpenAI(model="gpt-4o-mini")
-
-        def augment_document(chunk_text):
-            """为 chunk 生成增强内容"""
-            prompt = f"""请对以下文本做三项增强处理:
-
-            1. 生成一句话摘要
-            2. 提取 3-5 个关键术语(包括解释)
-            3. 生成一个相关的 FAQ 问答
-
-            文本:
-            {chunk_text[:1000]}
-
-            请以 JSON 格式输出:"""
-
-            response = llm.invoke(prompt)
-            return {
-                "original": chunk_text,
-                "augmented": response.content
-            }
-
-        # 把增强产物也存入向量库
-        augmented_docs = []
-        for chunk in chunks:
-            result = augment_document(chunk.page_content)
-            augmented_docs.append(Document(
-                page_content=result["augmented"],
-                metadata={"type": "augmented", "original_chunk": chunk.page_content[:100]}
-            ))
-
-        # 原始 chunks + 增强内容一起建索引
-        all_docs = chunks + augmented_docs
-        vectorstore = Chroma.from_documents(all_docs, embeddings)
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 🔄 7. Query-Transformation(查询改写)
-
-
-        # ■ 核心思想
-
-        # 用户输入的 query 往往质量不高(太短、歧义、口语化)。在检索前先让 LLM 把 query 改写成更适合检索的形式--扩写、补全、拆解、标准化。
-
-        # ■ 常见改写策略
-
-        # | 策略 | 说明 | 示例 |
-        # | 扩写 | 补充同义词或上下文 | "LoRA" → "LoRA 低秩适配微调方法" |
-        # | 拆解 | 复杂问题拆成子问题 | 多跳问题拆解为多个简单 query |
-        # | 假设回答 | 反问 LLM 可能的答案 | Step-back prompting |
-        # | 翻译 | 跨语言场景 | 中文 query 翻译为英文检索 |
-        # | 纠错 | 修正错别字 | "RAG 元梨" → "RAG 原理" |
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from langchain_openai import ChatOpenAI
-
-        llm = ChatOpenAI(model="gpt-4o-mini")
-
-        def transform_query(query):
-            """将原始 query 改写成更适合检索的版本"""
-            prompt = f"""你是一个搜索专家。用户输入了一个查询,请将它改写为更清晰、
-            更完整、更适合向量检索的版本。可以补全术语、纠正表达、增加相关关键词。
-
-            原始查询:{query}
-
-            要求:
-            - 保持原始意图不变
-            - 使用专业术语
-            - 输出 3 个改写版本,每行一个
-            - 不要额外解释
-
-            改写版本:"""
-            response = llm.invoke(prompt)
-            variants = [q.strip() for q in response.content.split("\n") if q.strip()]
-            return [query] + variants  # 原始 query + 改写版本
-
-        def multi_query_retrieve(retriever, query, k=3):
-            """用多个 query 变体分别检索,合并结果去重"""
-            queries = transform_query(query)
-            all_results = []
-
-            for q in queries:
-                results = retriever.invoke(q)
-                all_results.extend(results)
-
-            # 按内容去重
-            seen = set()
-            unique = []
-            for r in all_results:
-                if r.page_content not in seen:
-                    seen.add(r.page_content)
-                    unique.append(r)
-
-            return unique[:k]
-
-        # 使用
-        query = "微调显存不够怎么办"
-        results = multi_query_retrieve(retriever, query)
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 🎯 8. Rerank(重排序)
-
-
-        # ■ 核心思想
-
-        # 先用轻量级检索(向量、BM25)粗筛一轮,拿到候选集,再用一个专门的 Reranker 模型对候选集精细排序。 向量检索的"语义相似"≠"真正满足需要的答案",Reranker 能拉回排序的精度。
-
-        # ■ 原理
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        #               Query
-        #                 ↓
-        #    ┌───────────────────────┐
-        #    │   Step 1: 粗筛        │  ← 向量检索,召回 top-50
-        #    │   (Bi-encoder)         │
-        #    └────────┬──────────────┘
-        #             ↓
-        #    ┌───────────────────────┐
-        #    │   Step 2: 精排        │  ← Reranker,从 top-50 选出 top-3
-        #    │   (Cross-encoder)      │  ↑ 这里更慢但更准
-        #    └────────┬──────────────┘
-        #             ↓
-        #            LLM 回答
-
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # 方案 A:用 Cohere Rerank API
-        from langchain.retrievers import ContextualCompressionRetriever
-        from langchain.retrievers.document_compressors import CohereRerank
-        from langchain_cohere import CohereRerank
-
-        # 1. 基础检索器
-        base_retriever = vectorstore.as_retriever(search_kwargs={"k": 20})
-
-        # 2. 加 Reranker 压缩(重排序 + 截断)
-        compressor = CohereRerank(model="rerank-english-v3.0", top_n=3)
-        retriever_with_rerank = ContextualCompressionRetriever(
-            base_compressor=compressor,
-            base_retriever=base_retriever
-        )
-
-        results = retriever_with_rerank.invoke("LoRA 和 QLoRA 的区别")
-
-        # 方案 B:本地 Reranker(BAAI/bge-reranker-v2-m3)
-        # 免费、离线、隐私友好
-        from FlagEmbedding import FlagReranker
-
-        reranker = FlagReranker('BAAI/bge-reranker-v2-m3', use_fp16=True)
-
-        def rerank(query, candidates, top_k=3):
-            """本地重排序"""
-            pairs = [(query, doc.page_content) for doc in candidates]
-            scores = reranker.compute_score(pairs)
-
-            # 按得分降序排列
-            scored = list(zip(candidates, scores))
-            scored.sort(key=lambda x: x[1], reverse=True)
-
-            return [doc for doc, score in scored[:top_k]]
-
-        # 使用
-        candidates = vectorstore.similarity_search(query, k=20)
-        best = rerank(query, candidates, top_k=3)
-
-
-        # ■ 推荐 Reranker 模型
-
-        # | 模型 | 特点 |
-        # | `BAAI/bge-reranker-v2-m3` | 免费、中文好、Multi-lingual |
-        # | `Cohere rerank-english-v3.0` | 付费但效果好 |
-        # | `jina-reranker-v2-base-multilingual` | 多语言、免费 |
-        # | `ms-marco-MiniLM-L6-v2` | 轻量、速度快 |
-
-
-        # ------------------------------------------------------------
-
-
-    # 🧩 9. Sentence Window Retrieval(连续片段检索)
-
-
-        # ■ 核心思想
-
-        # 检索到一条句子后,把这条句子前后的 N 条句子也一起带上作为上下文。保证 LLM 看到的不是孤立的片段,而是一个完整的语义窗口。
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        class SentenceWindowRetriever:
-            def __init__(self,vectorstore, sentences, window_size=3):
-                self.vectorstore = vectorstore
-                self.sentences = sentences  # 按顺序的句子列表
-                self.window_size = window_size
-
-            def retrieve(self, query, k=3):
-                """检索句子及其上下文窗口"""
-                # 1. 检索命中的句子
-                results = self.vectorstore.similarity_search(query, k=k)
-
-                window_results = []
-                for r in results:
-                    idx = r.metadata.get("sentence_index", 0)
-                    # 2. 取前 window_size 和后 window_size 句
-                    start = max(0, idx - self.window_size)
-                    end = min(len(self.sentences), idx + self.window_size + 1)
-                    window = "".join(self.sentences[start:end])
-
-                    window_results.append(window)
-
-                return window_results
-
-        # 使用
-        sentences = text.replace("。", "。\n").split("\n")
-        sentences = [s.strip() for s in sentences if s.strip()]
-
-        # 每句建索引时记录 index
-        documents = [
-            Document(page_content=s, metadata={"sentence_index": i})
-            for i, s in enumerate(sentences)
-        ]
-
-        vectorstore = Chroma.from_documents(documents, embeddings)
-        retriever = SentenceWindowRetriever(vectorstore, sentences, window_size=3)
-
-        results = retriever.retrieve("什么是参数高效微调?")
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 📦 10. Context Compression(上下文压缩)
-
-
-        # ■ 核心思想
-
-        # 检索到的 chunks 太多太长?在送入 LLM 之前先压缩一下。 把大量检索结果压缩成精简的版本,省 token 省钱还减少噪声。
-
-        # ■ 常见方法
-
-        # | 方法 | 说明 |
-        # | LLM 重写摘要 | 让 LLM 把多个 chunks 压缩为一段 |
-        # | 自动提取关键句 | 用 NLP 方法(TextRank 等)提取关键句 |
-        # | 选择性包含 | 只保留与 query 相关的句子 |
-        # | 结构化输出 | 转为表格或要点列表 |
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from langchain.retrievers.document_compressors import LLMChainExtractor
-        from langchain_openai import ChatOpenAI
-        from langchain.retrievers import ContextualCompressionRetriever
-
-        # 方案 A:用 LLM 提取关键内容(自动去掉无关部分)
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        compressor = LLMChainExtractor.from_llm(llm)
-
-        compression_retriever = ContextualCompressionRetriever(
-        base_compressor=compressor,
-            base_retriever=vectorstore.as_retriever(search_kwargs={"k": 5})
-        )
-
-        compressed_results = compression_retriever.invoke("LoRA rank 怎么设置?")
-
-        # 方案 B:自己实现压缩
-        def compress_chunks(query, chunks, max_tokens=1000):
-            """手动压缩 chunks 为精简版"""
-            combined = "\n\n".join([c.page_content for c in chunks])
-            prompt = f"""请根据以下查询,从检索到的文档中提取最关键的信息。
-        # 只保留与查询直接相关的内容,去除冗余。
-
-        # 查询:{query}
-        # 文档:{combined}
-
-        # 精简后的关键信息:"""
-            response = llm.invoke(prompt)
-            return response.content
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 🔁 11. Feedback-Loop(反馈闭环)
-
-
-        # ■ 核心思想
-
-        # 让 RAG 系统有"记忆"。 如果用户对某个回答点了赞/踩,或者追问了,系统把这些反馈存下来。下次类似 query 来了,优先使用"历史已验证正确"的 chunks。
-
-        # ■ 实现方式
-
-        # - 存储用户的 query、检索到的 chunks、LLM 回答
-        # - 记录用户的显式反馈(点赞/点踩)
-        # - 记录隐式反馈(是否追问、是否复制答案)
-        # - 正反馈的 query-chunk 对用于重排序或作为提示
-
-        # ■ 代码示例(简化版)
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        import json
-        import sqlite3
-        from datetime import datetime
-
-        class FeedbackLoopRAG:
-            def __init__(self, retriever, llm, db_path="feedback.db"):
-                self.retriever = retriever
-                self.llm = llm
-                self.conn = sqlite3.connect(db_path)
-                self._init_db()
-
-            def _init_db(self):
-                self.conn.execute("""
-                    CREATE TABLE IF NOT EXISTS feedback (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        query TEXT,
-                        chunk_text TEXT,
-                        answer TEXT,
-                      rating INTEGER,  -- 1 = 正反馈, -1 = 负反馈
-                        timestamp TEXT
-                    )
-                """)
-                self.conn.execute("""
-                     CREATE TABLE IF NOT EXISTS positive_pairs (
-                         query TEXT,
-                         chunk_text TEXT,
-                         count INTEGER DEFAULT 1,
-                        UNIQUE(query, chunk_text)
-                    )
-                """)
-                self.conn.commit()
-
-            def retrieve(self, query, k=3):
-                """检索时考虑历史正反馈"""
-                # 基础检索
-                base_results = self.retriever.invoke(query, k=k * 2)
-
-                # 查历史正反馈中有没有匹配的
-                cursor = self.conn.execute(
-                    "SELECT chunk_text, count FROM positive_pairs WHERE query = ? ORDER BY count DESC",
-                    (query,)
-                )
-                positive_chunks = {row[0]: row[1] for row in cursor.fetchall()}
-
-                # 正反馈的 chunk 加权优先
-                scored = []
-                for doc in base_results:
-                    boost = positive_chunks.get(doc.page_content, 0)
-                    score = doc.metadata.get("score", 0.5) + boost * 0.1
-                    scored.append((doc, score))
-
-                scored.sort(key=lambda x: x[1], reverse=True)
-                return [doc for doc, _ in scored[:k]]
-
-            def record_feedback(self, query, chunks, answer, rating):
-                """记录用户反馈"""
-                now = datetime.now().isoformat()
-                for chunk in chunks:
-                    self.conn.execute(
-                        "INSERT INTO feedback (query, chunk_text, answer, rating, timestamp) VALUES (?, ?, ?, ?, ?)",
-                        (query, chunk.page_content, answer, rating, now)
-                    )
-                    if rating == 1:  # 正反馈
-                        self.conn.execute("""
-                            INSERT INTO positive_pairs (query, chunk_text, count)
-                            VALUES (?, ?, 1)
-                            ON CONFLICT(query, chunk_text) DO UPDATE SET count = count + 1
-                        """, (query, chunk.page_content))
-                self.conn.commit()
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 🧐 12. Self-RAG(内省反思机制)
-
-
-        # ■ 核心思想
-
-        # 让模型在生成回答时,自己做三个反思: (1)检索到的内容够不够? (2)回答有没有忠实于检索结果?(3)当前回答是否足够好? 根据反思结果决定是生成、重新检索还是修改。
-
-        # ■ 工作流程
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # Query → 检索 → 生成初步回答
-        #      ↓
-        #   自省评估:
-        #     ├── 检索足够? → 是 → 生成回答
-        #     │               └─ 否 → 重新检索
-        #     ├── 回答准确? → 是 → 输出
-        #     │               └─ 否 → 修正
-        #     └── 回答完整? → 是 → 输出
-        #                     └─ 否 → 继续检索
-
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from langchain_openai import ChatOpenAI
-
-        llm = ChatOpenAI(model="gpt-4o")
-
-        class SelfRAG:
-            def __init__(self, retriever, llm, max_iterations=3):
-                self.retriever = retriever
-                self.llm = llm
-                self.max_iterations = max_iterations
-
-            def ask(self, query):
-                """带自省反思的 RAG"""
-                context = ""
-                for i in range(self.max_iterations):
-                    # 1. 检索
-                    if not context:
-                        docs = self.retriever.invoke(query, k=3)
-                        context = "\n\n".join([d.page_content for d in docs])
-
-                    # 2. 生成回答
-                    prompt = f"""基于以下内容回答问题:
-
-                    上下文:{context}
-                    问题:{query}
-                    回答:"""
-                                answer = self.llm.invoke(prompt).content
-
-                                # 3. 自省评估
-                                critique = self.llm.invoke(f"""评估以下回答的质量:
-
-                    问题:{query}
-                    回答:{answer}
-                    上下文:{context}
-
-                    请从以下三个方面评分(1-5分):
-                    1. 回答是否忠实于上下文(faithfulness)
-                    2. 回答是否完整覆盖了问题(completeness)
-                    3. 是否需要更多信息(need_more_context,1=不需要,5=需要)
-
-                    只输出分数,格式:faithfulness: X, completeness: X, need_more: X""").content
-
-                    scores = {}
-                    for line in critique.split(","):
-                        parts = line.strip().split(":")
-                        if len(parts) == 2:
-                            key = parts[0].strip()
-                            val = parts[1].strip()
-                            scores[key] = int(val)
-
-                    # 4. 判断是否继续
-                    if scores.get("need_more", 5) <= 2 and scores.get("faithfulness", 1) >= 4:
-                        return answer  # 够了,输出
-
-                    # 否则补充检索
-                    new_docs = self.retriever.invoke(query, k=2)
-                    context += "\n\n" + "\n\n".join([d.page_content for d in new_docs])
-
-                # 兜底返回
-                return answer
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 🕸️ 13. Knowledge Graph RAG(知识图谱)
-
-
-        # ■ 核心思想
-
-        # 不是简单做向量检索,而是从文档中提取实体和关系构建知识图谱。 检索时既走向量相似度,也走图关系路径,把多跳关联信息也找出来。
-
-        # ■ 架构
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # 文档 → 实体提取 → 关系提取 → 知识图谱(Neo4j / NetworkX)
-        #                                           ↓
-        #                                    Query → 图查询 + 向量检索
-        #                                           ↓
-        #                                   融合结果 → LLM
-
-
-        # ■ 代码示例(简化版 NetworkX 实现)
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        import networkx as nx
-        import json
-        from langchain_openai import ChatOpenAI
-
-        llm = ChatOpenAI(model="gpt-4o-mini")
-
-        class KnowledgeGraphRAG:
-            def __init__(self, vectorstore, llm=llm):
-                self.vectorstore = vectorstore
-                self.llm = llm
-                self.graph = nx.Graph()
-
-            def build_graph(self, documents):
-                """从文档中提取实体和关系构建知识图谱"""
-                for doc in documents:
-                    prompt = f"""从以下文本中提取实体和关系,以 JSON 格式输出。
-
-                    文本:{doc.page_content[:1500]}
-
-                    格式:{{
-                       "entities": ["实体1", "实体2", ...],
-                       "relations": [
-                          {{"source": "实体1", "target": "实体2", "relation": "关系描述"}},
-                         ...
-                        ]
-                    }}
-
-                    注意:只提取确定存在的实体和关系。"""
-                    response = self.llm.invoke(prompt)
-                    try:
-                        data = json.loads(response.content)
-                        for entity in data["entities"]:
-                            self.graph.add_node(entity)
-                        for rel in data["relations"]:
-                            self.graph.add_edge(
-                                rel["source"],
-                                rel["target"],
-                                relation=rel["relation"]
-                            )
-                    except:
-                        continue
-
-            def retrieve(self, query, k=3):
-                """向量检索 + 图检索融合"""
-                # 1. 向量检索
-                vec_results = self.vectorstore.similarity_search(query, k=k)
-
-                # 2. 从 query 中提取实体
-                prompt = f"从查询中提取关键实体(逗号分隔):{query}"
-                entities = self.llm.invoke(prompt).content.split(",")
-                entities = [e.strip() for e in entities]
-
-                # 3. 图检索:找到相关实体的一跳邻居
-                graph_neighbors = set()
-                for e in entities:
-                    if e in self.graph:
-                        neighbors = list(self.graph.neighbors(e))
-                        graph_neighbors.update(neighbors)
-
-                # 4. 将图谱信息整合到向量检索结果中
-                if graph_neighbors:
-                    graph_context = f"关联实体:{', '.join(graph_neighbors)}"
-                    vec_results[0].page_content = graph_context + "\n" + vec_results[0].page_content
-
-                return vec_results
-
-
-
-        # ------------------------------------------------------------ 
-
-
-    # 📂 14. Hierarchical Index(层次化索引)
-
-
-        # ■ 核心思想
-
-        # 先建一个"目录级"摘要索引,再建"内容级"详细索引。 检索时先在摘要级别定位到文档,再在内容级精确定位 chunk。减少搜索范围,加速大语料库检索。
-
-        # ■ 结构
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # 一级索引(摘要/标题)
-        #  ├── 文档 A 摘要 → 指向 chunks A1, A2, A3...
-        #  ├── 文档 B 摘要 → 指向 chunks B1, B2, B3...
-        #  └── 文档 C 摘要 → 指向 chunks C1, C2, C3...
-
-        # 二级索引(详细内容)
-        #  ├── chunk A1 "关于..."
-        #  ├── chunk A2 "关于..."
-        #  └── ...
-
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        class HierarchicalRAG:
-            def __init__(self, summary_store, detail_store):
-                self.summary_store = summary_store  # 摘要向量库
-                self.detail_store = detail_store    # 详细内容向量库
-
-            def add_document(self, doc_id, title, summary, chunks):
-                """添加文档:同时建摘要索引和详细索引"""
-                # 存摘要(含 doc_id)
-                self.summary_store.add_texts(
-                    [summary],
-                    metadatas=[{"doc_id": doc_id, "title": title, "type": "summary"}]
-                )
-                # 存详细 chunks(每个 chunk 都关联 doc_id)
-                for chunk in chunks:
-                    self.detail_store.add_texts(
-                        [chunk],
-                        metadatas=[{"doc_id": doc_id, "title": title, "type": "detail"}]
-                    )
-
-            def retrieve(self, query, top_k=3):
-                """两步检索"""
-                # 第一步:从摘要索引找到相关文档
-                summary_results = self.summary_store.similarity_search(query, k=2)
-                target_docs = [r.metadata["doc_id"] for r in summary_results]
-
-                # 第二步:只在目标文档的详细内容中检索
-                all_details = self.detail_store.similarity_search(query, k=top_k * 2)
-                filtered = [
-                     d for d in all_details
-                    if d.metadata["doc_id"] in target_docs
-                ]
-                return filtered[:top_k]
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 🏗️ 15. HyDE(假设性文档嵌入)
-
-
-        # ■ 核心思想
-
-        # 拿到 query 后不直接检索,先让 LLM "假设" 一篇能回答这个问题的文档(假想文档),然后用这篇假想文档的 embedding 去检索真实文档。 
-        # 因为假想文档的语义空间更接近真实答案,能突破 query 和 answer 之间的"语义鸿沟"。
-
-        # ■ 原理
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # Query: "LoRA 和全参微调谁更好?"
-        #     ↓  LLM 生成假想文档
-        # "LoRA 是一种参数高效微调方法,它通过低秩分解..."
-        #     ↓  用假想文档的 embedding 检索
-        # [真实文档 1] [真实文档 2] [真实文档 3]  ← 更精准
-
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from langchain_openai import ChatOpenAI
-
-        llm = ChatOpenAI(model="gpt-4o-mini")
-
-        def hyde_retrieve(query, retriever, llm=llm):
-            """HyDE 检索:先生成假想文档再检索"""
-            # 1. 根据 query 生成假想文档
-            prompt = f"""请写一段简短的技术文档,内容围绕以下问题展开。
-        # 要求:内容具体、有细节、像是在真实资料中会看到的内容。
-
-        # 问题:{query}
-
-        # 技术文档:"""
-            hypothetical_doc = llm.invoke(prompt).content
-
-            print(f"[HyDE] 假想文档片段:{hypothetical_doc[:150]}...")
-
-            # 2. 用假想文档做检索
-            results = retriever.invoke(hypothetical_doc, k=3)
-
-            return results
-
-        # 使用
-        query = "QLoRA 需要多少显存?"
-        results = hyde_retrieve(query, retriever)
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 🔀 16. Hybrid Search(混合检索)
-
-
-        # ■ 核心思想
-
-        # 别把鸡蛋放一个篮子里。 向量检索(语义) + 关键词检索(BM25 精确匹配)一起上,结果融合。语义检索擅长同义词和泛化,关键词擅长专有名词和精确匹配。
-
-        # ■ 原理
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # 向量检索结果:[docA: 0.85, docB: 0.72, docC: 0.61]
-        # BM25 检索结果:[docB: 0.90, docD: 0.78, docA: 0.65]
-
-        # 融合(RRF 或加权)→ [docB, docA, docD, docC]
-
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from rank_bm25 import BM25Okapi
-        import numpy as np
-
-        class HybridRetriever:
-            def __init__(self, vectorstore, documents):
-                self.vectorstore = vectorstore
-                self.documents = documents
-                # 准备 BM25
-                tokenized = [doc.page_content.split() for doc in documents]
-                self.bm25 = BM25Okapi(tokenized)
-
-            def retrieve(self, query, k=3, alpha=0.5):
-                """混合检索,alpha 控制语义和关键词的权重"""
-                # 1. 向量检索
-                vec_results = self.vectorstore.similarity_search_with_score(query, k=k * 2)
-                vec_scores = {doc.page_content: score for doc, score in vec_results}
-                vec_max = max(vec_scores.values()) if vec_scores else 1
-
-                # 2. BM25 检索
-                tokenized_query = query.split()
-                bm25_scores = self.bm25.get_scores(tokenized_query)
-                bm25_norm = bm25_scores / (max(bm25_scores) if max(bm25_scores) > 0 else 1)
-
-                # 3. 融合
-                fusion_scores = {}
-                for i, doc in enumerate(self.documents):
-                    vec = vec_scores.get(doc.page_content, 0) / vec_max
-                    bm25 = bm25_norm[i]
-                    fusion_scores[doc.page_content] = alpha * vec + (1 - alpha) * bm25
-
-                # 4. 排序
-                ranked = sorted(fusion_scores.items(), key=lambda x: x[1], reverse=True)
-                top_chunks = [content for content, _ in ranked[:k]]
-
-                # 映射回 Document 对象
-                content_to_doc = {doc.page_content: doc for doc in self.documents}
-                return [content_to_doc[c] for c in top_chunks]
-
-        # 使用
-        hybrid = HybridRetriever(vectorstore, chunks)
-        results = hybrid.retrieve("LoRA rank 设置", alpha=0.6)
-
-
-        # ■ RRF(Reciprocal Rank Fusion)-- 更好的融合方式
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        def rrf_fusion(vec_results, bm25_results, k=60):
-            """RRF 融合排序"""
-            score_map = {}
-            for rank, doc in enumerate(vec_results):
-                score_map[doc.page_content] = 1 / (k + rank + 1)
-            for rank, doc in enumerate(bm25_results):
-                content = doc.page_content
-                score_map[content] = score_map.get(content, 0) + 1 / (k + len(vec_results) + rank + 1)
-
-            ranked = sorted(score_map.items(), key=lambda x: x[1], reverse=True)
-            return [content for content, _ in ranked]
-
-
-
-        # ------------------------------------------------------------
-
-
-    # 🩺 17. CRAG(Corrective RAG,纠错自愈)
-
-
-        # ■ 核心思想
-
-        # 检索结果也不是完全可信的。 CRAG 在生成回答之前,先对检索结果做一个置信度评估:
-
-        # - 高置信度 → 直接生成
-        # - 低置信度 → 尝试修正检索(重写 query、换检索源)
-        # - 无相关信息 → 告诉用户"没找到"而不是硬编
-
-        # ■ 工作流程
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        # Query → 检索 → 置信度评估
-        #               ├── 高 [0.8, 1.0] → 生成回答
-        #               ├── 中 [0.5, 0.8) → 知识修正(去除噪声、补充检索)
-        #               └── 低 [0.0, 0.5) → 重写 query 或回退到模型自身知识
-        #                                               ↓
-        #                                   LLM 生成最终回答
-
-
-        # ■ 代码示例
-
-
-        # ============================================================
-        # 代码
-        # ============================================================
-        from langchain_openai import ChatOpenAI
-
-        llm = ChatOpenAI(model="gpt-4o-mini")
-
-        class CorrectiveRAG:
-            def __init__(self, retriever, llm=llm):
-                self.retriever = retriever
-                self.llm = llm
-
-            def _evaluate_confidence(self, query, docs):
-                """评估检索结果的相关性置信度"""
-                if not docs:
-                    return 0.0
-
-                # 用 LLM 打分
-                context = "\n\n".join([d.page_content[:200] for d in docs])
-                prompt = f"""评估以下检索结果对问题的相关性,给出 0-1 的置信度分数。
-
-                问题:{query}
-                检索结果:{context}
-
-                只输出数字(如 0.85):"""
-                        score = float(self.llm.invoke(prompt).content.strip())
-                        return score
-
-                    def _correct_knowledge(self, query, docs):
-                        """修正知识:去除噪声,补充检索"""
-                        # 让 LLM 判断每段内容是否相关
-                        corrections = []
-                        for doc in docs:
-                            prompt = f"""以下内容是否与问题相关?只回答"相关"或"不相关"。
-
-                问题:{query}
-                内容:{doc.page_content[:300]}"""
-                            verdict = self.llm.invoke(prompt).content.strip()
-
-                            if "相关" in verdict:
-                                corrections.append(doc)
-                            else:
-                                # 不相关的 chunk,尝试从中提取有用信息
-                                extract_prompt = f"""从以下内容中提取可能与"{query}"相关的信息。
-                如果完全没有相关信息,输出"无相关信息"。
-
-                内容:{doc.page_content[:500]}"""
-
-                extracted = self.llm.invoke(extract_prompt).content.strip()
-                if extracted != "无相关信息":
-                    doc.page_content = extracted
-                    corrections.append(doc)
-
-                # 如果修正后信息太少,补充检索
-                if len(corrections) < 2:
-                    new_docs = self.retriever.invoke(query, k=2)
-                    corrections.extend(new_docs)
-
-                return corrections
-
-            def ask(self, query):
-                """CRAG 主流程"""
-                # 1. 检索
-                docs = self.retriever.invoke(query, k=5)
-                if not docs:
-                    return "没有找到相关信息。"
-
-                # 2. 评估置信度
-                confidence = self._evaluate_confidence(query, docs)
-
-                if confidence >= 0.8:
-                    # 高置信度 → 直接生成
-                    context = "\n\n".join([d.page_content for d in docs])
-                    prompt = f"基于以下内容回答问题:\n\n{context}\n\n问题:{query}"
-                    return self.llm.invoke(prompt).content
-
-                elif confidence >= 0.5:
-                    # 中等置信度 → 知识修正
-                    corrected_docs = self._correct_knowledge(query, docs)
-                    context = "\n\n".join([d.page_content for d in corrected_docs])
-                    prompt = f"基于以下修正后的内容回答问题:\n\n{context}\n\n问题:{query}"
-                    return self.llm.invoke(prompt).content
+            # ========== 3. 向量化入库 ==========
+            embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
+            vectorstore = Chroma.from_documents(chunk_docs, embeddings)
+
+            # ========== 4. 检索(三种策略) ==========
+
+            def retrieve_with_header(query, k=3, strategy="hybrid"):
+                """
+                三种检索策略:
+                 - "header_only": 只匹配 header(在 metadata 里搜)
+                 - "full_text": 匹配 header + 正文一起
+                 - "hybrid": 先按 header_only 过滤出候选,再用 full_text 重排
+                """
+                if strategy == "header_only":
+                    # 方案一:只搜 header
+                    # 直接把 query 和 header 拼接后检索
+                    results = vectorstore.similarity_search(query, k=k * 3)
+                    # 按 header 去重,保留第一个
+                    seen_headers = set()
+                    filtered = []
+                    for r in results:
+                        h = r.metadata["header"]
+                        if h not in seen_headers:
+                            seen_headers.add(h)
+                            # 返回原始内容
+                            r.page_content = r.metadata["original"]
+                            filtered.append(r)
+                    return filtered[:k]
+
+                elif strategy == "full_text":
+                    # 方案二:header + 正文一起匹配(默认)
+                    return vectorstore.similarity_search(query, k=k)
 
                 else:
-                    # 低置信度 → 重写 query + 重新检索
-                    rewrite_prompt = f"""原始查询没有检索到相关信息。请改写查询,使其更清晰更容易检索。
+                    # 方案三:混合策略 - 两步走
+                    # Step 1: 用 header 做一轮粗筛
+                    header_results = vectorstore.similarity_search(query, k=k * 2)
+                    # Step 2: 再用 query 和候选 chunks 做精排(用原始内容)
+                    candidates = []
+                    for r in header_results:
+                        candidates.append(Document(
+                            page_content=r.metadata["original"],
+                            metadata=r.metadata
+                        ))
+                    # 临时建一个小索引做精排
+                    temp_db = Chroma.from_documents(candidates, embeddings)
+                    final = temp_db.similarity_search(query, k=k)
+                    # 把 header 贴回结果便于阅读
+                    for r in final:
+                        r.page_content = f"【{r.metadata['header']}】\n{r.metadata['original']}"
+                    return final
 
-                    原始查询:{query}
-                    改写版本(只输出,不解释):"""
+            # ========== 5. 测试三种策略 ==========
+            query = "向量数据库怎么选型?"
 
-                    new_query = self.llm.invoke(rewrite_prompt).content.strip()
+            print("=== 策略1:仅匹配 header ===")
+            for r in retrieve_with_header(query, strategy="header_only"):
+                print(f"📌 {r.metadata['header']}")
+                print(r.metadata["original"][:150])
+                print()
 
-                    new_docs = self.retriever.invoke(new_query, k=5)
-                    if new_docs:
-                        context = "\n\n".join([d.page_content for d in new_docs])
+            print("=== 策略3:混合策略(推荐) ===")
+            for r in retrieve_with_header(query, strategy="hybrid"):
+                print(r.page_content[:200])
+                print()
+
+
+            # ■ 三种策略选哪个?
+
+            # | 策略            | 精度  | 召回 | 速度 | 适合场景 |
+            # | header_only     | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | header 质量极高时,快速筛选 |
+            # | full_text       | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | 默认通用方案 |
+            # | **hybrid**      | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | **推荐**,精度最高 |
+
+
+            # ------------------------------------------------------------
+
+
+        # 📄 6. Document-Augmentation(文档增强)
+
+
+            # ■ 核心思想
+
+            # 在文档入库之前,先让 LLM 对文档做预处理:生成摘要、提取关键词、补充相关知识点、改写为 Q&A 对。把"脏活"前置,让检索更准。
+
+            # ■ 常见操作
+
+            # - 为文档生成摘要,作为额外 chunk 存入
+            # - 从文档中提取 Q&A 对
+            # - 把口语化文档改写为结构化文本
+            # - 补充专业术语解释
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from langchain_openai import ChatOpenAI
+
+            llm = ChatOpenAI(model="gpt-4o-mini")
+
+            def augment_document(chunk_text):
+                """为 chunk 生成增强内容"""
+                prompt = f"""请对以下文本做三项增强处理:
+
+                1. 生成一句话摘要
+                2. 提取 3-5 个关键术语(包括解释)
+                3. 生成一个相关的 FAQ 问答
+
+                文本:
+                {chunk_text[:1000]}
+
+                请以 JSON 格式输出:"""
+
+                response = llm.invoke(prompt)
+                return {
+                    "original": chunk_text,
+                    "augmented": response.content
+                }
+
+            # 把增强产物也存入向量库
+            augmented_docs = []
+            for chunk in chunks:
+                result = augment_document(chunk.page_content)
+                augmented_docs.append(Document(
+                    page_content=result["augmented"],
+                    metadata={"type": "augmented", "original_chunk": chunk.page_content[:100]}
+                ))
+
+            # 原始 chunks + 增强内容一起建索引
+            all_docs = chunks + augmented_docs
+            vectorstore = Chroma.from_documents(all_docs, embeddings)
+
+            # ------------------------------------------------------------
+
+
+        # 🔄 7. Query-Transformation(查询改写)
+
+
+            # ■ 核心思想
+
+            # 用户输入的 query 往往质量不高(太短、歧义、口语化)。在检索前先让 LLM 把 query 改写成更适合检索的形式--扩写、补全、拆解、标准化。
+
+            # ■ 常见改写策略
+
+            # | 策略 | 说明 | 示例 |
+            # | 扩写 | 补充同义词或上下文 | "LoRA" → "LoRA 低秩适配微调方法" |
+            # | 拆解 | 复杂问题拆成子问题 | 多跳问题拆解为多个简单 query |
+            # | 假设回答 | 反问 LLM 可能的答案 | Step-back prompting |
+            # | 翻译 | 跨语言场景 | 中文 query 翻译为英文检索 |
+            # | 纠错 | 修正错别字 | "RAG 元梨" → "RAG 原理" |
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from langchain_openai import ChatOpenAI
+
+            llm = ChatOpenAI(model="gpt-4o-mini")
+
+            def transform_query(query):
+                """将原始 query 改写成更适合检索的版本"""
+                prompt = f"""你是一个搜索专家。用户输入了一个查询,请将它改写为更清晰、
+                更完整、更适合向量检索的版本。可以补全术语、纠正表达、增加相关关键词。
+
+                原始查询:{query}
+
+                要求:
+                - 保持原始意图不变
+                - 使用专业术语
+                - 输出 3 个改写版本,每行一个
+                - 不要额外解释
+
+                改写版本:"""
+                response = llm.invoke(prompt)
+                variants = [q.strip() for q in response.content.split("\n") if q.strip()]
+                return [query] + variants  # 原始 query + 改写版本
+
+            def multi_query_retrieve(retriever, query, k=3):
+                """用多个 query 变体分别检索,合并结果去重"""
+                queries = transform_query(query)
+                all_results = []
+
+                for q in queries:
+                    results = retriever.invoke(q)
+                    all_results.extend(results)
+
+                # 按内容去重
+                seen = set()
+                unique = []
+                for r in all_results:
+                    if r.page_content not in seen:
+                        seen.add(r.page_content)
+                        unique.append(r)
+
+                return unique[:k]
+
+            # 使用
+            query = "微调显存不够怎么办"
+            results = multi_query_retrieve(retriever, query)
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 🎯 8. Rerank(重排序)
+
+
+            # ■ 核心思想
+
+            # 先用轻量级检索(向量、BM25)粗筛一轮,拿到候选集,再用一个专门的 Reranker 模型对候选集精细排序。 向量检索的"语义相似"≠"真正满足需要的答案"
+            # Reranker 能拉回排序的精度。
+
+            # ■ 原理
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            #               Query
+            #                 ↓
+            #    ┌───────────────────────┐
+            #    │   Step 1: 粗筛        │  ← 向量检索,召回 top-50
+            #    │   (Bi-encoder)         │
+            #    └────────┬──────────────┘
+            #             ↓
+            #    ┌───────────────────────┐
+            #    │   Step 2: 精排        │  ← Reranker,从 top-50 选出 top-3
+            #    │   (Cross-encoder)      │  ↑ 这里更慢但更准
+            #    └────────┬──────────────┘
+            #             ↓
+            #            LLM 回答
+
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # 方案 A:用 Cohere Rerank API
+            from langchain.retrievers import ContextualCompressionRetriever
+            from langchain.retrievers.document_compressors import CohereRerank
+            from langchain_cohere import CohereRerank
+
+            # 1. 基础检索器
+            base_retriever = vectorstore.as_retriever(search_kwargs={"k": 20})
+
+            # 2. 加 Reranker 压缩(重排序 + 截断)
+            compressor = CohereRerank(model="rerank-english-v3.0", top_n=3)
+            retriever_with_rerank = ContextualCompressionRetriever(
+                base_compressor=compressor,
+                base_retriever=base_retriever
+            )
+
+            results = retriever_with_rerank.invoke("LoRA 和 QLoRA 的区别")
+
+            # 方案 B:本地 Reranker(BAAI/bge-reranker-v2-m3)
+            # 免费、离线、隐私友好
+            from FlagEmbedding import FlagReranker
+
+            reranker = FlagReranker('BAAI/bge-reranker-v2-m3', use_fp16=True)
+
+            def rerank(query, candidates, top_k=3):
+                """本地重排序"""
+                pairs = [(query, doc.page_content) for doc in candidates]
+                scores = reranker.compute_score(pairs)
+
+                # 按得分降序排列
+                scored = list(zip(candidates, scores))
+                scored.sort(key=lambda x: x[1], reverse=True)
+
+                return [doc for doc, score in scored[:top_k]]
+
+            # 使用
+            candidates = vectorstore.similarity_search(query, k=20)
+            best = rerank(query, candidates, top_k=3)
+
+
+            # ■ 推荐 Reranker 模型
+
+            # | 模型 | 特点 |
+            # | `BAAI/bge-reranker-v2-m3` | 免费、中文好、Multi-lingual |
+            # | `Cohere rerank-english-v3.0` | 付费但效果好 |
+            # | `jina-reranker-v2-base-multilingual` | 多语言、免费 |
+            # | `ms-marco-MiniLM-L6-v2` | 轻量、速度快 |
+
+
+            # ------------------------------------------------------------
+
+
+        # 🧩 9. Sentence Window Retrieval(连续片段检索)
+
+
+            # ■ 核心思想
+
+            # 检索到一条句子后,把这条句子前后的 N 条句子也一起带上作为上下文。保证 LLM 看到的不是孤立的片段,而是一个完整的语义窗口。
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            class SentenceWindowRetriever:
+                def __init__(self,vectorstore, sentences, window_size=3):
+                    self.vectorstore = vectorstore
+                    self.sentences = sentences  # 按顺序的句子列表
+                    self.window_size = window_size
+
+                def retrieve(self, query, k=3):
+                    """检索句子及其上下文窗口"""
+                    # 1. 检索命中的句子
+                    results = self.vectorstore.similarity_search(query, k=k)
+
+                    window_results = []
+                    for r in results:
+                        idx = r.metadata.get("sentence_index", 0)
+
+                        # 2. 取前 window_size 和后 window_size 句
+                        start = max(0, idx - self.window_size)
+                        end = min(len(self.sentences), idx + self.window_size + 1)
+                        window = "".join(self.sentences[start:end])
+
+                        window_results.append(window)
+
+                    return window_results
+
+            # 使用
+            sentences = text.replace("。", "。\n").split("\n")
+            sentences = [s.strip() for s in sentences if s.strip()]
+
+            # 每句建索引时记录 index
+            documents = [
+                Document(page_content=s, metadata={"sentence_index": i})
+                for i, s in enumerate(sentences)
+            ]
+
+            vectorstore = Chroma.from_documents(documents, embeddings)
+            retriever = SentenceWindowRetriever(vectorstore, sentences, window_size=3)
+
+            results = retriever.retrieve("什么是参数高效微调?")
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 📦 10. Context Compression(上下文压缩)
+
+
+            # ■ 核心思想
+
+            # 检索到的 chunks 太多太长?在送入 LLM 之前先压缩一下。 把大量检索结果压缩成精简的版本,省 token 省钱还减少噪声。
+
+            # ■ 常见方法
+
+            # | 方法 | 说明 |
+            # | LLM 重写摘要 | 让 LLM 把多个 chunks 压缩为一段 |
+            # | 自动提取关键句 | 用 NLP 方法(TextRank 等)提取关键句 |
+            # | 选择性包含 | 只保留与 query 相关的句子 |
+            # | 结构化输出 | 转为表格或要点列表 |
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from langchain.retrievers.document_compressors import LLMChainExtractor
+            from langchain_openai import ChatOpenAI
+            from langchain.retrievers import ContextualCompressionRetriever
+
+            # 方案 A:用 LLM 提取关键内容(自动去掉无关部分)
+            llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+            compressor = LLMChainExtractor.from_llm(llm)
+
+            compression_retriever = ContextualCompressionRetriever(
+                base_compressor=compressor,
+                base_retriever=vectorstore.as_retriever(search_kwargs={"k": 5})
+            )
+
+            compressed_results = compression_retriever.invoke("LoRA rank 怎么设置?")
+
+            # 方案 B:自己实现压缩
+            def compress_chunks(query, chunks, max_tokens=1000):
+                """手动压缩 chunks 为精简版"""
+                combined = "\n\n".join([c.page_content for c in chunks])
+                prompt = f"""请根据以下查询,从检索到的文档中提取最关键的信息。
+                    # 只保留与查询直接相关的内容,去除冗余。
+
+                    # 查询:{query}
+                    # 文档:{combined}
+
+                    # 精简后的关键信息:"""
+                response = llm.invoke(prompt)
+                return response.content
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 🔁 11. Feedback-Loop(反馈闭环)
+
+
+            # ■ 核心思想
+
+            # 让 RAG 系统有"记忆"。 如果用户对某个回答点了赞/踩,或者追问了,系统把这些反馈存下来。下次类似 query 来了,优先使用"历史已验证正确"的 chunks。
+
+            # ■ 实现方式
+
+            # - 存储用户的 query、检索到的 chunks、LLM 回答
+            # - 记录用户的显式反馈(点赞/点踩)
+            # - 记录隐式反馈(是否追问、是否复制答案)
+            # - 正反馈的 query-chunk 对用于重排序或作为提示
+
+            # ■ 代码示例(简化版)
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            import json
+            import sqlite3
+            from datetime import datetime
+
+            class FeedbackLoopRAG:
+                def __init__(self, retriever, llm, db_path="feedback.db"):
+                    self.retriever = retriever
+                    self.llm = llm
+                    self.conn = sqlite3.connect(db_path)
+                    self._init_db()
+
+                def _init_db(self):
+                    self.conn.execute("""
+                        CREATE TABLE IF NOT EXISTS feedback (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            query TEXT,
+                            chunk_text TEXT,
+                            answer TEXT,
+                            rating INTEGER,  -- 1 = 正反馈, -1 = 负反馈
+                            timestamp TEXT
+                        )
+                    """)
+                    self.conn.execute("""
+                         CREATE TABLE IF NOT EXISTS positive_pairs (
+                             query TEXT,
+                             chunk_text TEXT,
+                             count INTEGER DEFAULT 1,
+                            UNIQUE(query, chunk_text)
+                        )
+                    """)
+                    self.conn.commit()
+
+                def retrieve(self, query, k=3):
+                    """检索时考虑历史正反馈"""
+                    # 基础检索
+                    base_results = self.retriever.invoke(query, k=k * 2)
+
+                    # 查历史正反馈中有没有匹配的
+                    cursor = self.conn.execute(
+                        "SELECT chunk_text, count FROM positive_pairs WHERE query = ? ORDER BY count DESC",
+                        (query,)
+                    )
+                    positive_chunks = {row[0]: row[1] for row in cursor.fetchall()}
+
+                    # 正反馈的 chunk 加权优先
+                    scored = []
+                    for doc in base_results:
+                        boost = positive_chunks.get(doc.page_content, 0)
+                        score = doc.metadata.get("score", 0.5) + boost * 0.1
+                        scored.append((doc, score))
+
+                    scored.sort(key=lambda x: x[1], reverse=True)
+                    return [doc for doc, _ in scored[:k]]
+
+                def record_feedback(self, query, chunks, answer, rating):
+                    """记录用户反馈"""
+                    now = datetime.now().isoformat()
+                    for chunk in chunks:
+                        self.conn.execute(
+                            "INSERT INTO feedback (query, chunk_text, answer, rating, timestamp) VALUES (?, ?, ?, ?, ?)",
+                            (query, chunk.page_content, answer, rating, now)
+                        )
+                        if rating == 1:  # 正反馈
+                            self.conn.execute("""
+                                INSERT INTO positive_pairs (query, chunk_text, count)
+                                VALUES (?, ?, 1)
+                                ON CONFLICT(query, chunk_text) DO UPDATE SET count = count + 1
+                            """, (query, chunk.page_content))
+                    self.conn.commit()
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 🧐 12. Self-RAG(内省反思机制)
+
+
+            # ■ 核心思想
+
+            # 让模型在生成回答时,自己做三个反思: (1)检索到的内容够不够? (2)回答有没有忠实于检索结果?(3)当前回答是否足够好? 根据反思结果决定是生成、重新检索还是修改。
+
+            # ■ 工作流程
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # Query → 检索 → 生成初步回答
+            #      ↓
+            #   自省评估:
+            #     ├── 检索足够? → 是 → 生成回答
+            #     │               └─ 否 → 重新检索
+            #     ├── 回答准确? → 是 → 输出
+            #     │               └─ 否 → 修正
+            #     └── 回答完整? → 是 → 输出
+            #                     └─ 否 → 继续检索
+
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from langchain_openai import ChatOpenAI
+
+            llm = ChatOpenAI(model="gpt-4o")
+
+            class SelfRAG:
+                def __init__(self, retriever, llm, max_iterations=3):
+                    self.retriever = retriever
+                    self.llm = llm
+                    self.max_iterations = max_iterations
+
+                def ask(self, query):
+                    """带自省反思的 RAG"""
+                    context = ""
+                    for i in range(self.max_iterations):
+                        # 1. 检索
+                        if not context:
+                            docs = self.retriever.invoke(query, k=3)
+                            context = "\n\n".join([d.page_content for d in docs])
+
+                        # 2. 生成回答
+                        prompt = f"""基于以下内容回答问题:
+
+                        上下文:{context}
+                        问题:{query}
+                        回答:"""
+                        answer = self.llm.invoke(prompt).content
+
+                        # 3. 自省评估
+                        critique = self.llm.invoke(f"""评估以下回答的质量:
+
+                        问题:{query}
+                        回答:{answer}
+                        上下文:{context}
+
+                        请从以下三个方面评分(1-5分):
+                        1. 回答是否忠实于上下文(faithfulness)
+                        2. 回答是否完整覆盖了问题(completeness)
+                        3. 是否需要更多信息(need_more_context,1=不需要,5=需要)
+
+                        只输出分数,格式:faithfulness: X, completeness: X, need_more: X""").content
+
+                        scores = {}
+                        for line in critique.split(","):
+                            parts = line.strip().split(":")
+                            if len(parts) == 2:
+                                key = parts[0].strip()
+                                val = parts[1].strip()
+                                scores[key] = int(val)
+
+                        # 4. 判断是否继续
+                        if scores.get("need_more", 5) <= 2 and scores.get("faithfulness", 1) >= 4:
+                            return answer  # 够了,输出
+
+                        # 否则补充检索
+                        new_docs = self.retriever.invoke(query, k=2)
+                        context += "\n\n" + "\n\n".join([d.page_content for d in new_docs])
+
+                    # 兜底返回
+                    return answer
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 🕸️ 13. Knowledge Graph RAG(知识图谱)
+
+
+            # ■ 核心思想
+
+            # 不是简单做向量检索,而是从文档中提取实体和关系构建知识图谱。 检索时既走向量相似度,也走图关系路径,把多跳关联信息也找出来。
+
+            # ■ 架构
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # 文档 → 实体提取 → 关系提取 → 知识图谱(Neo4j / NetworkX)
+            #                                           ↓
+            #                                    Query → 图查询 + 向量检索
+            #                                           ↓
+            #                                   融合结果 → LLM
+
+
+            # ■ 代码示例(简化版 NetworkX 实现)
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            import networkx as nx
+            import json
+            from langchain_openai import ChatOpenAI
+
+            llm = ChatOpenAI(model="gpt-4o-mini")
+
+            class KnowledgeGraphRAG:
+                def __init__(self, vectorstore, llm=llm):
+                    self.vectorstore = vectorstore
+                    self.llm = llm
+                    self.graph = nx.Graph()
+
+                def build_graph(self, documents):
+                    """从文档中提取实体和关系构建知识图谱"""
+                    for doc in documents:
+                        prompt = f"""从以下文本中提取实体和关系,以 JSON 格式输出。
+
+                        文本:{doc.page_content[:1500]}
+
+                        格式:{{
+                           "entities": ["实体1", "实体2", ...],
+                           "relations": [
+                              {{"source": "实体1", "target": "实体2", "relation": "关系描述"}},
+                             ...
+                            ]
+                        }}
+
+                        注意:只提取确定存在的实体和关系。"""
+                        response = self.llm.invoke(prompt)
+                        try:
+                            data = json.loads(response.content)
+                            for entity in data["entities"]:
+                                self.graph.add_node(entity)
+                            for rel in data["relations"]:
+                                self.graph.add_edge(
+                                    rel["source"],
+                                    rel["target"],
+                                    relation=rel["relation"]
+                                )
+                        except:
+                            continue
+
+                def retrieve(self, query, k=3):
+                    """向量检索 + 图检索融合"""
+                    # 1. 向量检索
+                    vec_results = self.vectorstore.similarity_search(query, k=k)
+
+                    # 2. 从 query 中提取实体
+                    prompt = f"从查询中提取关键实体(逗号分隔):{query}"
+                    entities = self.llm.invoke(prompt).content.split(",")
+                    entities = [e.strip() for e in entities]
+
+                    # 3. 图检索:找到相关实体的一跳邻居
+                    graph_neighbors = set()
+                    for e in entities:
+                        if e in self.graph:
+                            neighbors = list(self.graph.neighbors(e))
+                            graph_neighbors.update(neighbors)
+
+                    # 4. 将图谱信息整合到向量检索结果中
+                    if graph_neighbors:
+                        graph_context = f"关联实体:{', '.join(graph_neighbors)}"
+                        vec_results[0].page_content = graph_context + "\n" + vec_results[0].page_content
+
+                    return vec_results
+
+
+
+            # ------------------------------------------------------------ 
+
+
+        # 📂 14. Hierarchical Index(层次化索引)
+
+
+            # ■ 核心思想
+
+            # 先建一个"目录级"摘要索引,再建"内容级"详细索引。 检索时先在摘要级别定位到文档,再在内容级精确定位 chunk。减少搜索范围,加速大语料库检索。
+
+            # ■ 结构
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # 一级索引(摘要/标题)
+            #  ├── 文档 A 摘要 → 指向 chunks A1, A2, A3...
+            #  ├── 文档 B 摘要 → 指向 chunks B1, B2, B3...
+            #  └── 文档 C 摘要 → 指向 chunks C1, C2, C3...
+
+            # 二级索引(详细内容)
+            #  ├── chunk A1 "关于..."
+            #  ├── chunk A2 "关于..."
+            #  └── ...
+
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            class HierarchicalRAG:
+                def __init__(self, summary_store, detail_store):
+                    self.summary_store = summary_store  # 摘要向量库
+                    self.detail_store = detail_store    # 详细内容向量库
+
+                def add_document(self, doc_id, title, summary, chunks):
+                    """添加文档:同时建摘要索引和详细索引"""
+                    # 存摘要(含 doc_id)
+                    self.summary_store.add_texts(
+                        [summary],
+                        metadatas=[{"doc_id": doc_id, "title": title, "type": "summary"}]
+                    )
+                    # 存详细 chunks(每个 chunk 都关联 doc_id)
+                    for chunk in chunks:
+                        self.detail_store.add_texts(
+                            [chunk],
+                            metadatas=[{"doc_id": doc_id, "title": title, "type": "detail"}]
+                        )
+
+                def retrieve(self, query, top_k=3):
+                    """两步检索(水哥修正版)"""
+                    # 第一步:从摘要索引找到相关文档
+                    summary_results = self.summary_store.similarity_search(query, k=2)
+                    target_docs = [r.metadata["doc_id"] for r in summary_results]
+
+                    # 第二步:只在目标文档的详细内容中检索
+                    # 利用摘要结果缩小范围,而不是全量搜再过滤
+                    filtered = self.detail_store.similarity_search(
+                        query,
+                        k=top_k,
+                        filter={"doc_id": {"$in": target_docs}}  # 只搜摘要命中文档的chunks Chroma中  先做filter 后做query
+                    )
+                    return filtered
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 🏗️ 15. HyDE(假设性文档嵌入)
+
+
+            # ■ 核心思想
+
+            # 拿到 query 后不直接检索,先让 LLM "假设" 一篇能回答这个问题的文档(假想文档),然后用这篇假想文档的 embedding 去检索真实文档。 
+            # 因为假想文档的语义空间更接近真实答案,能突破 query 和 answer 之间的"语义鸿沟"。
+
+            # ■ 原理
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # Query: "LoRA 和全参微调谁更好?"
+            #     ↓  LLM 生成假想文档
+            # "LoRA 是一种参数高效微调方法,它通过低秩分解..."
+            #     ↓  用假想文档的 embedding 检索
+            # [真实文档 1] [真实文档 2] [真实文档 3]  ← 更精准
+
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from langchain_openai import ChatOpenAI
+
+            llm = ChatOpenAI(model="gpt-4o-mini")
+
+            def hyde_retrieve(query, retriever, llm=llm):
+                """HyDE 检索:先生成假想文档再检索"""
+                # 1. 根据 query 生成假想文档
+                prompt = f"""请写一段简短的技术文档,内容围绕以下问题展开。
+                # 要求:内容具体、有细节、像是在真实资料中会看到的内容。
+
+                # 问题:{query}
+
+                # 技术文档:"""
+                hypothetical_doc = llm.invoke(prompt).content
+
+                print(f"[HyDE] 假想文档片段:{hypothetical_doc[:150]}...")
+
+                # 2. 用假想文档做检索
+                results = retriever.invoke(hypothetical_doc, k=3)
+
+                return results
+
+            # 使用
+            query = "QLoRA 需要多少显存?"
+            results = hyde_retrieve(query, retriever)
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 🔀 16. Hybrid Search(混合检索)
+
+
+            # ■ 核心思想
+
+            # 别把鸡蛋放一个篮子里。 向量检索(语义) + 关键词检索(BM25 精确匹配)一起上,结果融合。语义检索擅长同义词和泛化,关键词擅长专有名词和精确匹配。
+
+            # ■ 原理
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # 向量检索结果:[docA: 0.85, docB: 0.72, docC: 0.61]
+            # BM25 检索结果:[docB: 0.90, docD: 0.78, docA: 0.65]
+
+            # 融合(RRF 或加权)→ [docB, docA, docD, docC]
+
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from rank_bm25 import BM25Okapi
+            import numpy as np
+
+            class HybridRetriever:
+                def __init__(self, vectorstore, documents):
+                    self.vectorstore = vectorstore
+                    self.documents = documents
+                    # 准备 BM25
+                    tokenized = [doc.page_content.split() for doc in documents]
+                    self.bm25 = BM25Okapi(tokenized)
+
+                def retrieve(self, query, k=3, alpha=0.5):
+                    """混合检索,alpha 控制语义和关键词的权重"""
+                    # 1. 向量检索
+                    vec_results = self.vectorstore.similarity_search_with_score(query, k=k * 2)
+                    vec_scores = {doc.page_content: score for doc, score in vec_results}
+                    vec_max = max(vec_scores.values()) if vec_scores else 1
+
+                    # 2. BM25 检索
+                    tokenized_query = query.split()
+                    bm25_scores = self.bm25.get_scores(tokenized_query)
+                    bm25_norm = bm25_scores / (max(bm25_scores) if max(bm25_scores) > 0 else 1)
+
+                    # 3. 融合
+                    fusion_scores = {}
+                    for i, doc in enumerate(self.documents):
+                        vec = vec_scores.get(doc.page_content, 0) / vec_max
+                        bm25 = bm25_norm[i]
+                        fusion_scores[doc.page_content] = alpha * vec + (1 - alpha) * bm25
+
+                    # 4. 排序
+                    ranked = sorted(fusion_scores.items(), key=lambda x: x[1], reverse=True)
+                    top_chunks = [content for content, _ in ranked[:k]]
+
+                    # 映射回 Document 对象
+                    content_to_doc = {doc.page_content: doc for doc in self.documents}
+                    return [content_to_doc[c] for c in top_chunks]
+
+            # 使用
+            hybrid = HybridRetriever(vectorstore, chunks)
+            results = hybrid.retrieve("LoRA rank 设置", alpha=0.6)
+
+
+            # ■ RRF(Reciprocal Rank Fusion)-- 更好的融合方式
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            def rrf_fusion(vec_results, bm25_results, k=60):
+                """RRF 融合排序"""
+                score_map = {}
+                for rank, doc in enumerate(vec_results):
+                    score_map[doc.page_content] = 1 / (k + rank + 1)
+                for rank, doc in enumerate(bm25_results):
+                    content = doc.page_content
+                    score_map[content] = score_map.get(content, 0) + 1 / (k + len(vec_results) + rank + 1)
+
+                ranked = sorted(score_map.items(), key=lambda x: x[1], reverse=True)
+                return [content for content, _ in ranked]
+
+
+
+            # ------------------------------------------------------------
+
+
+        # 🩺 17. CRAG(Corrective RAG,纠错自愈)
+
+
+            # ■ 核心思想
+
+            # 检索结果也不是完全可信的。 CRAG 在生成回答之前,先对检索结果做一个置信度评估:
+
+            # - 高置信度 → 直接生成
+            # - 低置信度 → 尝试修正检索(重写 query、换检索源)
+            # - 无相关信息 → 告诉用户"没找到"而不是硬编
+
+            # ■ 工作流程
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            # Query → 检索 → 置信度评估
+            #               ├── 高 [0.8, 1.0] → 生成回答
+            #               ├── 中 [0.5, 0.8) → 知识修正(去除噪声、补充检索)
+            #               └── 低 [0.0, 0.5) → 重写 query 或回退到模型自身知识
+            #                                               ↓
+            #                                   LLM 生成最终回答
+
+
+            # ■ 代码示例
+
+
+            # ============================================================
+            # 代码
+            # ============================================================
+            from langchain_openai import ChatOpenAI
+
+            llm = ChatOpenAI(model="gpt-4o-mini")
+
+            class CorrectiveRAG:
+                def __init__(self, retriever, llm=llm):
+                    self.retriever = retriever
+                    self.llm = llm
+
+                def _evaluate_confidence(self, query, docs):
+                    """评估检索结果的相关性置信度"""
+                    if not docs:
+                        return 0.0
+
+                    # 用 LLM 打分
+                    context = "\n\n".join([d.page_content[:200] for d in docs])
+                    prompt = f"""评估以下检索结果对问题的相关性,给出 0-1 的置信度分数。
+
+                    问题:{query}
+                    检索结果:{context}
+
+                    只输出数字(如 0.85):"""
+                    score = float(self.llm.invoke(prompt).content.strip())
+                    return score
+
+                def _correct_knowledge(self, query, docs):
+                    """修正知识:去除噪声,补充检索"""
+                    # 让 LLM 判断每段内容是否相关
+                    corrections = []
+                    for doc in docs:
+                        prompt = f"""以下内容是否与问题相关?只回答"相关"或"不相关"。
+
+                    问题:{query}
+                    内容:{doc.page_content[:300]}"""
+                    verdict = self.llm.invoke(prompt).content.strip()
+
+                    if "相关" in verdict:
+                        corrections.append(doc)
+                    else:
+                        # 不相关的 chunk,尝试从中提取有用信息
+                        extract_prompt = f"""从以下内容中提取可能与"{query}"相关的信息。
+                        如果完全没有相关信息,输出"无相关信息"。
+
+                        内容:{doc.page_content[:500]}"""
+
+                        extracted = self.llm.invoke(extract_prompt).content.strip()
+
+                        if extracted != "无相关信息":
+                            doc.page_content = extracted
+                            corrections.append(doc)
+
+                    # 如果修正后信息太少,补充检索
+                    if len(corrections) < 2:
+                        new_docs = self.retriever.invoke(query, k=2)
+                        corrections.extend(new_docs)
+
+                    return corrections
+
+                def ask(self, query):
+                    """CRAG 主流程"""
+                    # 1. 检索
+                    docs = self.retriever.invoke(query, k=5)
+                    if not docs:
+                        return "没有找到相关信息。"
+
+                    # 2. 评估置信度
+                    confidence = self._evaluate_confidence(query, docs)
+
+                    if confidence >= 0.8:
+                        # 高置信度 → 直接生成
+                        context = "\n\n".join([d.page_content for d in docs])
                         prompt = f"基于以下内容回答问题:\n\n{context}\n\n问题:{query}"
                         return self.llm.invoke(prompt).content
+
+                    elif confidence >= 0.5:
+                        # 中等置信度 → 知识修正
+                        corrected_docs = self._correct_knowledge(query, docs)
+                        context = "\n\n".join([d.page_content for d in corrected_docs])
+                        prompt = f"基于以下修正后的内容回答问题:\n\n{context}\n\n问题:{query}"
+                        return self.llm.invoke(prompt).content
+
                     else:
-                        # 真没找到,诚实告知
-                        return f"抱歉,没有找到关于「{query}」的相关信息。"
+                        # 低置信度 → 重写 query + 重新检索
+                        rewrite_prompt = f"""原始查询没有检索到相关信息。请改写查询,使其更清晰更容易检索。
+
+                        原始查询:{query}
+                        改写版本(只输出,不解释):"""
+
+                        new_query = self.llm.invoke(rewrite_prompt).content.strip()
+
+                        new_docs = self.retriever.invoke(new_query, k=5)
+
+                        if new_docs:
+                            context = "\n\n".join([d.page_content for d in new_docs])
+                            prompt = f"基于以下内容回答问题:\n\n{context}\n\n问题:{query}"
+                            return self.llm.invoke(prompt).content
+                        else:
+                            # 真没找到,诚实告知
+                            return f"抱歉,没有找到关于「{query}」的相关信息。"
 
 
 
-        # ------------------------------------------------------------
+            # ------------------------------------------------------------
 
 
-    # ## 总结对比
+        # ## 总结对比
 
-    # | 方案 | 核心思路 | 效果提升 | 实现成本 | 推荐场景 |
-    # | **1. Simple RAG** | 字符硬切 | ⭐ | 极低 | Demo 快速验证 |
-    # | **2. Semantic Chunking** | 语义边界切分 | ⭐⭐ | 低 | 内容规范但不固定 |
-    # | **3. Small-to-Big** | 小块检索大块回答 | ⭐⭐⭐ | 低 | 需要精确定位+完整上下文 |
-    # | **4. Context-Enriched** | chunk 加前缀元信息 | ⭐⭐ | 低 | 多文档混合检索 |
-    # | **5. Chunk-Header** | 为 chunk 加标题 | ⭐⭐ | 中 | 长文档/需要快速预览 |
-    # | **6. Doc-Augmentation** | 预处理增强文档 | ⭐⭐⭐ | 中 | 数据质量不佳 |
-    # | **7. Query-Transformation** | 改写查询 | ⭐⭐⭐ | 低 | 用户 query 质量低 |
-    # | **8. Rerank** | 粗筛+精排两步走 | ⭐⭐⭐⭐ | 中 | 精度要求高 |
-    # | **9. Sentence Window** | 带上下文的片段检索 | ⭐⭐⭐ | 低 | 句子级搜索 |
-    # | **10. Context Compression** | 检索结果压缩去噪 | ⭐⭐⭐ | 中 | 上下文窗口有限 |
-    # | **11. Feedback-Loop** | 利用用户反馈优化 | ⭐⭐⭐⭐ | 高 | 生 产环境持续优化 |
-    # | **12. Self-RAG** | 内省反思 | ⭐⭐⭐⭐⭐ | 高 | 结果可靠性要求极高 |
-    # | **13. KG RAG** | 知识图谱+实体关系 | ⭐⭐⭐⭐⭐ | 高 | 多跳推理/关系复杂 |
-    # | **14. Hierarchical Index** | 两级索引 | ⭐⭐⭐ | 高 | 大规模语料库 |
-    # | **15. HyDE** | 假想文档做检索 | ⭐⭐⭐ | 低 | query短、语义不直接 |
-    # | **16. Hybrid Search** | 向量+关键词混合 | ⭐⭐⭐⭐ | 低 | 通用场景全能选手 |
-    # | **17. CRAG** | 纠错自愈 | ⭐⭐⭐⭐⭐ | 高 | 对幻觉零容忍 |
-
-
-    # ------------------------------------------------------------
+            # | 方案 | 核心思路 | 效果提升 | 实现成本 | 推荐场景 |
+            # | **1. Simple RAG** | 字符硬切 | ⭐ | 极低 | Demo 快速验证 |
+            # | **2. Semantic Chunking** | 语义边界切分 | ⭐⭐ | 低 | 内容规范但不固定 |
+            # | **3. Small-to-Big** | 小块检索大块回答 | ⭐⭐⭐ | 低 | 需要精确定位+完整上下文 |
+            # | **4. Context-Enriched** | chunk 加前缀元信息 | ⭐⭐ | 低 | 多文档混合检索 |
+            # | **5. Chunk-Header** | 为 chunk 加标题 | ⭐⭐ | 中 | 长文档/需要快速预览 |
+            # | **6. Doc-Augmentation** | 预处理增强文档 | ⭐⭐⭐ | 中 | 数据质量不佳 |
+            # | **7. Query-Transformation** | 改写查询 | ⭐⭐⭐ | 低 | 用户 query 质量低 |
+            # | **8. Rerank** | 粗筛+精排两步走 | ⭐⭐⭐⭐ | 中 | 精度要求高 |
+            # | **9. Sentence Window** | 带上下文的片段检索 | ⭐⭐⭐ | 低 | 句子级搜索 |
+            # | **10. Context Compression** | 检索结果压缩去噪 | ⭐⭐⭐ | 中 | 上下文窗口有限 |
+            # | **11. Feedback-Loop** | 利用用户反馈优化 | ⭐⭐⭐⭐ | 高 | 生 产环境持续优化 |
+            # | **12. Self-RAG** | 内省反思 | ⭐⭐⭐⭐⭐ | 高 | 结果可靠性要求极高 |
+            # | **13. KG RAG** | 知识图谱+实体关系 | ⭐⭐⭐⭐⭐ | 高 | 多跳推理/关系复杂 |
+            # | **14. Hierarchical Index** | 两级索引 | ⭐⭐⭐ | 高 | 大规模语料库 |
+            # | **15. HyDE** | 假想文档做检索 | ⭐⭐⭐ | 低 | query短、语义不直接 |
+            # | **16. Hybrid Search** | 向量+关键词混合 | ⭐⭐⭐⭐ | 低 | 通用场景全能选手 |
+            # | **17. CRAG** | 纠错自愈 | ⭐⭐⭐⭐⭐ | 高 | 对幻觉零容忍 |
 
 
-    # ============================================================
-    # 学习路线建议
-    # ============================================================
+            # ------------------------------------------------------------
 
-    # 新手入门 → 1 → 2 → 7 → 8 → 16
-    # 进阶提升 → 3 → 9 → 10 → 15
-    # 高阶实战 → 11 → 12 → 17 → 13 → 14
 
-    # 先别贪多,从最常见的 Simple → Rerank → Hybrid Search 这条线走起
-    # 就够应付大部分面试和实战需求了。
+            # ============================================================
+            # 学习路线建议
+            # ============================================================
+
+            # 新手入门 → 1 → 2 → 7 → 8 → 16
+            # 进阶提升 → 3 → 9 → 10 → 15
+            # 高阶实战 → 11 → 12 → 17 → 13 → 14
+
+            # 先别贪多,从最常见的 Simple → Rerank → Hybrid Search 这条线走起
+            # 就够应付大部分面试和实战需求了。
+
+    #####################################################################################
 
 
     """
@@ -9085,6 +9200,7 @@
 
 # 🎧 Agentic RAG
 # ====================================================================================================================================
+    
     # 🔥 6大Agentic RAG模式(从Naive RAG到智能决策,列出相关架构问题)
 
         # ■ 与传统Native RAG的区别
@@ -9100,243 +9216,244 @@
         # Agentic RAG = 工人有判断力,该查就查、该答就答、查错了重来
 
 
-    # 🧠 1️⃣ ReAct RAG(思考-行动闭环)
+        # 🧠 1️⃣ ReAct RAG(思考-行动闭环)
 
-        # ■ 核心思想
-        # LLM在每轮循环中输出 Thought → Action → Observation,自主决定是否调检索工具。
-        # 没查到就再查,查到了就答--这是Agentic RAG最基础的形态。
+            # ■ 核心思想
+            # LLM在每轮循环中输出 Thought → Action → Observation,自主决定是否调检索工具。
+            # 没查到就再查,查到了就答--这是Agentic RAG最基础的形态。
 
-        # ■ 核心模板(ReAct Prompt Template)
+            # ■ 核心模板(ReAct Prompt Template)
 
-            # ============================================================
-            # Answer the following questions as best you can. You have access to the following tools:
-            #
-            # retrieve_knowledge: 检索知识库,参数query(搜索关键词)
-            #
-            # Use the following format:
-            #
-            # Question: the input question you must answer
-            # Thought: you should always think about what to do
-            # Action: the action to take, should be one of [retrieve_knowledge]
-            # Action Input: the input to the action
-            # Observation: the result of the action
-            # ... (this Thought/Action/Action Input/Observation can repeat N times)
-            # Thought: I now know the final answer
-            # Final Answer: the final answer to the original input question
-            #
-            # Question: {user_question}
-            # Thought:
-            # ============================================================
+                # ============================================================
+                # Answer the following questions as best you can. You have access to the following tools:
+                #
+                # retrieve_knowledge: 检索知识库,参数query(搜索关键词)
+                #
+                # Use the following format:
+                #
+                # Question: the input question you must answer
+                # Thought: you should always think about what to do
+                # Action: the action to take, should be one of [retrieve_knowledge]
+                # Action Input: the input to the action
+                # Observation: the result of the action
+                # ... (this Thought/Action/Action Input/Observation can repeat N times)
+                # Thought: I now know the final answer
+                # Final Answer: the final answer to the original input question
+                #
+                # Question: {user_question}
+                # Thought:
+                # ============================================================
 
-        # ■ 代码级核心循环
+            # ■ 代码级核心循环
 
-            # ============================================================
-            # while True:
-            #     # Step 1: LLM 输出当前思考
-            #     response = llm.generate(react_prompt.format(question, context))
-            #
-            #     # Step 2: 解析LLM的决策
-            #     if "ACTION: retrieve" in response:
-            #         query = extract_query(response)
-            #         docs = vectorstore.search(query)
-            #         context += f"\n检索结果:{docs}"
-            #         continue  # 下一轮再问LLM:查够了没?
-            #
-            #     elif "ACTION: answer" in response:
-            #         final_answer = extract_answer(response)
-            #         return final_answer
-            # ============================================================
+                # ============================================================
+                # while True:
+                #     # Step 1: LLM 输出当前思考
+                #     response = llm.generate(react_prompt.format(question, context))
+                #
+                #     # Step 2: 解析LLM的决策
+                #     if "ACTION: retrieve" in response:
+                #         query = extract_query(response)
+                #         docs = vectorstore.search(query)
+                #         context += f"\n检索结果:{docs}"
+                #         continue  # 下一轮再问LLM:查够了没?
+                #
+                #     elif "ACTION: answer" in response:
+                #         final_answer = extract_answer(response)
+                #         return final_answer
+                # ============================================================
 
-        # ■ 设计细节
-        # - Thought 字段不是给LLM看的,是给开发者追踪决策链的
-        # - Action 和 Action Input 分离,便于代码正则解析
-        # - Observation 是系统填充的(检索结果),不是LLM生成
-        # - 必须设 max_iterations(通常5轮),防止死循环
-        # - LLM格式输出不稳定,需要 handle_parsing_errors
+            # ■ 设计细节
+            # - Thought 字段不是给LLM看的,是给开发者追踪决策链的
+            # - Action 和 Action Input 分离,便于代码正则解析
+            # - Observation 是系统填充的(检索结果),不是LLM生成
+            # - 必须设 max_iterations(通常5轮),防止死循环
+            # - LLM格式输出不稳定,需要 handle_parsing_errors
 
-        # ■ 适用场景
-        # - 通用问答 + 知识库混合场景
-        # - 需要"LLM自主判断是否检索"的场景
-        # - Agent快速原型
-
-
-    # 🩺 2️⃣ CRAG(Corrective RAG,纠错自愈)
-
-        # ■ 核心思想
-        # 检索结果不一定都是垃圾,也不一定都是好的。
-        # CRAG 先检、再判置信度,根据置信度走不同路径:
-
-        # | 置信度 | 操作 |
-        # | 高 [0.8, 1.0] | 直接基于检索结果生成回答 |
-        # | 中 [0.5, 0.8) | 知识修正:去噪声、提取有用信息、补充检索 |
-        # | 低 [0.0, 0.5) | 改写query重新检索,或回退到模型自身知识 |
-
-        # ■ 置信度评估方式
-        # 方案A:LLM-as-Judge(最灵活,但费钱)
-            # 用LLM打分:"这段文档和问题相关吗?0-1分"
-        # 方案B:专用分类模型(如GPT-as-Judge微调版)
-            # 更快更便宜,但需要训练
-        # 方案C:规则检查(如关键词匹配)
-            # 快但死板,适合简单场景
-
-        # ■ 伪代码流程
-
-            # ============================================================
-            # def crag_answer(question):
-            #     docs = retriever.search(question, k=5)
-            #     confidence = evaluate_confidence(question, docs)
-            #
-            #     if confidence >= 0.8:
-            #         return generate(question, docs)
-            #
-            #     elif confidence >= 0.5:
-            #         corrected = correct_knowledge(question, docs)
-            #         return generate(question, corrected)
-            #
-            #     else:
-            #         new_query = rewrite_query(question)
-            #         docs = retriever.search(new_query, k=5)
-            #         if docs:
-            #             return generate(question, docs)
-            #         else:
-            #             return "抱歉,没有找到相关信息。"
-            # ============================================================
-
-        # ■ 适用场景
-        # - 知识库质量参差不齐
-        # - 对幻觉零容忍的生产环境
-        # - 需要"没查到就诚实说没查到"的场景
+            # ■ 适用场景
+            # - 通用问答 + 知识库混合场景
+            # - 需要"LLM自主判断是否检索"的场景
+            # - Agent快速原型
 
 
-    # 🧐 3️⃣ Self-RAG(内省反思机制)
+        # 🩺 2️⃣ CRAG(Corrective RAG,纠错自愈)
 
-        # ■ 核心思想
-        # 不只在开头检索一次,而是在**生成过程中**随时插检索标记。
-        # LLM反思自己正在生成的每一句:"这句话我确定吗?要不要查一下?"
+            # ■ 核心思想
+            # 检索结果不一定都是垃圾,也不一定都是好的。
+            # CRAG 先检、再判置信度,根据置信度走不同路径:
 
-        # ■ 工作流程
+            # | 置信度 | 操作 |
+            # | 高 [0.8, 1.0] | 直接基于检索结果生成回答 |
+            # | 中 [0.5, 0.8) | 知识修正:去噪声、提取有用信息、补充检索 |
+            # | 低 [0.0, 0.5) | 改写query重新检索,或回退到模型自身知识 |
 
-            # ============================================================
-            # LLM生成一句 → 反思:这句的事实我确定吗?
-            #   ├── 确定 → 继续生成下一句
-            #   └── 不确定 → 插入检索 → 基于检索结果修正 → 继续生成
-            # ============================================================
+            # ■ 置信度评估方式
+            # 方案A:LLM-as-Judge(最灵活,但费钱)
+                # 用LLM打分:"这段文档和问题相关吗?0-1分"
+            # 方案B:专用分类模型(如GPT-as-Judge微调版)
+                # 更快更便宜,但需要训练
+            # 方案C:规则检查(如关键词匹配)
+                # 快但死板,适合简单场景
 
-        # ■ 三个反思检查点
-            # 1. 检索足够?(Retrieval Need)- 现有知识够回答吗?
-            # 2. 回答准确?(Faithfulness)- 回答忠实于检索结果吗?
-            # 3. 回答完整?(Completeness)- 问题所有子问都回答了吗?
+            # ■ 伪代码流程
 
-        # ■ 三个内省标记
+                # ============================================================
+                # def crag_answer(question):
+                #     docs = retriever.search(question, k=5)
+                #     confidence = evaluate_confidence(question, docs)
+                #
+                #     if confidence >= 0.8:
+                #         return generate(question, docs)
+                #
+                #     elif confidence >= 0.5:
+                #         corrected = correct_knowledge(question, docs)
+                #         return generate(question, corrected)
+                #
+                #     else:
+                #         new_query = rewrite_query(question)
+                #         docs = retriever.search(new_query, k=5)
+                #         if docs:
+                #             return generate(question, docs)
+                #         else:
+                #             return "抱歉,没有找到相关信息。"
+                # ============================================================
 
-            # ============================================================
-            # # LLM在生成序列中插入的特殊标记token:
-            #
-            # [Retrieve] → "这个我不确定,查一下"
-            #   └── LLM在生成过程中自插,触发检索
-            #
-            # [No Retrieve] → "这个我确定,继续生成"
-            #   └── 跳过检索,节省成本
-            #
-            # [Critique] → "检查前面对事实"
-            #   └── 评估已生成内容的事实准确性
-            # ============================================================
-
-        # ■ 适用场景
-        # - 长文生成、报告写作
-        # - 需要高事实准确性的场景(医疗、法律、金融)
-        # - 边写边查的场景(技术文档、调研报告)
-
-
-    # 🔗 4️⃣ Multi-hop RAG(多步链式检索)
-
-        # ■ 核心思想
-        # 复杂问题需要查多次才能回答,每次检索依赖上次结果。
-        # 第一步查什么、第二步查什么,都由LLM动态决定。
-
-        # ■ 典型场景
-
-            # ============================================================
-            # 问题:"LangGraph 和 CrewAI 的区别"
-            #
-            # Hop 1: 查 "LangGraph是什么" → 得到LangGraph的特点
-            # Hop 2: 查 "CrewAI是什么" → 得到CrewAI的特点
-            # Hop 3: LLM综合两个结果 → 回答对比
-            # ============================================================
-
-        # ■ 两种实现方式
-            # 方式A:无记忆的多跳(每次一个独立query)
-                # LLM基于当前已查到的信息,生成下一步的query
-                # 缺点:每次检索上下文是独立的,可能丢失前面的
-
-            # 方式B:有记忆的多跳(累积上下文)
-                # 每次检索结果追加到上下文,LLM看到全部
-                # 优点:信息不丢失,可以综合所有结果
-
-        # ■ 适用场景
-        # - 对比类问题("A和B对比")
-        # - 因果类问题("X为什么导致Y")
-        # - 综合多个知识源的复杂问题
+            # ■ 适用场景
+            # - 知识库质量参差不齐
+            # - 对幻觉零容忍的生产环境
+            # - 需要"没查到就诚实说没查到"的场景
 
 
-    # 🎯 5️⃣ Adaptive Retrieval(自适应的检索策略)
+        # 🧐 3️⃣ Self-RAG(内省反思机制)
 
-        # ■ 核心思想
-        # 不同复杂度的问题用不同粒度的检索策略:
-        # 简单问题查一次就够了,复杂问题要分步检索。
+            # ■ 核心思想
+            # 不只在开头检索一次,而是在**生成过程中**随时插检索标记。
+            # LLM反思自己正在生成的每一句:"这句话我确定吗?要不要查一下?"
 
-        # ■ 自适应策略分类
+            # ■ 工作流程
 
-            # ============================================================
-            # | 问题复杂度 | 示例 | 检索策略 | 检索次数 |
-            # | 简单 | "什么是Agent" | 直接查top-2 | 1次 |
-            # | 中等 | "RAG和微调的优缺点" | 分别查RAG和微调 | 2次 |
-            # | 复杂 | "设计一个客服Agent" | 多步检索+总结 | 3-5次 |
-            # ============================================================
+                # ============================================================
+                # LLM生成一句 → 反思:这句的事实我确定吗?
+                #   ├── 确定 → 继续生成下一句
+                #   └── 不确定 → 插入检索 → 基于检索结果修正 → 继续生成
+                # ============================================================
 
-        # ■ 复杂度判断方式
-            # LLM对问题做预分类:"这个问题是简单/中等/复杂?"
-            # 基于分类结果选择不同的retrieval pipeline
-            # 相当于一个router + 多个retriever的编排
+            # ■ 三个反思检查点
+                # 1. 检索足够?(Retrieval Need)- 现有知识够回答吗?
+                # 2. 回答准确?(Faithfulness)- 回答忠实于检索结果吗?
+                # 3. 回答完整?(Completeness)- 问题所有子问都回答了吗?
 
-        # ■ 适用场景
-        # - 生产环境需要成本优化(简单问题少花钱)
-        # - 查询规模差异大的场景
-        # - 混合了FAQ和深度咨询的场景
+            # ■ 三个内省标记
+
+                # ============================================================
+                # # LLM在生成序列中插入的特殊标记token:
+                #
+                # [Retrieve] → "这个我不确定,查一下"
+                #   └── LLM在生成过程中自插,触发检索
+                #
+                # [No Retrieve] → "这个我确定,继续生成"
+                #   └── 跳过检索,节省成本
+                #
+                # [Critique] → "检查前面对事实"
+                #   └── 评估已生成内容的事实准确性
+                # ============================================================
+
+            # ■ 适用场景
+            # - 长文生成、报告写作
+            # - 需要高事实准确性的场景(医疗、法律、金融)
+            # - 边写边查的场景(技术文档、调研报告)
 
 
-    # 🔄 6️⃣ Query Decomposition(查询分解)
+        # 🔗 4️⃣ Multi-hop RAG(多步链式检索)
 
-        # ■ 核心思想
-        # 一个复杂的query不适合直接拿去检索,应该先拆成多个子query,
-        # 分别检索,然后把结果综合起来。
+            # ■ 核心思想
+            # 复杂问题需要查多次才能回答,每次检索依赖上次结果。
+            # 第一步查什么、第二步查什么,都由LLM动态决定。
 
-        # ■ 典型流程
+            # ■ 典型场景
 
-            # ============================================================
-            # 原始问题:"LangGraph、CrewAI、AutoGen 的区别?"
-            #         ↓ LLM拆解
-            # 子问题1:"LangGraph是什么?特点?"
-            # 子问题2:"CrewAI是什么?特点?"
-            # 子问题3:"AutoGen是什么?特点?"
-            # 子问题4:"三者相比各有什么优劣?"
-            #         ↓ 分别检索
-            # 结果A + 结果B + 结果C + 结果D
-            #         ↓ LLM综合
-            # 完整的对比回答
-            # ============================================================
+                # ============================================================
+                # 问题:"LangGraph 和 CrewAI 的区别"
+                #
+                # Hop 1: 查 "LangGraph是什么" → 得到LangGraph的特点
+                # Hop 2: 查 "CrewAI是什么" → 得到CrewAI的特点
+                # Hop 3: LLM综合两个结果 → 回答对比
+                # ============================================================
 
-        # ■ 和Multi-hop的区别
-            # | Query Decomposition | Multi-hop |
-            # | 一次性拆分所有子问题 | 每步依赖上一步结果 |
-            # | 子问题并行检索 | 子问题串行检索 |
-            # | 适合并列式问题(对比、列举) | 适合递进式问题(因果、推理) |
+            # ■ 两种实现方式
+                # 方式A:无记忆的多跳(每次一个独立query)
+                    # LLM基于当前已查到的信息,生成下一步的query
+                    # 缺点:每次检索上下文是独立的,可能丢失前面的
 
-        # ■ 适用场景
-        # - 对比问题
-        # - 多维度问题("某个公司的营收、员工数、总部在哪儿")
-        # - 需要多个知识面的综合问题
+                # 方式B:有记忆的多跳(累积上下文)
+                    # 每次检索结果追加到上下文,LLM看到全部
+                    # 优点:信息不丢失,可以综合所有结果
 
+            # ■ 适用场景
+            # - 对比类问题("A和B对比")
+            # - 因果类问题("X为什么导致Y")
+            # - 综合多个知识源的复杂问题
+
+
+        # 🎯 5️⃣ Adaptive Retrieval(自适应的检索策略)
+
+            # ■ 核心思想
+            # 不同复杂度的问题用不同粒度的检索策略:
+            # 简单问题查一次就够了,复杂问题要分步检索。
+
+            # ■ 自适应策略分类
+
+                # ============================================================
+                # | 问题复杂度 | 示例 | 检索策略 | 检索次数 |
+                # | 简单 | "什么是Agent" | 直接查top-2 | 1次 |
+                # | 中等 | "RAG和微调的优缺点" | 分别查RAG和微调 | 2次 |
+                # | 复杂 | "设计一个客服Agent" | 多步检索+总结 | 3-5次 |
+                # ============================================================
+
+            # ■ 复杂度判断方式
+                # LLM对问题做预分类:"这个问题是简单/中等/复杂?"
+                # 基于分类结果选择不同的retrieval pipeline
+                # 相当于一个router + 多个retriever的编排
+
+            # ■ 适用场景
+            # - 生产环境需要成本优化(简单问题少花钱)
+            # - 查询规模差异大的场景
+            # - 混合了FAQ和深度咨询的场景
+
+
+        # 🔄 6️⃣ Query Decomposition(查询分解)
+
+            # ■ 核心思想
+            # 一个复杂的query不适合直接拿去检索,应该先拆成多个子query,
+            # 分别检索,然后把结果综合起来。
+
+            # ■ 典型流程
+
+                # ============================================================
+                # 原始问题:"LangGraph、CrewAI、AutoGen 的区别?"
+                #         ↓ LLM拆解
+                # 子问题1:"LangGraph是什么?特点?"
+                # 子问题2:"CrewAI是什么?特点?"
+                # 子问题3:"AutoGen是什么?特点?"
+                # 子问题4:"三者相比各有什么优劣?"
+                #         ↓ 分别检索
+                # 结果A + 结果B + 结果C + 结果D
+                #         ↓ LLM综合
+                # 完整的对比回答
+                # ============================================================
+
+            # ■ 和Multi-hop的区别
+                # | Query Decomposition | Multi-hop |
+                # | 一次性拆分所有子问题 | 每步依赖上一步结果 |
+                # | 子问题并行检索 | 子问题串行检索 |
+                # | 适合并列式问题(对比、列举) | 适合递进式问题(因果、推理) |
+
+            # ■ 适用场景
+            # - 对比问题
+            # - 多维度问题("某个公司的营收、员工数、总部在哪儿")
+            # - 需要多个知识面的综合问题
+
+    ################################################################################        
 
     # 🏗️ Agentic RAG 三组件架构
 
@@ -14987,436 +15104,438 @@
 # ☀ 多智能体协作
 # ====================================================================================================================================
 
-    # 🍊 Workflow 流程编排
-    #-------------------------------------------------------------------------------------------------------------------
-        # 🚀 Langgraph StateGraph串行边
-        from typing import TypedDict  # 给 LangGraph 的图状态定义带类型的字段结构
-        from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
-        from langchain_core.tools import tool    # 把普通函数包成 LangChain 工具,挂给 agent
-        from langgraph.graph import StateGraph, START, END  # 建图核心:StateGraph 定状态图,START/END 是起止虚拟节点
-        from langgraph.prebuilt import create_react_agent   # 把"模型 + 工具"组装成能自主调工具的 agent
-
-        # 把 env-prep 里的搜索函数包成 LangChain 工具
-        @tool
-        def web_search(query: str) -> str:
-            """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
-            return web_search_raw(query)
-
-        llm = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3)
-
-        # 三道工序各是一个带搜索工具的真 agent:能自主决定要不要搜、搜什么--这才叫 agent
-        researcher = create_react_agent(llm, tools=[web_search],
-            prompt="你是研究员。先用 web_search 搜索一两次主题资料,再提炼 3 个最该写进技术博客的要点,逗号分隔,只输出要点。")
-        writer = create_react_agent(llm, tools=[web_search],
-            prompt="你是技术撰稿人。根据研究要点写一段 80 字以内的博客片段,只输出正文。")
-        editor = create_react_agent(llm, tools=[web_search],
-            prompt="你是编辑。把博客片段精简润色成一句 25 字以内的导读,只输出这句话。")
-
-        # State 是流水线上传递的一张共享表,每个节点把对应 agent 的产出填进去
-        class State(TypedDict):
-            topic: str       # 输入:写作主题
-            points: str      # 研究员产出:研究要点
-            draft: str       # 写作者产出:博客初稿
-            final: str       # 编辑产出:精简定稿
-
-        def research(state: State):                              # 工序一:研究员 agent 搜资料、提要点
-            print("【研究员】启动")
-            r = researcher.invoke({"messages": [("user", f"主题:{state['topic']}")]})
-            out = r["messages"][-1].content
-            print(f"【研究员】产出:{out}\n")
-            return {"points": out}
-
-        def write(state: State):                                 # 工序二:撰稿 agent 据要点写初稿
-            print("【写作者】启动")
-            r = writer.invoke({"messages": [("user", f"研究要点:{state['points']}")]})
-            out = r["messages"][-1].content
-            print(f"【写作者】产出:{out}\n")
-            return {"draft": out}
-
-        def edit(state: State):                                  # 工序三:编辑 agent 精简定稿
-            print("【编辑】启动")
-            r = editor.invoke({"messages": [("user", f"博客片段:{state['draft']}")]})
-            out = r["messages"][-1].content
-            print(f"【编辑】产出:{out}\n")
-            return {"final": out}
-
-        # 三道工序按顺序焊死在边里--这就是 Workflow:每个工位是带工具的 agent,但工位顺序由代码定死
-        g = StateGraph(State)
-        g.add_node("research", research)
-        g.add_node("write", write)
-        g.add_node("edit", edit)
-
-        g.add_edge(START, "research")
-        g.add_edge("research", "write")
-        g.add_edge("write", "edit")
-        g.add_edge("edit", END)
-        app = g.compile()  # 把状态图编译成可执行的图
-
-        result = app.invoke({"topic": "多智能体协作模式"})
-        print("【研究要点】", result["points"])
-        print("【博客初稿】", result["draft"])
-        print("【精简定稿】", result["final"])
-
-
-        # ✈ CrewAI:Process.sequential
-        from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套:Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
-        from crewai.tools import tool as crew_tool          # CrewAI 的工具装饰器,把普通函数注册成 agent 可调的工具
-
-        # 把 env-prep 里的搜索函数包成 CrewAI 工具
-        @crew_tool("web_search")
-        def web_search(query: str) -> str:
-            """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
-            return web_search_raw(query)
-
-        # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀,这是 CrewAI 这条链路的硬要求
-        llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
-        os.environ.setdefault("OPENAI_API_KEY", KEY)             # CrewAI 部分组件会读 OPENAI_API_KEY,兜底设一下
-
-        # 三个角色,每个都配上搜索工具--能自主决定要不要搜、搜什么,这才叫 agent
-        researcher = Agent(role="内容研究员", goal="就给定主题先联网搜索、再提炼最该写进技术博客的核心要点",
-                           backstory="你擅长先查资料再下笔。", llm=llm, tools=[web_search], verbose=False)
-        writer = Agent(role="技术写作者", goal="把研究要点写成一段通俗的技术博客",
-                       backstory="你写的技术博客准确又好读。", llm=llm, tools=[web_search], verbose=False)
-        editor = Agent(role="文字编辑", goal="把一段博客精简成一句导读",
-                       backstory="你能把一整段讲解收成一句话。", llm=llm, tools=[web_search], verbose=False)
-
-        # Task.description 必须明确"先用 web_search 工具搜索",否则 agent 可能跳过工具直接答
-        t_research = Task(description="先用 web_search 工具搜索一两次「{topic}」,再提炼 3 个最该写进技术博客的核心要点,逗号分隔。",
-                          expected_output="3 个核心要点,逗号分隔。", agent=researcher)
-        t_write = Task(description="根据上一步的要点,写一段 80 字以内的技术博客片段。",
-                       expected_output="一段 80 字以内的博客片段。", agent=writer)
-        t_edit = Task(description="把上一步的博客精简成一句 25 字以内的导读。",
-                      expected_output="一句 25 字以内的导读。", agent=editor)
-
-        crew = Crew(agents=[researcher, writer, editor],  # 把一组 agent + task 编成一个团队
-                    tasks=[t_research, t_write, t_edit],
-                    process=Process.sequential, verbose=False)   # sequential = 流程编排
-
-        result = await crew.kickoff_async(inputs={"topic": "多智能体协作模式"})  # Jupyter 自带事件循环,须用异步版启动(过程中 web_search 被调用时会打印)
-        print("\n【各工序产出】")
-        for t in [t_research, t_write, t_edit]:
-            print(f"【{t.agent.role}】产出:", t.output.raw if t.output else "(无)")
-        print("\n【最终导读】", result)
-
-
-        # 🚢 OpenAI Agents SDK: 代码驱动编排
-        from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
-        # 多导入 function_tool:把普通函数包成 agent 可调的工具
-        from agents import Agent, Runner, OpenAIChatCompletionsModel, function_tool, set_tracing_disabled
-
-        set_tracing_disabled(True)                               # 关掉默认连 OpenAI 的 tracing,走第三方端点必须
-        client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
-        model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
-
-        # 把 env-prep 里的搜索函数包成 OpenAI SDK 工具
-        @function_tool
-        def web_search(query: str) -> str:
-            """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
-            return web_search_raw(query)
-
-        # 三个 Agent 各管一道工序,每个都挂上搜索工具;它们之间没有 handoff,纯靠下面的代码把输出接力下去
-        researcher = Agent(name="researcher", model=model, tools=[web_search],
-                           instructions="先用 web_search 搜索一两次用户给的主题,再提炼 3 个最该写进技术博客的核心要点,逗号分隔,不要解释。")
-        writer = Agent(name="writer", model=model, tools=[web_search],
-                       instructions="根据用户给的研究要点,写一段 80 字以内的技术博客片段。")
-        editor = Agent(name="editor", model=model, tools=[web_search],
-                       instructions="把用户给的博客片段精简成一句 25 字以内的导读。")
-
-        async def main():
-            topic = "多智能体协作模式"
-            print("【研究员】启动")
-            r1 = await Runner.run(researcher, topic)             # 工序一:研究
-            print(f"【研究员】产出:{r1.final_output}\n")
-            print("【写作者】启动")
-            r2 = await Runner.run(writer, r1.final_output)       # 上一步产出当这一步输入
-            print(f"【写作者】产出:{r2.final_output}\n")
-            print("【编辑】启动")
-            r3 = await Runner.run(editor, r2.final_output)       # 再接力一棒
-            print(f"【编辑】产出:{r3.final_output}\n")
-
-        await main()
-
-
-    # 🍇 Supervisor 集中调试
-    # -------------------------------------------------------------------------------------------------------------------
-        # 🚀 Langgraph
-        import os  # 读环境变量(密钥、模型名)
-        from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型,LangGraph 节点里用它调 LLM
-        from langgraph.prebuilt import create_react_agent          # 本课锁定 1.2.4,从 prebuilt 导入即可,当前版本可用
-        from langgraph_supervisor import create_supervisor  # LangGraph 官方扩展:一键装配"主管 + 一组专家"的集中调度结构
-
-        # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
-        model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
-
-        # 两个专家 agent(无外部工具,凭模型知识各管一个维度);name 是主管派单时的寻址依据
-        tech_expert = create_react_agent(model, tools=[], name="tech_expert",  # 造一个会自主推理、按需调工具的 ReAct 智能体
-            prompt="你是技术专家。只从技术原理和架构角度回答问题,80 字以内。")
-        apply_expert = create_react_agent(model, tools=[], name="apply_expert",
-            prompt="你是应用专家。只从落地场景和典型案例角度回答问题,80 字以内。")
-
-        # 主管:create_supervisor 自动给它注入 transfer_to_tech_expert / transfer_to_apply_expert 派单工具
-        supervisor = create_supervisor(  # 一键装配"主管 + 一组专家"的星形集中调度
-            agents=[tech_expert, apply_expert],
-            model=model,
-            prompt=("你是研究主管。把用户问题的技术维度交给 tech_expert,应用维度交给 apply_expert,"
-                    "两份都收齐后,综合成一段 150 字以内的研究简报。")
-        ).compile()  # 把状态图编译成可执行的图
-
-        # 用 stream 边跑边打印--messages 是共享状态(黑板),跑完再打顺序是按对话结构整理的;要看真实时间线得流式看
-        seen = set()                                                # 记录已打印的消息,去重
-        for _, state in supervisor.stream(
-                {"messages": [{"role": "user", "content": "多智能体协作模式在 2026 年的现状"}]},
-                subgraphs=True, stream_mode="values"):              # subgraphs=True 才看得到专家子图内部的事件
-            for m in state.get("messages", []):
-                if m.id in seen: continue
-                seen.add(m.id)
-                who = getattr(m, "name", None) or m.type
-                content = m.content if isinstance(m.content, str) else str(m.content)
-                if content.strip():
-                    print(f"[{who}] {content[:220]}")
-
-
-        # 🚢 OpenAI Agents SDK: agents-as-tools
-        import asyncio  # 驱动异步的 agent 调用
-        from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
-        from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
-
-        set_tracing_disabled(True)                                  # 关掉 SDK 默认上报,走第三方端点时必须
-        client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)        # 复用环境准备 cell 的 BASE_URL/KEY
-        model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
-
-        # 两个专家 Agent
-        tech_expert = Agent(name="tech_expert", model=model,
-                            instructions="你是技术专家。只从技术原理和架构角度回答,80 字以内。")
-        apply_expert = Agent(name="apply_expert", model=model,
-                             instructions="你是应用专家。只从落地场景和典型案例角度回答,80 字以内。")
-
-        # 主管:把两个专家 as_tool 挂成自己的工具;主管自己决定何时调哪个、最后综合(控制权不转移)
-        manager = Agent(
-            name="manager",
-            model=model,
-            instructions=("你是研究主管。用 ask_tech 工具问技术维度,用 ask_apply 工具问应用维度,"
-                          "两个都问完后综合成一段 150 字以内的研究简报。"),
-            tools=[
-                tech_expert.as_tool(tool_name="ask_tech", tool_description="就问题咨询技术专家"),  # 把一个 agent 包装成另一个 agent 可调用的工具(agents-as-tools)
-                apply_expert.as_tool(tool_name="ask_apply", tool_description="就问题咨询应用专家"),
-            ]
-        )
-
-        async def main():
-            r = await Runner.run(manager, "多智能体协作模式在 2026 年的现状")  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
-            print("【研究简报】", r.final_output)
-
-        await main()       # Jupyter 里直接 await
-
-        # ✈ CrewAI: Process.hierachical
-        import os  # 读环境变量(密钥、模型名)
-        from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套:Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
-
-        os.environ.setdefault("OPENAI_API_KEY", KEY)               # CrewAI 底层 litellm 会查这个变量
-        # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀,这是 CrewAI 这条链路的硬要求
-        llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
-
-        # 两个专家;hierarchical 模式下不绑 Task,由 manager 决定派给谁
-        tech_expert = Agent(role="技术专家", goal="从技术原理和架构角度分析问题",
-                            backstory="你精通多智能体协作模式的技术机制。", llm=llm, verbose=False)
-        apply_expert = Agent(role="应用专家", goal="从落地场景和典型案例角度分析问题",
-                             backstory="你熟悉多智能体协作模式的产业落地。", llm=llm, verbose=False)
-
-        # Task 不绑具体 agent,交给 manager 调度
-        task = Task(description="就「多智能体协作模式在 2026 年的现状」产出一份研究简报,综合技术与应用两个维度。",
-                    expected_output="一段 150 字以内的研究简报。")
-
-        # Process.hierarchical + manager_llm:CrewAI 自动建一个 manager 负责派单和汇总
-        crew = Crew(agents=[tech_expert, apply_expert], tasks=[task],  # 把一组 agent + task 编成一个团队
-                    process=Process.hierarchical, manager_llm=llm, verbose=False)  # CrewAI 层级编排:主管自动调度下属
-
-        result = await crew.kickoff_async()  # Jupyter 自带事件循环,须用异步版启动
-        print("【研究简报】", result)
-
-
-    # 🍋 Hierachical 分层协同
-    # -------------------------------------------------------------------------------------------------------------------
-        # 🚀 Langgraph
-        from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
-        from langgraph.prebuilt import create_react_agent     # 造底层 worker(会自主推理的 ReAct 智能体)
-        from langgraph_supervisor import create_supervisor    # 装配主管;它的产物可以再被上层 create_supervisor 嵌套
-
-        # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
-        model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
-
-        # ---- 最底层:四个 worker,各管一摊 ----
-        fe_ui = create_react_agent(model, tools=[], name="fe_ui",
-            prompt="你是前端界面工程师。给出待办应用的界面与交互实现,60 字以内。")
-        fe_state = create_react_agent(model, tools=[], name="fe_state",
-            prompt="你是前端状态工程师。给出待办应用的前端状态管理与数据持久化方案,60 字以内。")
-        be_api = create_react_agent(model, tools=[], name="be_api",
-            prompt="你是后端接口工程师。给出待办应用的 REST 接口设计,60 字以内。")
-        be_db = create_react_agent(model, tools=[], name="be_db",
-            prompt="你是后端存储工程师。给出待办应用的数据库表与存储方案,60 字以内。")
-
-        # ---- 中间层:两个团队主管,各自管两个 worker(这一层 LLM 自主派单),编译时起 name 供上层寻址 ----
-        frontend_team = create_supervisor(
-            model=model,
-            agents=[fe_ui, fe_state],
-            prompt="你是前端组长。把界面交互交给 fe_ui,状态与持久化交给 fe_state,两份都收齐后用一句话汇报前端方案。",
-            supervisor_name="fe_lead",
-        ).compile(name="frontend_team")     # 编译成"一个 agent",名字叫 frontend_team
-
-        backend_team = create_supervisor(
-            model=model,
-            agents=[be_api, be_db],
-            prompt="你是后端组长。把接口设计交给 be_api,存储方案交给 be_db,两份都收齐后用一句话汇报后端方案。",
-            supervisor_name="be_lead",
-        ).compile(name="backend_team")
-
-        # ---- 最顶层:CTO 主管把两个团队主管当 agent 管起来(顶层 LLM 自主派单)----
-        top = create_supervisor(
-            model=model,
-            agents=[frontend_team, backend_team],  # 注意:传进来的是两个"主管",不是 worker--这就是嵌套
-            prompt=("你是技术总监。把前端相关工作交给 frontend_team,后端相关工作交给 backend_team,"
-                    "两个团队都汇报完后,综合成一段 120 字以内的交付简报。"),
-            supervisor_name="cto",
-        ).compile()
-
-        # 同 3.2:stream 流式打印才是真实时间线(嵌套图要 subgraphs=True 才看得到组内事件)
-        seen = set()
-        for _, state in top.stream(
-                {"messages": [{"role": "user", "content": "做一个待办事项小应用"}]},
-                subgraphs=True, stream_mode="values"):
-            for m in state.get("messages", []):
-                if m.id in seen: continue
-                seen.add(m.id)
-                who = getattr(m, "name", None) or m.type
-                content = m.content if isinstance(m.content, str) else str(m.content)
-                if content.strip():
-                    print(f"[{who}] {content[:200]}")
-
-
-        # 🚢 OpenAI Agents SDK: 嵌套agents-as-tools
-        import asyncio  # 驱动异步的 agent 调用
-        from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
-        from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
-
-        set_tracing_disabled(True)                              # 关掉 SDK 默认上报,走第三方端点时必须
-        client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)    # 复用第二章环境准备 cell 的 BASE_URL/KEY
-        model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
-
-        def make_lead(side: str) -> Agent:                      # 组长:把工程师当工具挂上(第一层嵌套)
-            eng = Agent(name=f"{side}_eng", model=model,
-                        instructions=f"你是{side}工程师,给出{side}实现方案,80 字以内。")
-            return Agent(name=f"{side}_lead", model=model,
-                         instructions=f"你是{side}组长。用工具问{side}工程师拿实现方案,然后一句话汇报本组结论。",
-                         tools=[eng.as_tool(tool_name=f"ask_{side}_eng", tool_description=f"问{side}工程师实现方案")])  # 把一个 agent 包装成另一个 agent 可调用的工具(agents-as-tools)
-
-        fe_lead = make_lead("前端")
-        be_lead = make_lead("后端")
-        # 总监:把两个组长当工具挂上(第二层嵌套)
-        cto = Agent(name="cto", model=model,
-                    instructions="你是技术总监。用工具分别问前端组长、后端组长拿本组结论,综合成 100 字以内交付简报。",
-                    tools=[fe_lead.as_tool(tool_name="ask_fe_lead", tool_description="问前端组长本组结论"),
-                           be_lead.as_tool(tool_name="ask_be_lead", tool_description="问后端组长本组结论")])
-
-        async def main():
-            # max_turns 要给够:两层嵌套意味着总监一次调用会触发组长再调工程师,工具调用轮次成倍增加
-            r = await Runner.run(cto, "做一个待办事项小应用", max_turns=20)  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
-            print("【技术总监交付简报】", r.final_output)
-
-        await main()       # Jupyter 里直接 await
-
-
-    # 🍉 Swarm 自主协作
-    # -------------------------------------------------------------------------------------------------------------------
-        # 🚀 OpenAI Agents SDK: handoffs是它的招牌
-        import asyncio  # 驱动异步的 agent 调用
-        from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
-        from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
-
-        set_tracing_disabled(True)                              # 走 OpenRouter 第三方端点,必须关掉回传 OpenAI 的追踪
-        client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
-        model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
-
-        # name 必须英文:handoff 底层是 transfer_to_&lt;name&gt; 工具,中文名会撞名崩溃;中文角色说明放 instructions/handoff_description
-        refund = Agent(
-            name="refund",
-            model=model,
-            handoff_description="处理退款申请",
-            instructions="你是退款专员,处理退款。如果用户反映商品有质量问题、需要先做技术鉴定,转交给技术专员。一句话回复。",
-            handoffs: [tech]
-        )
-        tech = Agent(
-            name="tech",
-            model=model,
-            handoff_description="商品质量技术鉴定",
-            instructions="你是技术专员,负责商品质量技术鉴定,给出鉴定结论。一句话回复。"
-        )
-        triage = Agent(
-            name="triage",
-            model=model,
-            instructions="你是客服分诊台,只负责判断用户问题类型并转给对应专员:退款相关转 refund,纯技术问题转 tech。不要自己回答业务问题。",
-            handoffs=[refund, tech]
-        )   # 分诊台能转给退款、技术两个专员
-
-        async def main():
-            # max_turns 是保险丝:万一两个专员互踢死循环,到上限强制停下
-            result = await Runner.run(triage, "我买的手机有质量问题,想退款", max_turns=10)  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
-            print("【最终回复】", result.final_output)
-            print("\n【接力轨迹】")
-            for item in result.new_items:                        # 遍历运行产生的事件,打印 handoff 发生在哪些 agent 之间
-                cls = item.__class__.__name__
-                if "Handoff" in cls:                             # 一次控制权转交事件
-                    print(f"  - 发生 handoff:{cls}")
-                elif cls == "MessageOutputItem":                 # 某个 agent 产出了一段回复
-                    who = getattr(item.agent, "name", "?")
-                    print(f"  - {who} 回复")
-
-        await main()       # Jupyter 里直接 await,不要再套 asyncio.run(环境准备 cell 已开 nest_asyncio)
-
-
-        # ✈ Langgraph: langgraph-swarm 官方双件套之一
-        from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型,LangGraph 节点里用它调 LLM
-        from langgraph.prebuilt import create_react_agent  # LangGraph 预制件:造一个会自主推理、按需调工具的 ReAct 智能体
-        from langgraph_swarm import create_swarm, create_handoff_tool  # langgraph-swarm 扩展:create_swarm 建去中心化群组 / create_handoff_tool 造平级转交工具
-        from langgraph.checkpoint.memory import InMemorySaver  # 把图执行状态存进内存的 checkpointer,支持 interrupt 暂停后恢复
-
-        # 复用环境准备 cell 的 MODEL/BASE_URL/KEY
-        model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
-
-        # 每个专员挂一件 handoff 工具,能把控制权转给另一个专员(平级,无中心)
-        refund = create_react_agent(
-            model,
-            name="refund",  # 造一个会自主推理、按需调工具的 ReAct 智能体
-            tools=[
-                create_handoff_tool(agent_name="tech", description="商品有质量问题、需技术鉴定时转给技术专员") # 造一个"把控制权转交给某 agent"的自主协作工具
-            ],
-            prompt="你是退款专员,处理退款。商品质量问题需要技术鉴定时转给 tech。一句话回复。"
-        )
-        tech = create_react_agent(
-            model,
-            name="tech",
-            tools=[
-                create_handoff_tool(agent_name="refund", description="鉴定完转回退款专员")
-            ],
-            prompt="你是技术专员,做商品质量技术鉴定并给结论。一句话回复。")
-
-
-        checkpointer = InMemorySaver() # swarm 几乎必配:记住 active_agent,否则跨轮丢"现在轮到谁"
-        # create_swarm 把两个专员装配成互联群组,default_active_agent 指定初始接待者
-        swarm = create_swarm(agents=[refund, tech], default_active_agent="refund").compile(checkpointer=checkpointer)  # 编译图并挂上 checkpointer,状态才能存档、之后恢复
-
-        config = {"configurable": {"thread_id": "1"}}            # thread_id 标识一次会话,checkpointer 按它存取 active_agent
-        # 同 3.2:stream 流式打印接力轨迹的真实时间线
-        seen = set()
-        for _, state in swarm.stream(
-                {"messages": [{"role": "user", "content": "我的手机有质量问题,想退款"}]},
-                config, subgraphs=True, stream_mode="values"):
-            for m in state.get("messages", []):
-                if m.id in seen: continue
-                seen.add(m.id)
-                who = getattr(m, "name", None) or m.type
-                content = m.content if isinstance(m.content, str) else str(m.content)
-                if content.strip():
-                    print(f"[{who}] {content[:160]}")
+    # 👑 多agent协作模式
+
+        # 🍊 Workflow 流程编排
+        #-------------------------------------------------------------------------------------------------------------------
+            # 🚀 Langgraph StateGraph串行边
+            from typing import TypedDict  # 给 LangGraph 的图状态定义带类型的字段结构
+            from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
+            from langchain_core.tools import tool    # 把普通函数包成 LangChain 工具,挂给 agent
+            from langgraph.graph import StateGraph, START, END  # 建图核心:StateGraph 定状态图,START/END 是起止虚拟节点
+            from langgraph.prebuilt import create_react_agent   # 把"模型 + 工具"组装成能自主调工具的 agent
+
+            # 把 env-prep 里的搜索函数包成 LangChain 工具
+            @tool
+            def web_search(query: str) -> str:
+                """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
+                return web_search_raw(query)
+
+            llm = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3)
+
+            # 三道工序各是一个带搜索工具的真 agent:能自主决定要不要搜、搜什么--这才叫 agent
+            researcher = create_react_agent(llm, tools=[web_search],
+                prompt="你是研究员。先用 web_search 搜索一两次主题资料,再提炼 3 个最该写进技术博客的要点,逗号分隔,只输出要点。")
+            writer = create_react_agent(llm, tools=[web_search],
+                prompt="你是技术撰稿人。根据研究要点写一段 80 字以内的博客片段,只输出正文。")
+            editor = create_react_agent(llm, tools=[web_search],
+                prompt="你是编辑。把博客片段精简润色成一句 25 字以内的导读,只输出这句话。")
+
+            # State 是流水线上传递的一张共享表,每个节点把对应 agent 的产出填进去
+            class State(TypedDict):
+                topic: str       # 输入:写作主题
+                points: str      # 研究员产出:研究要点
+                draft: str       # 写作者产出:博客初稿
+                final: str       # 编辑产出:精简定稿
+
+            def research(state: State):                              # 工序一:研究员 agent 搜资料、提要点
+                print("【研究员】启动")
+                r = researcher.invoke({"messages": [("user", f"主题:{state['topic']}")]})
+                out = r["messages"][-1].content
+                print(f"【研究员】产出:{out}\n")
+                return {"points": out}
+
+            def write(state: State):                                 # 工序二:撰稿 agent 据要点写初稿
+                print("【写作者】启动")
+                r = writer.invoke({"messages": [("user", f"研究要点:{state['points']}")]})
+                out = r["messages"][-1].content
+                print(f"【写作者】产出:{out}\n")
+                return {"draft": out}
+
+            def edit(state: State):                                  # 工序三:编辑 agent 精简定稿
+                print("【编辑】启动")
+                r = editor.invoke({"messages": [("user", f"博客片段:{state['draft']}")]})
+                out = r["messages"][-1].content
+                print(f"【编辑】产出:{out}\n")
+                return {"final": out}
+
+            # 三道工序按顺序焊死在边里--这就是 Workflow:每个工位是带工具的 agent,但工位顺序由代码定死
+            g = StateGraph(State)
+            g.add_node("research", research)
+            g.add_node("write", write)
+            g.add_node("edit", edit)
+
+            g.add_edge(START, "research")
+            g.add_edge("research", "write")
+            g.add_edge("write", "edit")
+            g.add_edge("edit", END)
+            app = g.compile()  # 把状态图编译成可执行的图
+
+            result = app.invoke({"topic": "多智能体协作模式"})
+            print("【研究要点】", result["points"])
+            print("【博客初稿】", result["draft"])
+            print("【精简定稿】", result["final"])
+
+
+            # ✈ CrewAI:Process.sequential
+            from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套:Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
+            from crewai.tools import tool as crew_tool          # CrewAI 的工具装饰器,把普通函数注册成 agent 可调的工具
+
+            # 把 env-prep 里的搜索函数包成 CrewAI 工具
+            @crew_tool("web_search")
+            def web_search(query: str) -> str:
+                """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
+                return web_search_raw(query)
+
+            # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀,这是 CrewAI 这条链路的硬要求
+            llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
+            os.environ.setdefault("OPENAI_API_KEY", KEY)             # CrewAI 部分组件会读 OPENAI_API_KEY,兜底设一下
+
+            # 三个角色,每个都配上搜索工具--能自主决定要不要搜、搜什么,这才叫 agent
+            researcher = Agent(role="内容研究员", goal="就给定主题先联网搜索、再提炼最该写进技术博客的核心要点",
+                               backstory="你擅长先查资料再下笔。", llm=llm, tools=[web_search], verbose=False)
+            writer = Agent(role="技术写作者", goal="把研究要点写成一段通俗的技术博客",
+                           backstory="你写的技术博客准确又好读。", llm=llm, tools=[web_search], verbose=False)
+            editor = Agent(role="文字编辑", goal="把一段博客精简成一句导读",
+                           backstory="你能把一整段讲解收成一句话。", llm=llm, tools=[web_search], verbose=False)
+
+            # Task.description 必须明确"先用 web_search 工具搜索",否则 agent 可能跳过工具直接答
+            t_research = Task(description="先用 web_search 工具搜索一两次「{topic}」,再提炼 3 个最该写进技术博客的核心要点,逗号分隔。",
+                              expected_output="3 个核心要点,逗号分隔。", agent=researcher)
+            t_write = Task(description="根据上一步的要点,写一段 80 字以内的技术博客片段。",
+                           expected_output="一段 80 字以内的博客片段。", agent=writer)
+            t_edit = Task(description="把上一步的博客精简成一句 25 字以内的导读。",
+                          expected_output="一句 25 字以内的导读。", agent=editor)
+
+            crew = Crew(agents=[researcher, writer, editor],  # 把一组 agent + task 编成一个团队
+                        tasks=[t_research, t_write, t_edit],
+                        process=Process.sequential, verbose=False)   # sequential = 流程编排
+
+            result = await crew.kickoff_async(inputs={"topic": "多智能体协作模式"})  # Jupyter 自带事件循环,须用异步版启动(过程中 web_search 被调用时会打印)
+            print("\n【各工序产出】")
+            for t in [t_research, t_write, t_edit]:
+                print(f"【{t.agent.role}】产出:", t.output.raw if t.output else "(无)")
+            print("\n【最终导读】", result)
+
+
+            # 🚢 OpenAI Agents SDK: 代码驱动编排
+            from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
+            # 多导入 function_tool:把普通函数包成 agent 可调的工具
+            from agents import Agent, Runner, OpenAIChatCompletionsModel, function_tool, set_tracing_disabled
+
+            set_tracing_disabled(True)                               # 关掉默认连 OpenAI 的 tracing,走第三方端点必须
+            client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
+            model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+            # 把 env-prep 里的搜索函数包成 OpenAI SDK 工具
+            @function_tool
+            def web_search(query: str) -> str:
+                """联网搜索资料,返回前 3 条结果的标题和摘要。输入查询词。"""
+                return web_search_raw(query)
+
+            # 三个 Agent 各管一道工序,每个都挂上搜索工具;它们之间没有 handoff,纯靠下面的代码把输出接力下去
+            researcher = Agent(name="researcher", model=model, tools=[web_search],
+                               instructions="先用 web_search 搜索一两次用户给的主题,再提炼 3 个最该写进技术博客的核心要点,逗号分隔,不要解释。")
+            writer = Agent(name="writer", model=model, tools=[web_search],
+                           instructions="根据用户给的研究要点,写一段 80 字以内的技术博客片段。")
+            editor = Agent(name="editor", model=model, tools=[web_search],
+                           instructions="把用户给的博客片段精简成一句 25 字以内的导读。")
+
+            async def main():
+                topic = "多智能体协作模式"
+                print("【研究员】启动")
+                r1 = await Runner.run(researcher, topic)             # 工序一:研究
+                print(f"【研究员】产出:{r1.final_output}\n")
+                print("【写作者】启动")
+                r2 = await Runner.run(writer, r1.final_output)       # 上一步产出当这一步输入
+                print(f"【写作者】产出:{r2.final_output}\n")
+                print("【编辑】启动")
+                r3 = await Runner.run(editor, r2.final_output)       # 再接力一棒
+                print(f"【编辑】产出:{r3.final_output}\n")
+
+            await main()
+
+
+        # 🍇 Supervisor 集中调试
+        # -------------------------------------------------------------------------------------------------------------------
+            # 🚀 Langgraph
+            import os  # 读环境变量(密钥、模型名)
+            from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型,LangGraph 节点里用它调 LLM
+            from langgraph.prebuilt import create_react_agent          # 本课锁定 1.2.4,从 prebuilt 导入即可,当前版本可用
+            from langgraph_supervisor import create_supervisor  # LangGraph 官方扩展:一键装配"主管 + 一组专家"的集中调度结构
+
+            # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
+            model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+
+            # 两个专家 agent(无外部工具,凭模型知识各管一个维度);name 是主管派单时的寻址依据
+            tech_expert = create_react_agent(model, tools=[], name="tech_expert",  # 造一个会自主推理、按需调工具的 ReAct 智能体
+                prompt="你是技术专家。只从技术原理和架构角度回答问题,80 字以内。")
+            apply_expert = create_react_agent(model, tools=[], name="apply_expert",
+                prompt="你是应用专家。只从落地场景和典型案例角度回答问题,80 字以内。")
+
+            # 主管:create_supervisor 自动给它注入 transfer_to_tech_expert / transfer_to_apply_expert 派单工具
+            supervisor = create_supervisor(  # 一键装配"主管 + 一组专家"的星形集中调度
+                agents=[tech_expert, apply_expert],
+                model=model,
+                prompt=("你是研究主管。把用户问题的技术维度交给 tech_expert,应用维度交给 apply_expert,"
+                        "两份都收齐后,综合成一段 150 字以内的研究简报。")
+            ).compile()  # 把状态图编译成可执行的图
+
+            # 用 stream 边跑边打印--messages 是共享状态(黑板),跑完再打顺序是按对话结构整理的;要看真实时间线得流式看
+            seen = set()                                                # 记录已打印的消息,去重
+            for _, state in supervisor.stream(
+                    {"messages": [{"role": "user", "content": "多智能体协作模式在 2026 年的现状"}]},
+                    subgraphs=True, stream_mode="values"):              # subgraphs=True 才看得到专家子图内部的事件
+                for m in state.get("messages", []):
+                    if m.id in seen: continue
+                    seen.add(m.id)
+                    who = getattr(m, "name", None) or m.type
+                    content = m.content if isinstance(m.content, str) else str(m.content)
+                    if content.strip():
+                        print(f"[{who}] {content[:220]}")
+
+
+            # 🚢 OpenAI Agents SDK: agents-as-tools
+            import asyncio  # 驱动异步的 agent 调用
+            from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
+            from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+
+            set_tracing_disabled(True)                                  # 关掉 SDK 默认上报,走第三方端点时必须
+            client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)        # 复用环境准备 cell 的 BASE_URL/KEY
+            model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+            # 两个专家 Agent
+            tech_expert = Agent(name="tech_expert", model=model,
+                                instructions="你是技术专家。只从技术原理和架构角度回答,80 字以内。")
+            apply_expert = Agent(name="apply_expert", model=model,
+                                 instructions="你是应用专家。只从落地场景和典型案例角度回答,80 字以内。")
+
+            # 主管:把两个专家 as_tool 挂成自己的工具;主管自己决定何时调哪个、最后综合(控制权不转移)
+            manager = Agent(
+                name="manager",
+                model=model,
+                instructions=("你是研究主管。用 ask_tech 工具问技术维度,用 ask_apply 工具问应用维度,"
+                              "两个都问完后综合成一段 150 字以内的研究简报。"),
+                tools=[
+                    tech_expert.as_tool(tool_name="ask_tech", tool_description="就问题咨询技术专家"),  # 把一个 agent 包装成另一个 agent 可调用的工具(agents-as-tools)
+                    apply_expert.as_tool(tool_name="ask_apply", tool_description="就问题咨询应用专家"),
+                ]
+            )
+
+            async def main():
+                r = await Runner.run(manager, "多智能体协作模式在 2026 年的现状")  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
+                print("【研究简报】", r.final_output)
+
+            await main()       # Jupyter 里直接 await
+
+            # ✈ CrewAI: Process.hierachical
+            import os  # 读环境变量(密钥、模型名)
+            from crewai import Agent, Task, Crew, Process, LLM  # CrewAI 五件套:Agent 角色 / Task 任务 / Crew 团队 / Process 编排方式 / LLM 模型
+
+            os.environ.setdefault("OPENAI_API_KEY", KEY)               # CrewAI 底层 litellm 会查这个变量
+            # litellm 走 OpenRouter 时模型名要带 openrouter/ 前缀,这是 CrewAI 这条链路的硬要求
+            llm = LLM(model=f"openrouter/{MODEL}", base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180)
+
+            # 两个专家;hierarchical 模式下不绑 Task,由 manager 决定派给谁
+            tech_expert = Agent(role="技术专家", goal="从技术原理和架构角度分析问题",
+                                backstory="你精通多智能体协作模式的技术机制。", llm=llm, verbose=False)
+            apply_expert = Agent(role="应用专家", goal="从落地场景和典型案例角度分析问题",
+                                 backstory="你熟悉多智能体协作模式的产业落地。", llm=llm, verbose=False)
+
+            # Task 不绑具体 agent,交给 manager 调度
+            task = Task(description="就「多智能体协作模式在 2026 年的现状」产出一份研究简报,综合技术与应用两个维度。",
+                        expected_output="一段 150 字以内的研究简报。")
+
+            # Process.hierarchical + manager_llm:CrewAI 自动建一个 manager 负责派单和汇总
+            crew = Crew(agents=[tech_expert, apply_expert], tasks=[task],  # 把一组 agent + task 编成一个团队
+                        process=Process.hierarchical, manager_llm=llm, verbose=False)  # CrewAI 层级编排:主管自动调度下属
+
+            result = await crew.kickoff_async()  # Jupyter 自带事件循环,须用异步版启动
+            print("【研究简报】", result)
+
+
+        # 🍋 Hierachical 分层协同
+        # -------------------------------------------------------------------------------------------------------------------
+            # 🚀 Langgraph
+            from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
+            from langgraph.prebuilt import create_react_agent     # 造底层 worker(会自主推理的 ReAct 智能体)
+            from langgraph_supervisor import create_supervisor    # 装配主管;它的产物可以再被上层 create_supervisor 嵌套
+
+            # 复用第二章环境准备 cell 的 MODEL/BASE_URL/KEY
+            model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+
+            # ---- 最底层:四个 worker,各管一摊 ----
+            fe_ui = create_react_agent(model, tools=[], name="fe_ui",
+                prompt="你是前端界面工程师。给出待办应用的界面与交互实现,60 字以内。")
+            fe_state = create_react_agent(model, tools=[], name="fe_state",
+                prompt="你是前端状态工程师。给出待办应用的前端状态管理与数据持久化方案,60 字以内。")
+            be_api = create_react_agent(model, tools=[], name="be_api",
+                prompt="你是后端接口工程师。给出待办应用的 REST 接口设计,60 字以内。")
+            be_db = create_react_agent(model, tools=[], name="be_db",
+                prompt="你是后端存储工程师。给出待办应用的数据库表与存储方案,60 字以内。")
+
+            # ---- 中间层:两个团队主管,各自管两个 worker(这一层 LLM 自主派单),编译时起 name 供上层寻址 ----
+            frontend_team = create_supervisor(
+                model=model,
+                agents=[fe_ui, fe_state],
+                prompt="你是前端组长。把界面交互交给 fe_ui,状态与持久化交给 fe_state,两份都收齐后用一句话汇报前端方案。",
+                supervisor_name="fe_lead",
+            ).compile(name="frontend_team")     # 编译成"一个 agent",名字叫 frontend_team
+
+            backend_team = create_supervisor(
+                model=model,
+                agents=[be_api, be_db],
+                prompt="你是后端组长。把接口设计交给 be_api,存储方案交给 be_db,两份都收齐后用一句话汇报后端方案。",
+                supervisor_name="be_lead",
+            ).compile(name="backend_team")
+
+            # ---- 最顶层:CTO 主管把两个团队主管当 agent 管起来(顶层 LLM 自主派单)----
+            top = create_supervisor(
+                model=model,
+                agents=[frontend_team, backend_team],  # 注意:传进来的是两个"主管",不是 worker--这就是嵌套
+                prompt=("你是技术总监。把前端相关工作交给 frontend_team,后端相关工作交给 backend_team,"
+                        "两个团队都汇报完后,综合成一段 120 字以内的交付简报。"),
+                supervisor_name="cto",
+            ).compile()
+
+            # 同 3.2:stream 流式打印才是真实时间线(嵌套图要 subgraphs=True 才看得到组内事件)
+            seen = set()
+            for _, state in top.stream(
+                    {"messages": [{"role": "user", "content": "做一个待办事项小应用"}]},
+                    subgraphs=True, stream_mode="values"):
+                for m in state.get("messages", []):
+                    if m.id in seen: continue
+                    seen.add(m.id)
+                    who = getattr(m, "name", None) or m.type
+                    content = m.content if isinstance(m.content, str) else str(m.content)
+                    if content.strip():
+                        print(f"[{who}] {content[:200]}")
+
+
+            # 🚢 OpenAI Agents SDK: 嵌套agents-as-tools
+            import asyncio  # 驱动异步的 agent 调用
+            from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
+            from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+
+            set_tracing_disabled(True)                              # 关掉 SDK 默认上报,走第三方端点时必须
+            client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)    # 复用第二章环境准备 cell 的 BASE_URL/KEY
+            model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+            def make_lead(side: str) -> Agent:                      # 组长:把工程师当工具挂上(第一层嵌套)
+                eng = Agent(name=f"{side}_eng", model=model,
+                            instructions=f"你是{side}工程师,给出{side}实现方案,80 字以内。")
+                return Agent(name=f"{side}_lead", model=model,
+                             instructions=f"你是{side}组长。用工具问{side}工程师拿实现方案,然后一句话汇报本组结论。",
+                             tools=[eng.as_tool(tool_name=f"ask_{side}_eng", tool_description=f"问{side}工程师实现方案")])  # 把一个 agent 包装成另一个 agent 可调用的工具(agents-as-tools)
+
+            fe_lead = make_lead("前端")
+            be_lead = make_lead("后端")
+            # 总监:把两个组长当工具挂上(第二层嵌套)
+            cto = Agent(name="cto", model=model,
+                        instructions="你是技术总监。用工具分别问前端组长、后端组长拿本组结论,综合成 100 字以内交付简报。",
+                        tools=[fe_lead.as_tool(tool_name="ask_fe_lead", tool_description="问前端组长本组结论"),
+                               be_lead.as_tool(tool_name="ask_be_lead", tool_description="问后端组长本组结论")])
+
+            async def main():
+                # max_turns 要给够:两层嵌套意味着总监一次调用会触发组长再调工程师,工具调用轮次成倍增加
+                r = await Runner.run(cto, "做一个待办事项小应用", max_turns=20)  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
+                print("【技术总监交付简报】", r.final_output)
+
+            await main()       # Jupyter 里直接 await
+
+
+        # 🍉 Swarm 自主协作
+        # -------------------------------------------------------------------------------------------------------------------
+            # 🚀 OpenAI Agents SDK: handoffs是它的招牌
+            import asyncio  # 驱动异步的 agent 调用
+            from openai import AsyncOpenAI  # OpenAI 官方异步客户端,指向 OpenRouter 兼容端点
+            from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled  # OpenAI Agents SDK:Agent 智能体 / Runner 执行器 / 模型接兼容端点 / 关闭轨迹上报
+
+            set_tracing_disabled(True)                              # 走 OpenRouter 第三方端点,必须关掉回传 OpenAI 的追踪
+            client = AsyncOpenAI(base_url=BASE_URL, api_key=KEY)     # 复用环境准备 cell 的 BASE_URL/KEY
+            model = OpenAIChatCompletionsModel(model=MODEL, openai_client=client)
+
+            # name 必须英文:handoff 底层是 transfer_to_&lt;name&gt; 工具,中文名会撞名崩溃;中文角色说明放 instructions/handoff_description
+            refund = Agent(
+                name="refund",
+                model=model,
+                handoff_description="处理退款申请",
+                instructions="你是退款专员,处理退款。如果用户反映商品有质量问题、需要先做技术鉴定,转交给技术专员。一句话回复。",
+                handoffs: [tech]
+            )
+            tech = Agent(
+                name="tech",
+                model=model,
+                handoff_description="商品质量技术鉴定",
+                instructions="你是技术专员,负责商品质量技术鉴定,给出鉴定结论。一句话回复。"
+            )
+            triage = Agent(
+                name="triage",
+                model=model,
+                instructions="你是客服分诊台,只负责判断用户问题类型并转给对应专员:退款相关转 refund,纯技术问题转 tech。不要自己回答业务问题。",
+                handoffs=[refund, tech]
+            )   # 分诊台能转给退款、技术两个专员
+
+            async def main():
+                # max_turns 是保险丝:万一两个专员互踢死循环,到上限强制停下
+                result = await Runner.run(triage, "我买的手机有质量问题,想退款", max_turns=10)  # OpenAI Agents SDK 执行入口:跑一个 agent 直到产出
+                print("【最终回复】", result.final_output)
+                print("\n【接力轨迹】")
+                for item in result.new_items:                        # 遍历运行产生的事件,打印 handoff 发生在哪些 agent 之间
+                    cls = item.__class__.__name__
+                    if "Handoff" in cls:                             # 一次控制权转交事件
+                        print(f"  - 发生 handoff:{cls}")
+                    elif cls == "MessageOutputItem":                 # 某个 agent 产出了一段回复
+                        who = getattr(item.agent, "name", "?")
+                        print(f"  - {who} 回复")
+
+            await main()       # Jupyter 里直接 await,不要再套 asyncio.run(环境准备 cell 已开 nest_asyncio)
+
+
+            # ✈ Langgraph: langgraph-swarm 官方双件套之一
+            from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型,LangGraph 节点里用它调 LLM
+            from langgraph.prebuilt import create_react_agent  # LangGraph 预制件:造一个会自主推理、按需调工具的 ReAct 智能体
+            from langgraph_swarm import create_swarm, create_handoff_tool  # langgraph-swarm 扩展:create_swarm 建去中心化群组 / create_handoff_tool 造平级转交工具
+            from langgraph.checkpoint.memory import InMemorySaver  # 把图执行状态存进内存的 checkpointer,支持 interrupt 暂停后恢复
+
+            # 复用环境准备 cell 的 MODEL/BASE_URL/KEY
+            model = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=KEY, temperature=0.3, timeout=180, max_retries=1)
+
+            # 每个专员挂一件 handoff 工具,能把控制权转给另一个专员(平级,无中心)
+            refund = create_react_agent(
+                model,
+                name="refund",  # 造一个会自主推理、按需调工具的 ReAct 智能体
+                tools=[
+                    create_handoff_tool(agent_name="tech", description="商品有质量问题、需技术鉴定时转给技术专员") # 造一个"把控制权转交给某 agent"的自主协作工具
+                ],
+                prompt="你是退款专员,处理退款。商品质量问题需要技术鉴定时转给 tech。一句话回复。"
+            )
+            tech = create_react_agent(
+                model,
+                name="tech",
+                tools=[
+                    create_handoff_tool(agent_name="refund", description="鉴定完转回退款专员")
+                ],
+                prompt="你是技术专员,做商品质量技术鉴定并给结论。一句话回复。")
+
+
+            checkpointer = InMemorySaver() # swarm 几乎必配:记住 active_agent,否则跨轮丢"现在轮到谁"
+            # create_swarm 把两个专员装配成互联群组,default_active_agent 指定初始接待者
+            swarm = create_swarm(agents=[refund, tech], default_active_agent="refund").compile(checkpointer=checkpointer)  # 编译图并挂上 checkpointer,状态才能存档、之后恢复
+
+            config = {"configurable": {"thread_id": "1"}}            # thread_id 标识一次会话,checkpointer 按它存取 active_agent
+            # 同 3.2:stream 流式打印接力轨迹的真实时间线
+            seen = set()
+            for _, state in swarm.stream(
+                    {"messages": [{"role": "user", "content": "我的手机有质量问题,想退款"}]},
+                    config, subgraphs=True, stream_mode="values"):
+                for m in state.get("messages", []):
+                    if m.id in seen: continue
+                    seen.add(m.id)
+                    who = getattr(m, "name", None) or m.type
+                    content = m.content if isinstance(m.content, str) else str(m.content)
+                    if content.strip():
+                        print(f"[{who}] {content[:160]}")
 
 
     # 🎯 多 Agent 通信模式：Pub/Sub 事件驱动
@@ -15509,6 +15628,7 @@
             # 用 Redis Pub/Sub 代替内存 EventBus,实现跨进程/跨机器的多 Agent 通信。
             # pip install redis
             import redis.asyncio as redis
+            import json
             
             class RedisEventBus:
                 def __init__(self, url="redis://localhost:6379"):
