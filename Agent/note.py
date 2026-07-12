@@ -13376,76 +13376,237 @@
         # ❌ 可跳过     — MessageGraph(已废弃), 手动 SqliteSaver put/list(极少用)
 
 
-# 🤖 DeepAgents
-# ========================================================================================
+# 🤖 CrewAI — 多Agent协作框架
+# ====================================================================================================================================
 
-    # 📌 DeepAgents 是什么
-    #   DeepAgents = 一个轻量级多Agent编排框架,基于 LangChain/LangGraph 生态。
-    #   核心能力:让多个Agent协作完成任务,支持 Supervisor/Handoff/Pipeline 等模式。
-    #   特点:上手快、代码少、适合快速搭建多Agent原型。
-    #   定位:介于 LangGraph(灵活但代码多)和 CrewAI(重)之间的轻量选择。
+    # 📌 CrewAI 定位
+    #   CrewAI = 目前最成熟的多Agent协作框架。
+    #   核心理念:像组建一个团队一样组建Agent,每个Agent有角色、目标、技能。
+    #   特点:概念清晰(Agent/Task/Crew三个核心概念)、上手快、社区活跃。
+    #   对比:
+    #     LangGraph  → 图编排,灵活但代码量大
+    #     CrewAI     → 团队协作,概念少但覆盖了大部分场景
+    #     AutoGen    → 对话式多Agent,侧重Agent间自由对话
+    #     DeepAgents → 轻量但生态太弱,已弃用
 
-    # 🚀 核心概念
+    # 🚀 核心概念（三板斧）
 
-    #   create_deep_agent() — 创建一个 Agent 实例
-    #     参数:
-    #       model:       模型实例(必填)
-    #       subagents:   子Agent团队列表(list[dict])
-    #       system_prompt: 角色和行为的系统提示词
-    #       tools:       可直接使用的工具集
+    #   🥇 Agent — 智能体（团队成员）
+    #     属性: role(角色), goal(目标), backstory(背景), tools(工具), llm(模型)
+    #     每个Agent就像团队里的一个人——有岗位、有任务、有擅长的事
 
-    #   Supervisor 模式 — 主Agent协调子Agent
-    #     主Agent收到任务→判断交给哪个子Agent→子Agent执行→返回结果
-    #     适合:任务分类分发、多领域专家协作
+    #   🥇 Task — 任务（要干的活）
+    #     属性: description(描述), expected_output(预期输出), agent(指派给谁), tools(任务级工具)
+    #     一个Task可以指定一个Agent去执行,也可以不指定让Crew自动分配
 
-    #   Handoff 模式 — Agent间交接任务
-    #     一个Agent把任务转给另一个Agent继续处理
-    #     适合:需要流水线处理的任务
+    #   🥇 Crew — 团队（把人和活组织起来）
+    #     属性: agents(团队成员), tasks(任务列表), process(执行流程), verbose(日志)
+    #     Crew就是老板——把人招齐、活派好、流程定好,然后说"开始干"
 
-    # ✈ create_deep_agent 基础用法
-        # model: 必填,模型实例
-        # subagents: list[dict] 智能体团队列表
-        # system_prompt: str 角色和行为
-        # tools: list[Tool] 主智能体可直接使用的工具集
-        from deepagents import create_deep_agent
-        from langchain.chat_models import init_chat_model
-        from langchain.tools import tool
+    # 🚀 完整入门代码
 
-        model = init_chat_model()
+        # ============================================================
+        # pip install crewai
+        # ============================================================
 
-        @tool
-        def get_weather(city: str) -> str:
-            """获取城市的天气信息"""
-            return f"{city}天气,晴,24摄氏度"
+        # ===== Step 1: 定义 Agent =====
+        from crewai import Agent, Task, Crew, Process
 
-        @tool
-        def get_city_info(city: str) -> str:
-            """获取城市的详细信息"""
-            return f"{city}人口1000000,面积1000000,天气晴"
-
-        agent = create_deep_agent(
-            model=model,
-            subagents=[
-                {
-                    "name": "weather_agent",
-                    "description": "天气查询专家",
-                    "system_prompt": "你是顶尖气象专家",
-                    "tools": [],
-                }
-            ],
-            system_prompt="你是客服助手,调用子Agent处理专业问题",
-            tools=[get_weather, get_city_info],
+        # Agent 1: 研究员
+        researcher = Agent(
+            role="高级技术研究员",
+            goal="从技术文档和博客中挖掘最准确、最新的技术信息",
+            backstory="你是一名资深技术研究员,擅长从大量信息中提取关键内容并形成结构化报告。",
+            verbose=True,      # 打印思考过程
+            allow_delegation=False,  # 是否允许把任务交给别的Agent
         )
 
-        result = agent.invoke({"messages": [{"role": "user", "content": "重庆今天天气怎么样?"}]})
-        print(result["messages"][-1]["content"])
+        # Agent 2: 写作者
+        writer = Agent(
+            role="技术内容写手",
+            goal="将复杂的技术概念用通俗易懂的语言写出来",
+            backstory="你是一名技术博客作者,擅长把深奥的技术讲得人人都能听懂。",
+            verbose=True,
+        )
 
-    # 🔁 与 LangGraph 的关系
-    #   DeepAgents 底层基于 LangGraph 的 StateGraph,可以理解为:
-    #     LangGraph 给了你"搭图的积木"——AddNode, AddEdge, Conditional
-    #     DeepAgents 给了你"搭好的Agent模板"——直接传参就能用
-    #   什么时候用 LangGraph: 需要自定义复杂Workflow、条件分支、Human-in-the-Loop
-    #   什么时候用 DeepAgents: 快速搭建多Agent对话系统、原型验证
+        # ===== Step 2: 定义 Task =====
+        task_research = Task(
+            description="研究 LangGraph 和 CrewAI 这两个框架的核心区别,包括设计理念、适用场景、社区生态。",
+            expected_output="一份300字左右的对比分析报告,包含3个核心差异点。",
+            agent=researcher,
+        )
+
+        task_write = Task(
+            description="基于研究结果,写一篇通俗的对比文章。",
+            expected_output="一篇500字左右的博客文章,语言通俗,适合技术人员阅读。",
+            agent=writer,
+        )
+
+        # ===== Step 3: 组建 Crew 并运行 =====
+        crew = Crew(
+            agents=[researcher, writer],
+            tasks=[task_research, task_write],
+            process=Process.sequential,  # 顺序执行:先研究→再写作
+            verbose=True,
+        )
+
+        result = crew.kickoff()
+        print(result)
+
+
+    # 🔄 两种 Process 模式
+
+        # ── 1. Process.sequential（顺序执行）──
+        #     Task1 → Task2 → Task3 → ...
+        #     前一个Task的输出自动作为后一个Task的上下文
+        #     适合:流水线作业、研究→写作→审核
+
+        crew = Crew(
+            agents=[researcher, writer, reviewer],
+            tasks=[task1, task2, task3],
+            process=Process.sequential,
+        )
+
+        # ── 2. Process.hierarchical（层级管理）──
+        #     需要一个 manager_agent 来管理其他Agent
+        #     manager 决定谁做什么、谁先做、谁后做
+        #     适合:复杂任务、需要动态分配的场景
+
+        manager = Agent(
+            role="项目经理",
+            goal="协调团队高效完成任务,合理分配工作量",
+            backstory="你是一名经验丰富的项目经理,擅长任务分解和团队协调。",
+            verbose=True,
+        )
+
+        crew = Crew(
+            agents=[researcher, writer],
+            tasks=[task_research, task_write],
+            process=Process.hierarchical,
+            manager_agent=manager,  # 指定管理者
+        )
+
+        # ⚠️ hierarchical 模式需要调用 LLM 做决策,成本更高
+
+
+    # 🛠 工具集成
+
+        # CrewAI 支持多种方式集成工具:
+
+        # ── 方式1: @tool 装饰器（最简单）──
+        from crewai.tools import tool
+
+        @tool("search_web")
+        def search_web(query: str) -> str:
+            \"\"\"搜索互联网获取最新信息\"\"\"
+            # 这里接入你的搜索API
+            return f"搜索结果: {query}"
+
+        researcher_with_tools = Agent(
+            role="研究员",
+            goal="搜索最新技术信息",
+            backstory="你擅长搜索和分析",
+            tools=[search_web],
+        )
+
+        # ── 方式2: Task级工具（部分任务有专门工具）──
+        task_with_tools = Task(
+            description="查询天气信息",
+            expected_output="天气数据",
+            tools=[weather_tool],  # 只有这个任务能用
+        )
+
+        # ── 方式3: 内置工具包 ──
+        # from crewai_tools import (
+        #     SerperDevTool,       # 搜索引擎
+        #     ScrapeWebsiteTool,   # 网页抓取
+        #     FileReadTool,        # 文件读取
+        #     DirectoryReadTool,   # 目录遍历
+        # )
+
+
+    # 🔗 任务上下文与依赖
+
+        # Task 之间可以通过 context 传递数据:
+
+        task1 = Task(
+            description="研究LangGraph",
+            expected_output="研究笔记",
+            agent=researcher,
+        )
+
+        task2 = Task(
+            description="写对比文章",
+            expected_output="文章",
+            agent=writer,
+            context=[task1],  # task2 能看到 task1 的输出
+        )
+
+        # 这样 task2 在执行时,LLM 的上下文中会自动包含 task1 的结果。
+
+
+    # 🧪 高级用法
+
+        # ── 1. 回调(Callback)──
+        #     Crew 运行时可以监听事件:
+        #     from crewai import Crew, Process
+        #     crew = Crew(..., step_callback=my_callback)
+
+        # ── 2. 缓存(Cache)──
+        #     默认开启LLM调用缓存,相同输入不重复调LLM,省成本
+        #     crew = Crew(..., cache=True)
+
+        # ── 3. 输出格式──
+        #     result = crew.kickoff()
+        #     print(result.raw)         # 原始文本
+        #     print(result.json_dict)   # JSON格式(如果输出是JSON)
+        #     print(result.tasks_output) # 每个Task的独立输出
+
+        # ── 4. 嵌入任务 ──
+        #     Task 支持嵌入其他 Crew 作为子流程:
+        #     sub_crew = Crew(agents=[...], tasks=[...])
+        #     main_task = Task(..., crew=sub_crew)
+
+
+    # ⚡ 实战建议
+
+        #   场景                    推荐 Process
+        #   研究→写作→审核          sequential（流水线）
+        #   多个独立任务并行         sequential（任务间无依赖）
+        #   复杂项目需动态分配       hierarchical（需要manager）
+        #   不知道用什么             sequential（最稳）
+
+        #   工具只在需要的Agent上加,不要每个Agent都挂一堆工具
+        #   先 sequential 跑通,再考虑 hierarchical
+        #   verbose=True 在开发时开,上线关掉
+
+
+    # ⚠️ 注意事项
+
+        # 1. CrewAI 每个 Task 都会调一次 LLM,成本要算清楚
+        # 2. hierarchical 模式比 sequential 多调 LLM(manager 也要调)
+        # 3. Agent 的 backstory 对输出质量影响很大,值得好好写
+        # 4. 不要给一个 Agent 太多工具——它会困惑
+        # 5. CrewAI 的缓存是内存缓存,进程重启就没了
+        # 6. 长任务建议加 timeout,防止死循环
+
+
+    # 📊 多Agent框架对比
+
+        #           CrewAI          LangGraph       AutoGen
+        # ─────────────────────────────────────────────────
+        # 上手难度  ⭐ 最简单        ⭐⭐⭐            ⭐⭐
+        # 灵活性    ⭐⭐             ⭐⭐⭐⭐⭐         ⭐⭐⭐
+        # 适用场景  多Agent协作      复杂Workflow     Agent对话
+        # 学习曲线  低               高               中
+        # 社区      活跃             最活跃           中等
+        # 版本      1.x              1.x              0.4.x
+
+        # 一句话:
+        #   快速搭建多Agent → CrewAI
+        #   需要精细控制流程 → LangGraph
+        #   需要Agent间自由对话 → AutoGen
+
 
 
 # 🌙 Agent Scope
