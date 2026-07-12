@@ -13772,6 +13772,98 @@
         print(result.raw)
 
 
+    # 🔄 CrewAI Flow（1.0+ 新特性）
+
+        # Flow 可以把多个 Crew 串成流水线:
+
+        from crewai.flow import Flow, start, listen, router
+
+        class ResearchFlow(Flow):
+            @start()
+            def search_crew(self):
+                # 第一个 Crew: 调研
+                searcher = Agent(role="研究员", goal="搜集资料", backstory="...")
+                task = Task(description="调研AI Agent框架", expected_output="报告", agent=searcher)
+                crew = Crew(agents=[searcher], tasks=[task])
+                return crew.kickoff().raw
+
+            @listen(search_crew)
+            def write_crew(self, research_result):
+                # 第二个 Crew: 写作（基于调研结果）
+                writer = Agent(role="作者", goal="写文章", backstory="...")
+                task = Task(
+                    description=f"基于以下内容写文章:\n{research_result}",
+                    expected_output="文章",
+                    agent=writer
+                )
+                crew = Crew(agents=[writer], tasks=[task])
+                return crew.kickoff().raw
+
+        flow = ResearchFlow()
+        result = flow.kickoff()
+        print(result)
+
+        # @start()    → 标记Flow的入口方法
+        # @listen()   → 监听前一步的结果,拿到返回值
+        # @router()   → 根据条件走不同分支
+
+        # Flow 适合: 多阶段项目（调研→写作→审核→发布）
+
+
+    # 📋 JSON 结构化输出
+
+        # 如果希望 Task 输出 JSON 格式:
+
+        task = Task(
+            description="提取用户信息",
+            expected_output="JSON格式: name, age, city",
+            agent=extractor,
+            output_json=True,       # 强制JSON输出
+        )
+
+        # 或者指定 Pydantic 模型:
+        from pydantic import BaseModel
+
+        class UserInfo(BaseModel):
+            name: str
+            age: int
+            city: str
+
+        task = Task(
+            description="提取用户信息",
+            expected_output="用户信息JSON",
+            agent=extractor,
+            output_pydantic=UserInfo,  # 按Pydantic模型结构输出
+        )
+
+        result = crew.kickoff()
+        # result.pydantic  # 直接拿到 Pydantic 对象
+        # result.json_dict # 或者拿字典
+
+
+    # 🔗 多Crew编排
+
+        # 一个大型项目可能需要多个 Crew:
+
+        # Crew A: 数据采集
+        data_crew = Crew(agents=[crawler], tasks=[crawl_task], verbose=True)
+        data_result = data_crew.kickoff()
+
+        # Crew B: 数据分析
+        analysis_crew = Crew(agents=[analyst], tasks=[
+            Task(description=f"分析数据: {data_result.raw}", expected_output="分析结果", agent=analyst)
+        ])
+        analysis_result = analysis_crew.kickoff()
+
+        # Crew C: 生成报告
+        report_crew = Crew(agents=[writer], tasks=[
+            Task(description=f"写报告: {analysis_result.raw}", expected_output="报告", agent=writer)
+        ])
+        report_result = report_crew.kickoff()
+
+        # 或者用 Flow 自动编排（推荐）
+
+
     # ⚠️ 注意事项补充
 
         # 1. verbose=True 输出很多,每轮 Thought/Action 都打印
@@ -13781,22 +13873,23 @@
         # 5. 如果 Agent 不使用工具,检查描述是否足够明确
         # 6. backstory 对输出影响很大,值得花时间打磨
         # 7. CrewAI 1.0+ 相比 0.x API 变化较大,参考最新文档
+        # 8. 当前安装版本: crewai==1.15.2 (2026.7)
 
-# 📊 多Agent框架对比
+    # 📊 多Agent框架对比
 
-        #           CrewAI          LangGraph       AutoGen
-        # ─────────────────────────────────────────────────
-        # 上手难度  ⭐ 最简单        ⭐⭐⭐            ⭐⭐
-        # 灵活性    ⭐⭐             ⭐⭐⭐⭐⭐         ⭐⭐⭐
-        # 适用场景  多Agent协作      复杂Workflow     Agent对话
-        # 学习曲线  低               高               中
-        # 社区      活跃             最活跃           中等
-        # 版本      1.x              1.x              0.4.x
+            #           CrewAI          LangGraph       AutoGen
+            # ─────────────────────────────────────────────────
+            # 上手难度  ⭐ 最简单        ⭐⭐⭐            ⭐⭐
+            # 灵活性    ⭐⭐             ⭐⭐⭐⭐⭐         ⭐⭐⭐
+            # 适用场景  多Agent协作      复杂Workflow     Agent对话
+            # 学习曲线  低               高               中
+            # 社区      活跃             最活跃           中等
+            # 版本      1.x              1.x              0.4.x
 
-        # 一句话:
-        #   快速搭建多Agent → CrewAI
-        #   需要精细控制流程 → LangGraph
-        #   需要Agent间自由对话 → AutoGen
+            # 一句话:
+            #   快速搭建多Agent → CrewAI
+            #   需要精细控制流程 → LangGraph
+            #   需要Agent间自由对话 → AutoGen
 
 
 
