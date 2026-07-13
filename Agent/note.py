@@ -1391,7 +1391,7 @@
             # skip_stemming=True:跳过英文词干提取(中文无此需求)
             # token_pattern:中文按字切分 + 英文按词切分(BM25 中文场景标准配置)
             bm25_retriever = BM25Retriever.from_defaults(
-                nodes= ,
+                nodes=nodes,
                 similarity_top_k=3,
                 skip_stemming=True,
                 token_pattern=r"[\u4e00-\u9fff]|[a-zA-Z0-9]+",
@@ -1572,7 +1572,8 @@
             # 调用 Agent
             # from langchain.agents import AgentExecutor (removed in 1.3.4+, use LangGraph)
             # agent_executor = AgentExecutor(nt=agent, tools=selected_skill["tools"], verbose=False)
-            result = agent_executor.invoke({"input": last_msg})
+            # result = agent_executor.invoke({"input": last_msg})
+            # TODO: 用 LangGraph 实现 Skills 路由的 Agent 调用
 
             print(f"\nAgent 响应: {result['output']}")
             print(f"\n✓ 验证:Agent 只能调用 {intent.skill_id} Skill 的 {len(selected_skill['tools'])} 个工具")
@@ -2723,7 +2724,7 @@
         # 数据库连接字符串
         DB_URI = "postgresql://myuser:123456@localhost:5432/mydatabase"
 
-        with PostgresSaver.from_conn_string(DB_URL) as checkpointer:
+        with PostgresSaver.from_conn_string(DB_URI) as checkpointer:
             # 自动创建表结构(仅首次运行)
             checkpointer.setup()
 
@@ -2905,10 +2906,11 @@
 
             async def summarize_node(s: MessagesState) -> dict:
                 early, recent = s["messages"][:-KEEP], s["messages"][-KEEP:]
-                summary = await llm.ainvoke(f"压缩(80字):\n{"".join(str(m.content)[:100] for m in early)}")
+                early_text = "".join(str(m.content)[:100] for m in early)
+                summary = await llm.ainvoke(f"压缩(80字):\n{early_text}")
                 return {"messages": [SystemMessage(f"[摘要]{summary.content}")] + recent}
 
-            from langgrap.prebuilt import create_react_agent
+            from langgraph.prebuilt import create_react_agent
             
             tools = [get_weather]
             agent = create_react_agent(llm, tools)
@@ -14516,13 +14518,13 @@
 
         @tool
         def search_weather(city: str) -> dict:
-            \"\"\"查询城市天气\"\"\"
+            """查询城市天气"""
             # 调用天气API
             return {"city": city, "temp": 25, "weather": "晴"}
 
         @tool
         def calculate(expr: str) -> float:
-            \"\"\"执行数学运算\"\"\"
+            """执行数学运算"""
             return eval(expr)
 
         toolkit = Toolkit(tools=[search_weather, calculate])
@@ -14671,12 +14673,12 @@
         # 工具
         @tool
         def search_web(query: str) -> str:
-            \"\"\"搜索互联网信息\"\"\"
+            """搜索互联网信息"""
             return f"搜索结果: {query}的相关资料"
 
         @tool
         def calc(expr: str) -> float:
-            \"\"\"执行计算\"\"\"
+            """执行计算"""
             return eval(expr)
 
         # Agent1: 研究员(ReAct)
@@ -14746,6 +14748,7 @@
         # 7. 版本迭代快,2.0相比1.x API变化较大
         # 8. 如果面试被问AgentScope,说\"了解,阿里系框架,适合分布式部署\"即可
         # 9. 实际项目选型时,考虑团队技术栈:阿里系用AgentScope,其他用CrewAI/LangGraph
+
 
 # 🏀 Agents SDK
 # ====================================================================================================================================
@@ -17050,6 +17053,320 @@
             allow_methods=["*"],
             allow_headers=["*"]
         )
+
+
+# 🧩 Deep Agents — LangChain 官方 Agent Harness
+# ====================================================================================================================================
+
+    # 📌 概述
+    #   Deep Agents = LangChain 官方出品的 Agent Harness（开箱即用的 Agent 框架）
+    #   pip install deepagents 即装即用
+    #
+    #   生态位置：
+    #     LangSmith（观测/部署）
+    #        ↑
+    #     Deep Agents（harness，开箱即用）← 这个
+    #        ↓
+    #     LangGraph（图状态引擎）
+    #        ↓
+    #     LangChain（Agent 基础）
+    #
+    #   设计原则：
+    #     1. Opinionated（有主见）—— 默认配置针对长程多步任务调优
+    #     2. Extensible（可扩展）—— 任意组件可覆写，不需要 fork
+    #     3. Model-agnostic（模型无关）—— 任何支持 tool calling 的 LLM 都能用
+    #     4. Production-ready（生产就绪）—— 基于 LangGraph，原生支持 streaming、持久化、checkpoint
+    #
+    #   灵感来源：Claude Code。目标是找出 Claude Code 能做通用 Agent 的原因并推向更远。
+    #   官方代码：https://github.com/langchain-ai/deepagents
+    #   文档：https://docs.langchain.com/oss/python/deepagents/overview
+
+    # 🚀 安装
+        # pip install deepagents
+        # pip install tavily-python   # 可选：搜索工具
+        # uv 用户：uv add deepagents
+
+    # 🚀 快速开始
+        from deepagents import create_deep_agent
+
+        def get_weather(city: str) -> str:
+            """获取指定城市的天气"""
+            return f"{city} 今天晴天！"
+
+        agent = create_deep_agent(
+            model="openai:gpt-5.5",
+            tools=[get_weather],
+            system_prompt="你是一个天气助手",
+        )
+
+        # 同步调用
+        result = agent.invoke({"messages": [{"role": "user", "content": "深圳今天天气如何？"}]})
+
+        # 流式调用（推荐生产使用）
+        for event in agent.stream({"messages": [{"role": "user", "content": "深圳天气？"}]}):
+            print(event)
+
+    # 🚀 支持的模型
+    #   model 参数格式统一为 provider:model_name
+    #   必须使用支持 tool calling 的模型
+    #   DeepSeek 需通过 OpenRouter 等代理（原生 API 不直接支持）
+    #
+    #   Provider    示例值                     环境变量
+    #   ────────    ──────────                 ─────────────
+    #   OpenAI      openai:gpt-5.5             OPENAI_API_KEY
+    #   Anthropic   anthropic:claude-sonnet-4-6 ANTHROPIC_API_KEY
+    #   Google      google_genai:gemini-3.5     GOOGLE_API_KEY
+    #   OpenRouter  openrouter:z-ai/glm-5.2     OPENROUTER_API_KEY
+    #   Ollama      ollama:north-mini-code-1.0  本地运行不需要 key
+
+
+    # 🔥 Deep Agents 三大核心机制
+
+        #   Deep Agents = LangChain 官方 Agent Harness
+        #   核心：一个 Agent 深度执行复杂长任务，不是多 Agent 编排
+        #   三个大招：虚拟文件系统 + 任务规划 + 子 Agent 生成
+
+        # ⚡ 1. 虚拟文件系统（Virtual Filesystem）
+        #   解决的问题：普通 Agent 上下文窗口塞爆了
+        #   Agent 读大文件读到一半，上下文满了，前面全忘
+        #   Deep Agent 解法：Agent 自己有"硬盘"，大部分内容写文件，消息里只存路径和摘要
+
+            # ■ 内置文件工具
+            #   ls(path)              - 列目录
+            #   read_file(path)       - 读文件（支持图片自动转多模态）
+            #   write_file(path, content) - 写文件
+            #   edit_file(path, old, new) - 编辑文件中的指定内容
+            #   glob(pattern)         - 模糊搜索文件
+            #   grep(pattern, path)   - 搜索文件内容
+
+            # ■ 插件式后端，backend 参数随时切换
+                from deepagents import create_deep_agent
+                from deepagents.backends import FilesystemBackend, StoreBackend, CompositeBackend, StateBackend
+
+                # 后端1：操作本地电脑文件
+                agent = create_deep_agent(
+                    model="anthropic:claude-sonnet-4-6",
+                    backend=FilesystemBackend(root_dir="E:/projects")
+                )
+
+                # 后端2：持久化存储（跨线程共享记忆）
+                agent = create_deep_agent(
+                    model="anthropic:claude-sonnet-4-6",
+                    backend=StoreBackend()  # Agent 的记忆跨会话保留
+                )
+
+                # 后端3：组合模式——不同路径走不同后端
+                agent = create_deep_agent(
+                    model="anthropic:claude-sonnet-4-6",
+                    backend=CompositeBackend({
+                        "/workspace/": FilesystemBackend(root_dir="./workspace"),
+                        "/memories/":  StoreBackend(),        # 长期记忆
+                        "/tmp/":       StateBackend(),         # 一次性临时文件
+                    })
+                )
+
+            # ■ 权限控制（permissions 参数）
+                from deepagents import create_deep_agent
+                from deepagents.permissions import AllowRead, DenyWrite
+
+                agent = create_deep_agent(
+                    model="anthropic:claude-sonnet-4-6",
+                    permissions=[
+                        AllowRead("/project/public/"),   # 可以读公开目录
+                        DenyWrite("/system/"),           # 不能修改系统文件
+                    ]
+                )
+
+        # ⚡ 2. 任务规划（Task Planning）
+        #   解决的问题：Agent 接了复杂任务就一通猛干，干到一半发现方向错了
+        #   Deep Agent 解法：内置 write_todos 工具，让它自己拆任务
+        #
+        #   Agent 内心 OS：
+        #     1. 先写 todo list: write_todos([...])
+        #     2. 看第一条 todo，去执行
+        #     3. 完成一个就 update_todos(...)
+        #     4. 如此反复直到所有 todo 完成
+
+            # ■ 内置规划工具
+            #   write_todos(todos)           - 创建或覆盖任务清单
+            #   update_todos(item, status)   - 标记某条 todo 完成/阻塞
+            #   read_todos()                 - 查看当前任务进展
+
+        # ⚡ 3. 子 Agent 生成（Sub-Agent Spawning）
+        #   解决的问题：有些子任务需要完全隔离的上下文
+        #   比如 Agent 在"调研 AI 框架"，突然需要"读一份中文 PDF"
+        #   如果在同一个上下文中做，污染当前思路
+        #
+        #   Deep Agent 解法：主 Agent 自动生成子 Agent，独立上下文窗口，干完就关
+        #
+        #   主 Agent（上下文：框架对比调研）
+        #     ├── 工具调用：web_search()
+        #     ├── 工具调用：write_file()
+        #     └── 👶 spawn_subagent("帮我读这个 PDF，总结要点")
+        #           └── 子 Agent（上下文：只有 PDF 内容 + 总结指令）
+        #                 ├── read_file("report.pdf")
+        #                 └── 返回总结给主 Agent
+
+            # ■ 自定义子 Agent
+                from deepagents import SubAgent
+
+                sub_agent = SubAgent(
+                    name="pdf_reader",
+                    tools=[extract_text, ocr_image],
+                    system_prompt="你是一个 PDF 分析师，只负责提取和总结文档内容。"
+                )
+
+                agent = create_deep_agent(
+                    model="anthropic:claude-sonnet-4-6",
+                    tools=[web_search],
+                    subagents=[sub_agent],
+                )
+
+            # ■ 子 Agent vs 多 Agent 对比
+            #                     子 Agent (Sub-Agent)                   多 Agent (Multi-Agent)
+            #   本质             一个 Agent 自己决定生个帮手             开发者预先定义好一群 Agent 怎么协作
+            #   产生方式         运行时动态创建                          启动前预先定义
+            #   生命周期         干完就死，临时工                        跟系统共存亡，正式员工
+            #   上下文           独立的上下文窗口                        通常共享部分状态
+            #   谁决策           Agent 自己决定需不需要帮手              开发者设计好团队结构
+
+        # ⚡ 4. Skills（技能）—— 按需加载的知识模块
+        #   skills 参数指向目录，内含 SKILL.md 文件
+        #   对比 system prompt：
+        #     system prompt：所有指令一次性塞进上下文
+        #     Skills：需要时才加载，省 tokens，减少干扰
+
+        # ⚡ 5. Memory（记忆）
+        #   memory 参数指向 AGENTS.md，启动时加载为持久身份设定
+        #   agent = create_deep_agent(..., memory=["./AGENTS.md"], skills=["./skills/"])
+
+            # ■ Context Summarization & Offloading
+            #   自动总结长线程 + 大输出自动卸载到磁盘
+
+        # ⚡ 6. Steering（控制）/ HITL
+
+            # ■ Human-in-the-Loop 人工介入
+            #   两种模式：
+
+            #   模式一：interrupt_on 参数预设
+                from deepagents import create_deep_agent
+                from langgraph.checkpoint.memory import MemorySaver
+
+                checkpointer = MemorySaver()
+                agent = create_deep_agent(
+                    model=model,
+                    checkpointer=checkpointer,  # 必传参数，用于状态持久化
+                    tools=[delete_file, read_file, send_email],
+                    interrupt_on={
+                        "delete_file": True,        # 删除文件需要审核
+                        "read_file": False,          # 读文件不需要审核
+                        "send_email": {
+                            "allowed_decisions": ["approve", "reject"]
+                        },                           # 发邮件要审核但不允许编辑内容
+                    },
+                )
+
+            #   决策类型控制
+                interrupt_on = {
+                    # 高风险操作: 允许所有决策类型
+                    "delete_file": {"allowed_decisions": ["approve", "reject", "edit"]},
+                    # 中等风险: 只允许批准或拒绝，不能修改参数
+                    "write_file": {"allowed_decisions": ["approve", "reject"]},
+                    # 关键操作: 必须执行，只允许批准
+                    "critical_op": {"allowed_decisions": ["approve"]},
+                }
+
+            #   模式二：运行时中断处理（完整流程）
+                import uuid
+                from langgraph.types import Command
+
+                # 1. 创建唯一 thread 配置，用于持久化会话状态
+                config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+
+                # 2. 发送请求
+                result = agent.invoke(
+                    {"messages": [{"role": "user", "content": "删除文件 temp.txt"}]},
+                    config=config
+                )
+
+                # 3. 检查是否因审核中断
+                if result.get("__interrupt__"):
+                    interrupts = result["__interrupt__"][0].value
+                    action_requests = interrupts["action_requests"]
+                    review_configs = interrupts["review_configs"]
+                    config_map = {cfg["action_name"]: cfg for cfg in review_configs}
+
+                    # 展示待审核操作
+                    for actions in action_requests:
+                        cfg = config_map[actions["name"]]
+                        print(f"待审核: {actions['name']}, 参数: {actions['args']}")
+                        print(f"允许决策: {cfg['allowed_decisions']}")
+
+                    # 4. 用户决策后恢复执行
+                    decisions = [{"type": "approve"}]
+                    result = agent.invoke(
+                        Command(resume={"decisions": decisions}), config=config
+                    )
+                    print("最终结果:", result["messages"][-1].content)
+
+            # ■ Structured Output（结构化输出）
+            #   通过 response_format 参数指定 Pydantic 模型
+            #   agent = create_deep_agent(..., response_format=Report)
+            #   result = agent.invoke(...)  # 直接返回 Report 对象
+
+
+    # 🎬 三大招合体演示
+    #   Agent 内部实际流程场景：调研框架 + 写报告 + 发邮件
+
+        from deepagents import create_deep_agent
+        from deepagents.backends import FilesystemBackend
+
+        agent = create_deep_agent(
+            model="anthropic:claude-sonnet-4-6",
+            tools=[web_search, send_email],
+            backend=FilesystemBackend(root_dir="./workdir"),
+        )
+
+        # agent.invoke({"messages": [{"role": "user", "content": """
+        #     调研一下 2026 年主流的多 Agent 框架，
+        #     写一个对比报告到 /output/report.md，
+        #     顺便帮我发个邮件摘要给我同事。
+        # """}]})
+
+        # Agent 内部实际流程：
+        # Step 1:  write_todos(["调研框架A", "调研框架B", "对比分析", "写报告", "发邮件"])
+        # Step 2:  web_search("LangGraph 2026 features") → 写入 /research/langgraph.md
+        # Step 3:  web_search("CrewAI 2026 comparison")  → 写入 /research/crewai.md
+        # Step 4:  spawn_subagent("读我搜集的材料，写对比分析")
+        #          → 👶 子Agent: read_file("/*.md") → write_file("/analysis/comparison.md")
+        # Step 5:  read_file("/analysis/comparison.md") → write_file("/output/report.md")
+        # Step 6:  send_email("摘要内容...")
+        # Step 7:  update_todos("全部完成 ✅")
+
+
+    # 🏗️ 深度 vs 广度叠用架构
+    #   deepagents 管深度，supervisor 管广度，langgraph 管底层
+    #
+    #    ┌────────────────────────────────────────────┐
+    #    │ langgraph_supervisor (将军——管谁去打仗)      │
+    #    ├────────────────────────────────────────────┤
+    #    │ deepagents (士兵——管仗怎么打赢)              │
+    #    ├───────────────────────────────────────────-┤
+    #    │ langgraph (基础设施——图、状态、持久化)         │
+    #    └────────────────────────────────────────────┘
+    #
+    #    langgraph_supervisor 和 deepagents 互补：
+    #    Supervisor 当将军编排，DeepAgent 当士兵深度干活
+    #    两者可以叠用：一个 Supervisor 管理 N 个 DeepAgent
+
+
+    # 🚢 部署到生产
+    #   走 LangSmith 平台: langgraph dev → langgraph deploy
+    #   LangSmith 配套：Tracing + Evaluation + Monitoring
+    #   文档：https://docs.langchain.com/oss/python/deepagents/going-to-production
+
+    #   Deep Agents Code（终端 CLI，对标 Claude Code）：
+    #     安装：curl -LsSf https://langch.in/dcode | bash
 
 
 # 🐴 Harness Engineering
