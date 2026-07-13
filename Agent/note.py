@@ -2932,7 +2932,7 @@
             # summarize 完了回 agent
             graph.add_edge("summarize", "agent")
 
-            graph.set_entry_point("agent")
+            graph.add_edge(START, "agent")
 
             app = graph.compile()    
 
@@ -9581,7 +9581,7 @@
     # 🎪 Agentic RAG 完整代码架构(LangGraph实现)
 
         from typing import TypedDict, List
-        from langgraph.graph import StateGraph, END
+        from langgraph.graph import StateGraph, END, START
         from langchain_core.tools import tool
 
         # --- State定义(在整个Workflow中传递)---
@@ -9643,7 +9643,7 @@
         workflow.add_node("rewrite", rewrite_retrieve)
         workflow.add_node("generate", generate)
 
-        workflow.set_entry_point("decide")
+        workflow.add_edge(START, "decide")
         workflow.add_conditional_edges("decide",
             lambda s: "retrieve" if s["needs_retrieval"] else "generate")
         workflow.add_edge("retrieve", "evaluate")
@@ -11100,9 +11100,9 @@
         from langchain_core.prompts import ChatPromptTemplate
         import operator
         from typing import Annotated, TypedDict, List
-        from langgraph.graph import StateGraph,  END
+        from langgraph.graph import StateGraph, START, END
         from IPython.display import Image, display
-        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 
         if not os.environ.get("OPENAI_API_KEY"):
@@ -11114,7 +11114,7 @@
 
         # 定义图的状态模式
         class State(TypedDict):
-            messages: Annotated[List[str], operator.add] # 💡
+            messages: Annotated[List[BaseMessage], operator.add] # 💡
 
         # 创建图的实例
             builder = StateGraph(State)
@@ -11150,7 +11150,7 @@
             builder.add_node("convert_messages", convert_messages)
 
             # 设置启动点
-            builder.set_entry_point("chat_with_model")
+            builder.add_edge(START, "chat_with_model")
 
             # 添加边
             builder.add_edge("chat_with_model", "convert_messages")
@@ -11265,7 +11265,7 @@
         from typing import List
 
         def extract_json(message: AIMessage) -> List[dict]:
-            """Extracts JSON content from a string where JSON is embedded between \`\`\`json and \`\`\` tags.
+            """Extracts JSON content from a string where JSON is embedded between json and tags.
 
             Parameters:
                 text (str): The text containing the JSON content.
@@ -11450,7 +11450,7 @@
                 session.close()  # 关闭会话
 
         # 定义好了所有节点函数后,开始构建图
-        from langgraph.graph import StateGraph, END
+        from langgraph.graph import StateGraph, END, START
         from typing import TypedDict, Annotated
         import operator
         from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage
@@ -11475,7 +11475,7 @@
         graph.add_node("insert_db", insert_db)
 
         # 设置图的启动节点
-        graph.set_entry_point("chat_with_model")
+        graph.add_edge(START, "chat_with_model")
 
         # 设置条件边
         graph.add_conditional_edges(
@@ -11646,7 +11646,7 @@
         graph.add_node("execute_function", execute_function)
 
         # 设置图的启动节点
-        graph.set_entry_point("chat_with_model")
+        graph.add_edge(START, "chat_with_model")
 
         # 设置条件边
         graph.add_conditional_edges(
