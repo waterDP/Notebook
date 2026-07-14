@@ -3119,7 +3119,7 @@ from openai import OpenAI
             agent=agent,
             memory=memory,
             verbose=True,           # 调试时开
-            max_iterations=3,       # 防死循环
+            max_iterations=3,       # ✈ 防死循环
             handle_parsing_errors=True,  # LLM 乱输出自动重试
         )
         #   AgentExecutor = 封装了 ReAct 循环的执行器,替你做以下工作:
@@ -3163,6 +3163,80 @@ from openai import OpenAI
         #         max_iterations=3,           # 防死循环
         #         handle_parsing_errors=True, # LLM 乱输出自动重试
         #     )
+
+
+    # ☎ langchain集成MCP
+        # ! pip install langchain-mcp-adapters langgraph "langchain[openai]" 
+        # ! pip install MCP
+
+        # 定义 MCP 服务端
+        import asyncio
+        from mcp.server.fastmcp import FastMCP
+        mcp = FastMCP('math')
+
+        @mcp.tool()
+        def add(a: int, b: int) -> int:
+            """Add two numbers"""
+            return a + b
+
+        @mcp.tool()
+        def multiply(a: int, b: int) -> int:
+            """Multiple to numbers"""
+            return a * b    
+
+        if __name__ == "__main__":
+            mcp.run(transport="stdio")
+
+
+        # 创建客户端并加载工具
+        import asynic
+        from mcp import ClientSession, StdioServerParameters
+        from mcp.client.stdio import stdio_client
+        from langchain_mcp_adapters import load_mcp_tools
+        from langchain.agents import create_agent
+
+        async def main():
+            # 1. 配置服务器连接参数
+            server_params = StdioServerParameters(
+                command="python",
+                args=['/path/to/match_server.py']
+            )   
+
+            # 2. 建立会话并加载工具
+            async with stdio_client(server_params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    tools = await load_mcp_tools(session) # 核心：将mcp工具转换为langChain工具
+
+                    # 创建Agent并执行
+                    agent = create_agent("openai:gpt-4.1", tools)
+                    result = agent.invoke({"messages": "what'a (3 + 5) x 12"})
+                    print(result)
+
+        if __name__ == "__main__":
+            asyncio.run(main())            
+
+
+        # 🔌 管理多个 MCP 服务器 (MultiServerMCPClient可以让你同时连接多个mcp服务器)
+        from langchain_mcp_adapters.client import MultiServerMCPClient
+        from langchain.agents import create_agent
+
+        client = MltiServerMCPClient(
+            {
+                "math": {
+                    "command": "python",
+                    "args": ["/path/to/math_server.py"],
+                    "transport": "stdio"
+                },
+                "weather": {
+                    "url": "http://localhost:8000/mcp",
+                    "transport": "http",  # 流式HTTP
+                }
+            }
+        )
+
+        tools = await client.get_tools()
+        agent = create_agent("openai:gpt-4.1", tools)
 
 
 # 🌐 MCP
@@ -13498,7 +13572,7 @@ from openai import OpenAI
 
         # ── 方式3: 内置工具包 ──
         # from crewai_tools import (
-        #     SerperTool,          # 搜索引擎
+        #     SerperTool ,         # 搜索引擎
         #     ScrapeWebsiteTool,   # 网页抓取
         #     FileReadTool,        # 文件读取
         #     DirectoryReadTool,   # 目录遍历
@@ -13720,26 +13794,26 @@ from openai import OpenAI
 
         # ── 方式1: 用 crewai-tools 包（推荐）──
         # pip install crewai-tools
-        # from crewai_tools import MCPTool
-        #
-        # tool = MCPTool.from_server(
-        #     name="github",
-        #     server_url="http://localhost:8080/mcp",
-        # )
-        # agent = Agent(role="开发者", goal="管理代码仓库", backstory="...", tools=[tool])
+        from crewai_tools import MCPTool
+        
+        tool = MCPTool.from_server(
+            name="github",
+            server_url="http://localhost:8080/mcp",
+        )
+        agent = Agent(role="开发者", goal="管理代码仓库", backstory="...", tools=[tool])
 
         # ── 方式2: 用 MCP 官方 SDK 自定义工具（灵活）──
-        # from mcp import ClientSession
-        # from crewai.tools import tool
-        #
-        # session = ClientSession(...)  # 连接 MCP Server
-        #
-        # @tool("file_read")
-        # def file_read(path: str) -> str:
-        #     """读取本地文件内容"""
-        #     return session.call_tool("read_file", {"path": path})
-        #
-        # agent = Agent(role="文件分析师", goal="分析代码", backstory="...", tools=[file_read])
+        from mcp import ClientSession
+        from crewai.tools import tool
+        
+        session = ClientSession(...)  # 连接 MCP Server
+        
+        @tool("file_read")
+        def file_read(path: str) -> str:
+            """读取本地文件内容"""
+            return session.call_tool("read_file", {"path": path})
+        
+        agent = Agent(role="文件分析师", goal="分析代码", backstory="...", tools=[file_read])
 
         # MCP 集成价值: 让 CrewAI Agent 能直接调用任何 MCP Server 的能力
         # （文件系统、数据库、GitHub、浏览器自动化等），大幅扩展 Agent 的工具生态
