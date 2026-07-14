@@ -14277,8 +14277,12 @@ from openai import OpenAI
 
         # 团队
         term = TextMentionTermination("TERMINATE") | TextMentionTermination("DONE")
-        team = SelectorGroupChat([researcher, analyst, summarizer], model_client=model,
-                                 max_turns=8, termination_condition=term)
+        team = SelectorGroupChat(
+            [researcher, analyst, summarizer], 
+            model_client=model,
+            max_turns=8, 
+            termination_condition=term
+        )
 
         async def run():
             result = await team.run(task="讨论:2026年Agent开发最重要的框架有哪些?")
@@ -14313,15 +14317,17 @@ from openai import OpenAI
         # Swarm 模式下,Agent可以主动把任务交给另一个Agent(Handoff):
 
         from autogen_agentchat.teams import Swarm
-        from autogen_agentchat.conditions import HandoffTermination
+        from autogen_agentchat.conditions import HandoffTerminationmention
 
         agent1 = AssistantAgent(
-            "support", model,
+            "support", 
+            model,
             system_message="你是客服。如需技术问题,handoff给tech_team。说中文。用 HANDOFF 交办。",
             handoffs=["tech_team"],
         )
         agent2 = AssistantAgent(
-            "tech_team", model,
+            "tech_team", 
+            model,
             system_message="你是技术专家。解决问题后回复 TERMINATE。说中文。",
         )
 
@@ -15990,9 +15996,12 @@ from openai import OpenAI
             t_edit = Task(description="把上一步的博客精简成一句 25 字以内的导读。",
                           expected_output="一句 25 字以内的导读。", agent=editor)
 
-            crew = Crew(agents=[researcher, writer, editor],  # 把一组 agent + task 编成一个团队
-                        tasks=[t_research, t_write, t_edit],
-                        process=Process.sequential, verbose=False)   # sequential = 流程编排
+            crew = Crew(
+                agents=[researcher, writer, editor],  # 把一组 agent + task 编成一个团队
+                tasks=[t_research, t_write, t_edit],
+                process=Process.sequential, 
+                verbose=False
+            )   # sequential = 流程编排
 
             result = await crew.kickoff_async(inputs={"topic": "多智能体协作模式"})  # Jupyter 自带事件循环,须用异步版启动(过程中 web_search 被调用时会打印)
             print("\n【各工序产出】")
