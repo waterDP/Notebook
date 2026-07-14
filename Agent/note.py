@@ -39,7 +39,7 @@
 
     # 🚀 基础用法（OpenAI SDK）
         from langgraph.stream.run_stream import SubgraphStatus
-from openai import OpenAI
+        from openai import OpenAI
         import numpy as np
 
         client = OpenAI(api_key="sk-xxx")  # 换成你的 key
