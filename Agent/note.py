@@ -38,7 +38,8 @@
         # 5. 注意领域适配——通用场景 OpenAI 够用；纯中文场景 BGE 性价比更高，可本地离线
 
     # 🚀 基础用法（OpenAI SDK）
-        from openai import OpenAI
+        from langgraph.stream.run_stream import SubgraphStatus
+from openai import OpenAI
         import numpy as np
 
         client = OpenAI(api_key="sk-xxx")  # 换成你的 key
@@ -11149,16 +11150,13 @@
             builder.add_node("chat_with_model", chat_with_model)
             builder.add_node("convert_messages", convert_messages)
 
-            # 设置启动点
-            builder.add_edge(START, "chat_with_model")
-
             # 添加边
+            builder.add_edge(START, "chat_with_model")
             builder.add_edge("chat_with_model", "convert_messages")
             builder.add_edge("convert_messages", END)
 
             # 编译图
             graph = builder.compile()
-
 
             query="你好,请你介绍一下你自己"
             input_message = {"messages": [HumanMessage(content=query)]}
@@ -11275,7 +11273,7 @@
             """
             text = message.content
             # 定义正则表达式模式来匹配JSON块
-            pattern = r"\`\`\`json(.*?)\`\`\`"
+            pattern = r"```json(.*?)```"
 
             # 在字符串中查找模式的所有非重叠匹配
             matches = re.findall(pattern, text, re.DOTALL)
@@ -11292,7 +11290,7 @@
             [
                 (
                     "system",
-                    "Answer the user query. Wrap the output in `json`",
+                    "Answer the user query. Wrap the output in ```json```",
                 ),
                 ("human", "{query}"),
             ]
@@ -11368,6 +11366,7 @@
             response: str = Field(description="A conversational response to the user's query")
 
 
+        # 💡 这里是重点
         # 定义最终响应模型,可以是用户信息或一般响应
         class FinalResponse(BaseModel):
             final_output: Union[UserInfo, ConversationalResponse]
@@ -11413,19 +11412,15 @@
         Session = sessionmaker(bind=engine)
 
 
-        def chat_with_model(state):
+        def chat_with_model(state): 💡 这里是重点
             """generate structured output"""
-            print(state)
-            print("-----------------")
-            messages = state['messages']
             structured_llm = llm.with_structured_output(FinalResponse)
+            messages = state['messages']
             response = structured_llm.invoke(messages)
             return {"messages": [response]}
 
         def final_answer(state):
             """generate natural language responses"""
-            print(state)
-            print("-----------------")
             messages = state['messages'][-1]
             response = messages.final_output.response
             return {"messages": [response]}
@@ -11458,6 +11453,7 @@
         class AgentState(TypedDict):
             messages: Annotated[list[AnyMessage], operator.add]
 
+        # 💡 这里是重点
         def generate_branch(state: AgentState):
             result = state['messages'][-1]
             output = result.final_output
@@ -11559,8 +11555,6 @@
 
         from langgraph.prebuilt import ToolNode
         tools = [insert_db, fetch_real_time_info, get_weather]
-        tool_node = ToolNode(tools)
-
 
         import getpass
         import os
@@ -11573,10 +11567,6 @@
 
         llm = ChatOpenAI(model="gpt-4o")
 
-        model_with_tools = llm.bind_tools(tools)
-
-
-
         # 定义正常生成模型回复的模型
         class ConversationalResponse(BaseModel):
             """Respond to the user's query in a conversational manner. Be kind and helpful."""
@@ -11585,24 +11575,20 @@
 
         # 定义最终响应模型,可以是用户信息或一般响应
         class FinalResponse(BaseModel):
-            final_output: Union[ConversationalResponse, SearchQuery, WeatherLoc, UserInfo]
+            final_output: Union[ConverstaionalResponse, SearchQuery, WeatherLoc, UserInfo]
 
 
         # 依次定义三个节点函数
         def chat_with_model(state):
             """generate structured output"""
-            print(state)
-            print("-----------------")
             messages = state['messages'] # 此时才开始,只有一个message在messages列表里面
-            structured_llm = llm.with_structured_output(FinalResponse)
+            structured_llm = llm.with_structured_output(FinalResponse) # 💡 关键点
             response = structured_llm.invoke(messages)
             return {"messages": [response]}
 
 
         def final_answer(state):
             """gxenerate natural language responses"""
-            print(state)
-            print("-----------------")
             messages = state['messages'][-1]
             response = messages.final_output.response
             return {"messages": [response]}
@@ -11610,12 +11596,12 @@
 
         def execute_function(state):
             """generate natural language responses"""
-            print(state)
-            print("-----------------")
             messages = state['messages'][-1].final_output
-            # model_with_tools = llm.bind_tools(tools)
-            # tool_node = ToolNode(tools)
-            response = tool_node.invoke({"messages": [model_with_tools.invoke(str(messages))]}) # ⚡
+
+            # 💡 关键点
+            model_with_tools = llm.bind_tools(tools)
+            tool_node = ToolNode(tools)
+            response = tool_node.invoke({"messages": [model_with_tools.invoke(str(messages))]}) # 💡 关键点
 
             print(f"response:{response}")
             response = response["messages"][0].content
@@ -11841,58 +11827,58 @@
 
         llm = ChatOpenAI(model="gpt-4o")
 
-    # 🚀 创建ReAct代理
+        # 创建ReAct代理
         from langgraph.prebuilt import create_react_agent
 
         graph = create_react_agent(llm, tools=tools) # ⚙️ 我们可以逐步分析和解释一下这一行代码中的涉及的图构建过程
 
-        # ⚙️ step 1: 定义状态模式
-        from typing import Annotated
-        from typing_extensions import TypedDict
-        from langgraph.graph.message import add_messages
-        class State(TypedDict):
-            messages: Annotated[list, add_messages]
+            # ⚙️ step 1: 定义状态模式
+            from typing import Annotated
+            from typing_extensions import TypedDict
+            from langgraph.graph.message import add_messages
+            class State(TypedDict):
+                messages: Annotated[list, add_messages]
 
-        # ⚙️ step2: 定义Router Function
-        # 定义决定是否继续执行任务的路由函数
-        def should_continue(state: State):
-            messages = state["messages"]
-            last_message = messages[-1]
-            # 如果不是工具调用,则结束
-            if not last_message.tool_calls:
-                return END
-            # 如果是的话,则进入工具库中选择函数执行
-            else:
-                return "tools"
+            # ⚙️ step2: 定义Router Function
+            # 定义决定是否继续执行任务的路由函数
+            def should_continue(state: State):
+                messages = state["messages"]
+                last_message = messages[-1]
+                # 如果不是工具调用,则结束
+                if not last_message.tool_calls:
+                    return True
+                # 如果是的话,则进入工具库中选择函数执行
+                else:
+                    return False
 
-        # ⚙️ step3: 定义大模型的交互函数
-        from typing import Literal
-        from langchain_core.runnables import RunnableConfig
-        # 定义大模型交互的节点函数
-        async def call_model(state: State, config: RunnableConfig):
-            messages = state["messages"]
-            response = await model.ainvoke(messages, config)
-            # 将调用大模型后得到的响应,追加到消息列表中
-            return {"messages": response}
+            # ⚙️ step3: 定义大模型的交互函数
+            from typing import Literal
+            from langchain_core.runnables import RunnableConfig
+            # 定义大模型交互的节点函数
+            async def call_model(state: State, config: RunnableConfig):
+                messages = state["messages"]
+                response = await model.ainvoke(messages, config)
+                # 将调用大模型后得到的响应,追加到消息列表中
+                return {"messages": response}
 
-        # ⚙️ step4: 构建图结构
-        from langgraph.graph import END, START, StateGraph
-        # 定义一个新图
-        workflow = StateGraph(State)
-        workflow.add_node("agent", call_model)
-        workflow.add_node("tools", tool_node)
-        # 设置起始节点为 agent
-        workflow.add_edge(START, "agent")
-        # 添加条件边 -- > Router Agent
-        workflow.add_conditional_edges(
-            "agent",
-            should_continue,
-            ["tools", END],
-        )
-        # 添加回调边
-        workflow.add_edge("tools", "agent")
-        # 编译图
-        app = workflow.compile()
+            # ⚙️ step4: 构建图结构
+            from langgraph.graph import END, START, StateGraph
+            # 定义一个新图
+            workflow = StateGraph(State)
+            workflow.add_node("agent", call_model)
+            workflow.add_node("tools", tool_node)
+            # 设置起始节点为 agent
+            workflow.add_edge(START, "agent")
+            # 添加条件边 -- > Router Agent
+            workflow.add_conditional_edges(
+                "agent",
+                should_continue,
+                {True: "tools", False: END}
+            )
+            # 添加回调边
+            workflow.add_edge("tools", "agent")
+            # 编译图
+            app = workflow.compile()
 
     # 🐠 流式输出
         """
@@ -11923,77 +11909,52 @@
         input_message = {"messages": ["你好,南京现在的天气怎么样?"]}
         print_stream(graph.stream(input_message, stream_mode="values"))
 
-    # 🚂 Langgraph中的事件流
-        async for event in graph.astream_events({"messages": ["你好,请你介绍一下你自己"]}, version="v2"):
-            kind = event["event"]
-            print(f"{kind}: {event['name']}")
+        # 🚂 LangGraph 提供两种流式输出，理解它们的选择场景就够用
 
-        """
-        on_chain_start: LangGraph
-        on_chain_start: __start__
-        on_chain_end: __start__
-        on_chain_start: agent
-        on_chain_start: call_model
-        on_chain_start: RunnableSequence
-        on_chain_start: StateModifier
-        on_chain_end: StateModifier
-        on_chat_model_start: ChatOpenAI
-        on_chat_model_stream: ChatOpenAI
-        on_chat_model_stream: ChatOpenAI
-        ...
-        on_chat_model_stream: ChatOpenAI
-        on_chat_model_stream: ChatOpenAI
-        on_chat_model_end: ChatOpenAI
-        on_chain_end: RunnableSequence
-        on_chain_end: call_model
-        on_chain_start: _write
-        on_chain_end: _write
-        on_chain_start: should_continue
-        on_chain_end: should_continue
-        on_chain_stream: agent
-        on_chain_end: agent
-        on_chain_stream: LangGraph
-        on_chain_end: LangGraph
-        """
+            # ■ stream(mode="values") —— 状态级流
+            #   每轮 Agent 完成一次思考/工具调用后，返回当前完整状态
+            #   适合：聊天对话、基本调试
+            #   用法：
+                for chunk in graph.stream(input, stream_mode="values"):
+                    message = chunk["messages"][-1]
+                    message.pretty_print()  # 逐轮打印对话
 
-        # 🍋 我们可以从中提取具体的某个event事件,比如
-            events = []
-            async for event in graph.astrea_events({"messages": ["你好,请你介绍一下你自己"]}, version="vw"):
-                events.append(event)
+            # ■ astream_events(version="v2") —— 事件级流
+            #   返回 LLM 执行过程中的全部事件（开始/结束/逐 token）
+            #   适合：前端打字机效果、进度指示、调试
+            #   事件字段：
+            #     event — 事件类型（on_chat_model_stream / on_chain_start / ...）
+            #     name  — 事件来源（agent / ChatOpenAI / tools / ...）
+            #     data  — 事件关联数据
 
-            """
-            所有事件都会包含event、name和data字段:
-            - event: 正在发出的事件类型
-            - name: 事件的名称
-            - data: 事件关联的数据
-            """
+                # 按事件类型过滤：只取 LLM 逐 token 输出
+                async for event in graph.astream_events(input, version="v2"):
+                    if event["event"] == "on_chat_model_stream":
+                        print(event["data"]["chunk"].content, end="", flush=True)
 
-            # 基于此就可以按照`name`、`tags`或`type`等不同的字段来进行事件过滤,比如我们现在选择仅包含聊天模型的输出:
-            async for event in graph.astream_events({"messages": ["你好,请你介绍一下你自己"]}, version="v2"):
-                kind = event["event"]
-                if kind == "on_chat_model_stream":
-                    print(event, end="|", flush=True)
+            # ■ 选型建议
+            #   stream(mode="values") → 90% 场景够用（聊天、调试）
+            #   astream_events        → 需要打字机效果/前端实时进度时用
 
+                """
+                每种类型的事件都包含不同格式的数据。而其中`data`是一个非常重要的,包含此事件的实际数据。
+                在`on_chat_model_stream`事件中,就是需要响应的流式`Token`,如上图所示是一个 `AIMessageChunk`,其中包含消息的`content`以及`id` ,
+                提取的代码就非常简单了,直接采用如下代码:
+                """
+                first = True
+                async for msg, metadata in graph.astream({"messages": ["你好,请你介绍一下你自己"]}, stream_mode="messages"):
+                    if msg.content and not isinstance(msg, HumanMessage):
+                        print(msg.content, end="|", flush=True)
 
-            """
-            每种类型的事件都包含不同格式的数据。而其中`data`是一个非常重要的,包含此事件的实际数据。
-            在`on_chat_model_stream`事件中,就是需要响应的流式`Token`,如上图所示是一个 `AIMessageChunk`,其中包含消息的`content`以及`id` ,
-            提取的代码就非常简单了,直接采用如下代码:
-            """
-            first = True
-            async for msg, metadata in graph.astream({"messages": ["你好,请你介绍一下你自己"]}, stream_mode="messages"):
-                if msg.content and not isinstance(msg, HumanMessage):
-                    print(msg.content, end="|", flush=True)
+                    if isinstance(msg, AIMessageChunk):
+                        if first:
+                            gathered = msg
+                            first = False
+                        else:
+                            gathered = gathered + msg
 
-                if isinstance(msg, AIMessageChunk):
-                    if first:
-                        gathered = msg
-                        first = False
-                    else:
-                        gathered = gathered + msg
-
-                    if msg.tool_call_chunks:
-                        print(gathered.tool_calls)
+                        if msg.tool_call_chunks:
+                            print(gathered.tool_calls) 
 
     # 💾 LangGraph检查点(Checkpoint)机制 — 短期记忆
         # LangGraph 的检查点(checkpoint)机制是跨轮次对话记忆的基础。
@@ -12006,108 +11967,124 @@
         # - PostgresSaver (PostgreSQL): 生产推荐,支持并发
         # - RedisSaver (Redis): 低延迟场景
 
-    # 💾 LangGraph长短期记忆实现机制及检查点的使用(基础)
-        import getpass
-        import os
-        from langchain_openai import ChatOpenAI
-        from typing import Annotated
-        from typing_extensions import TypedDict
-        from IPython.display import Image, display
-        from langgraph.graph import StateGraph, MessagesState, START, END
-        from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage
-        from langgraph.graph.message import add_messages
+        # 💾 LangGraph长短期记忆实现机制及检查点的使用(准备)
+            import getpass
+            import os
+            from langchain_openai import ChatOpenAI
+            from typing import Annotated
+            from typing_extensions import TypedDict
+            from IPython.display import Image, display
+            from langgraph.graph import StateGraph, MessagesState, START, END
+            from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage
+            from langgraph.graph.message import add_messages
 
 
-        if not os.environ.get("OPENAI_API_KEY"):
-            os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+            if not os.environ.get("OPENAI_API_KEY"):
+                os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
 
-        # 定义大模型实例
-        llm = ChatOpenAI(model="gpt-4o")
+            # 定义大模型实例
+            llm = ChatOpenAI(model="gpt-4o")
 
-        # 定义状态模式
-        class State(TypedDict):
-            messages: Annotated[list, add_messages]
+            # 定义状态模式
+            class State(TypedDict):
+                messages: Annotated[list, add_messages]
 
-        # 定义大模型交互节点
-        def call_model(state: State):
-            response = llm.invoke(state["messages"])
-            return {"messages": response}
+            # 定义大模型交互节点
+            def call_model(state: State):
+                response = llm.invoke(state["messages"])
+                return {"messages": response}
 
-        # 定义翻译节点
-        def translate_message(state: State):
-            system_prompt = """
-            Please translate the received text in any language into English as output
-            """
-            messages = state['messages'][-1]
-            messages = [SystemMessage(content=system_prompt)] + [HumanMessage(content=messages.content)]
-            response = llm.invoke(messages)
-            return {"messages": response}
+            # 定义翻译节点
+            def translate_message(state: State):
+                system_prompt = """
+                Please translate the received text in any language into English as output
+                """
+                messages = state['messages'][-1]
+                messages = [SystemMessage(content=system_prompt)] + [HumanMessage(content=messages.content)]
+                response = llm.invoke(messages)
+                return {"messages": response}
 
-        # 构建状态图
-        builder = StateGraph(State)
+            # 构建状态图
+            builder = StateGraph(State)
 
-        # 向图中添加节点
-        builder.add_node("call_model", call_model)
-        builder.add_node("translate_message", translate_message)
+            # 向图中添加节点
+            builder.add_node("call_model", call_model)
+            builder.add_node("translate_message", translate_message)
 
-        # 构建边
-        builder.add_edge(START, "call_model")
-        builder.add_edge("call_model", "translate_message")
-        builder.add_edge("translate_message", END)
+            # 构建边
+            builder.add_edge(START, "call_model")
+            builder.add_edge("call_model", "translate_message")
+            builder.add_edge("translate_message", END)
 
-        # 编译图
-        graph = builder.compile()
-        # 生成可视化图像结构 这里是测试下图是不是正确的
-        display(Image(simple_short_graph.get_graph().draw_mermaid_png()))
+            # 编译图
+            graph = builder.compile()
+            # 生成可视化图像结构 这里是测试下图是不是正确的
+            display(Image(simple_short_graph.get_graph().draw_mermaid_png()))
 
-    # 💾 检查点的特定实现类型-MemorySaver
-        from langgraph.checkpoint.memory import MemorySaver
-        checkpointer = MemorySaver()
-        graph_width_memory = builder.compile(checkpointer=checkpointer)
+        # 💾 检查点的特定实现类型-MemorySaver
+            from langgraph.checkpoint.memory import MemorySaver
+            checkpointer = MemorySaver()
+            graph_with_memory = builder.compile(checkpointer=checkpointer)
 
-        config = {"configurable": {"thread_id": '1'}}
+            config = {"configurable": {"thread_id": '1'}}
 
-        for chunk in graph_with_memory.stream({"messages": ["你好,我叫木羽"]}, config, stream_mode="values"):
-            chunk["messages"][-1].pretty_print()
+            for chunk in graph_with_memory.stream({"messages": ["你好,我叫木羽"]}, config, stream_mode="values"):
+                chunk["messages"][-1].pretty_print()
 
 
-        for chunk in graph_with_memory.stream({"messages": ["请问我叫什么?"]}, config, stream_mode="values"):
-            chunk["messages"][-1].pretty_print()
+            for chunk in graph_with_memory.stream({"messages": ["请问我叫什么?"]}, config, stream_mode="values"):
+                chunk["messages"][-1].pretty_print()
 
-        for chunk in graph_with_memory.stream({"messages": ["我刚才都问了你什么问题?"]}, config, stream_mode="values"):
-            chunk["messages"][-1].pretty_print()
+            for chunk in graph_with_memory.stream({"messages": ["我刚才都问了你什么问题?"]}, config, stream_mode="values"):
+                chunk["messages"][-1].pretty_print()
 
-    # 💾 检查点的特定实现类型-SqliteSaver
-        # pip install langgraph-checkpoint-sqlite
+        # 💾 检查点的特定实现类型-SqliteSaver
+            # pip install langgraph-checkpoint-sqlite
 
-        from langgraph.checkpoint.sqlite import SqliteSaver
+            from langgraph.checkpoint.sqlite import SqliteSaver
 
-        # 📌 关键:大部分场景你不需要手动调用 checkpointer.put/list
-        #    只要在 compile() 时传入 checkpointer,
-        #    LangGraph 会自动管理 checkpoint 的保存和恢复。
-        #
-        #    下面演示的是 手动操作 checkpoint 的低级 API,
-        #    了解原理即可,生产代码中极少用到。
+            # 📌 关键:大部分场景你不需要手动调用 checkpointer.put/list
+            #    只要在 compile() 时传入 checkpointer,
+            #    LangGraph 会自动管理 checkpoint 的保存和恢复。
+            #
+            #    下面演示的是 手动操作 checkpoint 的低级 API,
+            #    了解原理即可,生产代码中极少用到。
 
-        with SqliteSaver.from_conn_string(":memory:") as memory:
-            pass  # 实际使用: checkpointer=SqliteSaver.from_conn_string("checkpoints.db")
+            with SqliteSaver.from_conn_string(":memory:") as memory:
+                pass  # 实际使用: checkpointer=SqliteSaver.from_conn_string("checkpoints.db")
 
-        # 💾 创建持久化的sqlite存储
-        from langgraph.checkpoint.sqlite import SqliteSaver
+            # 💾 创建持久化的sqlite存储
+            from langgraph.checkpoint.sqlite import SqliteSaver
 
-        # ✅ 推荐用法(编译图时直接传入)
-        # checkpointer = SqliteSaver.from_conn_string("checkpoints.db")
-        # graph = builder.compile(checkpointer=checkpointer)
+            # ✅ 推荐用法(编译图时直接传入)
+            # checkpointer = SqliteSaver.from_conn_string("checkpoints.db")
+            # graph = builder.compile(checkpointer=checkpointer)
 
-    # 💾 创建ReAct代理时,添加Memory
-        from langgraph.checkpoint.sqlite import SqliteSaver
-        from langgraph.prebuilt import create_react_agent
+        # 💾 创建ReAct代理时,添加Memory
+            from langgraph.checkpoint.sqlite import SqliteSaver
+            from langgraph.prebuilt import create_react_agent
 
-        with SqliteSaver.from_conn_string(":memory:") as checkpointer:
+            with SqliteSaver.from_conn_string(":memory:") as checkpointer:
+                graph = create_react_agent(llm, tools=tools, checkpointercheckpointer)
+                display(Image(graph.get_graph().draw_mermaid_png()))
+
+                config = {"configurable": {"thread_id": "1"}}
+
+                for chunk in graph.stream({"messages": ["你好,我叫木羽"]}, config, stream_mode="values"):
+                    chunk["messages"][-1].pretty_print()
+
+                for chunk in graph.stream({"messages": ["请问我叫什么?"]}, config, stream_mode="values"):
+                    chunk["messages"][-1].pretty_print()
+
+            # 但,这种方法不能跨单元传播,就是说你的graph只有在with里面使用,不能在with外面使用
+
+            from contextlib import ExitStack
+
+            stack = ExitStack()
+            checkpointer = stack.enter_context(SqliteSaver.from_conn_string(":memory:"))
             graph = create_react_agent(llm, tools=tools, checkpointer=checkpointer)
-            display(Image(graph.get_graph().draw_mermaid_png()))
 
-            config = {"configurable": {"thread_id": "1"}}
+            config = {"configurable": {"thread_id": "102"}}
 
             for chunk in graph.stream({"messages": ["你好,我叫木羽"]}, config, stream_mode="values"):
                 chunk["messages"][-1].pretty_print()
@@ -12115,52 +12092,36 @@
             for chunk in graph.stream({"messages": ["请问我叫什么?"]}, config, stream_mode="values"):
                 chunk["messages"][-1].pretty_print()
 
-        # 但,这种方法不能跨单元传播,就是说你的graph只有在with里面使用,不能在with外面使用
-
-        from contextlib import ExitStack
-
-        stack = ExitStack()
-        checkpointer = stack.enter_context(SqliteSaver.from_conn_string(":memory:"))
-        graph = create_react_agent(llm, tools=tools, checkpointer=checkpointer)
-
-        config = {"configurable": {"thread_id": "102"}}
-
-        for chunk in graph.stream({"messages": ["你好,我叫木羽"]}, config, stream_mode="values"):
-            chunk["messages"][-1].pretty_print()
-
-        for chunk in graph.stream({"messages": ["请问我叫什么?"]}, config, stream_mode="values"):
-            chunk["messages"][-1].pretty_print()
-
-        stack.close()
+            stack.close()
 
 
-        # 异步版本的
-        import asyncio
-        from contextlib import AsyncExitStack
-        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+            # 异步版本的
+            import asyncio
+            from contextlib import AsyncExitStack
+            from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-        # ⚠️ ExitStack/AsyncExitStack 模式是旧版 workaround
-        # 新版 LangGraph 的 SqliteSaver 可以直接作为 context manager 使用:
-        # with SqliteSaver.from_conn_string("checkpoints.db") as memory:
-        #     graph = create_react_agent(llm, tools=tools, checkpointer=memory)
-        #
-        # 或者直接创建再编译(最简洁):
-        # memory = SqliteSaver.from_conn_string("checkpoints.db")
-        # graph = create_react_agent(llm, tools=tools, checkpointer=memory)
+            from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+            stack = AsyncExitStack()
+            memory = await stack.enter_async_context(AsyncSqliteSaver.from_conn_string(":memory:"))
 
-        stack = AsyncExitStack()
-        memory = await stack.enter_async_context(AsyncSqliteSaver.from_conn_string(":memory:"))
+            graph = create_react_agent(llm, tools=tools, checkpointer=memory)
 
-        graph = create_react_agent(llm, tools=tools, checkpointer=memory)
+            config = {"configurable": {"thread_id": "24"}}
 
-        config = {"configurable": {"thread_id": "24"}}
+            async for chunk in graph.astream({"messages": ["帮我查一下北京的天气"]}, config, stream_mode="values"):
+                chunk["messages"][-1].pretty_print()
 
-        async for chunk in graph.astream({"messages": ["帮我查一下北京的天气"]}, config, stream_mode="values"):
-            chunk["messages"][-1].pretty_print()
+            await stack.aclose()
 
-        await stack.aclose()
+            # ⚠️ ExitStack/AsyncExitStack 模式是旧版 workaround
+            # 新版 LangGraph 的 SqliteSaver 可以直接作为 context manager 使用:
+            # with SqliteSaver.from_conn_string("checkpoints.db") as memory:
+            #     graph = create_react_agent(llm, tools=tools, checkpointer=memory)
+            #
+            # 或者直接创建再编译(最简洁):
+            # memory = SqliteSaver.from_conn_string("checkpoints.db")
+            # graph = create_react_agent(llm, tools=tools, checkpointer=memory)
 
     # 🔒 长期记忆和Store(仓库) — InMemoryStore
         # Store 是 LangGraph 的长期记忆层,存储跨对话/跨用户的结构化数据。
@@ -12174,12 +12135,17 @@
         from langgraph.store.memory import InMemoryStore
 
         in_memory_store = InMemoryStore()
+
         user_id = "1"
+
+        # 构建命名空间
         namespace_for_memory = ("memories", user_id)
 
         import uuid
         memory_id = str(uuid.uuid4())
+
         memory = {"user" : "你好,我叫木羽"}
+
         in_memory_store.put(namespace_for_memory, memory_id,  memory)
 
         # 当创建完成后,可以使用store.search读取命名空间中的记忆,这将以列表的形式返回给定用户的所有记忆。最近的记忆是列表中的最后一个。
@@ -12188,7 +12154,7 @@
         """
         {'value': {'user': '你好,我叫木羽'},
          'key': '6db0b2e0-8e51-4fbd-b3e1-761edf221ea0',
-         'namespace': ['1', 'memories'],
+         'namespace': ['memories', '1'],
          'created_at': '2024-11-01T08:45:59.453639+00:00',
          'updated_at': '2024-11-01T08:45:59.453639+00:00'}
         """
@@ -12244,6 +12210,7 @@
             # 根据用户id检索记忆
             memories = runtime.store.search(namespace)
             info = "\n".join([d.value["data"] for d in memories])
+            # 💉 把记忆注入到上下文中
             system_msg = f"Answer the user's question in context: {info}"
 
             response = llm.invoke(
@@ -12375,7 +12342,6 @@
             通过`get_state()`方法,可以查看到截至断点`breakpoint`前,图的运行过程中都产生了哪些状态信息:
             """
             snapshot = graph.get_state(config)
-            snapshot
 
             """
             StateSnapshot(
@@ -12556,7 +12522,7 @@
 
             # 定义一个Router Function 用来根据大模型的实时响应判断是执行外部函数调用还是直接输出最终的响应
             def should_continue(state):
-                last_message = state["messages"][-1]  # 🔧 fix: 变量名 typo (原版 last_messages vs last_message 不匹配)
+                last_message = state["messages"][-1]
                 if not last_message.tool_calls:
                     return "end"
                 else:
@@ -12974,7 +12940,7 @@
             run_multi_round_dialogue(graph, config)
 
     # 🚂 langgrah构建多智能体系统
-        # 🚀 Acchitectures架构
+        # 🚀 Architectures架构
             """
             - NetWork(网络):每个代理都可以与其他每个代理通信。任何代理都可以决定接下来要呼叫哪个其他代理。
             - Supervisor(主管):每个代理都与一个 `Supervisor` 代理通信。由 `Supervisor` 代理决定接下来应调用哪个代理。
@@ -12996,7 +12962,7 @@
                 from typing import TypedDict
                 class ParentState(TypedDict):
                     user_input: str   # 用来接收用户的输入
-                    final_answer: str   # 用来存储大模型针对用户输入的响应
+                    final_answer: str   # 🍒 用来存储大模型针对用户输入的响应
 
                 # step3: 定义父图的节点逻辑
                 def parent_node(state: ParentState):
@@ -13005,7 +12971,7 @@
 
                 # step4: 定义子图的状态模式
                 class SubgraphState(TypedDict):
-                    final_answer: str
+                    final_answer: str # 🍒
                     summary_answer: str
 
                 # step5: 定义子图的节点逻辑
@@ -13036,21 +13002,25 @@
                     return {"final_answer": response.content}
 
                 # step6: 定义子图的图结构并且进行编译
-                from langgraph.graph import START, StateGraph
+                from langgraph.graph import START, StateGraph, END
 
                 subgraph_builder = StateGraph(SubgraphState)
                 subgraph_builder.add_node(subgraph_node_1)
                 subgraph_builder.add_node(subgraph_node_2)
+
                 subgraph_builder.add_edge(START, "subgraph_node_1")
                 subgraph_builder.add_edge("subgraph_node_1", "subgraph_node_2")
+                subgraph_builder.add_edge("subgrahp_node_2", END)
                 subgraph = subgraph_builder.compile()
 
                 # step7: 定义父图的图结构,并将子图作为节点添加至父图
                 builder = StateGraph(ParentState)
                 builder.add_node("node_1", parent_node)
-
                 builder.add_node("node_2", subgraph)
+
+                builder.add_edge(START, "node_1")
                 builder.add_edge("node_1", "node_2")
+                builder.add_edge("node_2", END)
                 graph = builder.compile()
 
                 # step8: 可视化完整的图结构
@@ -13110,9 +13080,11 @@
                 subgraph_builder.add_node(subgraph_node_2)
                 subgraph_builder.add_edge(START, "subgraph_node_1")
                 subgraph_builder.add_edge("subgraph_node_1", "subgraph_node_2")
+                sbugraph_builder.add_edge("subgraph_node_2", END)
                 subgraph = subgraph_builder.compile()
 
-                def parent_node_2(state: ParentState):
+                # 💡 关键点
+                def pipe_node(state: ParentState):
                     # 将父图中的状态转换为子图状态
                     response = subgraph.invoke({"response_answer": state["final_answer"]})
                     # 将子图状态再转换回父状态
@@ -13121,10 +13093,12 @@
                 builder = StateGraph(ParentState)
                 builder.add_node("node_1", parent_node_1)
 
-                # 注意,我们使用的不是编译后的子图,而是调用子图的' node_2 '函数
-                builder.add_node("node_2", parent_node_2)
+                # 注意,我们使用的不是编译后的子图,而是调用'pipe_node '函数
+                builder.add_node("pipe_node", pipe_node)
+
                 builder.add_edge(START, "node_1")
-                builder.add_edge("node_1", "node_2")
+                builder.add_edge("node_1", "pipe_node")
+                builder.add_edge("pipe_node", END)
                 graph = builder.compile()
 
                 from IPython.display import Image, display
@@ -13240,6 +13214,7 @@
         builder = StateGraph(State)
         builder.add_node("approval", human_approval_node)
         builder.add_node("process", process_node)
+
         builder.add_edge(START, "approval")
         builder.add_edge("approval", "process")
         builder.add_edge("process", END)
@@ -13335,12 +13310,12 @@
 
         # 当前版本 checkpointer 选择指南:
         # ┌────────────────┬───────────┬─────────────┬──────────────┐
-        # │ 类型            │ 持久化     │ 并发         │ 适用场景       │
+        # │ 类型            │ 持久化     │ 并发       │ 适用场景      │
         # ├────────────────┼───────────┼─────────────┼──────────────┤
-        # │ MemorySaver    │ ❌        │ ✅          │ 开发/测试      │
-        # │ SqliteSaver    │ ✅        │ ⚠️ 单线程    │ 原型/单机      │
-        # │ PostgresSaver  │ ✅        │ ✅          │ 生产推荐       │
-        # │ RedisSaver     │ ✅        │ ✅          │ 低延迟场景     │
+        # │ MemorySaver    │ ❌        │ ✅          │ 开发/测试    │
+        # │ SqliteSaver    │ ✅        │ ⚠️ 单线程    │ 原型/单机   │
+        # │ PostgresSaver  │ ✅        │ ✅          │ 生产推荐     │
+        # │ RedisSaver     │ ✅        │ ✅          │ 低延迟场景   │
         # └────────────────┴───────────┴─────────────┴──────────────┘
 
 
@@ -13467,6 +13442,7 @@
             agents=[researcher, writer, reviewer],
             tasks=[task1, task2, task3],
             process=Process.sequential,
+            llm="deepseek/deepseek-chat"
         )
 
         # ── 2. Process.hierarchical（层级管理）──
@@ -13479,6 +13455,7 @@
             goal="协调团队高效完成任务,合理分配工作量",
             backstory="你是一名经验丰富的项目经理,擅长任务分解和团队协调。",
             verbose=True,
+            llm="deepseek/deepseek-chat"
         )
 
         crew = Crew(
@@ -13486,6 +13463,7 @@
             tasks=[task_research, task_write],
             process=Process.hierarchical,
             manager_agent=manager,  # 指定管理者
+            llm="deepseek/deepseek-chat"
         )
 
         # ⚠️ hierarchical 模式需要调用 LLM 做决策,成本更高
@@ -13520,7 +13498,7 @@
 
         # ── 方式3: 内置工具包 ──
         # from crewai_tools import (
-        #     SerperDevTool,       # 搜索引擎
+        #     SerperTool,          # 搜索引擎
         #     ScrapeWebsiteTool,   # 网页抓取
         #     FileReadTool,        # 文件读取
         #     DirectoryReadTool,   # 目录遍历
@@ -13550,9 +13528,20 @@
     # 🧪 高级用法
 
         # ── 1. 回调(Callback)──
-        #     Crew 运行时可以监听事件:
-        #     from crewai import Crew, Process
-        #     crew = Crew(..., step_callback=my_callback)
+        #     Crew 运行时可以监听多个事件:
+        #     def on_task_start(task):        print(f"任务开始: {task.description[:30]}...")
+        #     def on_task_end(task, output):  print(f"任务完成: {task.description[:30]}...")
+        #     def on_step_start(agent, task): print(f"Agent {agent.role} 开始步骤")
+        #     def on_step_end(agent, task, output): print(f"Agent {agent.role} 完成: {output[:30]}...")
+        #     def on_agent_start(agent):      print(f"Agent {agent.role} 启动")
+        #     def on_agent_end(agent):        print(f"Agent {agent.role} 结束")
+        #
+        #     crew = Crew(
+        #         ...,
+        #         step_callback=on_step_end,       # 每步完成时触发
+        #         task_callback=on_task_end,        # 每个 Task 完成时触发
+        #     )
+        #     可用来做: 实时日志 / Token统计 / 结果入库 / 提前终止
 
         # ── 2. 缓存(Cache)──
         #     默认开启LLM调用缓存,相同输入不重复调LLM,省成本
@@ -13574,9 +13563,9 @@
 
         #   场景                    推荐 Process
         #   研究→写作→审核          sequential（流水线）
-        #   多个独立任务并行         sequential（任务间无依赖）
         #   复杂项目需动态分配       hierarchical（需要manager）
         #   不知道用什么             sequential（最稳）
+        #   需要真正并行             asyncio.gather + 多个 Crew / Flow 编排
 
         #   工具只在需要的Agent上加,不要每个Agent都挂一堆工具
         #   先 sequential 跑通,再考虑 hierarchical
@@ -13591,6 +13580,8 @@
         # 4. 不要给一个 Agent 太多工具——它会困惑
         # 5. CrewAI 的缓存是内存缓存,进程重启就没了
         # 6. 长任务建议加 timeout,防止死循环
+        # 7. 可以用 CLI 脚手架快速创建项目: crewai create flow my_flow
+        # 8. 上线前跑 crewai run 测试整个流程
           
 
     # 🚀 CrewOutput 详解
@@ -13664,8 +13655,11 @@
         task3 = Task(description="对比AB", expected_output="对比表", agent=writer,
                     context=[task1, task2])
 
-        # task1 和 task2 无依赖,自动并行
-        # task3 等 task1+task2 都完成后才启动
+        # ⚠️ task1 和 task2 虽然无依赖,但在 Process.sequential 下仍是顺序执行
+        # 如果想真正并行,有以下两种方案:
+        #   方案A: 在同一个 Agent 上挂多个 Task（内部仍然串行,但 Agent 切换更快）
+        #   方案B: 拆成多个 Crew,用 asyncio.gather() 或 CrewAI Flow 编排
+        # task3 等 task1+task2 都完成后才启动（context 依赖保证这步）
 
 
     # 🔧 错误处理与重试
@@ -13678,6 +13672,10 @@
             backstory="...",
             max_retry_limit=3,      # 默认2,这里改为3
         )
+        # ⚠️ max_retry_limit 在不同版本接口有差异:
+        #    crewai < 1.5: Agent 参数
+        #    crewai 1.5+: 可能移到 Crew 级别或改名 task_default_max_retries
+        #    建议查当前版本文档确认: crewai.__version__
 
         # 全部重试失败:
         #   sequential: 整个 Crew 停,抛异常
@@ -13690,6 +13688,11 @@
         if hasattr(result, 'token_usage') and result.token_usage:
             u = result.token_usage
             print(f"总Tokens: {getattr(u, 'total_tokens', 'N/A')}")
+            # crewai 1.0+ 的 token_usage 对象通常包含:
+            #   total_tokens      总 token 数
+            #   prompt_tokens     提示词 token 数
+            #   completion_tokens 生成 token 数
+            #   successful_requests 请求次数
 
 
     # 🔗 CrewAI + LangChain 集成
@@ -13709,6 +13712,37 @@
         )
 
         # Task 的 tools 同样兼容 LangChain tools
+
+
+    # 🌐 CrewAI + MCP 集成
+
+        # MCP 工具可以直接集成到 CrewAI Agent 中:
+
+        # ── 方式1: 用 crewai-tools 包（推荐）──
+        # pip install crewai-tools
+        # from crewai_tools import MCPTool
+        #
+        # tool = MCPTool.from_server(
+        #     name="github",
+        #     server_url="http://localhost:8080/mcp",
+        # )
+        # agent = Agent(role="开发者", goal="管理代码仓库", backstory="...", tools=[tool])
+
+        # ── 方式2: 用 MCP 官方 SDK 自定义工具（灵活）──
+        # from mcp import ClientSession
+        # from crewai.tools import tool
+        #
+        # session = ClientSession(...)  # 连接 MCP Server
+        #
+        # @tool("file_read")
+        # def file_read(path: str) -> str:
+        #     """读取本地文件内容"""
+        #     return session.call_tool("read_file", {"path": path})
+        #
+        # agent = Agent(role="文件分析师", goal="分析代码", backstory="...", tools=[file_read])
+
+        # MCP 集成价值: 让 CrewAI Agent 能直接调用任何 MCP Server 的能力
+        # （文件系统、数据库、GitHub、浏览器自动化等），大幅扩展 Agent 的工具生态
 
 
     # ⚙️ 实战完整示例: 技术调研流水线
@@ -13805,7 +13839,30 @@
 
         # @start()    → 标记Flow的入口方法
         # @listen()   → 监听前一步的结果,拿到返回值
-        # @router()   → 根据条件走不同分支
+        # @router()   → 根据条件走不同分支（返回值决定走哪条路）
+
+        # @router() 示例:
+        # class ReviewFlow(Flow):
+        #     @start()
+        #     def generate_content(self):
+        #         return "技术对比报告"
+        #
+        #     @router(generate_content)
+        #     def review(self, content):
+        #         if "已审核" in check_quality(content):
+        #             return "approved"
+        #         return "needs_revision"
+        #
+        #     @listen("approved")
+        #     def publish(self, content):
+        #         return f"已发布: {content}"
+        #
+        #     @listen("needs_revision")
+        #     def revise(self, content):
+        #         return f"待修改: {content}"
+
+        # @router 的 return 值决定走哪条 @listen 路径
+        # 适合: 内容审查、质量打分后分流、异常降级
 
         # Flow 适合: 多阶段项目（调研→写作→审核→发布）
 
@@ -13862,6 +13919,68 @@
         report_result = report_crew.kickoff()
 
         # 或者用 Flow 自动编排（推荐）
+
+
+    # 📚 CrewAI Knowledge（1.5+ 新特性）
+
+        # Knowledge 可以给 Agent 注入结构化的参考知识（类似内嵌 RAG）:
+
+        # from crewai import Knowledge
+        # from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+        #
+        # # 创建知识源
+        # knowledge_source = StringKnowledgeSource(
+        #     content="公司产品定价规则:基础版 99/月,专业版 299/月,企业版 999/月",
+        #     metadata={"source": "pricing_manual"}
+        # )
+        #
+        # knowledge = Knowledge(
+        #     collection_name="product_knowledge",
+        #     sources=[knowledge_source],
+        # )
+        #
+        # agent = Agent(
+        #     role="客服",
+        #     goal="准确回答产品相关问题",
+        #     backstory="...",
+        #     knowledge_sources=[knowledge],  # Agent 自动检索知识
+        # )
+
+        # 也支持文件源: FileKnowledgeSource, CSVKnowledgeSource
+        # 底层自动做 Embedding + 向量检索，无需手动搭建 RAG 链路
+
+
+    # 📊 CrewAI 测试与评估
+
+        # 评估多 Agent 协作效果的方法:
+
+        # ── 1. 结构化检查 ──
+        #     # 检查 Task 是否返回了预期格式
+        #     result = crew.kickoff()
+        #     assert result.raw is not None
+        #     assert len(result.tasks_output) == len(tasks)
+        #
+        #     # 检查每个 Task 的输出长度
+        #     for t in result.tasks_output:
+        #         assert len(t.raw) > 50, f"Task 输出太短: {t.description}"
+
+        # ── 2. Token 成本审计 ──
+        #     total_cost = 0
+        #     if hasattr(result, 'token_usage') and result.token_usage:
+        #         u = result.token_usage
+        #         total_tokens = getattr(u, 'total_tokens', 0)
+        #         # deepseek-chat ≈ ¥0.01/1K tokens 为例
+        #         total_cost = (total_tokens / 1000) * 0.01
+        #     print(f"Token消耗: {total_tokens}, 预估成本: ¥{total_cost:.2f}")
+
+        # ── 3. 人工审查清单 ──
+        #     □ 每个 Agent 的 role/goal/backstory 是否一致?
+        #     □ Task 的 expected_output 是否够具体?
+        #     □ Agent 用到了给它配的工具吗?
+        #     □ sequential 的任务顺序是否符合逻辑?
+        #     □ verbose 输出有无异常?
+
+        # 评估原则: 多 Agent 系统先跑通（功能正确），再看成本（Token 审计），最后优化质量
 
 
     # ⚠️ 注意事项补充
