@@ -841,6 +841,222 @@
         # | Emotion Prompt | 提升回答质量 | ⭐⭐（玄学） |
 
 
+# 📑 Jinja2 模板引擎 × LangChain PromptTemplate 协同实战
+# ====================================================================================================================================
+
+    # 📌 一、核心理念：Jinja2 = Prompt 编译器，ChatPromptTemplate = 协议适配器
+    #
+    #    Jinja2 不是锦上添花，而是 Agent 工程化的基础设施。它解决的不只是「怎么写 prompt」：
+    #    - 可维护：改文案不改 Python 代码（.j2 文件归产品管，Python 归开发管）
+    #    - 可复用：同一套 .j2 模板用于 RAG / Tool Calling / MCP 消息生成
+    #    - 可审计：Git 提交记录 = prompt 迭代史，每次改版都有 diff
+    #
+    #    类比理解：
+    #      f-string                     → 手写汇编（灵活但难维护）
+    #      ChatPromptTemplate.from_messages() → 高级语言（安全但粒度粗）
+    #      Jinja2 + from_template_file()   → 编译型语言（兼顾灵活 + 安全 + 可追溯）
+
+
+    # 📌 二、Jinja2 给 Agent 开发的「5 条黄金语法」（够用、防坑）
+    #
+    #   ┌─────────────┬────────────────────┬──────────────────────────────────────┬─────────────────────────────────┐
+    #   │ 语法         │ 写法               │ Agent 场景示例                      │ 避坑提醒                        │
+    #   ├─────────────┼────────────────────┼──────────────────────────────────────┼─────────────────────────────────┤
+    #   │ ① 插值      │ {{ variable }}     │ {{ user_question }} → 注入用户问题  │ LLM 不需要转义，用 |safe 标记   │
+    #   │ ② 条件      │ {% if docs %}…     │ 控制是否显示“参考来源”区块         │ 空列表为 falsy，不用显式判空    │
+    #   │             │ {% endif %}        │                                      │                                 │
+    #   │ ③ 循环      │ {% for doc in      │ 遍历 RAG 结果，加来源/页码          │ loop.index 拿序号，              │
+    #   │             │ docs %}…{% endfor %}│                                      │ loop.length 拿总数               │
+    #   │ ④ 过滤器    │ {{ text|truncate   │ 截断长文本防止 token 溢出           │ |replace("\n", " ") 清空换行     │
+    #   │             │ (100) }}           │                                      │ LLM 更喜连续单行                 │
+    #   │ ⑤ 宏定义    │ {% macro doc_block │ 复用“文档卡片”模板，避免重复写       │ 宏里用 {{ caller() }}            │
+    #   │             │ (doc) %}…          │                                      │ 支持嵌套内容                     │
+    #   │             │ {% endmacro %}     │                                      │                                 │
+    #   └─────────────┴────────────────────┴──────────────────────────────────────┴─────────────────────────────────┘
+    #
+    #    💡 .j2 是 Jinja2 的标准后缀。LangChain 的 from_template_file() 默认识别 .j2。
+
+
+    # 📌 三、LangChain 中 Jinja2 的 3 种集成方式（按推荐度排列）
+    #
+    #   ✅ 方式 1：ChatPromptTemplate.from_template_file()——官方首选
+    #       ```python
+    #       from langchain_core.prompts import ChatPromptTemplate
+    #
+    #       # prompts/rag.j2：
+    #       #   {% for doc in docs %}
+    #       #   【来源：{{ doc.metadata.source|default("未知") }}】
+    #       #   {{ doc.page_content|truncate(300) }}
+    #       #   ---
+    #       #   {% endfor %}
+    #
+    #       prompt = ChatPromptTemplate.from_template_file("prompts/rag.j2")
+    #       chain = prompt | llm
+    #       context = chain.invoke({"docs": retrieved_docs})
+    #       # → 返回渲染后的字符串，自动处理转义
+    #       ```
+    #       优点：LangChain 内置校验，模板文件存 Git 即可版本管理
+    #
+    #   ✅ 方式 2：Jinja2Templates 工具类——复杂逻辑专用
+    #       ```python
+    #       from langchain_community.utilities import Jinja2Templates
+    #
+    #       templates = Jinja2Templates(
+    #           template_dir="prompts/",
+    #           filters={"to_upper": str.upper},  # 注册自定义过滤器
+    #       )
+    #       rendered = templates.render("rag.j2", docs=retrieved_docs)
+    #       ```
+    #       优点：支持多模板、自定义过滤器、宏导入
+    #
+    #   ✅ 方式 3：原生 Jinja2 Environment——完全掌控
+    #       ```python
+    #       from jinja2 import Environment, FileSystemLoader
+    #
+    #       env = Environment(loader=FileSystemLoader("prompts/"))
+    #       template = env.get_template("rag.j2")
+    #       context = template.render(docs=retrieved_docs, user_name="水哥")
+    #       ```
+    #       优点：不依赖 LangChain，可与 FastAPI/Flask 共用同一套模板
+    #
+    #   📌 选型建议：
+    #     - 简单场景 → 方式 1（最稳，LangChain 内置校验）
+    #     - 需要宏/多模板/自定义过滤器 → 方式 2
+    #     - 要和 FastAPI 等非 LangChain 系统共用模板 → 方式 3
+
+
+    # 📌 四、ChatPromptTemplate vs Jinja2 —— 职责分离模型（面试必答）
+    #
+    #    ┌──────────────┬──────────────────────────────────┬──────────────────────────────────────────┐
+    #    │              │ Jinja2                          │ ChatPromptTemplate                      │
+    #    ├──────────────┼──────────────────────────────────┼──────────────────────────────────────────┤
+    #    │ 角色         │ 内容渲染层（What to say）         │ 结构编排层（How to say it to LLM）       │
+    #    │ 输出         │ 纯字符串（文本）                  │ BaseMessage 对象列表（SystemMessage /    │
+    #    │              │                                  │ HumanMessage / AIMessage）              │
+    #    │ 是否感知     │ ❌ 不认识 system/human/ai 角色    │ ✅ 内置角色映射，自动转对应 Message 类   │
+    #    │ 消息角色      │                                  │                                          │
+    #    │ 版本管理     │ ✅ 存 .j2 文件到 Git              │ ✅ 存 .py 文件，或用 from_messages()     │
+    #    │ 对话结构     │ ❌ 手动拼 message list，易错位    │ ✅ (.invoke() 输出一定是标准 message     │
+    #    │ 保障          │                                  │ list，适配所有 LLM 协议）                │
+    #    │ LangSmith    │ ❌ 不感知 trace                   │ ✅ 自动上报 trace，每一步都可见          │
+    #    │ 追踪          │                                  │                                          │
+    #    │ 与 MCP       │ ❌ 未封装                         │ ✅ 直接输出标准 message 供 MCP Server    │
+    #    │ 适配          │                                  │                                          │
+    #    └──────────────┴──────────────────────────────────┴──────────────────────────────────────────┘
+    #
+    #    💡 本质关系：ChatPromptTemplate 是 Jinja2 的「LLM 专用超集」
+    #       ——它底层仍用 Jinja2 渲染，但加了 LLM 协议层封装，让你从「拼字符串」升级到「编排对话」。
+
+
+    # 📌 五、实战模式：Jinja2 渲染 RAG → ChatPromptTemplate 编排对话（完整实例）
+    #
+    #    这是生产环境最标准的组合写法，三步走：
+    #
+    #    Step 1：用 Jinja2 写 RAG 内容渲染模板（prompts/rag.j2）
+    #    ```jinja2
+    #    {% for doc in docs %}
+    #    【来源：{{ doc.metadata.source|default("未知") }} | 页码：{{ doc.metadata.page|default(1) }}】
+    #    {{ doc.page_content|replace("\n", " ")|truncate(300) }}
+    #    ---
+    #    {% endfor %}
+    #    ```
+    #
+    #    Step 2：用 Jinja2 写对话编排模板（prompts/chat.j2）
+    #    ```jinja2
+    #    你是一名专业的 {{ role }}。
+    #
+    #    ## 参考材料
+    #    {{ context }}
+    #
+    #    ## 用户问题
+    #    {{ question }}
+    #
+    #    ## 要求
+    #    - 仅基于以上参考材料回答
+    #    - 若材料中无答案，请明确说“暂未找到相关信息”
+    #    - 引用格式：【来源：xxx】
+    #    ```
+    #
+    #    Step 3：Python 层加载渲染 + 传入 ChatPromptTemplate
+    #    ```python
+    #    from langchain_core.prompts import ChatPromptTemplate
+    #    from langchain_community.utilities import Jinja2Templates
+    #
+    #    # 1. 加载 Jinja2 模板
+    #    templates = Jinja2Templates(template_dir="prompts/")
+    #
+    #    # 2. 渲染 RAG 检索结果（Jinja2 负责内容格式化）
+    #    formatted_context = templates.render("rag.j2", docs=retrieved_docs)
+    #
+    #    # 3. 渲染对话编排（ChatPromptTemplate 负责消息结构）
+    #    prompt = ChatPromptTemplate.from_template_file("prompts/chat.j2",
+    #        input_variables=["role", "context", "question"])
+    #
+    #    # 4. 最终调用（ChatPromptTemplate 自动转 BaseMessage 列表）
+    #    messages = prompt.invoke({
+    #        "role": "AI 法律助手",
+    #        "context": formatted_context,
+    #        "question": "LangSmith 的 trace 怎么看？"
+    #    })
+    #    # → 输出：[SystemMessage, HumanMessage]（结构安全）
+    #
+    #    # 5. 送入 LLM（LangSmith 自动 trace）
+    #    response = llm.invoke(messages)
+    #    ```
+    #
+    #    ✅ 这样组合：
+    #      - Jinja2 负责「内容美化」（加来源/页码/分隔线）
+    #      - ChatPromptTemplate 负责「协议合规」（确保输出是标准 message list）
+    #      - 最终获得：既灵活（Jinja2 可扩展），又安全（LangChain 保结构）
+
+
+    # 📌 六、问题解读
+    #    💬 被问：“你用 Jinja2 管理 prompt，和直接写 f-string 有什么区别？”
+    #    → “f-string 是‘手写 prompt’，Jinja2 是‘编译 prompt’。
+    #        我团队里产品经理改 rag.j2 文件里的文案，不需要碰一行 Python 代码；
+    #        而 ChatPromptTemplate 保证他改完的内容，100% 以正确的 HumanMessage 角色注入 LLM——
+    #        这就是工程化和 Demo 玩家的区别。”
+    #
+    #    💬 被问：“LangChain 自己有 PromptTemplate，为什么还要 Jinja2？”
+    #    → “LangChain 的 PromptTemplate 解决‘协议适配’，Jinja2 解决‘内容治理’。
+    #        就像汽车：PromptTemplate 是变速箱（确保动力传给轮子），
+    #        Jinja2 是发动机控制系统（精准控制油量、点火时机）。
+    #        没有后者，前者再稳也跑不远。”
+    #
+    #    💬 被问：“Jinja2 会不会增加复杂度？”
+    #    → “恰恰相反——它降低了复杂度。
+    #        以前改一个 prompt 要改 3 个地方：f-string、测试用例、文档说明；
+    #        现在只改 1 个 .j2 文件，Git 提交即留痕，
+    #        LangSmith trace 里还能看到渲染前后的 diff。复杂度从‘分散’变成了‘集中’。”
+
+
+    # 📌 七、避坑指南
+    #
+    #    ❌ 坑 1：混用 {{ }} 和 {% %} 在 Python 字符串里
+    #       表现：f"系统指令：{{role}}" 里嵌 Jinja2 → 报错
+    #       ✅ 正解：所有 Jinja2 语法必须在 .j2 文件里，Python 层只调用 render()
+    #
+    #    ❌ 坑 2：忘记 |safe 导致 HTML 转义
+    #       表现：{{ doc.content }} → &lt;p&gt;Hello&lt;/p&gt; → LLM 看不懂
+    #       ✅ 正解：对已清洗的文本用 {{ doc.content|safe }}
+    #
+    #    ❌ 坑 3：在 Jinja2 里写 Python 逻辑（如 score 过滤）
+    #       表现：{% if doc.score > 0.8 %} → 业务逻辑侵入模板
+    #       ✅ 正解：模板只做展示，score 过滤在 Python 层完成，传入已过滤的 docs
+    #
+    #    ❌ 坑 4：用 from_messages([("system", template)]) 直接传未渲染的 Jinja2 字符串
+    #       表现：LLM 收到 {{ user_question }} 原样输出
+    #       ✅ 正解：必须先 template.render(...)，再传渲染结果给 from_messages
+    #
+    #    ❌ 坑 5：.j2 文件编码问题
+    #       表现：中文乱码（Windows GBK vs UTF-8 冲突）
+    #       ✅ 正解：所有 .j2 文件统一 UTF-8 with BOM 保存，Python 侧 open() 指定 encoding="utf-8"
+
+    #    “Prompt 不是写给 LLM 看的，是写给人（产品/测试/自己）和机器（LangSmith/MCP/LLM）
+    #     共同阅读的契约。Jinja2 是契约的语法，ChatPromptTemplate 是契约的公证处——
+    #     两者合璧，才是 Agent 工程师的 signature move。”
+
+
 # 📜 Context Engineering
 # ====================================================================================================================================
 
