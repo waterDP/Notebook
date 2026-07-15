@@ -10397,759 +10397,774 @@
 # ====================================================================================================================================
 
 
-# ⚖ Ragas: 智能体与RAG系统的评估框架
+# ⚖ 智能体与RAG系统的评估
 # ====================================================================================================================================
-    from ragas.metrics import (
-        faithfulness,
-        answer_relevancy,
-        context_precision,
-        context_recall,
-        answer_correctness,
-        answer_similarity,
-    )
-
-    # 全量评估
-    result = evaluate(dataset, metrics=[
-        context_precision, context_recall,
-        faithfulness, answer_relevancy, answer_correctness,
-    ])
-
-
-    # ====================================================================
-    # 2. 单条评估:最简单用法
-    # ====================================================================
-
-    from ragas import evaluate
-    from datasets import Dataset
-
-    data = {
-        "question": ["Langfuse 和 Ragas 有什么区别?"],
-        "answer": ["Langfuse 是可观测性平台,Ragas 是评估框架。两者可以配合使用。"],
-        "contexts": [[
-            "Langfuse 是一个 LLM 可观测性平台,支持 trace、打分、数据集管理。",
-            "Ragas 是一个 RAG 评估框架,专注检索和生成质量的自动评分。"
-        ]],
-        "ground_truth": ["Langfuse 提供观测和监控能力,Ragas 提供评估指标计算能力,两者互补。"],
-    }
-
-    dataset = Dataset.from_dict(data)
-
-    result = evaluate(dataset, metrics=[faithfulness, answer_relevancy, context_recall])
-
-    print(f"Faithfulness:     {result['faithfulness']:.3f}")
-    print(f"Answer Relevancy: {result['answer_relevancy']:.3f}")
-    print(f"Context Recall:   {result['context_recall']:.3f}")
-    # 结果大概长这样:
-    # Faithfulness:     0.900
-    # Answer Relevancy: 0.750
-    # Context Recall:   0.800
-
-    # 注意事项:
-    # - contexts 必须是列表的列表 [[...]],即使只有一个 chunk
-    # - ground_truth 只在需要 answer_correctness 时才必须
-    # - faithfulness 和 answer_relevancy 不需要 ground_truth
-
-
-    # ====================================================================
-    # 3. 数据集批量评估
-    # ====================================================================
-
-    # 3.1 从 CSV 读取
-    import pandas as pd
-    import ast
-
-    df = pd.read_csv("eval_data.csv")
-    # CSV 格式: question,answer,contexts,ground_truth
-    df["contexts"] = df["contexts"].apply(ast.literal_eval)
-    dataset = Dataset.from_pandas(df)
-    result = evaluate(dataset, metrics=[faithfulness, answer_relevancy])
-
-
-    # 3.2 从 Dict 批量
-    batch_data = {
-        "question": [
-            "什么是 RAG?",
-            "Python 的 GIL 是什么?",
-            "什么是微服务架构?",
-        ],
-        "answer": [
-            "检索增强生成,是一种结合检索和生成的 AI 架构。",
-            "全局解释器锁,保证同一时刻只有一个线程执行字节码。",
-            "将应用拆分为多个独立部署的小服务。",
-        ],
-        "contexts": [
-            ["RAG = Retrieval-Augmented Generation,最流行的 RAG 架构..."],
-            ["GIL 全称 Global Interpreter Lock,是 CPython 的机制..."],
-            ["微服务是一种架构风格,将单一应用程序划分为一组小服务..."],
-        ],
-        "ground_truth": [
-            "RAG(检索增强生成)结合检索系统和生成模型来回答问题。",
-            "GIL 是 CPython 解释器中的一个互斥锁,防止多线程并发执行。",
-            "微服务架构将应用拆分成松耦合的独立服务。",
-        ],
-    }
-
-    batch_dataset = Dataset.from_dict(batch_data)
-    result = evaluate(batch_dataset, metrics=[
-        faithfulness, answer_relevancy, context_precision, answer_correctness,
-    ])
-
-    # 批量结果
-    df_result = result.to_pandas()
-    print(df_result)
-    #    faithfulness  answer_relevancy  context_precision  answer_correctness
-    # 0         0.850            0.720              0.800              0.780
-    # 1         0.920            0.880              0.950              0.900
-    # 2         0.780            0.650              0.700              0.710
-
-
-    # 3.3 汇总统计
-    import numpy as np
-
-    for metric, scores in result.items():
-        scores_list = scores if isinstance(scores, list) else [scores]
-        print(f"{metric}:")
-        print(f"  Mean:    {np.mean(scores_list):.3f}")
-        print(f"  Std:     {np.std(scores_list):.3f}")
-        print(f"  Min:     {np.min(scores_list):.3f}")
-        print(f"  Max:     {np.max(scores_list):.3f}")
-
-
-    # ====================================================================
-    # 4. 用你自己的 LLM 做审判官
-    # ====================================================================
-    #
-    # Ragas 默认用 OpenAI。可以切到国产模型或本地模型,省钱 + 数据不出域。
-    #
-
-    from ragas.llms import llm_factory
-
-    # ========== DeepSeek ==========
-    deepseek_llm = llm_factory(
-        model="deepseek-chat",
-        base_url="https://api.deepseek.com/v1",
-        api_key="***",
-    )
-
-    # ========== 阿里通义千问 ==========
-    qwen_llm = llm_factory(
-        model="qwen-plus",
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        api_key="***",
-    )
-
-    # ========== 本地 ollama ==========
-    # 先 ollama pull qwen2.5:7b && ollama serve
-    local_llm = llm_factory(
-        model="qwen2.5:7b",
-        base_url="http://localhost:11434/v1",
-        api_key="***",  # ollama 不校验 key
-    )
-
-    # 赋值给指标
-    for metric in [faithfulness, answer_relevancy, context_precision]:
-        metric.llm = deepseek_llm
-
-    result = evaluate(dataset, metrics=[faithfulness, answer_relevancy])
-
-
-    # ========== 用多个 LLM 投票取平均 ==========
-    llms = [deepseek_llm, qwen_llm, local_llm]
-
-    all_scores = []
-    for llm in llms:
-        faithfulness.llm = llm
-        result = evaluate(batch_dataset, metrics=[faithfulness])
-        all_scores.append(result["faithfulness"])
-
-    mean_score = np.mean(all_scores, axis=0)
-    std_score = np.std(all_scores, axis=0)
-    print(f"Faithfulness: {mean_score[0]:.3f} ± {std_score[0]:.3f}")
-
-
-    # ====================================================================
-    # 5. 自定义指标
-    # ====================================================================
-
-    # 5.1 规则型自定义指标
-    from ragas.metrics.base import Metric
-
-    class LengthChecker(Metric):
-        """检查答案长度是否合理"""
-        def __init__(self):
-            super().__init__(name="length_checker", requires_ground_truth=False)
-
-        async def _ascore(self, row: dict, callbacks=None) -> float:
-            answer = row["answer"]
-            question = row.get("question", "")
-            ratio = len(answer) / max(len(question), 1)
-            if 5 <= ratio <= 50:
-                return 1.0
-            elif 2 <= ratio < 5 or 50 < ratio <= 100:
-                return 0.5
-            else:
-                return 0.0
-
-    length_checker = LengthChecker()
-    result = evaluate(batch_dataset, metrics=[length_checker])
-
-
-    # 5.2 LLM Judge 型自定义指标
-    from ragas.metrics.base import MetricWithLLM
-
-    class ToxicityChecker(MetricWithLLM):
-        """检测回答是否包含有害内容"""
-        def __init__(self, llm=None):
-            super().__init__(name="toxicity_check", requires_ground_truth=False)
-            if llm:
-                self.llm = llm
-
-        async def _ascore(self, row: dict, callbacks=None) -> float:
-            answer = row["answer"]
-            prompt = f"""Is the following answer toxic or harmful?
-    Only answer with a single number 0 (not toxic) or 1 (toxic).
-
-    Answer: {answer}
-
-    Score (0 or 1):"""
-            response = await self.llm.agenerate([[prompt]], callbacks=callbacks)
-            text = response.generations[0][0].text.strip()
-            try:
-                return 1.0 - int(text)
-            except:
-                return 0.5
-
-
-    # 5.3 关键词覆盖率检查
-    class KeywordCoverage(Metric):
-        def __init__(self, required_keywords: dict):
-            super().__init__(name="keyword_coverage", requires_ground_truth=False)
-            self.keyword_map = required_keywords
-
-        async def _ascore(self, row: dict, callbacks=None) -> float:
-            question = row["question"]
-            answer = row["answer"]
-            keywords = self.keyword_map.get(question, [])
-            if not keywords:
-                return 1.0
-            found = sum(1 for kw in keywords if kw.lower() in answer.lower())
-            return found / len(keywords)
-
-
-    # ====================================================================
-    # 6. Ragas + Langfuse 集成(黄金搭配)
-    # ====================================================================
-    #
-    # 思路:Ragas 负责算分,分数打到 Langfuse trace 上,形成完整的 eval + observe 方案。
-    #
-
-    from langfuse import Langfuse
-
-    langfuse = Langfuse(
-        public_key="pk-xxx",
-        secret_key="sk-xxx",
-        host="https://cloud.langfuse.com"
-    )
-
-
-    def my_rag(question: str) -> dict:
-        """模拟一个 RAG pipeline"""
-        trace = langfuse.trace(name="rag_eval", input=question)
-        contexts = ["Langfuse 是一个可观测性平台。", "Ragas 是评估框架。"]
-        answer = "Langfuse 和 Ragas 是互补的工具。"
-
-        retrieval = trace.retrieval(name="retrieval", input=question)
-        retrieval.end(output=contexts)
-
-        generation = trace.generation(
-            name="generation", model="gpt-4o",
-            input=str({"question": question, "contexts": contexts}),
-            output=answer
+    # ❓ Agent的评估角度
+        # 1.任务结果评估（目标是否完成，结果是否正确）
+        # 2.工具与动作评估（工具选择正确，传参正确，动作不越界）
+        # 3.过程与轨迹评估（步骤合理，不漏步、不绕路、不死循环）
+        # 4.依据与状态一致性（回答有来源，操作符合真实状态）
+        # 5.多轮交互与状态保持（记得上下文，理解指代与延续）
+        # 6.规划、安全与权限（遵守规则，保护隐私，控制危险操作）
+        # 7.抗扰稳定性与回归稳定性（异常能兜底，改版不退化）
+        
+        # 特殊评估角度
+          # | 检索与引用 | 文档解析抽取 | 数据分析口径 | 代码执行补丁 | 沙箱环境 | 工作流分支 | 长任务生命周期 | 外部系统变更 
+          # | 多智能体协作 | 实时事件流 | 用户确认制控 | 知识库入库质量 | 报告产物质量
+  
+    # 🚀 --- Ragas ------------------- #
+        from ragas.metrics import (
+            faithfulness,
+            answer_relevancy,
+            context_precision,
+            context_recall,
+            answer_correctness,
+            answer_similarity,
         )
-        return trace, {"question": question, "answer": answer, "contexts": contexts, "trace_id": trace.id}
+
+        # 全量评估
+        result = evaluate(dataset, metrics=[
+            context_precision, context_recall,
+            faithfulness, answer_relevancy, answer_correctness,
+        ])
 
 
-    # 跑一次完整的 RAG + Ragas 评估 + Langfuse 记录
-    trace, data = my_rag("Langfuse 和 Ragas 有什么区别?")
+        # ====================================================================
+        # 2. 单条评估:最简单用法
+        # ====================================================================
 
-    ds = Dataset.from_dict({
-        "question": [data["question"]],
-        "answer": [data["answer"]],
-        "contexts": [data["contexts"]],
-    })
+        from ragas import evaluate
+        from datasets import Dataset
 
-    ragas_result = evaluate(ds, metrics=[faithfulness, answer_relevancy])
-
-    # 分数打到 Langfuse trace
-    trace.score(name="ragas_faithfulness", value=float(ragas_result["faithfulness"][0]), comment="Ragas 忠实度")
-    trace.score(name="ragas_answer_relevancy", value=float(ragas_result["answer_relevancy"][0]), comment="Ragas 相关性")
-    langfuse.flush()
-
-    print(f"✅ Faithfulness: {ragas_result['faithfulness'][0]:.3f}")
-    print(f"✅ Relevancy: {ragas_result['answer_relevancy'][0]:.3f}")
-    print("✅ Langfuse trace 里有分,去看看")
-
-
-    # 批量集成
-
-    def batch_eval_and_log(questions, rag_func):
-        for q in questions:
-            trace, data = rag_func(q)
-            ds = Dataset.from_dict({
-                "question": [data["question"]],
-                "answer": [data["answer"]],
-                "contexts": [data["contexts"]],
-            })
-            result = evaluate(ds, metrics=[faithfulness])
-            trace.score(name="ragas_faithfulness", value=float(result["faithfulness"][0]))
-            langfuse.flush()
-        print(f"✅ 完成 {len(questions)} 条评估")
-
-
-    # ====================================================================
-    # 7. CI/CD 自动化评估
-    # ====================================================================
-    #
-    # 把 Ragas 塞进 CI 流程,每次改 Prompt 或换模型自动跑分。
-    #
-    # 在 .github/workflows/rag-eval.yml 中配置:
-    #
-    # name: RAG Evaluation
-    # on:
-    #   pull_request:
-    #     paths:
-    #       - "app/prompts/**"
-    #       - "app/rag/**"
-    # jobs:
-    #   evaluate:
-    #     runs-on: ubuntu-latest
-    #     steps:
-    #       - uses: actions/checkout@v4
-    #       - uses: actions/setup-python@v5
-    #         with:
-    #           python-version: "3.11"
-    #       - run: pip install ragas openai datasets pandas
-    #       - run: python eval_ci.py
-    #         env:
-    #           OPENAI_API_KEY: *** secrets.OPENAI_API_KEY }}
-    #       - uses: actions/upload-artifact@v4
-    #         with:
-    #           name: eval-results
-    #           path: eval_results.json
-    #
-
-    # eval_ci.py 脚本示例:
-    #
-    import json
-
-
-    def load_test_set() -> Dataset:
         data = {
-            "question": [...],
-            "answer": [...],
-            "contexts": [[...], ...],
-            "ground_truth": [...],
+            "question": ["Langfuse 和 Ragas 有什么区别?"],
+            "answer": ["Langfuse 是可观测性平台,Ragas 是评估框架。两者可以配合使用。"],
+            "contexts": [[
+                "Langfuse 是一个 LLM 可观测性平台,支持 trace、打分、数据集管理。",
+                "Ragas 是一个 RAG 评估框架,专注检索和生成质量的自动评分。"
+            ]],
+            "ground_truth": ["Langfuse 提供观测和监控能力,Ragas 提供评估指标计算能力,两者互补。"],
         }
-        return Dataset.from_dict(data)
 
+        dataset = Dataset.from_dict(data)
 
-    def check_regression(old_scores, new_scores, threshold=0.05):
-        """检查评分有没有回退"""
-        regressions = []
-        for metric in new_scores:
-            old = np.mean(old_scores.get(metric, [0]))
-            new = np.mean(new_scores[metric])
-            if new < old - threshold:
-                regressions.append({
-                    "metric": metric,
-                    "old": round(old, 3),
-                    "new": round(new, 3),
-                    "diff": round(new - old, 3),
-                })
-        return regressions
-
-
-    if __name__ == "__main__":
-        dataset = load_test_set()
         result = evaluate(dataset, metrics=[faithfulness, answer_relevancy, context_recall])
 
-        scores = {k: [float(v) for v in vals] for k, vals in result.items()}
+        print(f"Faithfulness:     {result['faithfulness']:.3f}")
+        print(f"Answer Relevancy: {result['answer_relevancy']:.3f}")
+        print(f"Context Recall:   {result['context_recall']:.3f}")
+        # 结果大概长这样:
+        # Faithfulness:     0.900
+        # Answer Relevancy: 0.750
+        # Context Recall:   0.800
 
-        try:
-            with open("baseline.json", "r") as f:
-                baseline = json.load(f)
-            regressions = check_regression(baseline, scores)
-            if regressions:
-                print("❌ 指标回退!")
-                for r in regressions:
-                    print(f"  {r['metric']}: {r['old']} → {r['new']} ({r['diff']})")
-                exit(1)
-            else:
-                print("✅ 所有指标达标或提升")
-        except FileNotFoundError:
-            print("⚠️ 无 baseline,保存当前结果为新 baseline")
-
-        with open("eval_results.json", "w") as f:
-            json.dump(scores, f, indent=2)
-
-        for metric, vals in scores.items():
-            print(f"{metric}: mean={np.mean(vals):.3f} | std={np.std(vals):.3f}")
+        # 注意事项:
+        # - contexts 必须是列表的列表 [[...]],即使只有一个 chunk
+        # - ground_truth 只在需要 answer_correctness 时才必须
+        # - faithfulness 和 answer_relevancy 不需要 ground_truth
 
 
-    # ====================================================================
-    # 8. 常见问题与排查
-    # ====================================================================
-    #
-    # ❓ 指标跑不动 / 超时
-    #    原因:每个指标要跟 LLM 交互好几轮。
-    #    解决:只选必要指标,用便宜的模型做 judge
-    #    result = evaluate(dataset, metrics=[faithfulness])
-    #    faithfulness.llm = cheap_llm
-    #
-    # ❓ answer_relevancy 一直很低(0.3~0.5)
-    #    正常。Ragas 从 answer 反推 question,很难精确命中。0.6+ 就算不错。
-    #    结合 faithfulness 和 correctness 一起看。
-    #
-    # ❓ 批量跑太慢
-    #    解决:
-    #    import nest_asyncio
-    #    nest_asyncio.apply()
-    #    或者分批跑
-    #
-    # ❓ 版本冲突(langchain)
-    #    解决:用虚拟环境隔离
-    #    python -m venv ragas_env
-    #    source ragas_env/bin/activate
-    #    pip install ragas
-    #
-    # ❓ AttributeError: 'Chart' object has no attribute 'show'
-    #    解决:pip install ragas==0.1.0
-    #    或者直接用 pandas 自己画图:
-    #    import matplotlib.pyplot as plt
-    #    df_result = result.to_pandas()
-    #    df_result.mean().plot(kind="bar")
-    #    plt.show()
-    #
+        # ====================================================================
+        # 3. 数据集批量评估
+        # ====================================================================
+
+        # 3.1 从 CSV 读取
+        import pandas as pd
+        import ast
+
+        df = pd.read_csv("eval_data.csv")
+        # CSV 格式: question,answer,contexts,ground_truth
+        df["contexts"] = df["contexts"].apply(ast.literal_eval)
+        dataset = Dataset.from_pandas(df)
+        result = evaluate(dataset, metrics=[faithfulness, answer_relevancy])
 
 
-    # ====================================================================
-    # 总结:Ragas 评估的最佳实践
-    # ====================================================================
-    #
-    # 1. 先清楚你要测什么
-    #    只测检索质量 → context_precision + context_recall
-    #    只测生成质量 → faithfulness + answer_relevancy
-    #    全面评估     → 以上 + answer_correctness
-    #
-    # 2. 固定好测试集(50~100 条就够了)
-    #    覆盖常见场景 + 边缘场景 + 对抗性测试
-    #
-    # 3. 固定好 Judge LLM
-    #    gpt-4o-mini 性价比最好
-    #    国产模型省钱,但一致性略差
-    #    每次换模型要重新跑 baseline
-    #
-    # 4. 建 baseline + CI
-    #    第一次跑的结果存下来当 baseline
-    #    每次改 prompt/模型/PR上自动跑
-    #    设阈值,回退就 block
-    #
-    # 5. 结果可视化
-    #    打回 Langfuse 看趋势
-    #    或直接 pandas 出报表
-    #
-    # 一句话:Ragas 就是你的 RAG 质检员。faithfulness 防幻觉,
-    # context_recall 看检索,answer_relevancy 看生成对不对路。
-    # 配上 Langfuse 就是完整的 eval + observe 方案。
+        # 3.2 从 Dict 批量
+        batch_data = {
+            "question": [
+                "什么是 RAG?",
+                "Python 的 GIL 是什么?",
+                "什么是微服务架构?",
+            ],
+            "answer": [
+                "检索增强生成,是一种结合检索和生成的 AI 架构。",
+                "全局解释器锁,保证同一时刻只有一个线程执行字节码。",
+                "将应用拆分为多个独立部署的小服务。",
+            ],
+            "contexts": [
+                ["RAG = Retrieval-Augmented Generation,最流行的 RAG 架构..."],
+                ["GIL 全称 Global Interpreter Lock,是 CPython 的机制..."],
+                ["微服务是一种架构风格,将单一应用程序划分为一组小服务..."],
+            ],
+            "ground_truth": [
+                "RAG(检索增强生成)结合检索系统和生成模型来回答问题。",
+                "GIL 是 CPython 解释器中的一个互斥锁,防止多线程并发执行。",
+                "微服务架构将应用拆分成松耦合的独立服务。",
+            ],
+        }
+
+        batch_dataset = Dataset.from_dict(batch_data)
+        result = evaluate(batch_dataset, metrics=[
+            faithfulness, answer_relevancy, context_precision, answer_correctness,
+        ])
+
+        # 批量结果
+        df_result = result.to_pandas()
+        print(df_result)
+        #    faithfulness  answer_relevancy  context_precision  answer_correctness
+        # 0         0.850            0.720              0.800              0.780
+        # 1         0.920            0.880              0.950              0.900
+        # 2         0.780            0.650              0.700              0.710
 
 
-# 📈 Langfuse: AI应用的链路追踪与观测体系
+        # 3.3 汇总统计
+        import numpy as np
+
+        for metric, scores in result.items():
+            scores_list = scores if isinstance(scores, list) else [scores]
+            print(f"{metric}:")
+            print(f"  Mean:    {np.mean(scores_list):.3f}")
+            print(f"  Std:     {np.std(scores_list):.3f}")
+            print(f"  Min:     {np.min(scores_list):.3f}")
+            print(f"  Max:     {np.max(scores_list):.3f}")
+
+
+        # ====================================================================
+        # 4. 用你自己的 LLM 做审判官
+        # ====================================================================
+        #
+        # Ragas 默认用 OpenAI。可以切到国产模型或本地模型,省钱 + 数据不出域。
+        #
+
+        from ragas.llms import llm_factory
+
+        # ========== DeepSeek ==========
+        deepseek_llm = llm_factory(
+            model="deepseek-chat",
+            base_url="https://api.deepseek.com/v1",
+            api_key="***",
+        )
+
+        # ========== 阿里通义千问 ==========
+        qwen_llm = llm_factory(
+            model="qwen-plus",
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="***",
+        )
+
+        # ========== 本地 ollama ==========
+        # 先 ollama pull qwen2.5:7b && ollama serve
+        local_llm = llm_factory(
+            model="qwen2.5:7b",
+            base_url="http://localhost:11434/v1",
+            api_key="***",  # ollama 不校验 key
+        )
+
+        # 赋值给指标
+        for metric in [faithfulness, answer_relevancy, context_precision]:
+            metric.llm = deepseek_llm
+
+        result = evaluate(dataset, metrics=[faithfulness, answer_relevancy])
+
+
+        # ========== 用多个 LLM 投票取平均 ==========
+        llms = [deepseek_llm, qwen_llm, local_llm]
+
+        all_scores = []
+        for llm in llms:
+            faithfulness.llm = llm
+            result = evaluate(batch_dataset, metrics=[faithfulness])
+            all_scores.append(result["faithfulness"])
+
+        mean_score = np.mean(all_scores, axis=0)
+        std_score = np.std(all_scores, axis=0)
+        print(f"Faithfulness: {mean_score[0]:.3f} ± {std_score[0]:.3f}")
+
+
+        # ====================================================================
+        # 5. 自定义指标
+        # ====================================================================
+
+        # 5.1 规则型自定义指标
+        from ragas.metrics.base import Metric
+
+        class LengthChecker(Metric):
+            """检查答案长度是否合理"""
+            def __init__(self):
+                super().__init__(name="length_checker", requires_ground_truth=False)
+
+            async def _ascore(self, row: dict, callbacks=None) -> float:
+                answer = row["answer"]
+                question = row.get("question", "")
+                ratio = len(answer) / max(len(question), 1)
+                if 5 <= ratio <= 50:
+                    return 1.0
+                elif 2 <= ratio < 5 or 50 < ratio <= 100:
+                    return 0.5
+                else:
+                    return 0.0
+
+        length_checker = LengthChecker()
+        result = evaluate(batch_dataset, metrics=[length_checker])
+
+
+        # 5.2 LLM Judge 型自定义指标
+        from ragas.metrics.base import MetricWithLLM
+
+        class ToxicityChecker(MetricWithLLM):
+            """检测回答是否包含有害内容"""
+            def __init__(self, llm=None):
+                super().__init__(name="toxicity_check", requires_ground_truth=False)
+                if llm:
+                    self.llm = llm
+
+            async def _ascore(self, row: dict, callbacks=None) -> float:
+                answer = row["answer"]
+                prompt = f"""Is the following answer toxic or harmful?
+        Only answer with a single number 0 (not toxic) or 1 (toxic).
+
+        Answer: {answer}
+
+        Score (0 or 1):"""
+                response = await self.llm.agenerate([[prompt]], callbacks=callbacks)
+                text = response.generations[0][0].text.strip()
+                try:
+                    return 1.0 - int(text)
+                except:
+                    return 0.5
+
+
+        # 5.3 关键词覆盖率检查
+        class KeywordCoverage(Metric):
+            def __init__(self, required_keywords: dict):
+                super().__init__(name="keyword_coverage", requires_ground_truth=False)
+                self.keyword_map = required_keywords
+
+            async def _ascore(self, row: dict, callbacks=None) -> float:
+                question = row["question"]
+                answer = row["answer"]
+                keywords = self.keyword_map.get(question, [])
+                if not keywords:
+                    return 1.0
+                found = sum(1 for kw in keywords if kw.lower() in answer.lower())
+                return found / len(keywords)
+
+
+        # ====================================================================
+        # 6. Ragas + Langfuse 集成(黄金搭配)
+        # ====================================================================
+        #
+        # 思路:Ragas 负责算分,分数打到 Langfuse trace 上,形成完整的 eval + observe 方案。
+        #
+
+        from langfuse import Langfuse
+
+        langfuse = Langfuse(
+            public_key="pk-xxx",
+            secret_key="sk-xxx",
+            host="https://cloud.langfuse.com"
+        )
+
+
+        def my_rag(question: str) -> dict:
+            """模拟一个 RAG pipeline"""
+            trace = langfuse.trace(name="rag_eval", input=question)
+            contexts = ["Langfuse 是一个可观测性平台。", "Ragas 是评估框架。"]
+            answer = "Langfuse 和 Ragas 是互补的工具。"
+
+            retrieval = trace.retrieval(name="retrieval", input=question)
+            retrieval.end(output=contexts)
+
+            generation = trace.generation(
+                name="generation", model="gpt-4o",
+                input=str({"question": question, "contexts": contexts}),
+                output=answer
+            )
+            return trace, {"question": question, "answer": answer, "contexts": contexts, "trace_id": trace.id}
+
+
+        # 跑一次完整的 RAG + Ragas 评估 + Langfuse 记录
+        trace, data = my_rag("Langfuse 和 Ragas 有什么区别?")
+
+        ds = Dataset.from_dict({
+            "question": [data["question"]],
+            "answer": [data["answer"]],
+            "contexts": [data["contexts"]],
+        })
+
+        ragas_result = evaluate(ds, metrics=[faithfulness, answer_relevancy])
+
+        # 分数打到 Langfuse trace
+        trace.score(name="ragas_faithfulness", value=float(ragas_result["faithfulness"][0]), comment="Ragas 忠实度")
+        trace.score(name="ragas_answer_relevancy", value=float(ragas_result["answer_relevancy"][0]), comment="Ragas 相关性")
+        langfuse.flush()
+
+        print(f"✅ Faithfulness: {ragas_result['faithfulness'][0]:.3f}")
+        print(f"✅ Relevancy: {ragas_result['answer_relevancy'][0]:.3f}")
+        print("✅ Langfuse trace 里有分,去看看")
+
+
+        # 批量集成
+
+        def batch_eval_and_log(questions, rag_func):
+            for q in questions:
+                trace, data = rag_func(q)
+                ds = Dataset.from_dict({
+                    "question": [data["question"]],
+                    "answer": [data["answer"]],
+                    "contexts": [data["contexts"]],
+                })
+                result = evaluate(ds, metrics=[faithfulness])
+                trace.score(name="ragas_faithfulness", value=float(result["faithfulness"][0]))
+                langfuse.flush()
+            print(f"✅ 完成 {len(questions)} 条评估")
+
+
+        # ====================================================================
+        # 7. CI/CD 自动化评估
+        # ====================================================================
+        #
+        # 把 Ragas 塞进 CI 流程,每次改 Prompt 或换模型自动跑分。
+        #
+        # 在 .github/workflows/rag-eval.yml 中配置:
+        #
+        # name: RAG Evaluation
+        # on:
+        #   pull_request:
+        #     paths:
+        #       - "app/prompts/**"
+        #       - "app/rag/**"
+        # jobs:
+        #   evaluate:
+        #     runs-on: ubuntu-latest
+        #     steps:
+        #       - uses: actions/checkout@v4
+        #       - uses: actions/setup-python@v5
+        #         with:
+        #           python-version: "3.11"
+        #       - run: pip install ragas openai datasets pandas
+        #       - run: python eval_ci.py
+        #         env:
+        #           OPENAI_API_KEY: *** secrets.OPENAI_API_KEY }}
+        #       - uses: actions/upload-artifact@v4
+        #         with:
+        #           name: eval-results
+        #           path: eval_results.json
+        #
+
+        # eval_ci.py 脚本示例:
+        #
+        import json
+
+
+        def load_test_set() -> Dataset:
+            data = {
+                "question": [...],
+                "answer": [...],
+                "contexts": [[...], ...],
+                "ground_truth": [...],
+            }
+            return Dataset.from_dict(data)
+
+
+        def check_regression(old_scores, new_scores, threshold=0.05):
+            """检查评分有没有回退"""
+            regressions = []
+            for metric in new_scores:
+                old = np.mean(old_scores.get(metric, [0]))
+                new = np.mean(new_scores[metric])
+                if new < old - threshold:
+                    regressions.append({
+                        "metric": metric,
+                        "old": round(old, 3),
+                        "new": round(new, 3),
+                        "diff": round(new - old, 3),
+                    })
+            return regressions
+
+
+        if __name__ == "__main__":
+            dataset = load_test_set()
+            result = evaluate(dataset, metrics=[faithfulness, answer_relevancy, context_recall])
+
+            scores = {k: [float(v) for v in vals] for k, vals in result.items()}
+
+            try:
+                with open("baseline.json", "r") as f:
+                    baseline = json.load(f)
+                regressions = check_regression(baseline, scores)
+                if regressions:
+                    print("❌ 指标回退!")
+                    for r in regressions:
+                        print(f"  {r['metric']}: {r['old']} → {r['new']} ({r['diff']})")
+                    exit(1)
+                else:
+                    print("✅ 所有指标达标或提升")
+            except FileNotFoundError:
+                print("⚠️ 无 baseline,保存当前结果为新 baseline")
+
+            with open("eval_results.json", "w") as f:
+                json.dump(scores, f, indent=2)
+
+            for metric, vals in scores.items():
+                print(f"{metric}: mean={np.mean(vals):.3f} | std={np.std(vals):.3f}")
+
+
+        # ====================================================================
+        # 8. 常见问题与排查
+        # ====================================================================
+        #
+        # ❓ 指标跑不动 / 超时
+        #    原因:每个指标要跟 LLM 交互好几轮。
+        #    解决:只选必要指标,用便宜的模型做 judge
+        #    result = evaluate(dataset, metrics=[faithfulness])
+        #    faithfulness.llm = cheap_llm
+        #
+        # ❓ answer_relevancy 一直很低(0.3~0.5)
+        #    正常。Ragas 从 answer 反推 question,很难精确命中。0.6+ 就算不错。
+        #    结合 faithfulness 和 correctness 一起看。
+        #
+        # ❓ 批量跑太慢
+        #    解决:
+        #    import nest_asyncio
+        #    nest_asyncio.apply()
+        #    或者分批跑
+        #
+        # ❓ 版本冲突(langchain)
+        #    解决:用虚拟环境隔离
+        #    python -m venv ragas_env
+        #    source ragas_env/bin/activate
+        #    pip install ragas
+        #
+        # ❓ AttributeError: 'Chart' object has no attribute 'show'
+        #    解决:pip install ragas==0.1.0
+        #    或者直接用 pandas 自己画图:
+        #    import matplotlib.pyplot as plt
+        #    df_result = result.to_pandas()
+        #    df_result.mean().plot(kind="bar")
+        #    plt.show()
+        #
+
+
+        # ====================================================================
+        # 总结:Ragas 评估的最佳实践
+        # ====================================================================
+        #
+        # 1. 先清楚你要测什么
+        #    只测检索质量 → context_precision + context_recall
+        #    只测生成质量 → faithfulness + answer_relevancy
+        #    全面评估     → 以上 + answer_correctness
+        #
+        # 2. 固定好测试集(50~100 条就够了)
+        #    覆盖常见场景 + 边缘场景 + 对抗性测试
+        #
+        # 3. 固定好 Judge LLM
+        #    gpt-4o-mini 性价比最好
+        #    国产模型省钱,但一致性略差
+        #    每次换模型要重新跑 baseline
+        #
+        # 4. 建 baseline + CI
+        #    第一次跑的结果存下来当 baseline
+        #    每次改 prompt/模型/PR上自动跑
+        #    设阈值,回退就 block
+        #
+        # 5. 结果可视化
+        #    打回 Langfuse 看趋势
+        #    或直接 pandas 出报表
+        #
+        # 一句话:Ragas 就是你的 RAG 质检员。faithfulness 防幻觉,
+        # context_recall 看检索,answer_relevancy 看生成对不对路。
+        # 配上 Langfuse 就是完整的 eval + observe 方案。
+
+
+# 📈 AI应用的链路追踪与观测体系
 # ====================================================================================================================================
-    from langfuse import get_client, propagate_attributes
-    from langfuse.callback import CallbackHandler
-    import os
-
-    # 🚀 配置langfuse连接信息
-    os.environ['LANGFUSE_PUBLIC_KEY']="..."
-    os.environ['LANGFUSE_SECRET_KEY']="..."
-    os.environ['LANGFUSE_HOST']="localhost:3000"
-    os.environ['LANGFUSE_TRAING_ENVIRONMENT']="production" # 可选,标识环境
-    # 未配置 LangSmith 时关闭 tracing,避免 403 报错
-    os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
-
-    # 最简接入
-    from langchain_deepseek import ChatDeepSeek
-    from langchain.agents import create_agent
-    from langfuse import Langfuse
-    from langfuse.langchain import CallbackHandler
-    import os
+    # 🚀 --- langfuse ------------------- #
+        from langfuse import get_client, propagate_attributes
+        from langfuse.callback import CallbackHandler
+        import os
+
+        # 🚀 配置langfuse连接信息
+        os.environ['LANGFUSE_PUBLIC_KEY']="..."
+        os.environ['LANGFUSE_SECRET_KEY']="..."
+        os.environ['LANGFUSE_HOST']="localhost:3000"
+        os.environ['LANGFUSE_TRAING_ENVIRONMENT']="production" # 可选,标识环境
+        # 未配置 LangSmith 时关闭 tracing,避免 403 报错
+        os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
+
+        # 最简接入
+        from langchain_deepseek import ChatDeepSeek
+        from langchain.agents import create_agent
+        from langfuse import Langfuse
+        from langfuse.langchain import CallbackHandler
+        import os
 
 
-    # --- 模型 ---
-    model = ChatDeepSeek(
-        model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-        api_key='sk-08b1f9a1961e4b13a4d7ca9060e7cf4a',
-        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-        temperature=0.3,
-    )
+        # --- 模型 ---
+        model = ChatDeepSeek(
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            api_key='sk-08b1f9a1961e4b13a4d7ca9060e7cf4a',
+            base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+            temperature=0.3,
+        )
 
-    langfuse = Langfuse()
-    langfuse_handler = CallbackHandler()
+        langfuse = Langfuse()
+        langfuse_handler = CallbackHandler()
 
-    # --- Prompt ---
-    ec_agent_prompt = langfuse.get_prompt("default_prompt")
+        # --- Prompt ---
+        ec_agent_prompt = langfuse.get_prompt("default_prompt")
 
-    # --- Agent ---
-    agent = create_agent(
-        model=model,
-        tools=[],
-        system_prompt=ec_agent_prompt.prompt,
-    )
+        # --- Agent ---
+        agent = create_agent(
+            model=model,
+            tools=[],
+            system_prompt=ec_agent_prompt.prompt,
+        )
 
-    # --- 调用 ---
-    result = agent.invoke(
-        {"messages": [{"role": "user", "content": "你好"}]},
-        config={
-            "callbacks": [langfuse_handler],
-            "metadata": {"langfuse_prompt": ec_agent_prompt},
-        },
-    )
+        # --- 调用 ---
+        result = agent.invoke(
+            {"messages": [{"role": "user", "content": "你好"}]},
+            config={
+                "callbacks": [langfuse_handler],
+                "metadata": {"langfuse_prompt": ec_agent_prompt},
+            },
+        )
 
-    print(result)
+        print(result)
 
-
-    # Langfuse开启批处理
-    import os
-
-    # 每次刷新时最多发送的事件数
-    os.environ["LANGFUSE_FLUSH_AT"]="30"
-
-    # 队列最大等待时间(毫秒)
-    os.environ["LANGFUSE_FLUSH_INTERVAL"]="2000"
-
-    # 设置全局采样率
-    os.environ["LANGFUSE_SMPLE_RATE"]="0.5" # 仅记录50%的请求
-
-
-    # 获取langfuse中的提示词
-    ec_agent_prompt = langfuse.get_prompt("ec-agent", label="production") # 这里的label="production" 这个不写也可以 默认是这个
-
-    # 按版本号拉取
-    ec_agent_prompt = langfuse.get_prompt('ec-agent', version=1)
-
-    print("Name", ec_agent_prompt.name) # 输出ec-agent
-    print("Version", ec_agent_prompt.version) # 输出1(整数)
-    print("Is Fallback", ec_agent_prompt.is_fallback) # 正常情况下应该为False
-    print("Prompt", ec_agent_prompt.prompt) # 提示词全文
-
-
-    # 🚀 把动态Prompt注入到LLM应用
-    from langchain.chat_models import init_chat_model
-
-    model = init_chat_model()
-
-    from langchain.agents import create_agent
-
-    agent = create_agent(
-        model = model,
-        tools=[],
-        system_prompt=ec_agent_prompt.prompt
-    )
-
-    # 在Observation上下文调用,并携带prompt信息
-    with langfuse.start_as_current_observation(name="langchain_call"):
-        with propagate_attributes():
-            result = agent.invoke(
-                {"messages": [{"role": "user", "content": "上海的天气怎么样?"}]},
-                config={
-                    "callback": [langfuse_handler],
-                    "meta": {"langfuse_prompt": ec_agent_prompt}
-                }
-            )
-
-    # 确保数据完全发送
-    langfuse.flush()
-
-
-    prompt = lanfuse.get_prompt(
-        "move-xc",
-        callback="when error prompt", # 兜底提示词
-        cache_ttl_seconds=300, # 0 开发调试时不要缓存
-        label="latest"
-    )
-
-
-    # 🚀 在提示词中使用配置
-    from langfuse import get_client
-    from langchain.openai import OpenAI
-
-    langfuse = get_client()
-
-    prompt = langfuse.get_template('invoice-extractor')
-
-    cfg = prompt.config
-    model = cfg.get('model')
-    temperature = cfg.get('temperature')
-
-    agent = OpenAI(
-        model=model,
-        temperature=cfg.temperature,
-        message=prompt.prompt
-    )
-
-    # 🌿实战:给 RAG 应用加追踪
-
-    import openai
-    from langfuse.decorators import observe, langfuse_context
-
-    """
-    用 @observe 装饰器,自动帮你创建 trace/spans
-    比手写 trace/generation 方便得多
-    """
-
-    class RAGChat:
-        def __init__(self):
-            self.client = openai.OpenAI()
-
-        @observe(name="retrieve_docs", as_type="span")
-        def retrieve_docs(self, query: str) -> list:
-            """检索相关文档 -- 这一步会被自动记录为 span"""
-            # 模拟向量检索
-            docs = [
-                "Langfuse 是一个 LLM 可观测平台",
-                "它支持 trace、evaluation、prompt management",
-            ]
-            # 记录检索的额外信息
-            langfuse_context.update_current_observation(
-                input=query,
-                metadata={"docs_count": len(docs)}
-            )
-            return docs
-
-        @observe(name="generate_answer", as_type="generation")
-        def generate_answer(self, query: str, context: list) -> str:
-            """LLM 生成回答 -- 自动记录为 generation"""
-            prompt = f"""基于以下信息回答问题:
-
-            上下文:{' '.join(context)}
-            问题:{query}
-            回答:"""
-
-            response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-            )
-
-            result = response.choices[0].message.content
-
-            # 记录 token 用量(自动从 response 读取)
-            langfuse_context.update_current_observation(
-                input=prompt,
-                output=result,
-                usage={
-                    "input": response.usage.prompt_tokens,
-                    "output": response.usage.completion_tokens,
-                },
-                model="gpt-4o",
-            )
-
-            return result
-
-        @observe(name="rag_chat")  # 整个 trace
-        def chat(self, query: str) -> str:
-            """完整的 RAG 流程"""
-            docs = self.retrieve_docs(query)
-            answer = self.generate_answer(query, docs)
-            return answer
-
-
-    # 使用
-    rag = RAGChat()
-    result = rag.chat("Langfuse 是什么?")
-    print(result)
-
-
-    # ⚖打分与评估
-    # 🤔人工评分
-    # 在代码里记录评分
-    trace = langfuse.trace(name="qa_chat", user_id="user_001")
-
-    # 数值分(0-1)
-    trace.score(
-        name="helpfulness",
-        value=0.85,
-        comment="回答基本正确,但不够详细"
-    )
-
-    # 分类分
-    trace.score(
-        name="hallucination",
-        value="none",        # 可选: none / low / medium / high
-        data_type="CATEGORICAL"
-    )
-
-    # 布尔分
-    trace.score(
-        name="contains_toxic",
-        value=True,          # 或 False
-        data_type="BOOLEAN"
-    )
-
-    # 或者在 Langfuse UI 上直接打分
-    # Trace 详情页 → 右侧 Score 面板 → 点 Add Score
-
-    # 🤖自动评估(LLM-as-a-Judge)
-    from langfuse import Langfuse
-    from langfuse.evaluations import LlmJudge
-
-    # 在 Langfuse 平台上配置 LLM Judge 评估器
-    # Settings → Evaluations → 新建
-
-    # 或者用 SDK 定义简单评估
-    from langfuse.evaluations import StringEvaluator
-
-    def check_briefness(output: str, expected: str) -> float:
-        """检查回答是否太短(<20个字算差)"""
-        return 1.0 if len(output) > 20 else 0.0
-
-    # 批量跑评估
-    langfuse.evaluation.run(
-        name="briefness_check",
-        data=[...],  # trace 列表
-        evaluator=StringEvaluator(check_briefness),
-    )
-
-
-    # 🧪 数据集 & 实验
-    # 从历史 trace 创建
-    dataset = langfuse.create_dataset("qa-test-set")
-
-    # 添加数据
-    dataset.append_item(
-        input={"query": "什么是Langfuse?"},
-        expected_output={"answer": "Langfuse是LLM可观测平台"},
-    )
-
-    # 或者在 UI 上手动创建
-    # Langfuse → Datasets → 新建
-
-    # 跑实验
-    # 用不同 prompt 版本跑同一个数据集
-    experiment = langfuse.create_experiment(
-        name="prompt-v1-vs-v2",
-        dataset_id="qa-test-set",
-    )
-
-    # 对数据集里的每个 item 运行
-    for item in dataset.items:
-        # 用 prompt v1
-        result_v1 = chain_v1.invoke(item.input)
-        experiment.log(item, result_v1, prompt_version=1)
-
-        # 用 prompt v2
-        result_v2 = chain_v2.invoke(item.input)
-        experiment.log(item, result_v2, prompt_version=2)
+
+        # Langfuse开启批处理
+        import os
+
+        # 每次刷新时最多发送的事件数
+        os.environ["LANGFUSE_FLUSH_AT"]="30"
+
+        # 队列最大等待时间(毫秒)
+        os.environ["LANGFUSE_FLUSH_INTERVAL"]="2000"
+
+        # 设置全局采样率
+        os.environ["LANGFUSE_SMPLE_RATE"]="0.5" # 仅记录50%的请求
+
+
+        # 获取langfuse中的提示词
+        ec_agent_prompt = langfuse.get_prompt("ec-agent", label="production") # 这里的label="production" 这个不写也可以 默认是这个
+
+        # 按版本号拉取
+        ec_agent_prompt = langfuse.get_prompt('ec-agent', version=1)
+
+        print("Name", ec_agent_prompt.name) # 输出ec-agent
+        print("Version", ec_agent_prompt.version) # 输出1(整数)
+        print("Is Fallback", ec_agent_prompt.is_fallback) # 正常情况下应该为False
+        print("Prompt", ec_agent_prompt.prompt) # 提示词全文
+
+
+        # 🚀 把动态Prompt注入到LLM应用
+        from langchain.chat_models import init_chat_model
+
+        model = init_chat_model()
+
+        from langchain.agents import create_agent
+
+        agent = create_agent(
+            model = model,
+            tools=[],
+            system_prompt=ec_agent_prompt.prompt
+        )
+
+        # 在Observation上下文调用,并携带prompt信息
+        with langfuse.start_as_current_observation(name="langchain_call"):
+            with propagate_attributes():
+                result = agent.invoke(
+                    {"messages": [{"role": "user", "content": "上海的天气怎么样?"}]},
+                    config={
+                        "callback": [langfuse_handler],
+                        "meta": {"langfuse_prompt": ec_agent_prompt}
+                    }
+                )
+
+        # 确保数据完全发送
+        langfuse.flush()
+
+
+        prompt = lanfuse.get_prompt(
+            "move-xc",
+            callback="when error prompt", # 兜底提示词
+            cache_ttl_seconds=300, # 0 开发调试时不要缓存
+            label="latest"
+        )
+
+
+        # 🚀 在提示词中使用配置
+        from langfuse import get_client
+        from langchain.openai import OpenAI
+
+        langfuse = get_client()
+
+        prompt = langfuse.get_template('invoice-extractor')
+
+        cfg = prompt.config
+        model = cfg.get('model')
+        temperature = cfg.get('temperature')
+
+        agent = OpenAI(
+            model=model,
+            temperature=cfg.temperature,
+            message=prompt.prompt
+        )
+
+        # 🌿实战:给 RAG 应用加追踪
+
+        import openai
+        from langfuse.decorators import observe, langfuse_context
+
+        """
+        用 @observe 装饰器,自动帮你创建 trace/spans
+        比手写 trace/generation 方便得多
+        """
+
+        class RAGChat:
+            def __init__(self):
+                self.client = openai.OpenAI()
+
+            @observe(name="retrieve_docs", as_type="span")
+            def retrieve_docs(self, query: str) -> list:
+                """检索相关文档 -- 这一步会被自动记录为 span"""
+                # 模拟向量检索
+                docs = [
+                    "Langfuse 是一个 LLM 可观测平台",
+                    "它支持 trace、evaluation、prompt management",
+                ]
+                # 记录检索的额外信息
+                langfuse_context.update_current_observation(
+                    input=query,
+                    metadata={"docs_count": len(docs)}
+                )
+                return docs
+
+            @observe(name="generate_answer", as_type="generation")
+            def generate_answer(self, query: str, context: list) -> str:
+                """LLM 生成回答 -- 自动记录为 generation"""
+                prompt = f"""基于以下信息回答问题:
+
+                上下文:{' '.join(context)}
+                问题:{query}
+                回答:"""
+
+                response = self.client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,
+                )
+
+                result = response.choices[0].message.content
+
+                # 记录 token 用量(自动从 response 读取)
+                langfuse_context.update_current_observation(
+                    input=prompt,
+                    output=result,
+                    usage={
+                        "input": response.usage.prompt_tokens,
+                        "output": response.usage.completion_tokens,
+                    },
+                    model="gpt-4o",
+                )
+
+                return result
+
+            @observe(name="rag_chat")  # 整个 trace
+            def chat(self, query: str) -> str:
+                """完整的 RAG 流程"""
+                docs = self.retrieve_docs(query)
+                answer = self.generate_answer(query, docs)
+                return answer
+
+
+        # 使用
+        rag = RAGChat()
+        result = rag.chat("Langfuse 是什么?")
+        print(result)
+
+
+        # ⚖打分与评估
+        # 🤔人工评分
+        # 在代码里记录评分
+        trace = langfuse.trace(name="qa_chat", user_id="user_001")
+
+        # 数值分(0-1)
+        trace.score(
+            name="helpfulness",
+            value=0.85,
+            comment="回答基本正确,但不够详细"
+        )
+
+        # 分类分
+        trace.score(
+            name="hallucination",
+            value="none",        # 可选: none / low / medium / high
+            data_type="CATEGORICAL"
+        )
+
+        # 布尔分
+        trace.score(
+            name="contains_toxic",
+            value=True,          # 或 False
+            data_type="BOOLEAN"
+        )
+
+        # 或者在 Langfuse UI 上直接打分
+        # Trace 详情页 → 右侧 Score 面板 → 点 Add Score
+
+        # 🤖自动评估(LLM-as-a-Judge)
+        from langfuse import Langfuse
+        from langfuse.evaluations import LlmJudge
+
+        # 在 Langfuse 平台上配置 LLM Judge 评估器
+        # Settings → Evaluations → 新建
+
+        # 或者用 SDK 定义简单评估
+        from langfuse.evaluations import StringEvaluator
+
+        def check_briefness(output: str, expected: str) -> float:
+            """检查回答是否太短(<20个字算差)"""
+            return 1.0 if len(output) > 20 else 0.0
+
+        # 批量跑评估
+        langfuse.evaluation.run(
+            name="briefness_check",
+            data=[...],  # trace 列表
+            evaluator=StringEvaluator(check_briefness),
+        )
+
+
+        # 🧪 数据集 & 实验
+        # 从历史 trace 创建
+        dataset = langfuse.create_dataset("qa-test-set")
+
+        # 添加数据
+        dataset.append_item(
+            input={"query": "什么是Langfuse?"},
+            expected_output={"answer": "Langfuse是LLM可观测平台"},
+        )
+
+        # 或者在 UI 上手动创建
+        # Langfuse → Datasets → 新建
+
+        # 跑实验
+        # 用不同 prompt 版本跑同一个数据集
+        experiment = langfuse.create_experiment(
+            name="prompt-v1-vs-v2",
+            dataset_id="qa-test-set",
+        )
+
+        # 对数据集里的每个 item 运行
+        for item in dataset.items:
+            # 用 prompt v1
+            result_v1 = chain_v1.invoke(item.input)
+            experiment.log(item, result_v1, prompt_version=1)
+
+            # 用 prompt v2
+            result_v2 = chain_v2.invoke(item.input)
+            experiment.log(item, result_v2, prompt_version=2)
 
 
 # 📷 Langgraph

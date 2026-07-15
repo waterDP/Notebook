@@ -1,0 +1,8 @@
+LangSmith 是 LangChain 官方推出的 LLM 应用开发平台，核心功能包括：
+
+1. Trace 追踪：记录每一次 LLM 调用、工具执行、RAG 检索的完整链路，支持时间线视图和 token 消耗分析。
+2. Dataset 管理：可上传测试集（question/expected_answer），用于评估 Agent 表现。
+3. Playground：在线调试 prompt 和 chain，实时对比不同版本效果。
+4. Monitor：设置延迟、失败率等告警阈值，保障生产稳定性。
+
+💡 面试加分点：LangSmith 不仅是调试工具，更是你交付 Agent 时的「可信凭证」—— 你能向面试官展示："这个回答，是经过哪几步推理、调了哪个工具、检索了哪些文档，全程可追溯。"
