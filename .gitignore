@@ -1,6 +1,7 @@
 .opencode/
 Markdown/
 Django/
+Java/
 .env*
 !*.env.example
 
