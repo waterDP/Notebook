@@ -3,6 +3,13 @@
   "configurations": [
     {
         "type": "java",
+        "name": "StartEnum",
+        "request": "launch",
+        "mainClass": "StartEnum",
+        "projectName": "Notebook_14f73635"
+    },
+    {
+        "type": "java",
         "name": "Start",
         "request": "launch",
         "mainClass": "Start",
