@@ -2,35 +2,42 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node",
-      "request": "launch",
-      "name": "启动程序",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "program": "${file}"
+        "type": "java",
+        "name": "Start",
+        "request": "launch",
+        "mainClass": "Start",
+        "projectName": "Notebook_14f73635"
     },
     {
-      "name": "C/C++ Runner: Debug Session",
-      "type": "cppdbg",
-      "request": "launch",
-      "args": [],
-      "stopAtEntry": false,
-      "cwd": "e:/note",
-      "environment": [],
-      "program": "e:/note/build/Debug/outDebug",
-      "internalConsoleOptions": "openOnSessionStart",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb",
-      "console": "integratedTerminal",
-      "externalConsole": true,
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ]
+        "type": "node",
+        "request": "launch",
+        "name": "启动程序",
+        "skipFiles": [
+            "<node_internals>/**"
+        ],
+        "program": "${file}"
+    },
+    {
+        "name": "C/C++ Runner: Debug Session",
+        "type": "cppdbg",
+        "request": "launch",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "e:/note",
+        "environment": [],
+        "program": "e:/note/build/Debug/outDebug",
+        "internalConsoleOptions": "openOnSessionStart",
+        "MIMode": "gdb",
+        "miDebuggerPath": "gdb",
+        "console": "integratedTerminal",
+        "externalConsole": true,
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
     }
-  ]
+]
 }
