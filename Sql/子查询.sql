@@ -104,7 +104,9 @@ FROM employees;
  ANY 需要和单行操作符一起使用，和子查询返回的某一个值比较
  ALL 需要和单行操作符一起使用，和子查询返回的所有值比较
  SOME(同ANY)
- */ # 题目 返回其它job_id中比job_id为IT_PROG 部门任意工资低的员工的员工号 姓名 job_id以及salary
+ */ 
+ 
+# 题目 返回其它job_id中比job_id为IT_PROG 部门任意工资低的员工的员工号 姓名 job_id以及salary
 
 SELECT last_name, job_id, salary
 FROM employees
