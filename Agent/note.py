@@ -201,7 +201,7 @@
                 query_embedding=[query_embedding],
                 n_results=top_k
             )
-            return result['metadatas'][0] # 返回最相关的几个工具元数据 
+            return results['metadatas'][0] # 返回最相关的几个工具元数据 
 
         # 3. 只把几个工具的schema传给LLM
         def agent_with_retrieval(query, all_tools, tool_index):
