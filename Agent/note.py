@@ -14497,9 +14497,19 @@
                     api_key = line.strip().split()[-1]
                     break
 
-        MODEL_INFO = {"vision":False,"function_calling":True,"json_output":True,"structured_output":True,"family":"unknown"}
-        model = OpenAIChatCompletionClient(model="deepseek-chat", base_url="https://api.deepseek.com/v1",
-                                           api_key=api_key, model_info=MODEL_INFO)
+        MODEL_INFO = {
+            "vision": False,
+            "function_calling": True, 
+            "json_output": True,
+            "structured_output": True,
+            "family":"unknown"
+        }
+        model = OpenAIChatCompletionClient(
+            model="deepseek-chat", 
+            base_url="https://api.deepseek.com/v1",
+            api_key=api_key, 
+            model_info=MODEL_INFO
+        )
 
         # Agent
         researcher = AssistantAgent("researcher", model, system_message="你是研究员,负责收集信息。用中文。充分后回复 TERMINATE。")
@@ -16127,7 +16137,7 @@
     # 👑 多agent协作模式
 
         # 🍊 Workflow 流程编排
-        #-------------------------------------------------------------------------------------------------------------------
+        #--------------------------------------------------------------------------------------------------------------------
             # 🚀 Langgraph StateGraph串行边
             from typing import TypedDict  # 给 LangGraph 的图状态定义带类型的字段结构
             from langchain_openai import ChatOpenAI  # LangChain 封装的 OpenAI 兼容聊天模型
