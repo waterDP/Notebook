@@ -9940,7 +9940,7 @@
         workflow.add_edge("retrieve", "evaluate")
         workflow.add_conditional_edges("evaluate",
             lambda r: r["action"],
-            {"generate": "generate", "rewrite": "rewrite"})vfbedgv cb, 
+            {"generate": "generate", "rewrite": "rewrite"}), 
         workflow.add_edge("rewrite", "evaluate")
         workflow.add_edge("generate", END)
 
