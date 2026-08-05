@@ -6171,7 +6171,7 @@
     search_params = {
         "metric_type": "CONSINE",
         "params": {"nprobe": 15},  # 搜索时考虑的聚类中心数量 搜索最近的15个桶
-    }  # 搜索时考虑的聚类中心数据
+    }
     results = client.search(
         collection_name="articles",
         data=[query_vector],
