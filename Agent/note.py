@@ -20,14 +20,14 @@
 
     # 🚀 Embedding 模型怎么选？
         # ┌──────────────────────┬───────────┬──────────┬──────────────────┐
-        # │ 模型                 │ 维度       │ 价格      │ 推荐场景          │
+        # │ 模型                 │ 维度       │ 价格      │ 推荐场景         │
         # ├──────────────────────┼───────────┼──────────┼──────────────────┤
-        # │ OpenAI text-emb-3-small │ 1536    │ $0.02/1M │ 通用首选，质量稳   │
-        # │ OpenAI text-emb-3-large │ 3072    │ $0.13/1M │ 高精度场景         │
-        # │ BGE-small-zh-v1.5     │ 512       │ 免费本地  │ 中文场景离线       │
-        # │ BGE-large-zh-v1.5     │ 1024      │ 免费本地  │ 中文高精度离线     │
-        # │ 通义 text-embedding-v4│ 1024      │ 免费额度  │ 阿里云生态        │
-        # │ DeepSeek emb          │ 1024      │ 需申请    │ DeepSeek 全家桶   │
+        # │ OpenAI text-emb-3-small │ 1536    │ $0.02/1M │ 通用首选，质量稳  │
+        # │ OpenAI text-emb-3-large │ 3072    │ $0.13/1M │ 高精度场景       │
+        # │ BGE-small-zh-v1.5     │ 512       │ 免费本地  │ 中文场景离线     │
+        # │ BGE-large-zh-v1.5     │ 1024      │ 免费本地  │ 中文高精度离线   │
+        # │ 通义 text-embedding-v4│ 1024      │ 免费额度  │ 阿里云生态       │
+        # │ DeepSeek emb          │ 1024      │ 需申请    │ DeepSeek 全家桶 │
         # └──────────────────────┴───────────┴──────────┴──────────────────┘
 
         # ■ 选型原则：
@@ -78,7 +78,7 @@
         #    只看方向不看长度，适合比较语义相似度
         def cosine_similarity(a: list[float], b: list[float]) -> float:
             a, b = np.array(a), np.array(b)
-            dot = np.dot(a, b)
+            dot = np.dot(a, b)  
             norm = np.linalg.norm(a) * np.linalg.norm(b)
             return dot / norm if norm != 0 else 0.0
 
