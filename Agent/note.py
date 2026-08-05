@@ -17289,7 +17289,7 @@
             tags: set[str] = []
             image: Image | None = None
 
-        @app.put("item/{item_id}")
+        @app.put("/item/{item_id}")
         async def update_item(item_id: int, item: Item):
             results = {"item_id": item_id, "item": item}
             return results
@@ -17300,7 +17300,7 @@
 
         app = FastAPI()
 
-        @app.get("/items/")
+        @app.get("/items")
         async def read_items(ads_id: Annotated[str | None, Cookie(descrption="商品Id")] = None):
             return {"ads_id": ads_id}
 
@@ -17319,7 +17319,7 @@
             fatebook_tracker: str | None = None
             googall_tracker: str | None = None
 
-        @app.get("/items/")
+        @app.get("/items")
         async def read_items(cookies: Annotated[Cookies, Cookie()]):
             return cookies
 
