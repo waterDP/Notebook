@@ -7020,11 +7020,11 @@
             def generate_header(chunk_text):
                 """为 chunk 生成一句话标题"""
                 prompt = f"""为以下文本生成一句话标题(20字以内),
-            # 让读者能快速判断是否包含所需信息:
+                # 让读者能快速判断是否包含所需信息:
 
-            # {chunk_text[:500]}
+                # {chunk_text[:500]}
 
-            # 标题:"""
+                # 标题:"""
                 response = llm.invoke(prompt)
                 return response.content.strip()
 
