@@ -2656,7 +2656,7 @@
 
         config = RunnableConfig(
             max_concurrency=2, # 最大并发数
-            abstimeout=8.0, # 单个任务超时时间 秒 超过此时间的任务奖被强制终止
+            abstimeout=8.0, # 单个任务超时时间 秒 超过此时间的任务将被强制终止
             metadata={"request_id": "abs123", "task": "query"} # 元数据
         )
 
