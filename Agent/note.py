@@ -2656,7 +2656,7 @@
 
         config = RunnableConfig(
             max_concurrency=2, # 最大并发数
-            abstimeout=8.0, # 单个任务超时时间 秒 超过此时间的任务奖被强制终止
+            abstimeout=8.0, # 单个任务超时时间 秒 超过此时间的任务将被强制终止
             metadata={"request_id": "abs123", "task": "query"} # 元数据
         )
 
@@ -7020,11 +7020,11 @@
             def generate_header(chunk_text):
                 """为 chunk 生成一句话标题"""
                 prompt = f"""为以下文本生成一句话标题(20字以内),
-            # 让读者能快速判断是否包含所需信息:
+                # 让读者能快速判断是否包含所需信息:
 
-            # {chunk_text[:500]}
+                # {chunk_text[:500]}
 
-            # 标题:"""
+                # 标题:"""
                 response = llm.invoke(prompt)
                 return response.content.strip()
 
