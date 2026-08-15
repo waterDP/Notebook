@@ -3,6 +3,7 @@ Markdown/
 Django/
 Java/
 Go/
+Golang/
 .env*
 !*.env.example
 
