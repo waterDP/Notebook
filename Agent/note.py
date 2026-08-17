@@ -15262,12 +15262,10 @@
         print(result.final_output)
 
     # 🚀 Runner核心组件
-        """
-        - Runner.run(): 异步运行并返回最终响应结果。
-        - Runner.run_sync(): 同步运行,本质上是对异步 `run()` 方法的封装,
-                             从而可以在没有事件循环的情况下(例如在普通的 Python 脚本或某些环境中)以同步方式执行代理的逻辑。
-        - Runner.run_streamed(): 异步运行并返回最终的响应结果。它以流模式调用大模型,并在接收到事件时将其进行流式的实时传输。
-        """
+        # - Runner.run(): 异步运行并返回最终响应结果。
+        # - Runner.run_sync(): 同步运行,本质上是对异步 `run()` 方法的封装,
+        #                      从而可以在没有事件循环的情况下(例如在普通的 Python 脚本或某些环境中)以同步方式执行代理的逻辑。
+        # - Runner.run_streamed(): 异步运行并返回最终的响应结果。它以流模式调用大模型,并在接收到事件时将其进行流式的实时传输。
 
     # 🚢 上下文管理
 
@@ -15876,8 +15874,7 @@
             2. 如果用户明确表示需要产品推荐,且您已获取到足够的客户信息后,才使用transfer_to_recommend_agent工具
             3. 切勿在未获取充分客户信息的情况下过早转交给产品推荐助手
 
-            请使用中文与用户交流,确保提供准确的客户信息。
-            """,
+            请使用中文与用户交流,确保提供准确的客户信息。""",
             model=OpenAIChatCompletionsModel(
                 model=DEEPSEEK_MODEL,
                 openai_client=deepseek_client,
@@ -16050,8 +16047,7 @@
                 input: str | list[TResponseInputItem]
             ) -> GuardrailFunctionOutput:
                 """This is an input guardrail function, which happens to call an agent to check if the input
-                is a math homework question.
-                """
+                is a math homework question."""
                 result = await Runner.run(guardrail_agent, input, context=context.context)
                 final_output = result.final_output_as(MathHomeworkOutput)
 
@@ -16929,8 +16925,7 @@
 
             Args:
                 mask_template:            遮蔽后占位符模板,支持 {tool_name} {content_len} 插值
-                keep_last_n_observations: 保留最近 N 条观察不遮蔽,0 = 全部遮蔽
-            """
+                keep_last_n_observations: 保留最近 N 条观察不遮蔽,0 = 全部遮蔽"""
 
             def __init__(
                 self,
@@ -16997,8 +16992,7 @@
             Args:
                 max_tokens:    触发截断的 token 上限,默认 4000
                 keep_last:     至少保留最近 N 条消息
-                token_counter: 可注入自定义计数函数;None 时用内置粗估
-            """
+                token_counter: 可注入自定义计数函数;None 时用内置粗估"""
 
             def __init__(
                 self,
@@ -17053,8 +17047,7 @@
 
         输出格式:
         [对话摘要]
-        (直接输出摘要内容,不要加前缀)
-        """
+        (直接输出摘要内容,不要加前缀)"""
 
         class CompactionMiddleware(AgentMiddleware):
             """全局压缩重启 Middleware:超过 trigger_tokens 时执行完整压缩。
@@ -17064,8 +17057,7 @@
                 trigger_tokens: token 总数超过此值才触发,默认 3500
                 keep_recent:    压缩后保留的最近消息条数,默认 0
                 token_counter:  token 计数函数;None 时用粗估
-                summary_prompt: 摘要提示词模板,含 {history} 插槽
-            """
+                summary_prompt: 摘要提示词模板,含 {history} 插槽"""
 
             def __init__(
                 self,
@@ -17155,8 +17147,7 @@
                 llm: 用于压缩早期消息的 LLM 实例(必须支持 .invoke)
                 compress_trigger: 触发压缩的消息数阈值,默认 8(对齐 2.1.1 COMPRESS_TRIGGER)
                 keep_recent: 压缩后保留的最近消息数,默认 4(对齐 2.1.1 KEEP_RECENT)
-                sessions_dir: 持久化目录,默认 "./sessions"
-            """
+                sessions_dir: 持久化目录,默认 "./sessions""""
 
             def __init__(self, session_id, llm, compress_trigger=8, keep_recent=4, sessions_dir="./sessions"):
                 super().__init__()
@@ -17175,8 +17166,7 @@
                     state: AgentState(dict 子类),通过 state["messages"] 取消息列表
                     runtime: LangGraph Runtime,此 middleware 未使用 runtime.store
                 Returns:
-                    None - 纯副作用,不修改 state(压缩后的摘要存在实例变量,不写回 state)
-                """
+                    None - 纯副作用,不修改 state(压缩后的摘要存在实例变量,不写回 state)"""
 
                 messages = state['messages']
                 compress_ctx = self._last_summary
