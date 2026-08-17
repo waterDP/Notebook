@@ -629,8 +629,8 @@
 
                 f"""
                     Q: 一箱牛奶 12 瓶，喝了 1/3，还剩几瓶？
-                    A: Let's think step by step.
-                """
+                    A: Let's think step by step."""
+
                 # 这就是最经典的 Zero-shot CoT，来自 Kojima et al. (2022)，零样本就能激活推理能力。
 
                 # 中文等效："请一步一步推理"或"让我们一步步分析"
@@ -641,7 +641,7 @@
             # 🍋 2. Few-shot CoT — 给几个推理范例
                 # 在 prompt 里给 2-3 个带推理过程的例子，最后抛真实问题：
 
-                f"""
+                prompt = f"""
                     Q: 小明有 3 本书，又买了 5 本，送给朋友 2 本，还剩几本？
                     A: 小明有 3 本。买了 5 本后，3+5=8 本。送了 2 本后，8-2=6 本。所以剩 6 本。
 
@@ -649,8 +649,7 @@
                     A: 长方形面积=长×宽。8×5=40。所以面积是 40 平方厘米。
 
                     Q: 温度从 -5°C 上升了 12°C，现在是几度？
-                    A:
-                """
+                    A:"""
 
                 # 优点： 引导质量高，适合复杂推理
                 # 缺点： 需要找好例子，消耗更多 token
@@ -665,21 +664,19 @@
                 Run 4: 小明有5个苹果... 所以剩6个
                 Run 5: 小明有5个苹果... 所以剩6个
 
-                → 众数答案：6个（4/5 一致）    
-                """
+                → 众数答案：6个（4/5 一致）"""
 
                 # 代价： 推理成本 ×N，但不需要额外标注数据
 
             # 🍋 4. Tree of Thoughts(ToT)——思维树
                 # 不满足于一条推理链，而是构建一棵搜索树，每步生成多个可能的下一步，然后用 BFS/DFS 搜索：
 
-                f"""
+                """
                 Step 1: ① 先买票 → ② 先订酒店 → ③ 先查攻略
                          │              │
                 Step 2: ①→查航班     ②→比较价格
                          │              │
-                Step 3: ①→选座位     ②→看评价
-                """
+                Step 3: ①→选座位     ②→看评价"""
 
                 # 每次用 LLM 评估每条路径的价值（"这条思路对吗？"），剪枝保留最有希望的。
 
@@ -688,12 +685,11 @@
             # 🍋 5. Chain of Thought with Self-Correction
                 # 在 CoT 输出的后面加一轮自纠错
 
-                f"""
+                """
                 Step 1: 推理过程
                 Step 2: 答案
                 Step 3: "看看上面的推理有没有错误？检查计算过程"
-                Step 4: 修正后的答案
-                """
+                Step 4: 修正后的答案"""
 
                 # 缺点是 token 开销大，优点是能减少低级错误。
 
@@ -733,8 +729,7 @@
         - 多举生活中的例子
         - 不要使用分数或小数
 
-        学生问：为什么 1/3 比 1/5 大？
-        """
+        学生问：为什么 1/3 比 1/5 大？"""
 
         # ■ 效果原理
         # 角色设定 → 激活模型在预训练中对应领域的分布
@@ -743,14 +738,13 @@
     # 🚀 Few-shot Prompting（无 CoT 版）
         # 给例子，但不给推理过程。模型从例子中推断模式
 
-        f"""将中文句子翻译为情绪标签：
+        prompt = f"""将中文句子翻译为情绪标签：
 
         今天太开心了 → happy
         这件事让我很生气 → angry
         他走了，有点难过 → sad
 
-        明天的考试让我紧张 →
-        """
+        明天的考试让我紧张 →"""
 
         # ■ 什么时候用
         # 分类任务、情感分析、格式转换
@@ -774,8 +768,7 @@
         {output_format}
 
         # 示例
-        {examples}
-        """
+        {examples}"""
 
         # 比一大段纯文字效果好，原因：
         # 1. 结构化指令降低注意力分散
@@ -792,8 +785,7 @@
             "reason": "简短理由"
         }}
 
-        文本：今天天气真好
-        """
+        文本：今天天气真好"""
 
         # ■ 方法二：用 markdown 模板
         f"""请按以下格式回答：
@@ -805,8 +797,7 @@
         [最终结论]
 
         ## 置信度
-        [高/中/低]
-        """
+        [高/中/低]"""
 
     # 🚀 Negative Prompting 反向提示
         # 明确告诉模型不该做什么，比只告诉它该做什么更有效
@@ -817,8 +808,7 @@
         - 不要解释代码的作用
         - 不要说"这段代码有问题"之类的废话
         - 只输出具体的 bug 列表
-        - 如果没有 bug，输出"无问题"
-        """
+        - 如果没有 bug，输出\"无问题\""""
 
     # 🚀 Emotion Prompt 情绪注入
         # 给 prompt 加情绪压力词，能显著提升效果（有论文验证）
@@ -1163,8 +1153,7 @@
                 compress_prompt = f"""
                 请将以下对话历史压缩为一段简洁的摘要,保留所有关键技术决策和数字:
                 \n\n{early_text}\n\n
-                输出要求:一段话,不超过 80 字。
-                """
+                输出要求:一段话,不超过 80 字。"""
 
                 summary = llm.invoke(compress_prompt).content # 送入模型进行压缩
 
@@ -4156,9 +4145,9 @@
 # ⚙ Skills
 # ====================================================================================================================================
 
-    @ Skill的本质,不是"多一个工具",而是把能力变成 可发现、可判断、可执行、可维护的模块
-    @ 渐进式披露
-    @ 一个Skill应该完成一个单一的事情
+    ## Skill的本质,不是"多一个工具",而是把能力变成 可发现、可判断、可执行、可维护的模块
+    ## 渐进式披露
+    ## 一个Skill应该完成一个单一的事情
 
     # 🚀 skills 分层
     1. **路由层(frontmatter)**:
@@ -4298,8 +4287,7 @@
             - 用第三人称描述(「用户」「助手」)
             - 保留所有关键事实,不遗漏重要细节
             - 100-200字以内
-            - 以「[以下是之前对话的摘要]」开头
-            """
+            - 以「[以下是之前对话的摘要]」开头"""
 
             response = client.chat.completions.create(
                 model=MODEL,
@@ -4455,8 +4443,7 @@
             {conversation_snippet}
 
             请严格用 JSON 格式回复,不要输出其他内容:
-            {{"worth_memorizing": true/false, "memory_text": "如果值得记忆,提炼成一句话;否则留空"}}
-            """
+            {{"worth_memorizing": true/false, "memory_text": "如果值得记忆,提炼成一句话;否则留空"}}"""
 
             result = llm_judge.invoke([HumanMessage(content=prompt)])
             parsed = json.loads(result.content)
@@ -4614,8 +4601,8 @@
 
         {injected_memory}
 
-        请根据以上记忆,回答用户的问题。
-        """
+        请根据以上记忆,回答用户的问题。"""
+
         print("\n组装后的 system_prompt 示例(前200字):")
         print(system_prompt[:200], "...")
 
@@ -4661,8 +4648,7 @@
         - 用户使用 conda 创建虚拟环境(与上条重复)
         - 用户询问过如何优化向量检索速度
         - 用户希望部署到云端,询问过 AWS 和阿里云的费用对比
-        - 用户表示预算有限,倾向于选择性价比高的方案
-        """
+        - 用户表示预算有限,倾向于选择性价比高的方案"""
 
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:
             f.write(dirty_memory)
@@ -8757,8 +8743,7 @@
             机器学习专注于计算机程序的开发,这些程序可以访问数据并使用它学习为自己。
 
             深度学习是机器学习的子集,它基于人工神经网络的表征学习方法。
-            深度学习在图像、语音、文本等感知任务上取得了突破性进展。
-            """
+            深度学习在图像、语音、文本等感知任务上取得了突破性进展。"""
 
             # 切分文档
             splitter = SentenceSplitter(chunk_size=200, chunk_overlap=30)
@@ -8882,8 +8867,7 @@
             - 对于单个问题,找出排名最高的相关文档所在的位置(排名)。例如,第一个相关文档排在第2位,则其排名为2。
             - 计算这个排名的倒数。在上例中,倒数就是 1/2 = 0.5。如果没有任何相关文档,则倒数为0。
             - 对所有问题的倒数得分取平均值。
-            - 强调"找得准",适合首条答案质量敏感的业务
-        """
+            - 强调"找得准",适合首条答案质量敏感的业务"""
 
         # RetrieverEvaluator
         from llama_index.core.evaluation import RetrieverEvaluator, generate_question_context_pairs
@@ -17912,8 +17896,7 @@
                     messages: 当前消息列表(OpenAI 格式)
                     token_count: 当前总 token 数(由上层调用方估算)
                 Returns:
-                    list: 处理后的 messages(未超阈值则原样返回)
-                """
+                    list: 处理后的 messages(未超阈值则原样返回)"""
                 # 未超阈值直接返回,保持 prompt cache 命中
                 if token_count <= CONTEXT_THRESHOLD:
                     return messages
@@ -17940,8 +17923,8 @@
                 Args:
                     features: feature list(字典列表)
                 Returns:
-                    dict 或 None:最早的 pending 任务,全部完成则 None
-                """
+                    dict 或 None:最早的 pending 任务,全部完成则 None"""
+
                 # 按 id 顺序取第一个 pending,强制单步执行
                 # 这里用 next + 生成器是为了短路--找到第一个立即返回,不遍历全表
                 # 如果 agent 想"一次做多件",这个函数只返回一件,它就不得不分多轮
@@ -17954,8 +17937,8 @@
                 """pytest 真机验证
 
                 Returns:
-                    dict: {"passed": bool, "output": str}
-                """
+                    dict: {"passed": bool, "output": str}"""
+
                 # 真跑 pytest,不 mock 不 skip(mock 会让 agent 看到"假通过")
                 # --tb=short 让错误回溯简短,避免 stdout 溢出塞满 context
                 result = subprocess.run(
@@ -17976,8 +17959,8 @@
                     task: 子任务描述(自然语言)
                     tools: 子代理可用工具清单
                 Returns:
-                    str: 子任务的最终结论(不含中间过程)
-                """
+                    str: 子任务的最终结论(不含中间过程)"""
+
                 # 子代理有独立的 messages,不共享主 agent 历史
                 sub_messages = [
                     {"role": "system", "content": "你是专注于单一子任务的助手"},
@@ -17991,8 +17974,8 @@
                 """LLM 调用 placeholder
 
                 真实实现是 client.chat.completions.create(...),见 cell [55] naive_agent 的 LLM 调用。
-                此处用回显保证三角色的输入-输出形态可见,让学员聚焦三角色结构而非 LLM 细节。
-                """
+                此处用回显保证三角色的输入-输出形态可见,让学员聚焦三角色结构而非 LLM 细节。"""
+
                 return f"[LLM 响应占位] 针对 prompt 前 60 字:{prompt[:60]}... (真实场景由 LLM 生成)"
 
 
@@ -18002,8 +17985,8 @@
                 Args:
                     task: 原始任务描述
                 Returns:
-                    list: 可评审的子任务清单
-                """
+                    list: 可评审的子任务清单"""
+
                 return call_llm(f"把任务拆成可独立评审的子任务清单:{task}")
 
 
@@ -18013,8 +17996,8 @@
                 Args:
                     subtask: 单个子任务
                 Returns:
-                    str: 生成的代码或方案
-                """
+                    str: 生成的代码或方案"""
+
                 return call_llm(f"请完成以下子任务:{subtask}")
 
 
@@ -18025,8 +18008,8 @@
                     code: Generator 的产出(不含中间过程)
                     criteria: 评审标准
                 Returns:
-                    dict: {"approved": bool, "feedback": str}
-                """
+                    dict: {"approved": bool, "feedback": str}"""
+
                 # 不看生成过程,只看最终产出是否满足标准
                 # 关键:prompt 里明确"批判性",诱导 LLM 以审稿人角色挑刺而非辩护
                 verdict = call_llm(f"批判性审查以下代码是否满足标准:{criteria}\n\n{code}")
@@ -18144,8 +18127,8 @@
                     - 70-89: 需要再确认1-2个点
                     - < 70: 需要继续探索
                     
-                    Confidence score (only output a number):
-                    """
+                    Confidence score (only output a number):"""
+
                     score = int(llm.chat(prompt).strip())
                     return score  
 
@@ -18158,8 +18141,7 @@
                     New findings: {new_result}
                     
                     Does the new finding contain SIGNIFICANT new information
-                    that wasn't already in previous findings? Answer YES or NO.
-                    """
+                    that wasn't already in previous findings? Answer YES or NO."""
                     return llm.chat(prompt).strip() == "YES"  
 
             # 🐢 实战中的组合策略
@@ -18221,8 +18203,7 @@
 
                     如果你无法验证，直接回复：不确定
                     如果发现矛盾，回复：存疑 - [具体矛盾点]
-                    如果验证通过，回复：确认 - [依据]
-                    """
+                    如果验证通过，回复：确认 - [依据]"""
                     result = llm.chat(prompt)
                     if "UNCERTAIN" in result or "contradiction" in result.lower():
                         return 0.3
@@ -18269,17 +18250,16 @@
                 Previous approach failed. Error: {context.last_error}
                 Current goal: {context.goal}
                 
-                Suggest an alternative approach to achieve the same goal.
-                """
+                Suggest an alternative approach to achieve the same goal."""
                 new_plan = llm.chat(prompt)
                 return execute_new_plan(new_plan)
 
         # 💰 成本控制：loop 最大的隐藏坑       
             """
-            1. 先切模式再切模型 — 简单的一步查询用 4o-mini/DeepSeek，高难度推理才上强模型
-            2. 缓存相同的 tool call result — 同一个查询不要调两次
-            3. 预判终止 — 发现剩余步骤的收益不会超过成本，提前结束
-            4. 批处理 — 如果有多个独立查询，合并成一次调用
+                1. 先切模式再切模型 — 简单的一步查询用 4o-mini/DeepSeek，高难度推理才上强模型
+                2. 缓存相同的 tool call result — 同一个查询不要调两次
+                3. 预判终止 — 发现剩余步骤的收益不会超过成本，提前结束
+                4. 批处理 — 如果有多个独立查询，合并成一次调用
             """
 
 
