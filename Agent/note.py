@@ -11423,50 +11423,50 @@
             messages: Annotated[List[BaseMessage], operator.add] # 💡
 
         # 创建图的实例
-            builder = StateGraph(State)
+        builder = StateGraph(State)
 
-            def chat_with_model(state):
-                print(state)
-                print("-----------------")
-                messages = state['messages']
-                response = llm.invoke(messages)
-                return {"messages": [response]}  # 💡
+        def chat_with_model(state):
+            print(state)
+            print("-----------------")
+            messages = state['messages']
+            response = llm.invoke(messages)
+            return {"messages": [response]}  # 💡
 
-            def convert_messages(state):
-                # "您是一位数据提取专家,负责从文本中检索关键信息。请为所提供的文本提取相关信息,并以 JSON 格式输出。概述所提取的关键数据点。"
-                EXTRACTION_PROMPT = """
-                You are a data extraction specialist tasked with retrieving key information from a text.
-                Extract such information for the provided text and output it in JSON format. Outline the key data points extracted.
-                """
-                print(state)
-                print("-----------------")
-                messages = state['messages']
-                messages = messages[-1]
+        def convert_messages(state):
+            # "您是一位数据提取专家,负责从文本中检索关键信息。请为所提供的文本提取相关信息,并以 JSON 格式输出。概述所提取的关键数据点。"
+            EXTRACTION_PROMPT = """
+            You are a data extraction specialist tasked with retrieving key information from a text.
+            Extract such information for the provided text and output it in JSON format. Outline the key data points extracted.
+            """
+            print(state)
+            print("-----------------")
+            messages = state['messages']
+            messages = messages[-1]
 
-                messages = [
-                    SystemMessage(content=EXTRACTION_PROMPT),
-                    HumanMessage(content=state['messages'][-1].content)
-                ]
+            messages = [
+                SystemMessage(content=EXTRACTION_PROMPT),
+                HumanMessage(content=state['messages'][-1].content)
+            ]
 
-                response = llm.invoke(messages)
-                return {"messages": [response]}
+            response = llm.invoke(messages)
+            return {"messages": [response]}
 
-            # 添加节点
-            builder.add_node("chat_with_model", chat_with_model)
-            builder.add_node("convert_messages", convert_messages)
+        # 添加节点
+        builder.add_node("chat_with_model", chat_with_model)
+        builder.add_node("convert_messages", convert_messages)
 
-            # 添加边
-            builder.add_edge(START, "chat_with_model")
-            builder.add_edge("chat_with_model", "convert_messages")
-            builder.add_edge("convert_messages", END)
+        # 添加边
+        builder.add_edge(START, "chat_with_model")
+        builder.add_edge("chat_with_model", "convert_messages")
+        builder.add_edge("convert_messages", END)
 
-            # 编译图
-            graph = builder.compile()
+        # 编译图
+        graph = builder.compile()
 
-            query="你好,请你介绍一下你自己"
-            input_message = {"messages": [HumanMessage(content=query)]}
+        query="你好,请你介绍一下你自己"
+        input_message = {"messages": [HumanMessage(content=query)]}
 
-            result = graph.invoke(input_message)
+        result = graph.invoke(input_message)
 
     # 🚀 MessageGraph ⚠️ 已废弃
         # 
