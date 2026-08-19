@@ -4262,7 +4262,7 @@
                 return session  # 消息太少,不压缩
 
             # 取前 50% 作为待压缩部分(至少 4 条)
-            compress_count = max(4, len(messages) // 2)
+            compress_count = max(4, len(messages) // 2) # 除2向下取整
             to_compress = messages[:compress_count]
             to_keep = messages[compress_count:]
 
