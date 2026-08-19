@@ -17147,7 +17147,7 @@
                 llm: 用于压缩早期消息的 LLM 实例(必须支持 .invoke)
                 compress_trigger: 触发压缩的消息数阈值,默认 8(对齐 2.1.1 COMPRESS_TRIGGER)
                 keep_recent: 压缩后保留的最近消息数,默认 4(对齐 2.1.1 KEEP_RECENT)
-                sessions_dir: 持久化目录,默认 "./sessions""""
+                sessions_dir: 持久化目录,默认 \"./sessions\""""
 
             def __init__(self, session_id, llm, compress_trigger=8, keep_recent=4, sessions_dir="./sessions"):
                 super().__init__()
