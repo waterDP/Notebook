@@ -17799,8 +17799,7 @@
                 Args:
                     initial_state: 初始状态对象(含任务、历史、已完成标记)
                 Returns:
-                    final_state: 循环结束时的最终状态
-                """
+                    final_state: 循环结束时的最终状态"""
                 state = initial_state
                 # for 循环代替 while True,保证最大迭代次数
                 for i in range(MAX_ITER):
@@ -17823,8 +17822,8 @@
                     tool_name: 工具名(从 TOOL_REGISTRY 查表)
                     **kwargs: 工具参数(JSON schema 约束)
                 Returns:
-                    dict: {"status": "ok"|"error", "result": 或 "error": 字符串}
-                """
+                    dict: {"status": "ok"|"error", "result": 或 "error": 字符串}"""
+
                 try:
                     # 成功路径:正常返回结果
                     result = TOOL_REGISTRY[tool_name](**kwargs)
@@ -17843,8 +17842,9 @@
                 """每步完成后写进度文件,失败后可续传
 
                 Args:
-                    state: 当前 agent 状态(含已完成任务、上下文快照)
-                """
+                    state: 当前 agent 状态(含已完成任务、上下文快照)"""
+
+
                 # 每步写磁盘,写 JSON 格式方便人类阅读和工具消费
                 PROGRESS_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False))
 
@@ -17853,8 +17853,8 @@
                 """启动时先读进度,有则续传
 
                 Returns:
-                    dict 或 None:有进度则返回状态,无则返回 None(全新开始)
-                """
+                    dict 或 None:有进度则返回状态,无则返回 None(全新开始)"""
+
                 # 存在即续传,不存在即从零开始
                 if PROGRESS_FILE.exists():
                     return json.loads(PROGRESS_FILE.read_text())
@@ -17872,8 +17872,8 @@
                 Args:
                     msgs: 待压缩的消息列表(不含 system prompt)
                 Returns:
-                    str: 摘要字符串
-                """
+                    str: 摘要字符串"""
+                    
                 # 仅演示形态:把所有 content 拼接后截断;真实场景请换成 LLM 摘要
                 joined = " | ".join(str(m.get("content", ""))[:80] for m in msgs)
                 return f"[前 {len(msgs)} 条消息压缩摘要] {joined[:500]}"
