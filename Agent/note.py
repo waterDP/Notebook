@@ -2633,9 +2633,9 @@
         # 4. 批量调用
         requests = ["什么是人工智能?", "langchain有什么优势", "如何使用模型?"]
         response = model.batch(requests)
-        for i, response in enumerate(response):
+        for i, res in enumerate(response):
             print(f"问题{i+1}: {requests[i]}")
-            print(f"回答{i+1}: {response.content}")
+            print(f"回答{i+1}: {res.content}")
             print("=" * 30)
 
 
