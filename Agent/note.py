@@ -2710,8 +2710,7 @@
             """Search the customer database for records matching the query.
             Args:
                 query (str): The query to search for.
-                limit (int, optional): The maximum number of records to return. Defaults to 10.
-            """
+                limit (int, optional): The maximum number of records to return. Defaults to 10."""
             return f"Found {limit} results for {query}"
 
 
